@@ -1,0 +1,23 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "At its core, Artificial Intelligence works by learning from vast amounts of data. Machine learning algorithms identify patterns and relationships within this data, enabling the AI to make predictions or decisions without being explicitly programmed for each scenario."
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 15,
+    "candidatesTokenCount": 42,
+    "totalTokenCount": 57,
+    "cachedContentTokenCount": 0
+  },
+  "modelVersion": "gemini-2.0-flash"
+}

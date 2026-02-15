@@ -1,0 +1,15 @@
+{
+    "model": "claude-haiku-4-5-20251001",
+    "type": "text",
+    "content": "Quantum computers harness the properties of quantum mechanics—where particles can exist in multiple states simultaneously—to process certain types of problems exponentially faster than classical computers.",
+    "thinking": null,
+    "usage": {
+        "prompt_tokens": 15,
+        "completion_tokens": 36,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+    },
+    "stop_reason": "end_turn",
+    "endpoint": "\/v1\/messages",
+    "stored_at": "2026-02-13T20:23:15+00:00"
+}

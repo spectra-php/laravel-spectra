@@ -1,0 +1,8 @@
+{
+    "text": "Hello this is a test I want to see whether transcription works perfectly with OpenAI",
+    "usage": {
+        "type": "duration",
+        "seconds": 11
+    },
+    "finish_reason": null
+}

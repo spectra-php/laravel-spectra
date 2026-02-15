@@ -1,0 +1,15 @@
+{
+    "object": "list",
+    "data": [
+        {
+            "object": "embedding",
+            "index": 0,
+            "embedding": [0.0023064255, -0.009327292, 0.015797347, -0.0077854917, -0.004095641, 0.010290672, -0.005205812, 0.0023064255, -0.009327292, 0.015797347]
+        }
+    ],
+    "model": "text-embedding-3-small",
+    "usage": {
+        "prompt_tokens": 5,
+        "total_tokens": 5
+    }
+}

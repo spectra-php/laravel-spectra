@@ -1,0 +1,87 @@
+{
+    "name": "spectra-php/laravel-spectra",
+    "description": "Comprehensive observability for AI/LLM operations in Laravel applications",
+    "keywords": [
+        "ahmadmayahi",
+        "laravel",
+        "ai",
+        "llm",
+        "observability",
+        "openai",
+        "anthropic",
+        "gemini"
+    ],
+    "homepage": "https://github.com/spectra-php/laravel-spectra",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ahmad Mayahi",
+            "email": "ahmad@mayahi.net",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/contracts": "^11.0||^12.0",
+        "illuminate/database": "^11.0||^12.0",
+        "illuminate/support": "^11.0||^12.0",
+        "symfony/polyfill-php84": "^1.31"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.14",
+        "nunomaduro/collision": "^8.1",
+        "openai-php/laravel": "*",
+        "orchestra/testbench": "^9.0||^10.0",
+        "pestphp/pest": "^3.0||^4.0",
+        "pestphp/pest-plugin-arch": "^3.0||^4.0",
+        "pestphp/pest-plugin-laravel": "^3.0||^4.0",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "james-heinrich/getid3": "2.0.x-dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "Spectra\\": "src/",
+            "Spectra\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Spectra\\Tests\\": "tests/",
+            "Workbench\\App\\": "workbench/app/"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": "@composer run prepare",
+        "prepare": "@php vendor/bin/testbench package:discover --ansi",
+        "analyse": "vendor/bin/phpstan analyse src tests --no-progress",
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
+        "format": "vendor/bin/pint"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "suggest": {
+        "james-heinrich/getid3": "Required for extracting audio duration from TTS binary responses (minute-based cost calculation)"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Spectra\\SpectraServiceProvider"
+            ],
+            "aliases": {
+                "Spectra": "Spectra\\Facades\\Spectra"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

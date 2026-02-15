@@ -1,0 +1,400 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+|--------------------------------------------------------------------------
+| Base Styles & Typography
+|--------------------------------------------------------------------------
+*/
+
+@layer base {
+    body {
+        @apply antialiased;
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+
+    /* Improved focus styles */
+    *:focus-visible {
+        @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Highlight.js - Syntax Highlighting
+|--------------------------------------------------------------------------
+*/
+
+/* Light theme (GitHub style) */
+.hljs {
+    background: transparent !important;
+    color: #24292e;
+}
+
+.hljs-string {
+    color: #032f62;
+}
+
+.hljs-number {
+    color: #005cc5;
+}
+
+.hljs-literal {
+    color: #005cc5;
+}
+
+.hljs-attr {
+    color: #6f42c1;
+}
+
+.hljs-punctuation {
+    color: #24292e;
+}
+
+/* Dark theme */
+.dark .hljs {
+    color: #e6edf3;
+}
+
+.dark .hljs-string {
+    color: #a5d6ff;
+}
+
+.dark .hljs-number {
+    color: #79c0ff;
+}
+
+.dark .hljs-literal {
+    color: #79c0ff;
+}
+
+.dark .hljs-attr {
+    color: #d2a8ff;
+}
+
+.dark .hljs-punctuation {
+    color: #e6edf3;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Component Styles
+|--------------------------------------------------------------------------
+*/
+
+@layer components {
+    /*
+    |--------------------------------------------------------------------------
+    | Stat Cards
+    |--------------------------------------------------------------------------
+    */
+
+    .stat-card {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6;
+    }
+
+    .stat-label {
+        @apply text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider;
+    }
+
+    .stat-value {
+        @apply text-3xl font-bold text-gray-900 dark:text-white mt-2;
+        @apply tabular-nums tracking-tight;
+    }
+
+    .stat-change {
+        @apply text-sm font-medium mt-2 flex items-center gap-1;
+    }
+
+    .stat-change.positive {
+        @apply text-emerald-600 dark:text-emerald-400;
+    }
+
+    .stat-change.negative {
+        @apply text-red-600 dark:text-red-400;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cards
+    |--------------------------------------------------------------------------
+    */
+
+    .card {
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700;
+    }
+
+    .card-header {
+        @apply px-5 py-4 border-b border-gray-100 dark:border-gray-700;
+        @apply flex items-center justify-between;
+    }
+
+    .card-header h2,
+    .card-header h3 {
+        @apply font-semibold text-gray-900 dark:text-white;
+    }
+
+    .card-body {
+        @apply p-5;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Buttons
+    |--------------------------------------------------------------------------
+    */
+
+    .btn {
+        @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium text-sm;
+        @apply transition-all duration-150 ease-out;
+        @apply focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900;
+        @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
+    }
+
+    .btn-primary {
+        @apply bg-primary-600 text-white shadow-sm;
+        @apply hover:bg-primary-700 hover:shadow;
+        @apply focus:ring-primary-500;
+        @apply active:bg-primary-800;
+    }
+
+    .btn-secondary {
+        @apply bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200;
+        @apply border border-gray-300 dark:border-gray-600 shadow-sm;
+        @apply hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500;
+        @apply focus:ring-gray-500;
+        @apply active:bg-gray-100 dark:active:bg-gray-600;
+    }
+
+    .btn-ghost {
+        @apply text-gray-600 dark:text-gray-400;
+        @apply hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800;
+        @apply focus:ring-gray-500;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Badges
+    |--------------------------------------------------------------------------
+    */
+
+    .badge {
+        @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold;
+        @apply transition-colors duration-150;
+    }
+
+    .badge-success {
+        @apply bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20;
+        @apply dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20;
+    }
+
+    .badge-danger {
+        @apply bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20;
+        @apply dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20;
+    }
+
+    .badge-warning {
+        @apply bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20;
+        @apply dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20;
+    }
+
+    .badge-info {
+        @apply bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20;
+        @apply dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20;
+    }
+
+    .badge-secondary {
+        @apply bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-500/20;
+        @apply dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-500/20;
+    }
+
+    .badge-purple {
+        @apply bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20;
+        @apply dark:bg-purple-500/10 dark:text-purple-400 dark:ring-purple-500/20;
+    }
+
+    /* Provider brand badges — colors match each provider's brand identity */
+    .badge-provider-openai {
+        @apply bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20;
+        @apply dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20;
+    }
+
+    .badge-provider-anthropic {
+        @apply bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-600/20;
+        @apply dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-500/20;
+    }
+
+    .badge-provider-google {
+        @apply bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20;
+        @apply dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20;
+    }
+
+    .badge-provider-xai {
+        @apply bg-zinc-50 text-zinc-700 ring-1 ring-inset ring-zinc-500/20;
+        @apply dark:bg-zinc-500/10 dark:text-zinc-400 dark:ring-zinc-500/20;
+    }
+
+    .badge-provider-ollama {
+        @apply bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-500/20;
+        @apply dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-500/20;
+    }
+
+    .badge-provider-azure {
+        @apply bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-600/20;
+        @apply dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-500/20;
+    }
+
+    .badge-provider-openrouter {
+        @apply bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-600/20;
+        @apply dark:bg-violet-500/10 dark:text-violet-400 dark:ring-violet-500/20;
+    }
+
+    .badge-provider-cohere {
+        @apply bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-600/20;
+        @apply dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-500/20;
+    }
+
+    .badge-provider-groq {
+        @apply bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-600/20;
+        @apply dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-500/20;
+    }
+
+    .badge-provider-elevenlabs {
+        @apply bg-gray-100 text-gray-800 ring-1 ring-inset ring-gray-600/20;
+        @apply dark:bg-gray-600/10 dark:text-gray-300 dark:ring-gray-500/20;
+    }
+
+    .badge-provider-replicate {
+        @apply bg-gray-100 text-gray-800 ring-1 ring-inset ring-gray-600/20;
+        @apply dark:bg-gray-600/10 dark:text-gray-300 dark:ring-gray-500/20;
+    }
+
+    .badge-provider-mistral {
+        @apply bg-orange-50 text-orange-600 ring-1 ring-inset ring-orange-500/20;
+        @apply dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-500/20;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tables
+    |--------------------------------------------------------------------------
+    */
+
+    .table {
+        @apply w-full text-sm text-left;
+    }
+
+    .table thead {
+        @apply text-xs uppercase tracking-wider;
+        @apply text-gray-500 dark:text-gray-400;
+        @apply bg-gray-50/50 dark:bg-gray-800/50;
+        @apply border-b border-gray-200 dark:border-gray-700;
+    }
+
+    .table th {
+        @apply px-5 py-3 font-semibold;
+    }
+
+    .table td {
+        @apply px-5 py-4 text-gray-600 dark:text-gray-300;
+    }
+
+    .table tbody tr {
+        @apply border-b border-gray-100 dark:border-gray-700/50;
+        @apply transition-colors duration-150;
+    }
+
+    .table tbody tr:last-child {
+        @apply border-b-0;
+    }
+
+    .table tbody tr:hover {
+        @apply bg-gray-50/50 dark:bg-gray-700/30;
+    }
+
+    .table tbody tr.cursor-pointer:hover {
+        @apply bg-primary-50/50 dark:bg-primary-900/10;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Forms
+    |--------------------------------------------------------------------------
+    */
+
+    .form-input,
+    .form-select {
+        @apply block w-full rounded-lg text-sm;
+        @apply bg-white dark:bg-gray-800;
+        @apply border border-gray-300 dark:border-gray-600;
+        @apply text-gray-900 dark:text-white;
+        @apply placeholder-gray-400 dark:placeholder-gray-500;
+        @apply shadow-sm;
+        @apply transition-colors duration-150;
+        @apply focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
+        @apply px-4 py-2.5;
+    }
+
+    .form-input:hover,
+    .form-select:hover {
+        @apply border-gray-400 dark:border-gray-500;
+    }
+
+    .form-select {
+        @apply pr-10 cursor-pointer;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.75rem center;
+        background-repeat: no-repeat;
+        background-size: 1.25em 1.25em;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+
+    .form-select-sm {
+        @apply w-auto px-3 py-1.5 text-xs pr-8;
+        background-size: 1em 1em;
+        background-position: right 0.5rem center;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Empty States
+    |--------------------------------------------------------------------------
+    */
+
+    .empty-state {
+        @apply text-center py-12 px-4;
+    }
+
+    .empty-state-icon {
+        @apply mx-auto h-12 w-12 text-gray-400 dark:text-gray-500;
+    }
+
+    .empty-state-title {
+        @apply mt-4 text-sm font-medium text-gray-900 dark:text-white;
+    }
+
+    .empty-state-description {
+        @apply mt-1 text-sm text-gray-500 dark:text-gray-400;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Loading Spinner
+    |--------------------------------------------------------------------------
+    */
+
+    .spinner {
+        @apply inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin;
+    }
+
+    .spinner-sm {
+        @apply w-4 h-4;
+    }
+
+    .spinner-lg {
+        @apply w-8 h-8;
+    }
+}

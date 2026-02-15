@@ -1,0 +1,15 @@
+{
+    "id": "video_abc123",
+    "object": "video",
+    "created_at": 1770492811,
+    "status": "queued",
+    "completed_at": null,
+    "error": null,
+    "expires_at": null,
+    "model": "sora-2",
+    "progress": 0,
+    "prompt": "A futuristic city at sunset",
+    "remixed_from_video_id": null,
+    "seconds": "10",
+    "size": "1280x720"
+}

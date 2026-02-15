@@ -1,0 +1,13 @@
+/node_modules
+/vendor
+composer.lock
+package-lock.json
+.phpunit.result.cache
+.phpunit.cache
+database/database.sqlite
+docs/.vitepress/cache
+docs/.vitepress/dist
+coverage
+.DS_Store
+Thumbs.db
+build/

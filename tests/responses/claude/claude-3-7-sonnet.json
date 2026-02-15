@@ -1,0 +1,15 @@
+{
+    "model": "claude-3-7-sonnet-20250219",
+    "type": "text",
+    "content": "Quantum computing harnesses the principles of quantum mechanics, such as superposition and entanglement, to perform calculations using quantum bits (qubits) that can exist in multiple states simultaneously, potentially solving certain problems exponentially faster than classical computers.",
+    "thinking": null,
+    "usage": {
+        "prompt_tokens": 15,
+        "completion_tokens": 53,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+    },
+    "stop_reason": "end_turn",
+    "endpoint": "\/v1\/messages",
+    "stored_at": "2026-02-13T20:26:21+00:00"
+}

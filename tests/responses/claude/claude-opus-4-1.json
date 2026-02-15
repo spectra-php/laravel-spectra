@@ -1,0 +1,15 @@
+{
+    "model": "claude-opus-4-1-20250805",
+    "type": "text",
+    "content": "Quantum computing harnesses the strange properties of quantum mechanics—like superposition and entanglement—to process information in fundamentally new ways that can solve certain complex problems exponentially faster than traditional computers.",
+    "thinking": "I need to explain quantum computing in a single, clear sentence that captures its essence without being too technical or too vague. The key aspects are: 1) it uses quantum mechanical phenomena, 2) it processes information differently than classical computers, 3) it can solve certain problems much faster. Let me craft a concise but informative sentence.",
+    "usage": {
+        "prompt_tokens": 44,
+        "completion_tokens": 124,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+    },
+    "stop_reason": "end_turn",
+    "endpoint": "\/v1\/messages",
+    "stored_at": "2026-02-13T20:24:54+00:00"
+}

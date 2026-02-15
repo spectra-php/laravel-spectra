@@ -1,0 +1,15 @@
+{
+    "model": "claude-3-5-haiku-20241022",
+    "type": "text",
+    "content": "Quantum computing is a type of computing that uses quantum-mechanical phenomena like superposition and entanglement to perform complex calculations exponentially faster than classical computers by manipulating quantum bits (qubits) that can exist in multiple states simultaneously.",
+    "thinking": null,
+    "usage": {
+        "prompt_tokens": 15,
+        "completion_tokens": 52,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+    },
+    "stop_reason": "end_turn",
+    "endpoint": "\/v1\/messages",
+    "stored_at": "2026-02-13T20:22:48+00:00"
+}

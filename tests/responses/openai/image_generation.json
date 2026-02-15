@@ -1,0 +1,13 @@
+{
+    "created": 1700000000,
+    "data": [
+        {
+            "url": "https://oaidalleapiprodscus.blob.core.windows.net/example-image-1.png",
+            "revised_prompt": "A white Siamese cat with bright blue eyes sitting on a windowsill"
+        },
+        {
+            "url": "https://oaidalleapiprodscus.blob.core.windows.net/example-image-2.png",
+            "revised_prompt": "A white Siamese cat with bright blue eyes sitting on a windowsill, alternate angle"
+        }
+    ]
+}

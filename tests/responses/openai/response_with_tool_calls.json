@@ -1,0 +1,73 @@
+{
+  "id": "resp_tool123abc",
+  "object": "response",
+  "created_at": 1770887215,
+  "status": "completed",
+  "completed_at": 1770887220,
+  "error": null,
+  "model": "o3-deep-research",
+  "output": [
+    {
+      "id": "ws_001",
+      "type": "web_search_call",
+      "status": "completed"
+    },
+    {
+      "id": "ws_002",
+      "type": "web_search_call",
+      "status": "completed"
+    },
+    {
+      "id": "ws_003",
+      "type": "web_search_call",
+      "status": "completed"
+    },
+    {
+      "id": "ci_001",
+      "type": "code_interpreter_call",
+      "status": "completed"
+    },
+    {
+      "id": "fc_001",
+      "type": "function_call",
+      "name": "get_data",
+      "arguments": "{\"query\": \"test\"}",
+      "call_id": "call_abc",
+      "status": "completed"
+    },
+    {
+      "id": "fc_002",
+      "type": "function_call",
+      "name": "save_result",
+      "arguments": "{\"data\": \"result\"}",
+      "call_id": "call_def",
+      "status": "completed"
+    },
+    {
+      "id": "msg_001",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "text": "Based on my research, here are the findings."
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "service_tier": "default",
+  "usage": {
+    "input_tokens": 500,
+    "input_tokens_details": {
+      "cached_tokens": 100
+    },
+    "output_tokens": 2000,
+    "output_tokens_details": {
+      "reasoning_tokens": 1500
+    },
+    "total_tokens": 2500
+  },
+  "metadata": []
+}

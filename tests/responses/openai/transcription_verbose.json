@@ -1,0 +1,7 @@
+{
+    "task": "transcribe",
+    "language": "english",
+    "duration": 3.45,
+    "text": "Hello world",
+    "model": "whisper-1"
+}

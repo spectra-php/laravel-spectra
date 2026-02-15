@@ -1,0 +1,17 @@
+providers:
+  - Spectra\SpectraServiceProvider
+  - Workbench\App\Providers\WorkbenchServiceProvider
+
+migrations:
+  - workbench/database/migrations
+
+seeders:
+  - Workbench\Database\Seeders\DatabaseSeeder
+
+workbench:
+  start: /spectra
+  install: true
+  discovers:
+    web: true
+    commands: true
+    health: false

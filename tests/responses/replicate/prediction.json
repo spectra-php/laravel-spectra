@@ -1,0 +1,22 @@
+{
+    "id": "p7pxyz123abc",
+    "model": "stability-ai/stable-diffusion",
+    "version": "abc123def456",
+    "urls": {
+        "get": "https://api.replicate.com/v1/predictions/p7pxyz123abc",
+        "cancel": "https://api.replicate.com/v1/predictions/p7pxyz123abc/cancel"
+    },
+    "status": "succeeded",
+    "input": {
+        "prompt": "A beautiful sunset over mountains"
+    },
+    "output": [
+        "https://replicate.delivery/output1.png",
+        "https://replicate.delivery/output2.png"
+    ],
+    "metrics": {
+        "predict_time": 4.52
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "completed_at": "2024-01-01T00:00:04Z"
+}

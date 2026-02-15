@@ -1,0 +1,15 @@
+{
+    "model": "claude-sonnet-4-20250514",
+    "type": "text",
+    "content": "Quantum computing harnesses quantum mechanical phenomena like superposition and entanglement to process information in ways that could solve certain complex problems exponentially faster than classical computers.",
+    "thinking": "I need to explain quantum computing in just one sentence, so I should capture the most essential aspect - that it uses quantum mechanical properties like superposition and entanglement to process information in ways that classical computers cannot, potentially solving certain problems much faster.",
+    "usage": {
+        "prompt_tokens": 44,
+        "completion_tokens": 94,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+    },
+    "stop_reason": "end_turn",
+    "endpoint": "\/v1\/messages",
+    "stored_at": "2026-02-13T20:26:56+00:00"
+}

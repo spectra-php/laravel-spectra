@@ -1,0 +1,24 @@
+{
+    "id": "e3a1f5d2-a7b0-4c3e-8f1a-9b2c4d6e8f0a",
+    "message": {
+        "role": "assistant",
+        "content": [
+            {
+                "type": "text",
+                "text": "Hello! I'm Command R, an AI assistant by Cohere. How can I help you today?"
+            }
+        ]
+    },
+    "finish_reason": "COMPLETE",
+    "model": "command-r-plus",
+    "usage": {
+        "billed_units": {
+            "input_tokens": 12,
+            "output_tokens": 18
+        },
+        "tokens": {
+            "input_tokens": 15,
+            "output_tokens": 20
+        }
+    }
+}

@@ -1,0 +1,90 @@
+:root {
+  --vp-c-brand-1: #0ea5e9;
+  --vp-c-brand-2: #0284c7;
+  --vp-c-brand-3: #0369a1;
+  --vp-c-brand-soft: color-mix(in srgb, var(--vp-c-brand-1) 16%, transparent);
+  --vp-nav-height: 64px;
+  --vp-nav-logo-height: 32px;
+
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    90deg,
+    #ef4444 0%,
+    #f97316 20%,
+    #eab308 40%,
+    #22c55e 60%,
+    #06b6d4 80%,
+    #3b82f6 100%
+  );
+
+  --spectra-gradient: linear-gradient(
+    90deg,
+    #ef4444,
+    #f97316,
+    #eab308,
+    #22c55e,
+    #06b6d4,
+    #3b82f6
+  );
+}
+
+.dark {
+  --vp-c-brand-1: #38bdf8;
+  --vp-c-brand-2: #0ea5e9;
+  --vp-c-brand-3: #0284c7;
+  --vp-c-brand-soft: color-mix(in srgb, var(--vp-c-brand-1) 24%, transparent);
+}
+
+.VPHome .VPButton.brand {
+  border-color: var(--vp-c-brand-1);
+  color: #ffffff;
+  background-color: var(--vp-c-brand-1);
+}
+
+.VPHome .VPButton.brand:hover {
+  border-color: var(--vp-c-brand-2);
+  background-color: var(--vp-c-brand-2);
+}
+
+.VPHome .VPFeature {
+  position: relative;
+  overflow: hidden;
+}
+
+.VPHome .VPFeature::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--spectra-gradient);
+}
+
+.VPHome .image-bg {
+  background-image: radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.26), transparent 65%);
+}
+
+@media (max-width: 960px) {
+  :root {
+    --vp-nav-height: 60px;
+    --vp-nav-logo-height: 28px;
+  }
+}
+
+.footer-logo {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 24px;
+}
+
+.footer-logo img {
+  height: 36px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --vp-nav-height: 56px;
+    --vp-nav-logo-height: 24px;
+  }
+}

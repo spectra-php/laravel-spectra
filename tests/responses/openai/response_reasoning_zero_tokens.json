@@ -1,0 +1,46 @@
+{
+  "id": "resp_0e3954671713a03a00698d982f505c8194b626bab4a68c3a34",
+  "object": "response",
+  "created_at": 1770887215,
+  "status": "completed",
+  "completed_at": 1770887217,
+  "error": null,
+  "model": "gpt-5.2-codex",
+  "output": [
+    {
+      "id": "rs_0e3954671713a03a00698d982fcc1c819491e7b1263b3d741e",
+      "type": "reasoning",
+      "summary": []
+    },
+    {
+      "id": "msg_0e3954671713a03a00698d9830b254819489918f1348eced5f",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "text": "Laravel is a PHP web application framework."
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "reasoning": {
+    "effort": "medium",
+    "summary": null
+  },
+  "service_tier": "default",
+  "usage": {
+    "input_tokens": 10,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 121,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 131
+  },
+  "metadata": []
+}
