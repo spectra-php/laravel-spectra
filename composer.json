@@ -28,17 +28,18 @@
         "symfony/polyfill-php84": "^1.31"
     },
     "require-dev": {
+        "james-heinrich/getid3": "2.0.x-dev",
         "larastan/larastan": "^3.0",
         "laravel/pint": "^1.14",
         "nunomaduro/collision": "^8.1",
+        "openai-php/laravel": "^0.18.0",
         "orchestra/testbench": "^9.0||^10.0",
         "pestphp/pest": "^3.0||^4.0",
         "pestphp/pest-plugin-arch": "^3.0||^4.0",
         "pestphp/pest-plugin-laravel": "^3.0||^4.0",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan-deprecation-rules": "^2.0",
-        "phpstan/phpstan-phpunit": "^2.0",
-        "james-heinrich/getid3": "2.0.x-dev"
+        "phpstan/phpstan-phpunit": "^2.0"
     },
     "autoload": {
         "psr-4": {
