@@ -14,7 +14,8 @@ The schema migrations create the following tables:
 | `spectra_requests` | Stores every tracked AI request with provider, model, tokens, cost, and metadata |
 | `spectra_budgets` | Budget limits and thresholds for spending enforcement |
 | `spectra_daily_stats` | Aggregated daily statistics per provider/model combination |
-| `spectra_tags` | Polymorphic tag associations for request categorization |
+| `spectra_tags` | Tag name lookup table for request categorization |
+| `spectra_requests_tags` | Pivot table linking requests to tags |
 
 ### Publishing Schema Migrations
 

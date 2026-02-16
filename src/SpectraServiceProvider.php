@@ -124,6 +124,7 @@ class SpectraServiceProvider extends ServiceProvider
     {
         $this->registerCommands();
         $this->registerPublishing();
+        $this->registerMiddleware();
 
         if (! $this->app->make('config')->get('spectra.enabled')) {
             return;
@@ -259,6 +260,13 @@ class SpectraServiceProvider extends ServiceProvider
     protected function getVersion(): ?string
     {
         return InstalledVersions::getPrettyVersion('spectra-php/laravel-spectra');
+    }
+
+    protected function registerMiddleware(): void
+    {
+        $this->callAfterResolving('router', function (Router $router) {
+            $router->aliasMiddleware('spectra.budget', Http\Middleware\EnforceBudgetLimit::class);
+        });
     }
 
     protected function registerHttpMacros(): void

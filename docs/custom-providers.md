@@ -35,7 +35,7 @@ For providers with a single endpoint type, you need only one handler. For provid
 <a name="creating-a-provider"></a>
 ## Creating a Provider
 
-The following example creates support for a Mistral AI provider with a single chat completions endpoint.
+The following example shows how to create a provider, using Mistral AI as an illustration. Mistral is already a built-in provider, but we use it here because its API shape is straightforward and easy to follow.
 
 <a name="step-1-create-the-handler"></a>
 ### Step 1: Create the Handler
@@ -361,7 +361,7 @@ class MyChatHandler implements Handler, StreamsResponse
 }
 ```
 
-The `StreamHandler` abstract class requires three methods:
+The `StreamHandler` abstract class requires four methods:
 
 ```php
 use Spectra\Support\Tracking\StreamHandler;
@@ -387,6 +387,11 @@ class MyStreamHandler extends StreamHandler
     public function finishReason(array $data): ?string
     {
         return $data['choices'][0]['finish_reason'] ?? null;
+    }
+
+    public function model(array $data): ?array
+    {
+        return isset($data['model']) ? ['model' => $data['model']] : null;
     }
 }
 ```

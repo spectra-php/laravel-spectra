@@ -271,6 +271,20 @@ For the full list of built-in providers, see [Models](/models#supported-provider
 
 Add custom providers by extending `Provider` and adding an entry here. See [Custom Providers](/custom-providers) for a complete guide.
 
+<a name="endpoint-urls"></a>
+## Endpoint URLs
+
+Override the base URL for any provider. This is useful when routing requests through a proxy or using a self-hosted model server:
+
+```php
+'endpoint_urls' => [
+    'openai' => env('OPENAI_BASE_URL', 'https://api.openai.com'),
+    'anthropic' => env('ANTHROPIC_BASE_URL', 'https://api.anthropic.com'),
+],
+```
+
+When the `laravel-ai` package is installed, Spectra will also check its config (`ai.providers.{provider}.url`) as a fallback.
+
 <a name="integrations"></a>
 ## Integrations
 

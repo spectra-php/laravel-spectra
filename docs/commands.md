@@ -15,7 +15,7 @@ The installer performs the following steps in order:
 
 1. **Publishes configuration** — Copies `config/spectra.php` to your application's config directory.
 2. **Publishes schema migrations** — Copies Spectra schema migration files to `database/migrations/`.
-3. **Runs migrations** (optional) — Prompts you to run `php artisan migrate` to create the Spectra database tables.
+3. **Runs migrations** (optional) — Prompts to run migrations and creates the Spectra database tables if confirmed.
 
 If you prefer manual control, you can skip the installer entirely and publish resources individually:
 

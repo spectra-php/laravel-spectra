@@ -47,6 +47,7 @@ export default defineConfig({
           { text: 'Testing', link: '/testing' },
           { text: 'Custom Providers', link: '/custom-providers' },
           { text: 'Artisan Commands', link: '/commands' },
+          { text: 'Migrations', link: '/migrations' },
           { text: 'Configuration', link: '/configuration' },
           { text: 'Troubleshooting', link: '/troubleshooting' }
         ]

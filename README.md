@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="Spectra" src="art/logo.svg" width="300px" />
+  <img alt="Spectra" src="art/logo.svg" width="500px" />
 </p>
 
 <div align="center">

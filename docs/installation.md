@@ -28,7 +28,7 @@ After installing Spectra, publish its assets and run the database migrations usi
 php artisan spectra:install
 ```
 
-The installer will guide you through publishing the configuration file to `config/spectra.php`, publishing the schema migrations to `database/migrations/`, and running the migrations to create the Spectra tables. Each step prompts for confirmation so you can control exactly what happens.
+The installer publishes the configuration file to `config/spectra.php` and the schema migrations to `database/migrations/`, then prompts you to run the migrations.
 
 If you prefer to run each step manually instead of using the interactive installer:
 

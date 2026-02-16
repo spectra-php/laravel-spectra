@@ -31,7 +31,7 @@ Enable the integration in `config/spectra.php` and provide the OTLP endpoint for
 ```php
 'integrations' => [
     'opentelemetry' => [
-        'enabled' => env('SPECTRA_OTEL_ENABLED', true),
+        'enabled' => env('SPECTRA_OTEL_ENABLED', false),
         'endpoint' => env('SPECTRA_OTEL_ENDPOINT', 'http://localhost:4318/v1/traces'),
         'headers' => [],
         'service_version' => env('SPECTRA_OTEL_SERVICE_VERSION', '1.0.0'),
