@@ -126,7 +126,7 @@ This is expected behavior in two scenarios:
 
 2. **A budget record exists and is active** for the user:
    ```php
-   $user->aiBudgets()->where('is_active', true)->first();
+   $user->aiBudget()->where('is_active', true)->first();
    ```
 
 3. **Middleware is applied correctly** to the route:

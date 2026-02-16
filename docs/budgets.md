@@ -255,8 +255,5 @@ Set global budget defaults in `config/spectra.php`. These values apply when indi
     'enabled' => true,
     'default_provider' => 'openai',
     'default_model' => 'gpt-4',
-    'warning_threshold' => 80,
-    'critical_threshold' => 95,
-    'hard_limit' => true,
 ],
 ```

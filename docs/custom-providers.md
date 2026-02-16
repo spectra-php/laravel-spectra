@@ -354,7 +354,7 @@ use Spectra\Support\Tracking\StreamHandler;
 
 class MyChatHandler implements Handler, StreamsResponse
 {
-    public function streamingClass(): StreamHandler
+    public function streamingHandler(): StreamHandler
     {
         return new MyStreamHandler();
     }

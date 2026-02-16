@@ -1,26 +1,19 @@
 <p align="center">
-  <img alt="Spectra" src="art/logo.svg" />
+  <img alt="Spectra" src="art/logo.svg" width="300px" />
 </p>
 
-<p align="center">
-    <a href="https://packagist.org/packages/spectra-php/laravel-spectra">
-        <img src="https://poser.pugx.org/spectra-php/laravel-spectra/d/total.svg" alt="Total Downloads">
-    </a>
-    <a href="https://packagist.org/packages/spectra-php/laravel-spectra">
-        <img src="https://poser.pugx.org/spectra-php/laravel-spectra/v/stable.svg" alt="Latest Stable Version">
-    </a>
-    <a href="https://packagist.org/packages/spectra-php/laravel-spectra">
-        <img src="https://poser.pugx.org/spectra-php/laravel-spectra/license.svg" alt="License">
-    </a>
-</p>
+<div align="center">
 
-# Spectra
+[![Latest Stable Version](http://poser.pugx.org/spectra-php/laravel-spectra/v)](https://packagist.org/packages/spectra-php/laravel-spectra) [![Total Downloads](http://poser.pugx.org/spectra-php/laravel-spectra/downloads)](https://packagist.org/packages/spectra-php/laravel-spectra) [![Latest Unstable Version](http://poser.pugx.org/spectra-php/laravel-spectra/v/unstable)](https://packagist.org/packages/spectra-php/laravel-spectra) [![License](http://poser.pugx.org/spectra-php/laravel-spectra/license)](https://packagist.org/packages/spectra-php/laravel-spectra) [![PHP Version Require](http://poser.pugx.org/spectra-php/laravel-spectra/require/php)](https://packagist.org/packages/spectra-php/laravel-spectra)
+
+</div>
+
 
 Spectra is a comprehensive Laravel package for AI observability. It helps you track AI requests, measure usage, calculate costs across different pricing units, enforce budgets, and inspect AI operations through a unified dashboard and API. This lets you focus on shipping reliable AI features without getting buried in provider-specific operational complexity.
 
 ## Official Documentation
 
-Official documentation can be found on [spectraphp.com](https://spectra-php.com).
+Official documentation can be found on [spectraphp.com](https://spectraphp.com).
 
 ## Code of Conduct
 

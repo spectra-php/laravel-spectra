@@ -132,7 +132,7 @@ OpenTelemetry export follows the same persistence mode as request storage, contr
 
 | Queue Config | Export Behavior |
 | --- | --- |
-| `queue.enabled: true` | Dispatched as an `ExportOtelTraceJob` on your configured queue |
+| `queue.enabled: true` | Dispatched as an `ExportTrackedRequestJob` on your configured queue |
 | `queue.after_response: true` | Exported after the HTTP response is sent to the client (no added latency for the user) |
 | Both `false` (default) | Exported synchronously after the AI response completes |
 

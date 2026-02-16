@@ -256,7 +256,7 @@ class SpectraServiceProvider extends ServiceProvider
         }
     }
 
-    protected function getVersion(): string|null
+    protected function getVersion(): ?string
     {
         return InstalledVersions::getPrettyVersion('spectra-php/laravel-spectra');
     }

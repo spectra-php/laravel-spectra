@@ -77,9 +77,9 @@ For more complex validation, pass a callback that receives the recorded request 
 
 ```php
 $fake->assertTracked(function ($recorded) {
-    return $recorded['provider'] === 'openai'
-        && $recorded['model'] === 'gpt-4o'
-        && $recorded['usage']['prompt_tokens'] > 0;
+    return $recorded['context']->provider === 'openai'
+        && $recorded['context']->model === 'gpt-4o'
+        && $recorded['context']->promptTokens > 0;
 });
 ```
 

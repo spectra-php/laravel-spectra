@@ -246,7 +246,7 @@ class SpectraFake extends Spectra
     public function assertTotalTokens(int $expectedTokens): void
     {
         $actualTokens = collect($this->recorded)
-            ->sum(fn ($r) => $r['context']->totalTokens);
+            ->sum(fn ($r) => $r['context']->promptTokens + $r['context']->completionTokens);
 
         Assert::assertEquals(
             $expectedTokens,

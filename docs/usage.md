@@ -245,7 +245,7 @@ $tracker = Spectra::stream('anthropic', 'claude-sonnet-4-20250514');
 
 $response = Http::withToken(config('services.anthropic.api_key'))
     ->withHeaders(['anthropic-version' => '2023-06-01'])
-    ->withResponseType('stream')
+    ->withOptions(['stream' => true])
     ->post('https://api.anthropic.com/v1/messages', [
         'model' => 'claude-sonnet-4-20250514',
         'max_tokens' => 1024,

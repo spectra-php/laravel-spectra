@@ -2,6 +2,23 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## v0.3.1 - 2026-02-16
+
+### Bug Fixes
+
+- Fixed `SpectraFake::assertTotalTokens()` using non-existent `totalTokens` property
+- Fixed `streamingClass()` → `streamingHandler()` in custom-providers docs
+- Fixed `ExportOtelTraceJob` → `ExportTrackedRequestJob` in OpenTelemetry docs
+- Fixed `withResponseType('stream')` → `withOptions(['stream' => true])` in usage docs
+- Fixed `aiBudgets()` → `aiBudget()` in troubleshooting docs
+- Fixed `assertTracked` callback example in testing docs
+- Removed non-existent config keys from budget configuration docs
+
+### Non-Breaking Changes
+
+- Removed unused query methods from `StatsAggregator`
+- Fixed code style in `SpectraServiceProvider`
+
 ## v0.3.0 - 2026-02-16
 
 ### Breaking Changes
