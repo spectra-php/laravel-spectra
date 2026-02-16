@@ -81,6 +81,19 @@ The dashboard path is configurable via the `SPECTRA_PATH` environment variable o
 ],
 ```
 
+## Layout Modes
+
+The `dashboard.layout` configuration option controls which model types are displayed in the dashboard. This is useful if your application only uses a subset of model types and you want a focused view:
+
+| Layout | Shows |
+| --- | --- |
+| `full` | All model types with a type distribution chart |
+| `text` | Text completions only |
+| `embedding` | Embeddings only |
+| `image` | Image generation only |
+| `video` | Video generation only |
+| `audio` | TTS and STT metrics |
+
 ## Separate Database
 
 For high-volume applications, you may want Spectra to use its own database connection. This isolates observability writes from your application database and prevents Spectra from competing with your application queries for connection pool resources. To configure a separate connection, set the `storage.connection` option:

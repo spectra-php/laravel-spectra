@@ -363,14 +363,14 @@ it('rounds fractional request costs up to whole cents for budget enforcement', f
         ->toThrow(BudgetExceededException::class);
 });
 
-it('returns an BudgetBuilder from configureBudget', function () {
+it('returns a BudgetBuilder from configureAiBudget', function () {
     $user = User::create([
         'name' => 'Test User',
         'email' => 'builder-instance@example.com',
         'password' => 'password',
     ]);
 
-    $builder = $user->configureBudget();
+    $builder = $user->configureAiBudget();
 
     expect($builder)->toBeInstanceOf(BudgetBuilder::class);
 });
@@ -382,11 +382,11 @@ it('can create a budget using fluent builder', function () {
         'password' => 'password',
     ]);
 
-    $budget = $user->configureBudget()
-        ->dailyLimit(1000)
-        ->weeklyLimit(5000)
-        ->monthlyLimit(20000)
-        ->totalLimit(100000)
+    $budget = $user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->weeklyCostLimitInCents(5000)
+        ->monthlyCostLimitInCents(20000)
+        ->totalCostLimitInCents(100000)
         ->dailyTokenLimit(500000)
         ->weeklyTokenLimit(2000000)
         ->monthlyTokenLimit(5000000)
@@ -395,8 +395,8 @@ it('can create a budget using fluent builder', function () {
         ->weeklyRequestLimit(1000)
         ->monthlyRequestLimit(5000)
         ->hardLimit()
-        ->warningThreshold(80)
-        ->criticalThreshold(95)
+        ->warningThresholdPercentage(80)
+        ->criticalThresholdPercentage(95)
         ->allowProviders(['openai', 'anthropic'])
         ->allowModels(['gpt-4o', 'claude-sonnet-4-20250514'])
         ->name('Production Budget')
@@ -429,8 +429,8 @@ it('can create a budget with soft limit using fluent builder', function () {
         'password' => 'password',
     ]);
 
-    $budget = $user->configureBudget()
-        ->dailyLimit(1000)
+    $budget = $user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
         ->softLimit()
         ->save();
 
@@ -445,13 +445,13 @@ it('can update an existing budget using fluent builder', function () {
         'password' => 'password',
     ]);
 
-    $user->configureBudget()
-        ->dailyLimit(1000)
+    $user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
         ->save();
 
-    $updated = $user->configureBudget()
-        ->dailyLimit(2000)
-        ->weeklyLimit(10000)
+    $updated = $user->configureAiBudget()
+        ->dailyCostLimitInCents(2000)
+        ->weeklyCostLimitInCents(10000)
         ->save();
 
     expect($updated->daily_limit)->toBe(2000)
@@ -459,23 +459,106 @@ it('can update an existing budget using fluent builder', function () {
         ->and(SpectraBudget::where('budgetable_id', $user->id)->count())->toBe(1);
 });
 
-it('exposes builder attributes via toArray', function () {
+it('builder methods return the builder for chaining', function () {
+    $user = User::create([
+        'name' => 'Test User',
+        'email' => 'builder-chaining@example.com',
+        'password' => 'password',
+    ]);
+
+    $builder = $user->configureAiBudget();
+
+    expect($builder->dailyCostLimitInCents(1000))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->weeklyCostLimitInCents(5000))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->monthlyCostLimitInCents(20000))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->totalCostLimitInCents(100000))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->dailyTokenLimit(500000))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->weeklyTokenLimit(2000000))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->monthlyTokenLimit(5000000))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->totalTokenLimit(10000000))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->dailyRequestLimit(200))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->weeklyRequestLimit(1000))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->monthlyRequestLimit(5000))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->hardLimit())->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->softLimit())->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->warningThresholdPercentage(80))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->criticalThresholdPercentage(95))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->allowProviders(['openai']))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->allowModels(['gpt-4o']))->toBeInstanceOf(BudgetBuilder::class)
+        ->and($builder->name('Test'))->toBeInstanceOf(BudgetBuilder::class);
+});
+
+it('builder toArray reflects all set methods', function () {
     $user = User::create([
         'name' => 'Test User',
         'email' => 'builder-toarray@example.com',
         'password' => 'password',
     ]);
 
-    $builder = $user->configureBudget()
-        ->dailyLimit(1000)
+    $builder = $user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->weeklyCostLimitInCents(5000)
+        ->monthlyCostLimitInCents(20000)
+        ->totalCostLimitInCents(100000)
+        ->dailyTokenLimit(500000)
+        ->weeklyTokenLimit(2000000)
+        ->monthlyTokenLimit(5000000)
+        ->totalTokenLimit(10000000)
+        ->dailyRequestLimit(200)
+        ->weeklyRequestLimit(1000)
+        ->monthlyRequestLimit(5000)
         ->hardLimit()
-        ->warningThreshold(75);
+        ->warningThresholdPercentage(80)
+        ->criticalThresholdPercentage(95)
+        ->allowProviders(['openai', 'anthropic'])
+        ->allowModels(['gpt-4o'])
+        ->name('Test Budget');
 
     expect($builder->toArray())->toBe([
         'daily_limit' => 1000,
+        'weekly_limit' => 5000,
+        'monthly_limit' => 20000,
+        'total_limit' => 100000,
+        'daily_token_limit' => 500000,
+        'weekly_token_limit' => 2000000,
+        'monthly_token_limit' => 5000000,
+        'total_token_limit' => 10000000,
+        'daily_request_limit' => 200,
+        'weekly_request_limit' => 1000,
+        'monthly_request_limit' => 5000,
         'hard_limit' => true,
-        'warning_threshold' => 75,
+        'warning_threshold' => 80,
+        'critical_threshold' => 95,
+        'allowed_providers' => ['openai', 'anthropic'],
+        'allowed_models' => ['gpt-4o'],
+        'name' => 'Test Budget',
     ]);
+});
+
+it('builder save persists budget to database', function () {
+    $user = User::create([
+        'name' => 'Test User',
+        'email' => 'builder-save@example.com',
+        'password' => 'password',
+    ]);
+
+    $budget = $user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->monthlyTokenLimit(5000000)
+        ->dailyRequestLimit(200)
+        ->hardLimit()
+        ->warningThresholdPercentage(75)
+        ->criticalThresholdPercentage(90)
+        ->save();
+
+    expect($budget)->toBeInstanceOf(SpectraBudget::class)
+        ->and($budget->exists)->toBeTrue()
+        ->and($budget->daily_limit)->toBe(1000)
+        ->and($budget->monthly_token_limit)->toBe(5000000)
+        ->and($budget->daily_request_limit)->toBe(200)
+        ->and($budget->hard_limit)->toBeTrue()
+        ->and($budget->warning_threshold)->toBe(75)
+        ->and($budget->critical_threshold)->toBe(90);
 });
 
 it('fluent builder budget works with enforcement', function () {
@@ -485,8 +568,8 @@ it('fluent builder budget works with enforcement', function () {
         'password' => 'password',
     ]);
 
-    $user->configureBudget()
-        ->dailyLimit(100)
+    $user->configureAiBudget()
+        ->dailyCostLimitInCents(100)
         ->hardLimit()
         ->save();
 

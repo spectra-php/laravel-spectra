@@ -26,9 +26,7 @@ export default defineConfig({
       {
         text: 'Core Concepts',
         items: [
-          { text: 'Dashboard', link: '/dashboard' },
           { text: 'Usage', link: '/usage' },
-          { text: 'Providers', link: '/providers' },
           { text: 'Models', link: '/models' },
           { text: 'Pricing', link: '/pricing' },
           { text: 'Costs', link: '/costs' },

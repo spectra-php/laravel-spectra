@@ -10,6 +10,7 @@ import Skeleton from '@/components/Skeleton.vue';
 import StatusCode from '@/components/StatusCode.vue';
 import RequestFilters from '@/components/RequestFilters.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
+import ProviderLogo from '@/components/ProviderLogo.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -182,14 +183,6 @@ const formatUsage = (request) => {
     return { value: formatNumber(request.total_tokens), label: 'tokens' };
 };
 
-const providerLogos = computed(() => {
-    const map = {};
-    for (const p of providers.value) {
-        if (p.logo_svg) map[p.internal_name] = p.logo_svg;
-    }
-    return map;
-});
-
 const usageLabel = computed(() => 'Usage');
 
 onMounted(async () => {
@@ -300,12 +293,11 @@ onUnmounted(() => {
                             >
                                 <td>
                                     <div class="flex items-center gap-2 min-w-0">
-                                        <span
-                                            v-if="providerLogos[request.provider]"
-                                            v-html="providerLogos[request.provider]"
+                                        <ProviderLogo
+                                            :provider="request.provider"
                                             :title="request.provider_display_name || request.provider"
                                             class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
-                                        ></span>
+                                        />
                                         <span class="font-medium text-gray-900 dark:text-white">{{ request.model }}</span>
                                         <span
                                             v-if="request.model_type"

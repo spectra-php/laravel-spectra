@@ -11,12 +11,13 @@ import StatCard from '@/components/StatCard.vue';
 import StatusCode from '@/components/StatusCode.vue';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
+import ProviderLogo from '@/components/ProviderLogo.vue';
 
 const route = useRoute();
 const router = useRouter();
 const { formatNumber, formatCurrency, currencySymbol, formatDuration, formatDurationSeconds, truncate, providerChartColor, apiRequest } = useHelpers();
 const { period, startDate, endDate, periodLabel } = usePeriodQuery();
-const { providers, loadProviders, providerDisplayName, providerLogo } = useProviders();
+const { providers, loadProviders, providerDisplayName } = useProviders();
 const { createBarChart, createLineChart, createDoughnutChart } = useCharts();
 const loading = useLoading();
 
@@ -493,13 +494,12 @@ onUnmounted(() => {
                                 <tr v-for="model in allModels.slice(0, 10)" :key="model.model">
                                     <td>
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <span
-                                                v-if="providerLogo(model.provider)"
-                                                v-html="providerLogo(model.provider)"
+                                            <ProviderLogo
+                                                :provider="model.provider"
                                                 :title="providerDisplayName(model.provider)"
                                                 class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                                 aria-hidden="true"
-                                            ></span>
+                                            />
                                             <span class="max-w-[14rem] truncate font-medium text-gray-900 dark:text-white" :title="model.model">
                                                 {{ model.model }}
                                             </span>
@@ -568,13 +568,12 @@ onUnmounted(() => {
                                 >
                                     <td class="max-w-0">
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <span
-                                                v-if="providerLogo(request.provider)"
-                                                v-html="providerLogo(request.provider)"
+                                            <ProviderLogo
+                                                :provider="request.provider"
                                                 :title="providerDisplayName(request.provider)"
                                                 class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                                 aria-hidden="true"
-                                            ></span>
+                                            />
                                             <span
                                                 class="truncate font-medium text-gray-900 dark:text-white"
                                                 :title="request.model || ''"
@@ -713,13 +712,12 @@ onUnmounted(() => {
                             <tr v-for="model in pagedModels" :key="model.model">
                                 <td>
                                     <div class="flex items-center gap-2 min-w-0">
-                                        <span
-                                            v-if="providerLogo(model.provider)"
-                                            v-html="providerLogo(model.provider)"
+                                        <ProviderLogo
+                                            :provider="model.provider"
                                             :title="providerDisplayName(model.provider)"
                                             class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                             aria-hidden="true"
-                                        ></span>
+                                        />
                                         <span class="max-w-[14rem] truncate font-medium text-gray-900 dark:text-white" :title="model.model">
                                             {{ model.model }}
                                         </span>

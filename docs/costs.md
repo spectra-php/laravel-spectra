@@ -103,7 +103,7 @@ Configure the default tier per provider in `config/spectra.php`. This tier is us
 Override the tier on a per-request basis using `withAITracking`:
 
 ```php
-Http::withAITracking('openai', 'gpt-4o', pricingTier: 'batch')
+Http::withAITracking('openai', 'gpt-4o', ['pricing_tier' => 'batch'])
     ->post('https://api.openai.com/v1/chat/completions', [...]);
 ```
 

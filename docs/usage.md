@@ -60,7 +60,7 @@ If you use Guzzle directly — for example, with a custom HTTP client that bypas
 ```php
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
-use Spectra\Http\GuzzleMiddleware;
+use Spectra\Support\Tracking\GuzzleMiddleware;
 
 $stack = HandlerStack::create();
 $stack->push(GuzzleMiddleware::create('openai', 'gpt-4o'));

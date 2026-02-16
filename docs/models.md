@@ -2,6 +2,21 @@
 
 Every tracked request is classified into a **model type** that determines which metrics are extracted, which pricing formula is applied, and how the request is rendered in the dashboard. The provider's handler automatically detects the model type from the endpoint and response shape, so no additional configuration is needed.
 
+## Supported Providers
+
+- OpenAI
+- Anthropic
+- Google AI
+- Groq
+- xAI
+- OpenRouter
+- Ollama
+- Replicate
+- Cohere
+- Mistral
+
+To support a provider not listed here, see [Custom Providers](/custom-providers).
+
 ## Model Types
 
 <a name="text-completions"></a>
@@ -90,12 +105,4 @@ STT models are priced **per minute** of input audio.
 | Category | Example Models | Reason |
 | --- | --- | --- |
 | Realtime (WebSocket) | gpt-4o-realtime-preview, gpt-4o-mini-realtime-preview | Realtime models use persistent WebSocket connections rather than HTTP request/response cycles |
-| Fine-tuned models | ft:gpt-4o:my-org:custom-suffix | Fine-tuned models use dynamic naming that cannot be matched to pricing data |
 
----
-
-## Provider Reference
-
-Supported providers and their capabilities are documented in [Providers](/providers). Use that page as the single provider support reference.
-
-For provider-specific endpoints and handler coverage, see the per-provider sections in [Providers](/providers).

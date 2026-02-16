@@ -230,12 +230,6 @@ php artisan spectra:rebuild-stats --from=2026-01-01 --to=2026-01-31
   SPECTRA_STORE_RESPONSES=false
   ```
 
-- **Set truncation limits** to cap the size of stored content:
-  ```bash
-  SPECTRA_MAX_PROMPT_LENGTH=5000
-  SPECTRA_MAX_RESPONSE_LENGTH=5000
-  ```
-
 - **Schedule pruning** to prevent unbounded table growth:
   ```shell
   php artisan spectra:prune --hours=168

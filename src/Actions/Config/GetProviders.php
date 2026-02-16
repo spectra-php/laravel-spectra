@@ -18,7 +18,6 @@ class GetProviders
             ->map(fn (string $slug) => new Provider(
                 internal_name: $slug,
                 display_name: $this->providerRegistry->displayName($slug),
-                logo_svg: $this->providerRegistry->logoSvg($slug),
             ))->values();
 
         return new ProvidersResponse(providers: $providers);

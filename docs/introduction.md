@@ -14,7 +14,7 @@ The entire process is transparent to your application code. In most cases, you i
 
 ## Supported Providers
 
-The canonical provider support and capability matrix lives in [Providers](/providers). Use that page as the single reference for which providers and capabilities Spectra currently supports.
+For the full list of supported providers, see [Models](/models#supported-providers).
 
 You can also add support for additional providers by creating a custom provider class. See [Custom Providers](/custom-providers) for details.
 

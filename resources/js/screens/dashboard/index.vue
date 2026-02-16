@@ -10,11 +10,12 @@ import Skeleton from '@/components/Skeleton.vue';
 import StatCard from '@/components/StatCard.vue';
 import StatusCode from '@/components/StatusCode.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
+import ProviderLogo from '@/components/ProviderLogo.vue';
 
 const router = useRouter();
 const { formatNumber, formatCurrency, formatDuration, formatDurationSeconds, truncate, providerClass, providerChartColor, apiRequest } = useHelpers();
 const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery();
-const { providers, loadProviders, providerDisplayName, providerLogo } = useProviders();
+const { providers, loadProviders, providerDisplayName } = useProviders();
 const { createLineChart, createDoughnutChart } = useCharts();
 const loading = useLoading();
 
@@ -395,13 +396,12 @@ onUnmounted(() => {
                                 <tr v-for="model in stats.top_models" :key="model.model">
                                     <td>
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <span
-                                                v-if="providerLogo(model.provider)"
-                                                v-html="providerLogo(model.provider)"
+                                            <ProviderLogo
+                                                :provider="model.provider"
                                                 :title="providerDisplayName(model.provider)"
                                                 class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                                 aria-hidden="true"
-                                            ></span>
+                                            />
                                             <span class="max-w-[14rem] truncate font-medium text-gray-900 dark:text-white" :title="model.model">
                                                 {{ model.model }}
                                             </span>
@@ -462,13 +462,12 @@ onUnmounted(() => {
                                 >
                                     <td class="max-w-0">
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <span
-                                                v-if="providerLogo(request.provider)"
-                                                v-html="providerLogo(request.provider)"
+                                            <ProviderLogo
+                                                :provider="request.provider"
                                                 :title="providerDisplayName(request.provider, request.provider_display_name)"
                                                 class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                                 aria-hidden="true"
-                                            ></span>
+                                            />
                                             <span
                                                 class="truncate font-medium text-gray-900 dark:text-white"
                                                 :title="request.model || ''"

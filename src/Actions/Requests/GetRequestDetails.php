@@ -5,12 +5,10 @@ namespace Spectra\Actions\Requests;
 use Spectra\Data\Responses\RequestDetailsResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Pricing\PricingLookup;
-use Spectra\Support\ProviderRegistry;
 
 class GetRequestDetails
 {
     public function __construct(
-        private readonly ProviderRegistry $providerRegistry,
         private readonly PricingLookup $pricingLookup,
     ) {}
 
@@ -24,7 +22,6 @@ class GetRequestDetails
         $data['prompt'] = $request->prompt;
         $data['response'] = $response;
         $data['tags'] = $request->tags->pluck('name')->toArray();
-        $data['provider_logo_svg'] = $this->providerRegistry->logoSvg($request->provider ?? '');
         $data['model_capabilities'] = $this->pricingLookup->getCapabilities($request->provider ?? '', $request->model);
 
         if ($request->model_type === 'image') {

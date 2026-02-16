@@ -138,8 +138,8 @@ return [
 
         'media' => [
             'enabled' => env('SPECTRA_MEDIA_ENABLED', false),
-            'disk' => env('SPECTRA_MEDIA_DISK', 'local'),
-            'path' => env('SPECTRA_MEDIA_PATH', 'spectra-media'),
+            'disk' => env('SPECTRA_MEDIA_DISK'),
+            'path' => env('SPECTRA_MEDIA_PATH', 'spectra'),
         ],
 
     ],

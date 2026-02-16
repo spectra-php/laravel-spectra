@@ -14,86 +14,86 @@ class BudgetBuilder
         protected Model $budgetable,
     ) {}
 
-    public function dailyLimit(int $cents): static
+    public function dailyCostLimitInCents(int $costInCents): static
     {
-        $this->attributes['daily_limit'] = $cents;
+        $this->attributes['daily_limit'] = $costInCents;
 
         return $this;
     }
 
-    public function weeklyLimit(int $cents): static
+    public function weeklyCostLimitInCents(int $costInCents): static
     {
-        $this->attributes['weekly_limit'] = $cents;
+        $this->attributes['weekly_limit'] = $costInCents;
 
         return $this;
     }
 
-    public function monthlyLimit(int $cents): static
+    public function monthlyCostLimitInCents(int $costInCents): static
     {
-        $this->attributes['monthly_limit'] = $cents;
+        $this->attributes['monthly_limit'] = $costInCents;
 
         return $this;
     }
 
-    public function totalLimit(int $cents): static
+    public function totalCostLimitInCents(int $costInCents): static
     {
-        $this->attributes['total_limit'] = $cents;
+        $this->attributes['total_limit'] = $costInCents;
 
         return $this;
     }
 
-    public function dailyTokenLimit(int $tokens): static
+    public function dailyTokenLimit(int $maxTokens): static
     {
-        $this->attributes['daily_token_limit'] = $tokens;
+        $this->attributes['daily_token_limit'] = $maxTokens;
 
         return $this;
     }
 
-    public function weeklyTokenLimit(int $tokens): static
+    public function weeklyTokenLimit(int $maxTokens): static
     {
-        $this->attributes['weekly_token_limit'] = $tokens;
+        $this->attributes['weekly_token_limit'] = $maxTokens;
 
         return $this;
     }
 
-    public function monthlyTokenLimit(int $tokens): static
+    public function monthlyTokenLimit(int $maxTokens): static
     {
-        $this->attributes['monthly_token_limit'] = $tokens;
+        $this->attributes['monthly_token_limit'] = $maxTokens;
 
         return $this;
     }
 
-    public function totalTokenLimit(int $tokens): static
+    public function totalTokenLimit(int $maxTokens): static
     {
-        $this->attributes['total_token_limit'] = $tokens;
+        $this->attributes['total_token_limit'] = $maxTokens;
 
         return $this;
     }
 
-    public function dailyRequestLimit(int $count): static
+    public function dailyRequestLimit(int $maxRequests): static
     {
-        $this->attributes['daily_request_limit'] = $count;
+        $this->attributes['daily_request_limit'] = $maxRequests;
 
         return $this;
     }
 
-    public function weeklyRequestLimit(int $count): static
+    public function weeklyRequestLimit(int $maxRequests): static
     {
-        $this->attributes['weekly_request_limit'] = $count;
+        $this->attributes['weekly_request_limit'] = $maxRequests;
 
         return $this;
     }
 
-    public function monthlyRequestLimit(int $count): static
+    public function monthlyRequestLimit(int $maxRequests): static
     {
-        $this->attributes['monthly_request_limit'] = $count;
+        $this->attributes['monthly_request_limit'] = $maxRequests;
 
         return $this;
     }
 
-    public function hardLimit(bool $hard = true): static
+    public function hardLimit(bool $enabled = true): static
     {
-        $this->attributes['hard_limit'] = $hard;
+        $this->attributes['hard_limit'] = $enabled;
 
         return $this;
     }
@@ -105,14 +105,14 @@ class BudgetBuilder
         return $this;
     }
 
-    public function warningThreshold(int $percentage): static
+    public function warningThresholdPercentage(int $percentage): static
     {
         $this->attributes['warning_threshold'] = $percentage;
 
         return $this;
     }
 
-    public function criticalThreshold(int $percentage): static
+    public function criticalThresholdPercentage(int $percentage): static
     {
         $this->attributes['critical_threshold'] = $percentage;
 

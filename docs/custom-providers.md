@@ -156,7 +156,7 @@ Add an entry to the `providers` array in `config/spectra.php`:
 
 ```php
 'providers' => [
-    // Keep existing built-in providers (see /providers for current list).
+    // Keep existing built-in providers.
     // ...
 
     // Your custom provider
@@ -398,7 +398,7 @@ AI providers often return generated images and videos as temporary URLs that exp
 ```php
 use Illuminate\Support\Facades\Http;
 use Spectra\Contracts\HasMedia;
-use Spectra\Services\MediaPersister;
+use Spectra\Support\MediaPersister;
 
 class MyImageHandler implements Handler, HasMedia
 {

@@ -14,6 +14,7 @@ import TtsMetrics from './previews/TtsMetrics.vue';
 import SttMetrics from './previews/SttMetrics.vue';
 import VideoMetrics from './previews/VideoMetrics.vue';
 import Breadcrumb from '@/components/Breadcrumb.vue';
+import ProviderLogo from '@/components/ProviderLogo.vue';
 
 const route = useRoute();
 const { spectra, formatNumber, formatCurrency, formatDuration, statusClass, providerClass, apiRequest } = useHelpers();
@@ -118,11 +119,10 @@ onMounted(() => {
                 <div class="stat-card">
                     <div class="stat-label">Provider</div>
                     <div class="mt-1 flex items-center gap-2">
-                        <span
-                            v-if="request.provider_logo_svg"
-                            v-html="request.provider_logo_svg"
+                        <ProviderLogo
+                            :provider="request.provider"
                             class="inline-flex items-center w-5 h-5 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400 shrink-0"
-                        ></span>
+                        />
                         <span class="stat-value text-lg">{{ request.provider_display_name || request.provider }}</span>
                     </div>
                 </div>

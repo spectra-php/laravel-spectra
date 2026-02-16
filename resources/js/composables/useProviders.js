@@ -4,7 +4,7 @@ import { useHelpers } from './useHelpers';
 /**
  * Composable for loading and resolving provider metadata.
  *
- * Provides provider display names, logo SVGs, and chart colors
+ * Provides provider display names and chart colors
  * from the /providers API endpoint.
  */
 export function useProviders() {
@@ -33,15 +33,10 @@ export function useProviders() {
         return providerMetaBySlug.value[provider]?.display_name || fallback || provider;
     };
 
-    const providerLogo = (provider) => {
-        return providerMetaBySlug.value[provider]?.logo_svg || null;
-    };
-
     return {
         providers,
         loadProviders,
         providerMetaBySlug,
         providerDisplayName,
-        providerLogo,
     };
 }

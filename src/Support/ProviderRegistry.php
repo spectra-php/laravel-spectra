@@ -159,19 +159,6 @@ class ProviderRegistry
         return $this->providers[$provider]['name'] ?? ucfirst($provider);
     }
 
-    public function logoSvg(string $provider): ?string
-    {
-        $path = __DIR__.'/../../resources/images/logos/'.$provider.'.svg';
-
-        if (! file_exists($path)) {
-            return null;
-        }
-
-        $svg = file_get_contents($path);
-
-        return $svg !== false ? $svg : null;
-    }
-
     public function slugForProvider(string $providerClass): ?string
     {
         foreach ($this->providers as $slug => $config) {

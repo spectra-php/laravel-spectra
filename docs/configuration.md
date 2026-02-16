@@ -47,8 +47,8 @@ Some AI endpoints return media with expiring URLs — for example, DALL-E images
 'storage' => [
     'media' => [
         'enabled' => env('SPECTRA_MEDIA_ENABLED', false),
-        'disk'    => env('SPECTRA_MEDIA_DISK', 'local'),
-        'path'    => env('SPECTRA_MEDIA_PATH', 'spectra-media'),
+        'disk'    => env('SPECTRA_MEDIA_DISK'),
+        'path'    => env('SPECTRA_MEDIA_PATH', 'spectra'),
     ],
 ],
 ```
@@ -56,8 +56,8 @@ Some AI endpoints return media with expiring URLs — for example, DALL-E images
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `media.enabled` | `bool` | `false` | Enable automatic media download and persistence. |
-| `media.disk` | `string` | `local` | Laravel filesystem disk to store media on. Use `s3` or another cloud disk in production for accessibility across servers. |
-| `media.path` | `string` | `spectra-media` | Directory path within the disk. |
+| `media.disk` | `string\|null` | `null` | Laravel filesystem disk to store media on. `null` uses the default filesystem disk. Use `s3` or another cloud disk in production for accessibility across servers. |
+| `media.path` | `string` | `spectra` | Directory path within the disk. |
 
 > [!NOTE]
 > **Binary data is always stripped from stored responses.** Regardless of whether media persistence is enabled, Spectra replaces inline base64-encoded data with `[stripped]` placeholders before saving responses to the database. This prevents multi-megabyte base64 strings from bloating the `response` column. The following formats are stripped automatically:
@@ -259,11 +259,11 @@ Configure automatic HTTP request interception.
 
 Map provider names to their provider classes. Each provider defines hosts, endpoints, and handlers for detecting and extracting data from AI API responses.
 
-For the canonical built-in provider list and capability matrix, see [Providers](/providers).
+For the full list of built-in providers, see [Models](/models#supported-providers).
 
 ```php
 'providers' => [
-    // Built-in providers are registered by default (see /providers).
+    // Built-in providers are registered by default.
     // Add or override entries as needed.
     'acme' => ['class' => App\Spectra\AcmeProvider::class, 'name' => 'Acme AI'],
 ],
@@ -309,8 +309,8 @@ SPECTRA_STORE_EMBEDDINGS=false
 
 # Media
 SPECTRA_MEDIA_ENABLED=false
-SPECTRA_MEDIA_DISK=local
-SPECTRA_MEDIA_PATH=spectra-media
+SPECTRA_MEDIA_DISK=
+SPECTRA_MEDIA_PATH=spectra
 
 # Queue / persistence mode
 SPECTRA_QUEUE_ENABLED=false

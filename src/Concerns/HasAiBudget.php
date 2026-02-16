@@ -15,7 +15,7 @@ use Spectra\Support\Budget\BudgetEnforcer;
  */
 trait HasAiBudget
 {
-    public function configureBudget(): BudgetBuilder
+    public function configureAiBudget(): BudgetBuilder
     {
         return new BudgetBuilder($this);
     }
@@ -26,26 +26,6 @@ trait HasAiBudget
             ['budgetable_type' => $this->getMorphClass(), 'budgetable_id' => $this->getKey()],
             $attributes
         );
-    }
-
-    public function setDailyBudget(int $cents): SpectraBudget
-    {
-        return $this->setAiBudget(['daily_limit' => $cents]);
-    }
-
-    public function setWeeklyBudget(int $cents): SpectraBudget
-    {
-        return $this->setAiBudget(['weekly_limit' => $cents]);
-    }
-
-    public function setMonthlyBudget(int $cents): SpectraBudget
-    {
-        return $this->setAiBudget(['monthly_limit' => $cents]);
-    }
-
-    public function setTotalBudget(int $cents): SpectraBudget
-    {
-        return $this->setAiBudget(['total_limit' => $cents]);
     }
 
     public function hasExceededBudget(string $provider, string $model): bool

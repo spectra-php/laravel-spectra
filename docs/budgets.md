@@ -21,15 +21,15 @@ The trait provides methods for creating budgets, checking budget status, and que
 <a name="defining-budgets"></a>
 ## Defining Budgets
 
-Use the fluent builder returned by `configureBudget()` to define a budget. Chain the limits you need and call `save()` to persist:
+Use the fluent builder returned by `configureAiBudget()` to define a budget. Chain the limits you need and call `save()` to persist:
 
 ```php
-$user->configureBudget()
-    ->dailyLimit(1000)          // $10/day
-    ->monthlyLimit(20000)       // $200/month
+$user->configureAiBudget()
+    ->dailyCostLimitInCents(1000)          // $10/day
+    ->monthlyCostLimitInCents(20000)       // $200/month
     ->monthlyTokenLimit(5000000)
-    ->warningThreshold(75)
-    ->criticalThreshold(90)
+    ->warningThresholdPercentage(75)
+    ->criticalThresholdPercentage(90)
     ->hardLimit()
     ->save();
 ```
@@ -44,18 +44,18 @@ The builder supports the following chainable methods:
 **Cost limits** (in cents):
 
 ```php
-$user->configureBudget()
-    ->dailyLimit(1000)       // $10/day
-    ->weeklyLimit(5000)      // $50/week
-    ->monthlyLimit(20000)    // $200/month
-    ->totalLimit(500000)     // $5,000 lifetime
+$user->configureAiBudget()
+    ->dailyCostLimitInCents(1000)       // $10/day
+    ->weeklyCostLimitInCents(5000)      // $50/week
+    ->monthlyCostLimitInCents(20000)    // $200/month
+    ->totalCostLimitInCents(500000)     // $5,000 lifetime
     ->save();
 ```
 
 **Token limits:**
 
 ```php
-$user->configureBudget()
+$user->configureAiBudget()
     ->dailyTokenLimit(500000)
     ->weeklyTokenLimit(2000000)
     ->monthlyTokenLimit(5000000)
@@ -66,7 +66,7 @@ $user->configureBudget()
 **Request count limits:**
 
 ```php
-$user->configureBudget()
+$user->configureAiBudget()
     ->dailyRequestLimit(200)
     ->weeklyRequestLimit(1000)
     ->monthlyRequestLimit(5000)
@@ -77,14 +77,14 @@ $user->configureBudget()
 
 ```php
 // Hard limit — blocks requests when exceeded (default)
-$user->configureBudget()
-    ->monthlyLimit(20000)
+$user->configureAiBudget()
+    ->monthlyCostLimitInCents(20000)
     ->hardLimit()
     ->save();
 
 // Soft limit — allows requests but fires warning events
-$user->configureBudget()
-    ->monthlyLimit(20000)
+$user->configureAiBudget()
+    ->monthlyCostLimitInCents(20000)
     ->softLimit()
     ->save();
 ```
@@ -92,10 +92,10 @@ $user->configureBudget()
 **Alert thresholds** (percentage 0–100):
 
 ```php
-$user->configureBudget()
-    ->monthlyLimit(20000)
-    ->warningThreshold(75)     // Fire event at 75% usage
-    ->criticalThreshold(90)    // Fire event at 90% usage
+$user->configureAiBudget()
+    ->monthlyCostLimitInCents(20000)
+    ->warningThresholdPercentage(75)     // Fire event at 75% usage
+    ->criticalThresholdPercentage(90)    // Fire event at 90% usage
     ->save();
 ```
 
@@ -104,8 +104,8 @@ Setting either threshold to `0` disables it. The defaults are 80% (warning) and 
 **Provider and model restrictions:**
 
 ```php
-$user->configureBudget()
-    ->monthlyLimit(20000)
+$user->configureAiBudget()
+    ->monthlyCostLimitInCents(20000)
     ->allowProviders(['openai', 'anthropic'])
     ->allowModels(['gpt-4o', 'claude-sonnet-4-20250514'])
     ->save();
@@ -116,32 +116,10 @@ When `allowProviders` or `allowModels` is set, any request to a provider or mode
 **Named budgets:**
 
 ```php
-$user->configureBudget()
+$user->configureAiBudget()
     ->name('Production Budget')
-    ->monthlyLimit(20000)
+    ->monthlyCostLimitInCents(20000)
     ->save();
-```
-
-<a name="shorthand-methods"></a>
-### Shorthand Methods
-
-For simple budgets with a single limit, use the direct setter methods instead of the builder:
-
-```php
-$user->setDailyBudget(1000);     // $10/day
-$user->setWeeklyBudget(5000);    // $50/week
-$user->setMonthlyBudget(20000);  // $200/month
-$user->setTotalBudget(500000);   // $5,000 lifetime
-```
-
-You can also pass an array directly:
-
-```php
-$user->setAiBudget([
-    'daily_limit' => 1000,
-    'monthly_limit' => 20000,
-    'hard_limit' => true,
-]);
 ```
 
 <a name="checking-budget-status"></a>
@@ -255,10 +233,10 @@ Event::listen(BudgetExceeded::class, function ($event) {
 
 | Method | Limit | Type | Description |
 | --- | --- | --- | --- |
-| `dailyLimit()` | `daily_limit` | Cost (cents) | Maximum daily spend |
-| `weeklyLimit()` | `weekly_limit` | Cost (cents) | Maximum weekly spend |
-| `monthlyLimit()` | `monthly_limit` | Cost (cents) | Maximum monthly spend |
-| `totalLimit()` | `total_limit` | Cost (cents) | Maximum lifetime spend |
+| `dailyCostLimitInCents()` | `daily_limit` | Cost (cents) | Maximum daily spend |
+| `weeklyCostLimitInCents()` | `weekly_limit` | Cost (cents) | Maximum weekly spend |
+| `monthlyCostLimitInCents()` | `monthly_limit` | Cost (cents) | Maximum monthly spend |
+| `totalCostLimitInCents()` | `total_limit` | Cost (cents) | Maximum lifetime spend |
 | `dailyTokenLimit()` | `daily_token_limit` | Tokens | Maximum daily token usage (prompt + completion) |
 | `weeklyTokenLimit()` | `weekly_token_limit` | Tokens | Maximum weekly token usage |
 | `monthlyTokenLimit()` | `monthly_token_limit` | Tokens | Maximum monthly token usage |

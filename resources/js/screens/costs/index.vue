@@ -7,10 +7,11 @@ import { useCharts } from '@/composables/useCharts';
 import { useLoading } from '@/composables/useLoading';
 import Skeleton from '@/components/Skeleton.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
+import ProviderLogo from '@/components/ProviderLogo.vue';
 
 const { formatNumber, formatCurrency, currencySymbol, providerChartColor, apiRequest } = useHelpers();
 const { period, startDate, endDate, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery();
-const { providers, loadProviders, providerDisplayName, providerLogo } = useProviders();
+const { providers, loadProviders, providerDisplayName } = useProviders();
 const { createLineChart, createDoughnutChart } = useCharts();
 const loading = useLoading();
 
@@ -265,13 +266,12 @@ onUnmounted(() => {
                                 <tr v-for="model in stats.costs_by_model" :key="model.model + ':' + (model.model_type || 'text')">
                                     <td>
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <span
-                                                v-if="providerLogo(model.provider)"
-                                                v-html="providerLogo(model.provider)"
+                                            <ProviderLogo
+                                                :provider="model.provider"
                                                 :title="providerDisplayName(model.provider)"
                                                 class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                                 aria-hidden="true"
-                                            ></span>
+                                            />
                                             <span class="font-medium text-gray-900 dark:text-white truncate" :title="model.model">{{ model.model }}</span>
                                             <span
                                                 v-if="model.model_type"
