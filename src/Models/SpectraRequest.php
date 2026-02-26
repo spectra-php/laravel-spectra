@@ -2,7 +2,6 @@
 
 namespace Spectra\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -167,8 +166,7 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    #[Scope]
-    protected function withTag(Builder $query, string $tag): Builder
+    public function scopeWithTag(Builder $query, string $tag): Builder
     {
         return $query->whereHas('tags', function ($q) use ($tag) {
             $q->where('name', $tag);
@@ -180,8 +178,7 @@ class SpectraRequest extends Model
      * @param  array<int, string>  $tags
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    #[Scope]
-    protected function withAnyTags(Builder $query, array $tags): Builder
+    public function scopeWithAnyTags(Builder $query, array $tags): Builder
     {
         return $query->whereHas('tags', function ($q) use ($tags) {
             $q->whereIn('name', $tags);
@@ -210,8 +207,7 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    #[Scope]
-    protected function provider(Builder $query, string $provider): Builder
+    public function scopeProvider(Builder $query, string $provider): Builder
     {
         return $query->where('provider', $provider);
     }
@@ -220,8 +216,7 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    #[Scope]
-    protected function model(Builder $query, string $model): Builder
+    public function scopeModel(Builder $query, string $model): Builder
     {
         return $query->where('model', $model);
     }
@@ -230,8 +225,7 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    #[Scope]
-    protected function successful(Builder $query): Builder
+    public function scopeSuccessful(Builder $query): Builder
     {
         return $query->whereBetween('status_code', [200, 299]);
     }
@@ -240,8 +234,7 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    #[Scope]
-    protected function failed(Builder $query): Builder
+    public function scopeFailed(Builder $query): Builder
     {
         return $query->where(function (Builder $q) {
             $q->where('status_code', '>=', 400)
@@ -253,8 +246,7 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    #[Scope]
-    protected function modelType(Builder $query, string $modelType): Builder
+    public function scopeModelType(Builder $query, string $modelType): Builder
     {
         return $query->where('model_type', $modelType);
     }
@@ -263,8 +255,7 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    #[Scope]
-    protected function finishReason(Builder $query, string $reason): Builder
+    public function scopeFinishReason(Builder $query, string $reason): Builder
     {
         return $query->where('finish_reason', $reason);
     }
@@ -273,8 +264,7 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    #[Scope]
-    protected function withToolCalls(Builder $query): Builder
+    public function scopeWithToolCalls(Builder $query): Builder
     {
         return $query->where('has_tool_calls', true);
     }
@@ -283,8 +273,7 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    #[Scope]
-    protected function forTrackable(Builder $query, Model $trackable): Builder
+    public function scopeForTrackable(Builder $query, Model $trackable): Builder
     {
         return $query->where('trackable_type', $trackable->getMorphClass())
             ->where('trackable_id', $trackable->getKey());
