@@ -178,17 +178,11 @@ class StreamingTracker
         }
     }
 
-    /**
-     * @param  iterable<mixed>  $stream
-     */
-    /**
-     * @param  iterable<mixed>  $stream
-     */
-    protected function detectProvider(iterable $stream): string
+    protected function detectProvider(mixed $stream): string
     {
-        $className = is_object($stream) ? get_class($stream) : null;
+        if (is_object($stream)) {
+            $className = get_class($stream);
 
-        if ($className !== null) { // @phpstan-ignore notIdentical.alwaysFalse
             if (isset(self::$streamClassMap[$className])) {
                 return self::$streamClassMap[$className];
             }
