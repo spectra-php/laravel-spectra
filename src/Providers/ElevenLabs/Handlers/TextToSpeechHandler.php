@@ -45,12 +45,6 @@ class TextToSpeechHandler implements ExtractsModelFromRequest, Handler, HasMedia
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
-    {
-        return null;
-    }
-
-    /** @param  array<string, mixed>  $response */
     public function extractResponse(array $response): ?string
     {
         return '[audio]';

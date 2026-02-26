@@ -40,16 +40,6 @@ class SpeechHandler implements Handler, HasMedia, ReturnsBinaryResponse
         );
     }
 
-    /**
-     * TTS response is binary audio, not JSON — model is not available.
-     *
-     * @param  array<string, mixed>  $response
-     */
-    public function extractModel(array $response): ?string
-    {
-        return null;
-    }
-
     /** @param  array<string, mixed>  $response */
     public function extractResponse(array $response): ?string
     {

@@ -4,6 +4,7 @@ namespace Spectra\Providers\Google\Handlers;
 
 use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromRequest;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasMedia;
 use Spectra\Contracts\MatchesResponseShape;
@@ -14,7 +15,7 @@ use Spectra\Enums\ModelType;
 use Spectra\Providers\Google\ExtractsModelFromGoogleEndpoint;
 use Spectra\Support\MediaPersister;
 
-class ImageHandler implements ExtractsModelFromRequest, Handler, HasMedia, MatchesResponseShape
+class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse, Handler, HasMedia, MatchesResponseShape
 {
     use ExtractsModelFromGoogleEndpoint;
     use MatchesParametricEndpoints;
@@ -68,7 +69,7 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasMedia, Match
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['modelVersion'] ?? null;
     }

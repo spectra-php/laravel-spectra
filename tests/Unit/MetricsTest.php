@@ -6,15 +6,13 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Data\VideoMetrics;
 
-// --- TokenMetrics ---
-
 it('creates token metrics with defaults', function () {
     $tokens = new TokenMetrics;
 
-    expect($tokens->promptTokens)->toBe(0);
-    expect($tokens->completionTokens)->toBe(0);
-    expect($tokens->cachedTokens)->toBe(0);
-    expect($tokens->reasoningTokens)->toBe(0);
+    expect($tokens->promptTokens)->toBe(0)
+        ->and($tokens->completionTokens)->toBe(0)
+        ->and($tokens->cachedTokens)->toBe(0)
+        ->and($tokens->reasoningTokens)->toBe(0);
 });
 
 it('creates token metrics with values', function () {
@@ -24,10 +22,10 @@ it('creates token metrics with values', function () {
         cachedTokens: 10,
     );
 
-    expect($tokens->promptTokens)->toBe(100);
-    expect($tokens->completionTokens)->toBe(50);
-    expect($tokens->cachedTokens)->toBe(10);
-    expect($tokens->reasoningTokens)->toBe(0);
+    expect($tokens->promptTokens)->toBe(100)
+        ->and($tokens->completionTokens)->toBe(50)
+        ->and($tokens->cachedTokens)->toBe(10)
+        ->and($tokens->reasoningTokens)->toBe(0);
 });
 
 it('creates token metrics with reasoning tokens', function () {
@@ -38,10 +36,10 @@ it('creates token metrics with reasoning tokens', function () {
         reasoningTokens: 25,
     );
 
-    expect($tokens->promptTokens)->toBe(100);
-    expect($tokens->completionTokens)->toBe(50);
-    expect($tokens->cachedTokens)->toBe(10);
-    expect($tokens->reasoningTokens)->toBe(25);
+    expect($tokens->promptTokens)->toBe(100)
+        ->and($tokens->completionTokens)->toBe(50)
+        ->and($tokens->cachedTokens)->toBe(10)
+        ->and($tokens->reasoningTokens)->toBe(25);
 });
 
 it('converts token metrics to array', function () {
@@ -83,8 +81,6 @@ it('token metrics is readonly', function () {
     expect(fn () => $tokens->promptTokens = 200)->toThrow(Error::class);
 });
 
-// --- ImageMetrics ---
-
 it('creates image metrics with defaults', function () {
     $image = new ImageMetrics;
 
@@ -109,27 +105,25 @@ it('image metrics is readonly', function () {
     expect(fn () => $image->count = 5)->toThrow(Error::class);
 });
 
-// --- AudioMetrics ---
-
 it('creates audio metrics with defaults', function () {
     $audio = new AudioMetrics;
 
-    expect($audio->durationSeconds)->toBeNull();
-    expect($audio->inputCharacters)->toBeNull();
+    expect($audio->durationSeconds)->toBeNull()
+        ->and($audio->inputCharacters)->toBeNull();
 });
 
 it('creates audio metrics with duration', function () {
     $audio = new AudioMetrics(durationSeconds: 12.5);
 
-    expect($audio->durationSeconds)->toBe(12.5);
-    expect($audio->inputCharacters)->toBeNull();
+    expect($audio->durationSeconds)->toBe(12.5)
+        ->and($audio->inputCharacters)->toBeNull();
 });
 
 it('creates audio metrics with characters', function () {
     $audio = new AudioMetrics(inputCharacters: 250);
 
-    expect($audio->durationSeconds)->toBeNull();
-    expect($audio->inputCharacters)->toBe(250);
+    expect($audio->durationSeconds)->toBeNull()
+        ->and($audio->inputCharacters)->toBe(250);
 });
 
 it('converts audio metrics to array with only non-null values', function () {
@@ -159,8 +153,6 @@ it('audio metrics is readonly', function () {
     expect(fn () => $audio->durationSeconds = 2.0)->toThrow(Error::class);
 });
 
-// --- VideoMetrics ---
-
 it('creates video metrics with defaults', function () {
     $video = new VideoMetrics;
 
@@ -185,15 +177,13 @@ it('video metrics is readonly', function () {
     expect(fn () => $video->count = 3)->toThrow(Error::class);
 });
 
-// --- Metrics Container ---
-
 it('creates metrics container with defaults', function () {
     $metrics = new Metrics;
 
-    expect($metrics->tokens)->toBeNull();
-    expect($metrics->image)->toBeNull();
-    expect($metrics->audio)->toBeNull();
-    expect($metrics->video)->toBeNull();
+    expect($metrics->tokens)->toBeNull()
+        ->and($metrics->image)->toBeNull()
+        ->and($metrics->audio)->toBeNull()
+        ->and($metrics->video)->toBeNull();
 });
 
 it('creates metrics with tokens only', function () {
@@ -201,11 +191,11 @@ it('creates metrics with tokens only', function () {
         tokens: new TokenMetrics(promptTokens: 100, completionTokens: 50),
     );
 
-    expect($metrics->tokens)->toBeInstanceOf(TokenMetrics::class);
-    expect($metrics->tokens->promptTokens)->toBe(100);
-    expect($metrics->image)->toBeNull();
-    expect($metrics->audio)->toBeNull();
-    expect($metrics->video)->toBeNull();
+    expect($metrics->tokens)->toBeInstanceOf(TokenMetrics::class)
+        ->and($metrics->tokens->promptTokens)->toBe(100)
+        ->and($metrics->image)->toBeNull()
+        ->and($metrics->audio)->toBeNull()
+        ->and($metrics->video)->toBeNull();
 });
 
 it('creates metrics with image only', function () {
@@ -213,9 +203,9 @@ it('creates metrics with image only', function () {
         image: new ImageMetrics(count: 3),
     );
 
-    expect($metrics->tokens)->toBeNull();
-    expect($metrics->image)->toBeInstanceOf(ImageMetrics::class);
-    expect($metrics->image->count)->toBe(3);
+    expect($metrics->tokens)->toBeNull()
+        ->and($metrics->image)->toBeInstanceOf(ImageMetrics::class)
+        ->and($metrics->image->count)->toBe(3);
 });
 
 it('creates metrics with audio only', function () {
@@ -223,9 +213,9 @@ it('creates metrics with audio only', function () {
         audio: new AudioMetrics(inputCharacters: 250),
     );
 
-    expect($metrics->tokens)->toBeNull();
-    expect($metrics->audio)->toBeInstanceOf(AudioMetrics::class);
-    expect($metrics->audio->inputCharacters)->toBe(250);
+    expect($metrics->tokens)->toBeNull()
+        ->and($metrics->audio)->toBeInstanceOf(AudioMetrics::class)
+        ->and($metrics->audio->inputCharacters)->toBe(250);
 });
 
 it('creates metrics with multiple types', function () {
@@ -234,10 +224,10 @@ it('creates metrics with multiple types', function () {
         audio: new AudioMetrics(durationSeconds: 3.45),
     );
 
-    expect($metrics->tokens->promptTokens)->toBe(50);
-    expect($metrics->audio->durationSeconds)->toBe(3.45);
-    expect($metrics->image)->toBeNull();
-    expect($metrics->video)->toBeNull();
+    expect($metrics->tokens->promptTokens)->toBe(50)
+        ->and($metrics->audio->durationSeconds)->toBe(3.45)
+        ->and($metrics->image)->toBeNull()
+        ->and($metrics->video)->toBeNull();
 });
 
 it('metrics container is readonly', function () {

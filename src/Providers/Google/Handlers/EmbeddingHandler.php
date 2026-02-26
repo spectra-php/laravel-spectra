@@ -89,17 +89,6 @@ class EmbeddingHandler implements ExtractsModelFromRequest, Handler, MatchesResp
         return null;
     }
 
-    /**
-     * The embedContent response does not include a model field.
-     * The model is only available from the request URL path.
-     *
-     * @param  array<string, mixed>  $response
-     */
-    public function extractModel(array $response): ?string
-    {
-        return null;
-    }
-
     /** @param  array<string, mixed>  $response */
     public function extractResponse(array $response): ?string
     {

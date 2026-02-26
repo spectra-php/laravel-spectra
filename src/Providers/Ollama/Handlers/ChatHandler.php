@@ -3,6 +3,7 @@
 namespace Spectra\Providers\Ollama\Handlers;
 
 use Spectra\Concerns\MatchesEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
 use Spectra\Contracts\MatchesResponseShape;
@@ -13,7 +14,7 @@ use Spectra\Enums\ModelType;
 use Spectra\Providers\Ollama\Streaming\ChatStreaming;
 use Spectra\Support\Tracking\StreamHandler;
 
-class ChatHandler implements Handler, HasFinishReason, MatchesResponseShape, StreamsResponse
+class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, MatchesResponseShape, StreamsResponse
 {
     use MatchesEndpoints;
 
@@ -42,7 +43,7 @@ class ChatHandler implements Handler, HasFinishReason, MatchesResponseShape, Str
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

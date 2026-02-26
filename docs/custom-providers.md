@@ -50,12 +50,13 @@ The `MatchesEndpoints` trait provides the `matchesEndpoint()` method required by
 namespace App\Spectra\Handlers;
 
 use Spectra\Concerns\MatchesEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 
-class MistralChatHandler implements Handler
+class MistralChatHandler implements Handler, ExtractsModelFromResponse
 {
     use MatchesEndpoints;
 
@@ -91,7 +92,7 @@ class MistralChatHandler implements Handler
      * Extract the model identifier from the response.
      * This is used for pricing lookup and dashboard display.
      */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }
@@ -257,21 +258,34 @@ class MyTextHandler implements Handler, MatchesResponseShape
 }
 ```
 
+### `ExtractsModelFromResponse`
+
+Most AI providers include the model name in the JSON response body. Implement `ExtractsModelFromResponse` so Spectra can read the model identifier for pricing lookup and dashboard display. This is the most common model extraction approach — implement it on any handler whose response body contains a model field:
+
+```php
+use Spectra\Contracts\ExtractsModelFromResponse;
+
+class MyChatHandler implements Handler, ExtractsModelFromResponse
+{
+    public function extractModelFromResponse(array $response): ?string
+    {
+        return $response['model'] ?? null;
+    }
+}
+```
+
+> [!NOTE]
+> `extractModelFromResponse()` is not part of the base `Handler` interface — it is opt-in via `ExtractsModelFromResponse`. If your handler does not implement this interface, Spectra falls back to `ExtractsModelFromRequest` (below) or the `model` field in the request body.
+
 ### `ExtractsModelFromRequest`
 
-Some providers embed the model name in the URL path rather than in the response body (for example, Google's `/v1/models/{model}:generateContent`). When a handler's `extractModel()` returns `null`, the provider falls back to checking if the handler implements `ExtractsModelFromRequest` to extract the model from the request data or endpoint path:
+Some providers embed the model name in the URL path rather than in the response body (for example, Google's `/v1/models/{model}:generateContent` or fal.ai's `/fal-ai/flux/dev`). Implement `ExtractsModelFromRequest` to extract the model from the request data or endpoint path. Handlers that implement this interface typically do not implement `ExtractsModelFromResponse`, although both can be combined when the model appears in both the request URL and the response body:
 
 ```php
 use Spectra\Contracts\ExtractsModelFromRequest;
 
 class MyHandler implements Handler, ExtractsModelFromRequest
 {
-    public function extractModel(array $response): ?string
-    {
-        // Response doesn't include the model name
-        return null;
-    }
-
     public function extractModelFromRequest(
         array $requestData,
         string $endpoint
@@ -324,17 +338,19 @@ class MyHandler implements Handler, HasExpiration
 
 ### `ReturnsBinaryResponse`
 
-Some endpoints return binary data instead of JSON (for example, text-to-speech endpoints return raw audio bytes). Implement this marker interface so Spectra knows not to JSON-decode the response body. The handler's `extractModel()` will receive an empty array since the response is not parseable:
+Some endpoints return binary data instead of JSON (for example, text-to-speech endpoints return raw audio bytes). Implement this marker interface so Spectra knows not to JSON-decode the response body. Since binary responses cannot contain a model name, these handlers typically implement `ExtractsModelFromRequest` instead of `ExtractsModelFromResponse`:
 
 ```php
+use Spectra\Contracts\ExtractsModelFromRequest;
 use Spectra\Contracts\ReturnsBinaryResponse;
 
-class MySpeechHandler implements Handler, ReturnsBinaryResponse
+class MySpeechHandler implements Handler, ExtractsModelFromRequest, ReturnsBinaryResponse
 {
-    public function extractModel(array $response): ?string
-    {
-        // Binary response — model must be extracted from request data instead
-        return null;
+    public function extractModelFromRequest(
+        array $requestData,
+        string $endpoint
+    ): ?string {
+        return $requestData['model'] ?? null;
     }
 
     public function extractResponse(array $response): ?string
@@ -584,7 +600,7 @@ it('extracts metrics from Mistral chat response', function () {
 
     expect($metrics->tokens->promptTokens)->toBe(10);
     expect($metrics->tokens->completionTokens)->toBe(5);
-    expect($handler->extractModel($response))->toBe('mistral-large-latest');
+    expect($handler->extractModelFromResponse($response))->toBe('mistral-large-latest');
     expect($handler->extractResponse($response))->toBe('Hello!');
 });
 ```

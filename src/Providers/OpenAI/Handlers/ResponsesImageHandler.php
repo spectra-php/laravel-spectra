@@ -3,6 +3,7 @@
 namespace Spectra\Providers\OpenAI\Handlers;
 
 use Spectra\Concerns\MatchesEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
 use Spectra\Contracts\HasMedia;
@@ -13,7 +14,7 @@ use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Support\MediaPersister;
 
-class ResponsesImageHandler implements Handler, HasFinishReason, HasMedia, MatchesResponseShape
+class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, HasMedia, MatchesResponseShape
 {
     use MatchesEndpoints;
 
@@ -56,7 +57,7 @@ class ResponsesImageHandler implements Handler, HasFinishReason, HasMedia, Match
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

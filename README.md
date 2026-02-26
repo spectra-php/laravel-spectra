@@ -4,7 +4,11 @@
 
 <div align="center">
 
-[![Latest Stable Version](http://poser.pugx.org/spectra-php/laravel-spectra/v)](https://packagist.org/packages/spectra-php/laravel-spectra) [![Total Downloads](http://poser.pugx.org/spectra-php/laravel-spectra/downloads)](https://packagist.org/packages/spectra-php/laravel-spectra) [![Latest Unstable Version](http://poser.pugx.org/spectra-php/laravel-spectra/v/unstable)](https://packagist.org/packages/spectra-php/laravel-spectra) [![License](http://poser.pugx.org/spectra-php/laravel-spectra/license)](https://packagist.org/packages/spectra-php/laravel-spectra) [![PHP Version Require](http://poser.pugx.org/spectra-php/laravel-spectra/require/php)](https://packagist.org/packages/spectra-php/laravel-spectra)
+<p align="center">
+<a href="https://github.com/spectra-php/laravel-spectra/actions"><img src="https://github.com/spectra-php/laravel-spectra/workflows/tests/badge.svg" alt="Build Status"></a>
+<a href="https://packagist.org/packages/spectra-php/laravel-spectra"><img src="https://img.shields.io/packagist/v/spectra-php/laravel-spectra" alt="Spectra Stable Version"></a>
+<a href="https://packagist.org/packages/spectra-php/laravel-spectra"><img src="https://img.shields.io/packagist/l/spectra-php/laravel-spectra" alt="License"></a>
+</p>
 
 </div>
 

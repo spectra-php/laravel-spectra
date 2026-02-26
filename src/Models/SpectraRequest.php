@@ -2,11 +2,15 @@
 
 namespace Spectra\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Spectra\Database\Factories\SpectraRequestFactory;
 use Spectra\Support\ProviderRegistry;
 
 /**
@@ -86,9 +90,17 @@ use Spectra\Support\ProviderRegistry;
  */
 class SpectraRequest extends Model
 {
+    /** @use HasFactory<SpectraRequestFactory> */
+    use HasFactory;
+
     use HasUuids;
 
     public $timestamps = false;
+
+    protected static function newFactory(): SpectraRequestFactory
+    {
+        return SpectraRequestFactory::new();
+    }
 
     protected $guarded = [];
 
@@ -155,7 +167,8 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    public function scopeWithTag(Builder $query, string $tag): Builder
+    #[Scope]
+    protected function withTag(Builder $query, string $tag): Builder
     {
         return $query->whereHas('tags', function ($q) use ($tag) {
             $q->where('name', $tag);
@@ -167,7 +180,8 @@ class SpectraRequest extends Model
      * @param  array<int, string>  $tags
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    public function scopeWithAnyTags(Builder $query, array $tags): Builder
+    #[Scope]
+    protected function withAnyTags(Builder $query, array $tags): Builder
     {
         return $query->whereHas('tags', function ($q) use ($tags) {
             $q->whereIn('name', $tags);
@@ -196,7 +210,8 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    public function scopeProvider(Builder $query, string $provider): Builder
+    #[Scope]
+    protected function provider(Builder $query, string $provider): Builder
     {
         return $query->where('provider', $provider);
     }
@@ -205,29 +220,28 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    public function scopeModel(Builder $query, string $model): Builder
+    #[Scope]
+    protected function model(Builder $query, string $model): Builder
     {
         return $query->where('model', $model);
     }
 
     /**
-     * Scope to filter successful requests (2xx status codes).
-     *
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    public function scopeSuccessful(Builder $query): Builder
+    #[Scope]
+    protected function successful(Builder $query): Builder
     {
         return $query->whereBetween('status_code', [200, 299]);
     }
 
     /**
-     * Scope to filter failed requests (4xx/5xx or null status codes).
-     *
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    public function scopeFailed(Builder $query): Builder
+    #[Scope]
+    protected function failed(Builder $query): Builder
     {
         return $query->where(function (Builder $q) {
             $q->where('status_code', '>=', 400)
@@ -239,7 +253,8 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    public function scopeModelType(Builder $query, string $modelType): Builder
+    #[Scope]
+    protected function modelType(Builder $query, string $modelType): Builder
     {
         return $query->where('model_type', $modelType);
     }
@@ -248,7 +263,8 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    public function scopeFinishReason(Builder $query, string $reason): Builder
+    #[Scope]
+    protected function finishReason(Builder $query, string $reason): Builder
     {
         return $query->where('finish_reason', $reason);
     }
@@ -257,7 +273,8 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    public function scopeWithToolCalls(Builder $query): Builder
+    #[Scope]
+    protected function withToolCalls(Builder $query): Builder
     {
         return $query->where('has_tool_calls', true);
     }
@@ -266,61 +283,78 @@ class SpectraRequest extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
      */
-    public function scopeForTrackable(Builder $query, Model $trackable): Builder
+    #[Scope]
+    protected function forTrackable(Builder $query, Model $trackable): Builder
     {
         return $query->where('trackable_type', $trackable->getMorphClass())
             ->where('trackable_id', $trackable->getKey());
     }
 
-    public function getPromptAttribute(): ?string
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function prompt(): Attribute
     {
-        return $this->response['prompt'] ?? null;
-    }
-
-    public function getResponseTextAttribute(): ?string
-    {
-        return $this->response['response'] ?? null;
-    }
-
-    public function getTotalTokensAttribute(): int
-    {
-        return $this->prompt_tokens + $this->completion_tokens;
-    }
-
-    public function getFormattedCreatedAtAttribute(): ?string
-    {
-        return $this->created_at?->format(config('spectra.dashboard.date_format', 'M j, Y g:i:s A'));
-    }
-
-    public function getFormattedExpiresAtAttribute(): ?string
-    {
-        return $this->expires_at?->format(config('spectra.dashboard.date_format', 'M j, Y g:i:s A'));
-    }
-
-    public function getCreatedAtHumanAttribute(): ?string
-    {
-        return $this->created_at?->diffForHumans();
+        return Attribute::get(fn () => $this->response['prompt'] ?? null);
     }
 
     /**
-     * Get the provider display name from the registry config.
+     * @return Attribute<string|null, never>
      */
-    public function getProviderDisplayNameAttribute(): ?string
+    protected function responseText(): Attribute
     {
-        if ($this->provider === null) {
-            return null;
-        }
-
-        return app(ProviderRegistry::class)->displayName($this->provider);
+        return Attribute::get(fn () => $this->response['response'] ?? null);
     }
 
     /**
-     * Get the total cost in dollars.
-     * Note: total_cost_in_cents is stored in cents.
+     * @return Attribute<int, never>
      */
-    public function getTotalCostInDollarsAttribute(): float
+    protected function totalTokens(): Attribute
     {
-        return $this->total_cost_in_cents / 100;
+        return Attribute::get(fn () => $this->prompt_tokens + $this->completion_tokens);
+    }
+
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function formattedCreatedAt(): Attribute
+    {
+        return Attribute::get(fn () => $this->created_at?->format(config('spectra.dashboard.date_format', 'M j, Y g:i:s A')));
+    }
+
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function formattedExpiresAt(): Attribute
+    {
+        return Attribute::get(fn () => $this->expires_at?->format(config('spectra.dashboard.date_format', 'M j, Y g:i:s A')));
+    }
+
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function createdAtHuman(): Attribute
+    {
+        return Attribute::get(fn () => $this->created_at?->diffForHumans());
+    }
+
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function providerDisplayName(): Attribute
+    {
+        return Attribute::get(fn () => $this->provider !== null
+            ? app(ProviderRegistry::class)->displayName($this->provider)
+            : null
+        );
+    }
+
+    /**
+     * @return Attribute<float, never>
+     */
+    protected function totalCostInDollars(): Attribute
+    {
+        return Attribute::get(fn () => $this->total_cost_in_cents / 100);
     }
 
     public function isSuccessful(): bool

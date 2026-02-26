@@ -1,0 +1,18 @@
+{
+    "images": [
+        {
+            "url": "https://v3.fal.media/files/rabbit/YYbm6L3DaXYHDL1_A4OaL.jpeg",
+            "width": 1024,
+            "height": 1024,
+            "content_type": "image/jpeg"
+        }
+    ],
+    "timings": {
+        "inference": 2.507048434985336
+    },
+    "seed": 15860307465884635512,
+    "has_nsfw_concepts": [
+        false
+    ],
+    "prompt": "a cat"
+}

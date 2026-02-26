@@ -3,6 +3,7 @@
 namespace Spectra\Providers\XAi\Handlers;
 
 use Illuminate\Support\Facades\Http;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasMedia;
 use Spectra\Contracts\SkipsResponse;
@@ -11,7 +12,7 @@ use Spectra\Data\VideoMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Support\MediaPersister;
 
-class VideoHandler implements Handler, HasMedia, SkipsResponse
+class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, SkipsResponse
 {
     public function modelType(): ModelType
     {
@@ -53,7 +54,7 @@ class VideoHandler implements Handler, HasMedia, SkipsResponse
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

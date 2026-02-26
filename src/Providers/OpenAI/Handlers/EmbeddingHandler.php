@@ -3,13 +3,14 @@
 namespace Spectra\Providers\OpenAI\Handlers;
 
 use Spectra\Concerns\MatchesEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\MatchesResponseShape;
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 
-class EmbeddingHandler implements Handler, MatchesResponseShape
+class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesResponseShape
 {
     use MatchesEndpoints;
 
@@ -40,7 +41,7 @@ class EmbeddingHandler implements Handler, MatchesResponseShape
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

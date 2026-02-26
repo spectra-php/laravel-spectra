@@ -546,6 +546,7 @@ return [
             'replicate' => \Spectra\Pricing\ReplicatePricing::class,
             'cohere' => \Spectra\Pricing\CoherePricing::class,
             'groq' => \Spectra\Pricing\GroqPricing::class,
+            'falai' => \Spectra\Pricing\FalAiPricing::class,
         ],
 
     ],
@@ -599,7 +600,7 @@ return [
         |
         */
 
-        'default_model' => 'gpt-4',
+        'default_model' => 'gpt-5.2',
 
     ],
 
@@ -684,6 +685,7 @@ return [
         'elevenlabs' => ['class' => Spectra\Providers\ElevenLabs\ElevenLabs::class, 'name' => 'ElevenLabs'],
         'replicate' => ['class' => Spectra\Providers\Replicate\Replicate::class, 'name' => 'Replicate'],
         'mistral' => ['class' => Spectra\Providers\Mistral\Mistral::class, 'name' => 'Mistral'],
+        'falai' => ['class' => Spectra\Providers\FalAi\FalAi::class, 'name' => 'fal.ai'],
     ],
 
     /*

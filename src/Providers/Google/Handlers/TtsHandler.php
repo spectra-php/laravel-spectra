@@ -4,6 +4,7 @@ namespace Spectra\Providers\Google\Handlers;
 
 use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromRequest;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasMedia;
 use Spectra\Contracts\MatchesResponseShape;
@@ -14,7 +15,7 @@ use Spectra\Enums\ModelType;
 use Spectra\Providers\Google\ExtractsModelFromGoogleEndpoint;
 use Spectra\Support\MediaPersister;
 
-class TtsHandler implements ExtractsModelFromRequest, Handler, HasMedia, MatchesResponseShape
+class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse, Handler, HasMedia, MatchesResponseShape
 {
     use ExtractsModelFromGoogleEndpoint;
     use MatchesParametricEndpoints;
@@ -62,7 +63,7 @@ class TtsHandler implements ExtractsModelFromRequest, Handler, HasMedia, Matches
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['modelVersion'] ?? null;
     }

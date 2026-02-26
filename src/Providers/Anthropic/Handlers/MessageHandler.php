@@ -3,6 +3,7 @@
 namespace Spectra\Providers\Anthropic\Handlers;
 
 use Spectra\Concerns\MatchesEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
 use Spectra\Contracts\MatchesResponseShape;
@@ -13,7 +14,7 @@ use Spectra\Enums\ModelType;
 use Spectra\Providers\Anthropic\Streaming\MessageStreaming;
 use Spectra\Support\Tracking\StreamHandler;
 
-class MessageHandler implements Handler, HasFinishReason, MatchesResponseShape, StreamsResponse
+class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, MatchesResponseShape, StreamsResponse
 {
     use MatchesEndpoints;
 
@@ -46,7 +47,7 @@ class MessageHandler implements Handler, HasFinishReason, MatchesResponseShape, 
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

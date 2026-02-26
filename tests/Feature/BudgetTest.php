@@ -9,380 +9,242 @@ use Spectra\Support\Budget\BudgetBuilder;
 use Spectra\Support\Budget\BudgetEnforcer;
 use Workbench\App\Models\User;
 
-it('can create a budget for a user', function () {
-    $user = User::create([
+beforeEach(function () {
+    $this->defaultProvider = config('spectra.budget.default_provider');
+    $this->defaultModel = config('spectra.budget.default_model');
+
+    /** @var User $user */
+    $this->user = User::create([
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => 'password',
     ]);
+});
 
-    $budget = $user->setAiBudget([
-        'daily_limit' => 1000, // $10.00
-        'monthly_limit' => 10000, // $100.00
+it('should create a budget for a user', function () {
+    $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->monthlyCostLimitInCents(10000)
+        ->warningThresholdPercentage(80)
+        ->criticalThresholdPercentage(95)
+        ->save();
+
+    $this->assertDatabaseHas('spectra_budgets', [
+        'budgetable_type' => User::class,
+        'budgetable_id' => $this->user->id,
+        'daily_limit' => 1000,
+        'monthly_limit' => 10000,
         'warning_threshold' => 80,
         'critical_threshold' => 95,
     ]);
-
-    expect($budget)->toBeInstanceOf(SpectraBudget::class)
-        ->and($budget->daily_limit)->toBe(1000)
-        ->and($budget->monthly_limit)->toBe(10000)
-        ->and($budget->dailyLimitInDollars)->toBe(10.0);
 });
 
-it('can check if budget allows request', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
-
-    $user->setAiBudget([
-        'daily_limit' => 1000,
-    ]);
+it('should check if budget allows request', function () {
+    $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->save();
 
     $enforcer = app(BudgetEnforcer::class);
-    $result = $enforcer->check($user, 'openai', 'gpt-4');
+    $result = $enforcer->check($this->user, $this->defaultProvider, $this->defaultModel);
 
-    expect($result['allowed'])->toBeTrue()
-        ->and($result['budget'])->toBeInstanceOf(SpectraBudget::class)
-        ->and($result['percentage'])->toBe(0.0);
+    expect($result->allowed)->toBeTrue()
+        ->and($result->budget)->toBeInstanceOf(SpectraBudget::class)
+        ->and($result->percentage)->toBe(0.0);
 });
 
-it('throws exception when budget exceeded', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
+it('should throw exception when budget exceeded', function () {
+    $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(100)
+        ->hardLimit()
+        ->save();
 
-    $user->setAiBudget([
-        'daily_limit' => 100, // $1.00
-        'hard_limit' => true,
-    ]);
-
-    // Create a request that exceeds the budget
-    SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4',
-        'trackable_type' => User::class,
-        'trackable_id' => $user->id,
-        'response' => json_encode(['prompt' => 'test']),
-        'total_cost_in_cents' => 150, // $1.50
-        'status_code' => 200,
-        'created_at' => now(),
-    ]);
+    SpectraRequest::factory()->forTrackable($this->user)->withCost(150)->create();
 
     $enforcer = app(BudgetEnforcer::class);
 
-    expect(fn () => $enforcer->enforce($user, 'openai', 'gpt-4'))
+    expect(fn () => $enforcer->enforce($this->user, $this->defaultProvider, $this->defaultModel))
         ->toThrow(BudgetExceededException::class);
 });
 
-it('allows request when soft limit is set', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
+it('should allow request when soft limit is set', function () {
+    $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(100)
+        ->softLimit()
+        ->save();
 
-    $user->setAiBudget([
-        'daily_limit' => 100,
-        'hard_limit' => false, // Soft limit
-    ]);
-
-    // Create a request that exceeds the budget
-    SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4',
-        'trackable_type' => User::class,
-        'trackable_id' => $user->id,
-        'response' => json_encode(['prompt' => 'test']),
-        'total_cost_in_cents' => 150,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]);
+    SpectraRequest::factory()->forTrackable($this->user)->withCost(150)->create();
 
     $enforcer = app(BudgetEnforcer::class);
 
     // Should not throw with soft limit
-    $enforcer->enforce($user, 'openai', 'gpt-4');
+    $enforcer->enforce($this->user, $this->defaultProvider, $this->defaultModel);
 
-    $result = $enforcer->check($user, 'openai', 'gpt-4');
+    $result = $enforcer->check($this->user, $this->defaultProvider, $this->defaultModel);
     // With soft limit, request IS allowed even when budget exceeded
-    expect($result['allowed'])->toBeTrue()
-        ->and($result['percentage'])->toBeGreaterThan(100);
+    expect($result->allowed)->toBeTrue()
+        ->and($result->percentage)->toBeGreaterThan(100);
 });
 
-it('fires threshold reached events', function () {
+it('should fire threshold reached events', function () {
     Event::fake([BudgetThresholdReached::class]);
 
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
+    $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(100)
+        ->warningThresholdPercentage(80)
+        ->criticalThresholdPercentage(95)
+        ->softLimit()
+        ->save();
 
-    $user->setAiBudget([
-        'daily_limit' => 100,
-        'warning_threshold' => 80,
-        'critical_threshold' => 95,
-        'hard_limit' => false,
-    ]);
-
-    // Create a request at 85% of budget
-    SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4',
-        'trackable_type' => User::class,
-        'trackable_id' => $user->id,
-        'response' => json_encode(['prompt' => 'test']),
-        'total_cost_in_cents' => 85,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]);
+    SpectraRequest::factory()->forTrackable($this->user)->withCost(85)->create();
 
     $enforcer = app(BudgetEnforcer::class);
-    $enforcer->enforce($user, 'openai', 'gpt-4');
+    $enforcer->enforce($this->user, $this->defaultProvider, $this->defaultModel);
 
     Event::assertDispatched(BudgetThresholdReached::class, function ($event) {
         return $event->thresholdType === 'warning';
     });
 });
 
-it('restricts provider when not allowed', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
-
-    $user->setAiBudget([
-        'daily_limit' => 1000,
-        'allowed_providers' => ['openai'], // Only OpenAI allowed
-    ]);
+it('should restrict provider when not allowed', function () {
+    $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->allowProviders([$this->defaultProvider])
+        ->save();
 
     $enforcer = app(BudgetEnforcer::class);
 
-    expect(fn () => $enforcer->enforce($user, 'anthropic', 'claude-3'))
+    expect(fn () => $enforcer->enforce($this->user, 'anthropic', 'claude-3'))
         ->toThrow(BudgetExceededException::class, 'Provider "anthropic" is not allowed');
 });
 
-it('restricts model when not allowed', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
-
-    $user->setAiBudget([
-        'daily_limit' => 1000,
-        'allowed_models' => ['gpt-3.5-turbo'], // Only GPT-3.5 allowed
-    ]);
+it('should restrict model when not allowed', function () {
+    $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->allowModels(['gpt-3.5-turbo'])
+        ->save();
 
     $enforcer = app(BudgetEnforcer::class);
 
-    expect(fn () => $enforcer->enforce($user, 'openai', 'gpt-4'))
-        ->toThrow(BudgetExceededException::class, 'Model "gpt-4" is not allowed');
+    expect(fn () => $enforcer->enforce($this->user, $this->defaultProvider, $this->defaultModel))
+        ->toThrow(BudgetExceededException::class, "Model \"{$this->defaultModel}\" is not allowed");
 });
 
-it('can get remaining budget', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
+it('should get remaining budget', function () {
+    $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->monthlyCostLimitInCents(5000)
+        ->save();
 
-    $user->setAiBudget([
-        'daily_limit' => 1000,
-        'monthly_limit' => 5000,
-    ]);
+    SpectraRequest::factory()->forTrackable($this->user)->withCost(300)->create();
 
-    // Use 300 cents
-    SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4',
-        'trackable_type' => User::class,
-        'trackable_id' => $user->id,
-        'response' => json_encode(['prompt' => 'test']),
-        'total_cost_in_cents' => 300,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]);
+    $remaining = $this->user->getRemainingBudget();
 
-    $remaining = $user->getRemainingBudget();
-
-    expect($remaining['daily'])->toBe(700);
-    expect($remaining['monthly'])->toBe(4700);
+    expect($remaining['daily'])->toBe(700)
+        ->and($remaining['monthly'])->toBe(4700);
 });
 
-it('can disable and enable budget', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
-
-    $budget = $user->setAiBudget([
-        'daily_limit' => 1000,
-        'is_active' => true,
-    ]);
+it('should disable and enable budget', function () {
+    $budget = $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->save();
 
     expect($budget->is_active)->toBeTrue();
 
-    $user->disableAiBudget();
+    $this->user->disableAiBudget();
     $budget->refresh();
     expect($budget->is_active)->toBeFalse();
 
-    $user->enableAiBudget();
+    $this->user->enableAiBudget();
     $budget->refresh();
     expect($budget->is_active)->toBeTrue();
 });
 
-it('can check budget status', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
+it('should check budget status', function () {
+    $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->save();
 
-    $user->setAiBudget([
-        'daily_limit' => 1000,
-    ]);
+    SpectraRequest::factory()->forTrackable($this->user)->withCost(500)->create();
 
-    // Use 500 cents
-    SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4',
-        'trackable_type' => User::class,
-        'trackable_id' => $user->id,
-        'response' => json_encode(['prompt' => 'test']),
-        'total_cost_in_cents' => 500,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]);
+    $status = $this->user->getBudgetStatus($this->defaultProvider, $this->defaultModel);
 
-    $status = $user->getBudgetStatus('openai', 'gpt-4');
-
-    expect($status['allowed'])->toBeTrue();
-    expect($status['percentage'])->toBe(50.0);
-    expect($status['usage']['dailyCost'])->toBe(500);
+    expect($status->allowed)->toBeTrue()
+        ->and($status->percentage)->toBe(50.0)
+        ->and($status->usage->dailyCost)->toBe(500);
 });
 
-it('enforces token limits', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
+it('should enforce token limits', function () {
+    $this->user->configureAiBudget()
+        ->dailyTokenLimit(1000)
+        ->hardLimit()
+        ->save();
 
-    $user->setAiBudget([
-        'daily_token_limit' => 1000,
-        'hard_limit' => true,
-    ]);
-
-    // Use 1500 tokens
-    SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4',
-        'trackable_type' => User::class,
-        'trackable_id' => $user->id,
-        'response' => json_encode(['prompt' => 'test']),
-        'prompt_tokens' => 1000,
-        'completion_tokens' => 500,
-        'total_cost_in_cents' => 0,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]);
+    SpectraRequest::factory()->forTrackable($this->user)->withTokens(1000, 500)->create();
 
     $enforcer = app(BudgetEnforcer::class);
 
-    expect(fn () => $enforcer->enforce($user, 'openai', 'gpt-4'))
+    expect(fn () => $enforcer->enforce($this->user, $this->defaultProvider, $this->defaultModel))
         ->toThrow(BudgetExceededException::class, 'token budget exceeded');
 });
 
-it('enforces request limits', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
+it('should enforce request limits', function () {
+    $this->user->configureAiBudget()
+        ->dailyRequestLimit(2)
+        ->hardLimit()
+        ->save();
 
-    $user->setAiBudget([
-        'daily_request_limit' => 2,
-        'hard_limit' => true,
-    ]);
-
-    // Create 3 requests
-    for ($i = 0; $i < 3; $i++) {
-        SpectraRequest::create([
-            'provider' => 'openai',
-            'model' => 'gpt-4',
-            'trackable_type' => User::class,
-            'trackable_id' => $user->id,
-            'response' => json_encode(['prompt' => 'test']),
-            'total_cost_in_cents' => 0,
-            'status_code' => 200,
-            'created_at' => now(),
-        ]);
-    }
+    SpectraRequest::factory()->forTrackable($this->user)->count(3)->create();
 
     $enforcer = app(BudgetEnforcer::class);
 
-    expect(fn () => $enforcer->enforce($user, 'openai', 'gpt-4'))
+    expect(fn () => $enforcer->enforce($this->user, $this->defaultProvider, $this->defaultModel))
         ->toThrow(BudgetExceededException::class, 'request limit exceeded');
 });
 
-it('rounds fractional request costs up to whole cents for budget enforcement', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'test-rounding@example.com',
-        'password' => 'password',
-    ]);
+it('should round fractional request costs up to whole cents for budget enforcement', function () {
+    $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(1)
+        ->hardLimit()
+        ->save();
 
-    $user->setAiBudget([
-        'daily_limit' => 1,
-        'hard_limit' => true,
-    ]);
-
-    SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4',
-        'trackable_type' => User::class,
-        'trackable_id' => $user->id,
-        'response' => json_encode(['prompt' => 'test']),
-        'total_cost_in_cents' => 0.2,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]);
+    SpectraRequest::factory()->forTrackable($this->user)->withCost(0.2)->create();
 
     $enforcer = app(BudgetEnforcer::class);
-    $status = $enforcer->check($user, 'openai', 'gpt-4');
+    $status = $enforcer->check($this->user, $this->defaultProvider, $this->defaultModel);
 
-    expect($status['usage']['dailyCost'])->toBe(1);
-    expect(fn () => $enforcer->enforce($user, 'openai', 'gpt-4'))
+    expect($status->usage->dailyCost)->toBe(1)
+        ->and(fn () => $enforcer->enforce($this->user, $this->defaultProvider, $this->defaultModel))
         ->toThrow(BudgetExceededException::class);
 });
 
-it('returns a BudgetBuilder from configureAiBudget', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'builder-instance@example.com',
-        'password' => 'password',
-    ]);
-
-    $builder = $user->configureAiBudget();
+it('should return a BudgetBuilder from configureAiBudget', function () {
+    $builder = $this->user->configureAiBudget();
 
     expect($builder)->toBeInstanceOf(BudgetBuilder::class);
 });
 
-it('can create a budget using fluent builder', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'builder-create@example.com',
-        'password' => 'password',
-    ]);
+it('should persist budget to database', function () {
+    $budget = $this->user->configureAiBudget()
+        ->dailyCostLimitInCents(1000)
+        ->monthlyTokenLimit(5000000)
+        ->dailyRequestLimit(200)
+        ->hardLimit()
+        ->warningThresholdPercentage(75)
+        ->criticalThresholdPercentage(90)
+        ->save();
 
-    $budget = $user->configureAiBudget()
+    expect($budget)->toBeInstanceOf(SpectraBudget::class)
+        ->and($budget->exists)->toBeTrue()
+        ->and($budget->daily_limit)->toBe(1000)
+        ->and($budget->monthly_token_limit)->toBe(5000000)
+        ->and($budget->daily_request_limit)->toBe(200)
+        ->and($budget->hard_limit)->toBeTrue()
+        ->and($budget->warning_threshold)->toBe(75)
+        ->and($budget->critical_threshold)->toBe(90);
+});
+
+it('should create a budget using fluent builder', function () {
+    $budget = $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->weeklyCostLimitInCents(5000)
         ->monthlyCostLimitInCents(20000)
@@ -422,14 +284,8 @@ it('can create a budget using fluent builder', function () {
         ->and($budget->name)->toBe('Production Budget');
 });
 
-it('can create a budget with soft limit using fluent builder', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'builder-soft@example.com',
-        'password' => 'password',
-    ]);
-
-    $budget = $user->configureAiBudget()
+it('should create a budget with soft limit using fluent builder', function () {
+    $budget = $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->softLimit()
         ->save();
@@ -438,35 +294,23 @@ it('can create a budget with soft limit using fluent builder', function () {
         ->and($budget->hard_limit)->toBeFalse();
 });
 
-it('can update an existing budget using fluent builder', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'builder-update@example.com',
-        'password' => 'password',
-    ]);
-
-    $user->configureAiBudget()
+it('should update an existing budget using fluent builder', function () {
+    $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->save();
 
-    $updated = $user->configureAiBudget()
+    $updated = $this->user->configureAiBudget()
         ->dailyCostLimitInCents(2000)
         ->weeklyCostLimitInCents(10000)
         ->save();
 
     expect($updated->daily_limit)->toBe(2000)
         ->and($updated->weekly_limit)->toBe(10000)
-        ->and(SpectraBudget::where('budgetable_id', $user->id)->count())->toBe(1);
+        ->and(SpectraBudget::where('budgetable_id', $this->user->id)->count())->toBe(1);
 });
 
-it('builder methods return the builder for chaining', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'builder-chaining@example.com',
-        'password' => 'password',
-    ]);
-
-    $builder = $user->configureAiBudget();
+it('should return the builder for chaining from all methods', function () {
+    $builder = $this->user->configureAiBudget();
 
     expect($builder->dailyCostLimitInCents(1000))->toBeInstanceOf(BudgetBuilder::class)
         ->and($builder->weeklyCostLimitInCents(5000))->toBeInstanceOf(BudgetBuilder::class)
@@ -488,14 +332,8 @@ it('builder methods return the builder for chaining', function () {
         ->and($builder->name('Test'))->toBeInstanceOf(BudgetBuilder::class);
 });
 
-it('builder toArray reflects all set methods', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'builder-toarray@example.com',
-        'password' => 'password',
-    ]);
-
-    $builder = $user->configureAiBudget()
+it('should reflect all set methods in builder toArray', function () {
+    $builder = $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->weeklyCostLimitInCents(5000)
         ->monthlyCostLimitInCents(20000)
@@ -535,57 +373,16 @@ it('builder toArray reflects all set methods', function () {
     ]);
 });
 
-it('builder save persists budget to database', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'builder-save@example.com',
-        'password' => 'password',
-    ]);
-
-    $budget = $user->configureAiBudget()
-        ->dailyCostLimitInCents(1000)
-        ->monthlyTokenLimit(5000000)
-        ->dailyRequestLimit(200)
-        ->hardLimit()
-        ->warningThresholdPercentage(75)
-        ->criticalThresholdPercentage(90)
-        ->save();
-
-    expect($budget)->toBeInstanceOf(SpectraBudget::class)
-        ->and($budget->exists)->toBeTrue()
-        ->and($budget->daily_limit)->toBe(1000)
-        ->and($budget->monthly_token_limit)->toBe(5000000)
-        ->and($budget->daily_request_limit)->toBe(200)
-        ->and($budget->hard_limit)->toBeTrue()
-        ->and($budget->warning_threshold)->toBe(75)
-        ->and($budget->critical_threshold)->toBe(90);
-});
-
-it('fluent builder budget works with enforcement', function () {
-    $user = User::create([
-        'name' => 'Test User',
-        'email' => 'builder-enforce@example.com',
-        'password' => 'password',
-    ]);
-
-    $user->configureAiBudget()
+it('should enforce fluent builder budget', function () {
+    $this->user->configureAiBudget()
         ->dailyCostLimitInCents(100)
         ->hardLimit()
         ->save();
 
-    SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4',
-        'trackable_type' => User::class,
-        'trackable_id' => $user->id,
-        'response' => json_encode(['prompt' => 'test']),
-        'total_cost_in_cents' => 150,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]);
+    SpectraRequest::factory()->forTrackable($this->user)->withCost(150)->create();
 
     $enforcer = app(BudgetEnforcer::class);
 
-    expect(fn () => $enforcer->enforce($user, 'openai', 'gpt-4'))
+    expect(fn () => $enforcer->enforce($this->user, $this->defaultProvider, $this->defaultModel))
         ->toThrow(BudgetExceededException::class);
 });

@@ -1,23 +1,21 @@
 <?php
 
+use Illuminate\Database\Eloquent\Factories\Sequence;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\StatsAggregator;
 use Workbench\App\Models\User;
 
-it('records stats when a request is created', function () {
+it('should record stats when a request is created', function () {
     $aggregator = app(StatsAggregator::class);
 
-    $request = SpectraRequest::create([
+    $request = SpectraRequest::factory()->create([
         'provider' => 'openai',
         'model' => 'gpt-4',
-        'response' => json_encode(['prompt' => 'test']),
         'prompt_tokens' => 100,
         'completion_tokens' => 50,
         'total_cost_in_cents' => 500,
         'latency_ms' => 250,
-        'status_code' => 200,
-        'created_at' => now(),
     ]);
 
     $aggregator->recordRequest($request);
@@ -36,23 +34,19 @@ it('records stats when a request is created', function () {
         ->and($stat->total_cost_in_cents)->toBe(500.0);
 });
 
-it('increments stats for multiple requests', function () {
+it('should increment stats for multiple requests', function () {
     $aggregator = app(StatsAggregator::class);
 
-    for ($i = 0; $i < 3; $i++) {
-        $request = SpectraRequest::create([
+    SpectraRequest::factory()
+        ->count(3)
+        ->create([
             'provider' => 'anthropic',
             'model' => 'claude-3',
-            'response' => json_encode(['prompt' => 'test']),
             'prompt_tokens' => 100,
             'completion_tokens' => 50,
             'total_cost_in_cents' => 200,
-            'status_code' => 200,
-            'created_at' => now(),
-        ]);
-
-        $aggregator->recordRequest($request);
-    }
+        ])
+        ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $stat = SpectraDailyStat::where('provider', 'anthropic')
         ->where('model', 'claude-3')
@@ -65,26 +59,17 @@ it('increments stats for multiple requests', function () {
         ->and($stat->total_cost_in_cents)->toBe(600.0);
 });
 
-it('tracks failed requests separately', function () {
+it('should track failed requests separately', function () {
     $aggregator = app(StatsAggregator::class);
 
-    // Successful request
-    $aggregator->recordRequest(SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4-failed-test',
-        'response' => json_encode(['prompt' => 'test']),
-        'status_code' => 200,
-        'created_at' => now(),
-    ]));
-
-    // Failed request
-    $aggregator->recordRequest(SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4-failed-test',
-        'response' => json_encode(['prompt' => 'test']),
-        'status_code' => 500,
-        'created_at' => now(),
-    ]));
+    SpectraRequest::factory()
+        ->count(2)
+        ->state(new Sequence(
+            ['model' => 'gpt-4-failed-test'],
+            ['model' => 'gpt-4-failed-test', 'status_code' => 500],
+        ))
+        ->create()
+        ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $stat = SpectraDailyStat::where('model', 'gpt-4-failed-test')
         ->whereNull('trackable_type')
@@ -97,7 +82,7 @@ it('tracks failed requests separately', function () {
         ->and($stat->successRate)->toBe(50.0);
 });
 
-it('tracks per-user stats separately', function () {
+it('should track per-user stats separately', function () {
     $user = User::create([
         'name' => 'Test User',
         'email' => 'stats-test@example.com',
@@ -106,15 +91,11 @@ it('tracks per-user stats separately', function () {
 
     $aggregator = app(StatsAggregator::class);
 
-    $request = SpectraRequest::create([
-        'provider' => 'openai',
+    $request = SpectraRequest::factory()->create([
         'model' => 'gpt-4-user-test',
         'trackable_type' => User::class,
         'trackable_id' => $user->id,
-        'response' => json_encode(['prompt' => 'test']),
         'total_cost_in_cents' => 100,
-        'status_code' => 200,
-        'created_at' => now(),
     ]);
 
     $aggregator->recordRequest($request);
@@ -133,26 +114,29 @@ it('tracks per-user stats separately', function () {
         ->where('trackable_id', $user->id)
         ->first();
 
-    expect($userStat)->not->toBeNull();
-    expect($userStat->request_count)->toBe(1);
+    expect($userStat)->not->toBeNull()
+        ->and($userStat->request_count)->toBe(1);
 });
 
-it('can get aggregated stats for a period', function () {
+it('should get aggregated stats for a period', function () {
     $aggregator = app(StatsAggregator::class);
 
-    for ($i = 0; $i < 5; $i++) {
-        $aggregator->recordRequest(SpectraRequest::create([
-            'provider' => 'openai',
+    SpectraRequest::factory()
+        ->count(5)
+        ->state(new Sequence(
+            ['latency_ms' => 100],
+            ['latency_ms' => 150],
+            ['latency_ms' => 200],
+            ['latency_ms' => 250],
+            ['latency_ms' => 300],
+        ))
+        ->create([
             'model' => 'gpt-4-period-test',
-            'response' => json_encode(['prompt' => 'test']),
             'prompt_tokens' => 100,
             'completion_tokens' => 50,
             'total_cost_in_cents' => 200,
-            'latency_ms' => 100 + ($i * 50),
-            'status_code' => 200,
-            'created_at' => now(),
-        ]));
-    }
+        ])
+        ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $stats = SpectraDailyStat::getAggregatedStats(
         now()->startOfDay(),
@@ -167,16 +151,12 @@ it('can get aggregated stats for a period', function () {
         ->and($stats['success_rate'])->toBe(100.0);
 });
 
-it('can get daily breakdown', function () {
+it('should get daily breakdown', function () {
     $aggregator = app(StatsAggregator::class);
 
-    $aggregator->recordRequest(SpectraRequest::create([
-        'provider' => 'openai',
+    $aggregator->recordRequest(SpectraRequest::factory()->create([
         'model' => 'gpt-4-daily-test',
-        'response' => json_encode(['prompt' => 'test']),
         'total_cost_in_cents' => 100,
-        'status_code' => 200,
-        'created_at' => now(),
     ]));
 
     $breakdown = SpectraDailyStat::getDailyBreakdown(
@@ -193,18 +173,15 @@ it('can get daily breakdown', function () {
         ->and($todayData['requests'])->toBeGreaterThanOrEqual(1);
 });
 
-it('records model_type in daily stats', function () {
+it('should record model_type in daily stats', function () {
     $aggregator = app(StatsAggregator::class);
 
-    $request = SpectraRequest::create([
-        'provider' => 'openai',
+    $request = SpectraRequest::factory()->create([
         'model' => 'dall-e-3',
         'model_type' => 'image',
         'response' => json_encode(['data' => []]),
         'image_count' => 2,
         'total_cost_in_cents' => 400,
-        'status_code' => 200,
-        'created_at' => now(),
     ]);
 
     $aggregator->recordRequest($request);
@@ -221,20 +198,17 @@ it('records model_type in daily stats', function () {
         ->and($stat->total_cost_in_cents)->toBe(400.0);
 });
 
-it('records billing metrics for different model types', function () {
+it('should record billing metrics for different model types', function () {
     $aggregator = app(StatsAggregator::class);
 
     // TTS request
-    $ttsRequest = SpectraRequest::create([
-        'provider' => 'openai',
+    $ttsRequest = SpectraRequest::factory()->create([
         'model' => 'tts-1',
         'model_type' => 'tts',
         'response' => json_encode([]),
         'input_characters' => 500,
         'duration_seconds' => 12.5,
         'total_cost_in_cents' => 100,
-        'status_code' => 200,
-        'created_at' => now(),
     ]);
 
     $aggregator->recordRequest($ttsRequest);
@@ -249,18 +223,15 @@ it('records billing metrics for different model types', function () {
         ->and($stat->total_duration_seconds)->toBe(12.5);
 });
 
-it('records video_count in daily stats', function () {
+it('should record video_count in daily stats', function () {
     $aggregator = app(StatsAggregator::class);
 
-    $request = SpectraRequest::create([
-        'provider' => 'openai',
+    $request = SpectraRequest::factory()->create([
         'model' => 'sora',
         'model_type' => 'video',
         'response' => json_encode(['data' => []]),
         'video_count' => 3,
         'total_cost_in_cents' => 600,
-        'status_code' => 200,
-        'created_at' => now(),
     ]);
 
     $aggregator->recordRequest($request);
@@ -277,33 +248,17 @@ it('records video_count in daily stats', function () {
         ->and($stat->total_cost_in_cents)->toBe(600.0);
 });
 
-it('separates stats by model_type', function () {
+it('should separate stats by model_type', function () {
     $aggregator = app(StatsAggregator::class);
 
-    // Text request
-    $aggregator->recordRequest(SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4o',
-        'model_type' => 'text',
-        'response' => json_encode([]),
-        'prompt_tokens' => 100,
-        'completion_tokens' => 50,
-        'total_cost_in_cents' => 200,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]));
-
-    // Image request (same provider, different model type)
-    $aggregator->recordRequest(SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'dall-e-3',
-        'model_type' => 'image',
-        'response' => json_encode([]),
-        'image_count' => 1,
-        'total_cost_in_cents' => 400,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]));
+    SpectraRequest::factory()
+        ->count(2)
+        ->state(new Sequence(
+            ['model' => 'gpt-4o', 'model_type' => 'text', 'prompt_tokens' => 100, 'completion_tokens' => 50, 'total_cost_in_cents' => 200],
+            ['model' => 'dall-e-3', 'model_type' => 'image', 'image_count' => 1, 'total_cost_in_cents' => 400],
+        ))
+        ->create(['response' => json_encode([])])
+        ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $textStats = SpectraDailyStat::getAggregatedStats(
         now()->startOfDay(),
@@ -330,26 +285,17 @@ it('separates stats by model_type', function () {
         ->and($imageStats['total_images'])->toBe(1);
 });
 
-it('can get stats by provider', function () {
+it('should get stats by provider', function () {
     $aggregator = app(StatsAggregator::class);
 
-    $aggregator->recordRequest(SpectraRequest::create([
-        'provider' => 'openai',
-        'model' => 'gpt-4',
-        'response' => json_encode(['prompt' => 'test']),
-        'total_cost_in_cents' => 100,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]));
-
-    $aggregator->recordRequest(SpectraRequest::create([
-        'provider' => 'anthropic',
-        'model' => 'claude-3',
-        'response' => json_encode(['prompt' => 'test']),
-        'total_cost_in_cents' => 150,
-        'status_code' => 200,
-        'created_at' => now(),
-    ]));
+    SpectraRequest::factory()
+        ->count(2)
+        ->state(new Sequence(
+            ['total_cost_in_cents' => 100],
+            ['provider' => 'anthropic', 'model' => 'claude-3', 'total_cost_in_cents' => 150],
+        ))
+        ->create()
+        ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $byProvider = SpectraDailyStat::getStatsByProvider(
         now()->startOfDay(),
@@ -363,11 +309,10 @@ it('can get stats by provider', function () {
         ->and($providers)->toContain('anthropic');
 });
 
-it('records reasoning tokens in daily stats', function () {
+it('should record reasoning tokens in daily stats', function () {
     $aggregator = app(StatsAggregator::class);
 
-    $request = SpectraRequest::create([
-        'provider' => 'openai',
+    $request = SpectraRequest::factory()->create([
         'model' => 'o3-mini',
         'response' => json_encode(['content' => 'reasoning result']),
         'prompt_tokens' => 50,
@@ -375,8 +320,6 @@ it('records reasoning tokens in daily stats', function () {
         'reasoning_tokens' => 150,
         'total_cost_in_cents' => 100,
         'latency_ms' => 300,
-        'status_code' => 200,
-        'created_at' => now(),
     ]);
 
     $aggregator->recordRequest($request);
@@ -392,24 +335,20 @@ it('records reasoning tokens in daily stats', function () {
         ->and($stat->completion_tokens)->toBe(20);
 });
 
-it('accumulates reasoning tokens across multiple requests', function () {
+it('should accumulate reasoning tokens across multiple requests', function () {
     $aggregator = app(StatsAggregator::class);
 
-    for ($i = 0; $i < 3; $i++) {
-        $request = SpectraRequest::create([
-            'provider' => 'openai',
+    SpectraRequest::factory()
+        ->count(3)
+        ->create([
             'model' => 'o3-mini',
             'response' => json_encode(['content' => 'test']),
             'prompt_tokens' => 10,
             'completion_tokens' => 5,
             'reasoning_tokens' => 100,
             'total_cost_in_cents' => 50,
-            'status_code' => 200,
-            'created_at' => now(),
-        ]);
-
-        $aggregator->recordRequest($request);
-    }
+        ])
+        ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $stat = SpectraDailyStat::where('provider', 'openai')
         ->where('model', 'o3-mini')

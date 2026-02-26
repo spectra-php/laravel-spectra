@@ -3,6 +3,7 @@
 namespace Spectra\Providers\OpenAI\Handlers;
 
 use Spectra\Concerns\MatchesEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
 use Spectra\Contracts\MatchesResponseShape;
@@ -13,7 +14,7 @@ use Spectra\Enums\ModelType;
 use Spectra\Providers\OpenAI\Streaming\TextStreaming;
 use Spectra\Support\Tracking\StreamHandler;
 
-class TextHandler implements Handler, HasFinishReason, MatchesResponseShape, StreamsResponse
+class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, MatchesResponseShape, StreamsResponse
 {
     use MatchesEndpoints;
 
@@ -48,7 +49,7 @@ class TextHandler implements Handler, HasFinishReason, MatchesResponseShape, Str
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

@@ -4,6 +4,7 @@ namespace Spectra\Providers\Replicate\Handlers;
 
 use Illuminate\Support\Facades\Http;
 use Spectra\Concerns\MatchesParametricEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
 use Spectra\Contracts\HasMedia;
@@ -13,7 +14,7 @@ use Spectra\Data\VideoMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Support\MediaPersister;
 
-class VideoHandler implements Handler, HasFinishReason, HasMedia, MatchesResponseShape
+class VideoHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, HasMedia, MatchesResponseShape
 {
     use MatchesParametricEndpoints;
 
@@ -41,7 +42,7 @@ class VideoHandler implements Handler, HasFinishReason, HasMedia, MatchesRespons
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

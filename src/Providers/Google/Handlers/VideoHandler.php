@@ -5,6 +5,7 @@ namespace Spectra\Providers\Google\Handlers;
 use Illuminate\Support\Facades\Http;
 use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromRequest;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
 use Spectra\Contracts\HasMedia;
@@ -16,7 +17,7 @@ use Spectra\Enums\ModelType;
 use Spectra\Providers\Google\ExtractsModelFromGoogleEndpoint;
 use Spectra\Support\MediaPersister;
 
-class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason, HasMedia, MatchesResponseShape, SkipsResponse
+class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse, Handler, HasFinishReason, HasMedia, MatchesResponseShape, SkipsResponse
 {
     use ExtractsModelFromGoogleEndpoint;
     use MatchesParametricEndpoints;
@@ -67,7 +68,7 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['modelVersion'] ?? null;
     }

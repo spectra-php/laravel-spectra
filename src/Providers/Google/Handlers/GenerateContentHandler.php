@@ -4,6 +4,7 @@ namespace Spectra\Providers\Google\Handlers;
 
 use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromRequest;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
 use Spectra\Contracts\MatchesResponseShape;
@@ -15,7 +16,7 @@ use Spectra\Providers\Google\ExtractsModelFromGoogleEndpoint;
 use Spectra\Providers\Google\Streaming\GenerateContentStreaming;
 use Spectra\Support\Tracking\StreamHandler;
 
-class GenerateContentHandler implements ExtractsModelFromRequest, Handler, HasFinishReason, MatchesResponseShape, StreamsResponse
+class GenerateContentHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse, Handler, HasFinishReason, MatchesResponseShape, StreamsResponse
 {
     use ExtractsModelFromGoogleEndpoint;
     use MatchesParametricEndpoints;
@@ -50,7 +51,7 @@ class GenerateContentHandler implements ExtractsModelFromRequest, Handler, HasFi
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['modelVersion'] ?? null;
     }

@@ -3,6 +3,7 @@
 namespace Spectra\Providers\XAi\Handlers;
 
 use Spectra\Concerns\MatchesEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
 use Spectra\Contracts\MatchesResponseShape;
@@ -10,7 +11,7 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 
-class ChatHandler implements Handler, HasFinishReason, MatchesResponseShape
+class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, MatchesResponseShape
 {
     use MatchesEndpoints;
 
@@ -40,7 +41,7 @@ class ChatHandler implements Handler, HasFinishReason, MatchesResponseShape
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

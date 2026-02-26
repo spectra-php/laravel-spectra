@@ -5,6 +5,7 @@ namespace Spectra\Providers\OpenAI\Handlers;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Spectra\Concerns\MatchesParametricEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasExpiration;
 use Spectra\Contracts\HasMedia;
@@ -15,7 +16,7 @@ use Spectra\Enums\ModelType;
 use Spectra\Support\ApiKeyResolver;
 use Spectra\Support\MediaPersister;
 
-class VideoHandler implements Handler, HasExpiration, HasMedia, SkipsResponse
+class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration, HasMedia, SkipsResponse
 {
     use MatchesParametricEndpoints;
 
@@ -53,7 +54,7 @@ class VideoHandler implements Handler, HasExpiration, HasMedia, SkipsResponse
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

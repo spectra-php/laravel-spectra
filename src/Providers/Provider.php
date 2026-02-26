@@ -3,6 +3,7 @@
 namespace Spectra\Providers;
 
 use Spectra\Contracts\ExtractsModelFromRequest;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
 use Spectra\Contracts\MatchesResponseShape;
@@ -149,8 +150,8 @@ abstract class Provider
     {
         $handler = $this->resolveHandlerFor($endpoint, $response);
 
-        if ($handler !== null) {
-            return $handler->extractModel($this->toArray($response));
+        if ($handler instanceof ExtractsModelFromResponse) {
+            return $handler->extractModelFromResponse($this->toArray($response));
         }
 
         return null;

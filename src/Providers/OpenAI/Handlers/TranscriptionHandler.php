@@ -3,13 +3,14 @@
 namespace Spectra\Providers\OpenAI\Handlers;
 
 use Spectra\Concerns\MatchesEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Data\AudioMetrics;
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 
-class TranscriptionHandler implements Handler
+class TranscriptionHandler implements ExtractsModelFromResponse, Handler
 {
     use MatchesEndpoints;
 
@@ -57,7 +58,7 @@ class TranscriptionHandler implements Handler
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

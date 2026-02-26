@@ -21,8 +21,5 @@ interface Handler
     public function extractMetrics(array $requestData, array $responseData): Metrics;
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string;
-
-    /** @param  array<string, mixed>  $response */
     public function extractResponse(array $response): ?string;
 }

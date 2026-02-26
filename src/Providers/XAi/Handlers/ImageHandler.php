@@ -3,6 +3,7 @@
 namespace Spectra\Providers\XAi\Handlers;
 
 use Spectra\Concerns\MatchesEndpoints;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasMedia;
 use Spectra\Data\ImageMetrics;
@@ -10,7 +11,7 @@ use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\OpenAI\StoresOpenAiImageMedia;
 
-class ImageHandler implements Handler, HasMedia
+class ImageHandler implements ExtractsModelFromResponse, Handler, HasMedia
 {
     use MatchesEndpoints;
     use StoresOpenAiImageMedia;
@@ -39,7 +40,7 @@ class ImageHandler implements Handler, HasMedia
     }
 
     /** @param  array<string, mixed>  $response */
-    public function extractModel(array $response): ?string
+    public function extractModelFromResponse(array $response): ?string
     {
         return $response['model'] ?? null;
     }

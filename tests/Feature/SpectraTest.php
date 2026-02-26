@@ -4,26 +4,7 @@ use Spectra\Facades\Spectra as SpectraFacade;
 use Spectra\Models\SpectraRequest;
 use Spectra\Spectra;
 
-function generateSilentWavForSpectraTest(int $seconds = 1, int $sampleRate = 8000): string
-{
-    $channels = 1;
-    $bitsPerSample = 16;
-    $bytesPerSample = intdiv($bitsPerSample, 8);
-    $dataSize = $seconds * $sampleRate * $channels * $bytesPerSample;
-    $byteRate = $sampleRate * $channels * $bytesPerSample;
-    $blockAlign = $channels * $bytesPerSample;
-
-    return 'RIFF'
-        .pack('V', 36 + $dataSize)
-        .'WAVE'
-        .'fmt '
-        .pack('VvvVVvv', 16, 1, $channels, $sampleRate, $byteRate, $blockAlign, $bitsPerSample)
-        .'data'
-        .pack('V', $dataSize)
-        .str_repeat("\x00", $dataSize);
-}
-
-it('can track an ai request', function () {
+it('should track an ai request', function () {
     $manager = app(Spectra::class);
 
     $context = $manager->startRequest('openai', 'gpt-4o', [
@@ -34,7 +15,7 @@ it('can track an ai request', function () {
         ->and($context->model)->toBe('gpt-4o');
 });
 
-it('can record a successful request', function () {
+it('should record a successful request', function () {
     $manager = app(Spectra::class);
 
     $context = $manager->startRequest('openai', 'gpt-4o');
@@ -113,21 +94,21 @@ it('saves video model_type with billing metrics', function () {
         ->and($request->video_count)->toBe(1);
 });
 
-it('can record a failed request', function () {
+it('should record a failed request', function () {
     $manager = app(Spectra::class);
 
     $context = $manager->startRequest('openai', 'gpt-4o');
 
     $request = $manager->recordFailure(
         $context,
-        new \Exception('API Error'),
+        new Exception('API Error'),
         500
     );
 
     expect($request->status_code)->toBe(500);
 });
 
-it('can track using the track helper', function () {
+it('should track using the track helper', function () {
     $result = SpectraFacade::track('anthropic', 'claude-sonnet-4-20250514', function ($context) {
         return [
             'content' => 'Response',
@@ -156,7 +137,7 @@ it('uses extracted binary tts duration for minute-based persisted cost', functio
             'response_format' => 'wav',
         ],
     ]);
-    $context->rawResponseBody = generateSilentWavForSpectraTest();
+    $context->rawResponseBody = $this->generateSilentWav();
 
     $request = $manager->recordSuccess($context, []);
 
@@ -165,7 +146,7 @@ it('uses extracted binary tts duration for minute-based persisted cost', functio
         ->and($request->total_cost_in_cents)->toBeGreaterThan(0.0);
 });
 
-it('can use the fake for testing', function () {
+it('should use the fake for testing', function () {
     SpectraFacade::fake();
 
     SpectraFacade::track('openai', 'gpt-4o', function () {
@@ -254,9 +235,9 @@ it('tracks failed requests in fake', function () {
 
     try {
         SpectraFacade::track('openai', 'gpt-4o', function () {
-            throw new \Exception('Test error');
+            throw new Exception('Test error');
         });
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // Expected
     }
 
