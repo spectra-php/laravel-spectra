@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: "Laravel Spectra"
+  name: "Spectra"
   text: "AI Observability for Laravel"
   tagline: "Track every AI request. Calculate costs. Enforce budgets. Inspect traffic end-to-end."
   image:
