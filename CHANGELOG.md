@@ -2,6 +2,12 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## 1.0.0-beta.1 - 2026-06-03
+
+### Added
+
+- Add support for Laravel 13
+
 ## 0.2.0 - 2026-01-26
 
 ### Breaking Changes
