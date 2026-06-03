@@ -2,8 +2,8 @@
 
 ## Requirements
 
-- PHP 8.2 or higher
-- Laravel 11.x or 12.x
+- PHP 8.2 or higher (PHP 8.3+ required for Laravel 13)
+- Laravel 11.x, 12.x, or 13.x
 - MySQL 8.0+ or PostgreSQL 13+
 
 ## Install the Package
