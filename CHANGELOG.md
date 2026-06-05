@@ -2,6 +2,15 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## v1.1.0 - 2026-06-05
+
+### 1.1.0
+
+#### Fixed
+
+- Widen `trackable_id` from UUID to string on `spectra_requests` and `spectra_daily_stats` so trackable models can use UUIDs, ULIDs, or integer primary keys (a new follow-up migration handles the schema change)
+- Remove `formatted_expires_at` from `SpectraRequest::$appends` and append it explicitly in `GetRequestDetails`, preventing `MissingAttributeException` on partial-select endpoints when the consuming app enables strict-mode models
+
 ## 1.1.0
 
 ### Fixed
