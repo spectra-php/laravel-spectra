@@ -10,6 +10,7 @@ use Spectra\Providers\Groq\Groq;
 use Spectra\Providers\Mistral\Mistral;
 use Spectra\Providers\OpenAI\OpenAI;
 use Spectra\Providers\Replicate\Replicate;
+use Spectra\Providers\Scaleway\Scaleway;
 use Spectra\Providers\XAi\XAi;
 
 trait CreatesProviders
@@ -52,6 +53,11 @@ trait CreatesProviders
     protected function cohereProvider(): Cohere
     {
         return new Cohere;
+    }
+
+    protected function scalewayProvider(): Scaleway
+    {
+        return new Scaleway;
     }
 
     protected function googleVideoHandler(): GoogleVideoHandler

@@ -40,8 +40,13 @@ class TestCase extends Orchestra
             $table->timestamps();
         });
 
-        // Run schema migration
-        $migration = include __DIR__.'/../database/migrations/2026_03_01_000001_create_spectra_entries.php';
-        $migration->up();
+        // Run schema migrations in order
+        foreach ([
+            __DIR__.'/../database/migrations/2026_03_01_000001_create_spectra_entries.php',
+            __DIR__.'/../database/migrations/2026_06_05_000001_change_trackable_id_to_string_on_spectra_tables.php',
+        ] as $path) {
+            $migration = include $path;
+            $migration->up();
+        }
     }
 }

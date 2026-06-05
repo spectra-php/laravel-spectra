@@ -22,6 +22,7 @@ use Spectra\Providers\Ollama\Ollama;
 use Spectra\Providers\OpenAI\OpenAI;
 use Spectra\Providers\OpenRouter\OpenRouter;
 use Spectra\Providers\Replicate\Replicate;
+use Spectra\Providers\Scaleway\Scaleway;
 use Spectra\Providers\XAi\XAi;
 use Spectra\Support\RequestTransformer;
 use Spectra\Watchers\GuzzleWatcher;
@@ -715,6 +716,7 @@ return [
         'replicate' => ['class' => Replicate::class, 'name' => 'Replicate'],
         'mistral' => ['class' => Mistral::class, 'name' => 'Mistral'],
         'falai' => ['class' => FalAi::class, 'name' => 'fal.ai'],
+        'scaleway' => ['class' => Scaleway::class, 'name' => 'Scaleway'],
     ],
 
     /*

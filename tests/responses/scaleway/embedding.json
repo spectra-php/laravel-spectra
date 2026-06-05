@@ -1,0 +1,15 @@
+{
+    "object": "list",
+    "data": [
+        {
+            "object": "embedding",
+            "index": 0,
+            "embedding": [0.0023064255, -0.009327292, 0.015797051, -0.007447006]
+        }
+    ],
+    "model": "bge-multilingual-gemma2",
+    "usage": {
+        "prompt_tokens": 8,
+        "total_tokens": 8
+    }
+}

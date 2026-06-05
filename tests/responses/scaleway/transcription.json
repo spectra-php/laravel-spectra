@@ -1,0 +1,5 @@
+{
+    "text": "Hello, this is a test of Scaleway whisper.",
+    "model": "whisper-large-v3",
+    "duration": 4.2
+}

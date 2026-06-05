@@ -16,6 +16,8 @@ class GetRequestDetails
     {
         $request = SpectraRequest::with('tags')->findOrFail($id);
 
+        $request->append('formatted_expires_at');
+
         $response = $request->response;
 
         $data = $request->toArray();

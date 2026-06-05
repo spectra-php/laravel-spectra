@@ -2,11 +2,18 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## 1.1.0
+
+### Fixed
+
+- Widen `trackable_id` from UUID to string on `spectra_requests` and `spectra_daily_stats` so trackable models can use UUIDs, ULIDs, or integer primary keys (a new follow-up migration handles the schema change)
+- Remove `formatted_expires_at` from `SpectraRequest::$appends` and append it explicitly in `GetRequestDetails`, preventing `MissingAttributeException` on partial-select endpoints when the consuming app enables strict-mode models
+
 ## 1.0.0
 
 ### Added
 
-- Add support for [Scaleway](https://www.scaleway.com) provider pricing (Generative APIs)
+- Add support for [Scaleway](https://www.scaleway.com) provider (Generative APIs: chat, embeddings, and Whisper transcription)
 
 ## 1.0.0-beta.1 - 2026-06-03
 

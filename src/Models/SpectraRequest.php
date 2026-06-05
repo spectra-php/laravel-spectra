@@ -105,7 +105,7 @@ class SpectraRequest extends Model
 
     protected $guarded = [];
 
-    protected $appends = ['provider_display_name', 'total_tokens', 'formatted_created_at', 'formatted_expires_at', 'created_at_human'];
+    protected $appends = ['provider_display_name', 'total_tokens', 'formatted_created_at', 'created_at_human'];
 
     protected function casts(): array
     {

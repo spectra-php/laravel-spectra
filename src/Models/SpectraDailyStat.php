@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @property string $id
@@ -242,31 +241,43 @@ class SpectraDailyStat extends Model
         $inputCharacters = max(0, $inputCharacters);
         $cost = max(0, $cost);
 
-        $updates = [
-            'request_count' => DB::raw('request_count + 1'),
-            'successful_count' => DB::raw('successful_count + '.($successful ? 1 : 0)),
-            'failed_count' => DB::raw('failed_count + '.($successful ? 0 : 1)),
-            'prompt_tokens' => DB::raw('prompt_tokens + '.$promptTokens),
-            'completion_tokens' => DB::raw('completion_tokens + '.$completionTokens),
-            'total_tokens' => DB::raw('total_tokens + '.($promptTokens + $completionTokens)),
-            'total_images' => DB::raw('total_images + '.$imageCount),
-            'total_videos' => DB::raw('total_videos + '.$videoCount),
-            'total_duration_seconds' => DB::raw('total_duration_seconds + '.$durationSeconds),
-            'total_input_characters' => DB::raw('total_input_characters + '.$inputCharacters),
-            'total_reasoning_tokens' => DB::raw('total_reasoning_tokens + '.$reasoningTokens),
-            'total_cost_in_cents' => DB::raw('total_cost_in_cents + '.$cost),
+        $increments = [
+            'request_count' => 1,
+            'successful_count' => $successful ? 1 : 0,
+            'failed_count' => $successful ? 0 : 1,
+            'prompt_tokens' => $promptTokens,
+            'completion_tokens' => $completionTokens,
+            'total_tokens' => $promptTokens + $completionTokens,
+            'total_images' => $imageCount,
+            'total_videos' => $videoCount,
+            'total_duration_seconds' => $durationSeconds,
+            'total_input_characters' => $inputCharacters,
+            'total_reasoning_tokens' => $reasoningTokens,
+            'total_cost_in_cents' => $cost,
         ];
 
         if ($latencyMs !== null) {
             $latencyMs = max(0, $latencyMs);
-            $updates['total_latency_ms'] = DB::raw('total_latency_ms + '.$latencyMs);
-            $updates['min_latency_ms'] = DB::raw("CASE WHEN min_latency_ms IS NULL OR min_latency_ms > {$latencyMs} THEN {$latencyMs} ELSE min_latency_ms END");
-            $updates['max_latency_ms'] = DB::raw("CASE WHEN max_latency_ms IS NULL OR max_latency_ms < {$latencyMs} THEN {$latencyMs} ELSE max_latency_ms END");
+            $increments['total_latency_ms'] = $latencyMs;
         }
 
+        $key = $stat->getKey();
+
         static::query()
-            ->whereKey($stat->getKey())
-            ->update($updates);
+            ->whereKey($key)
+            ->incrementEach($increments);
+
+        if ($latencyMs !== null) {
+            static::query()
+                ->whereKey($key)
+                ->where(fn (Builder $q) => $q->whereNull('min_latency_ms')->orWhere('min_latency_ms', '>', $latencyMs))
+                ->update(['min_latency_ms' => $latencyMs]);
+
+            static::query()
+                ->whereKey($key)
+                ->where(fn (Builder $q) => $q->whereNull('max_latency_ms')->orWhere('max_latency_ms', '<', $latencyMs))
+                ->update(['max_latency_ms' => $latencyMs]);
+        }
     }
 
     /**

@@ -1,0 +1,13 @@
+{
+    "object": "list",
+    "data": [
+        {"index": 2, "relevance_score": 0.92},
+        {"index": 0, "relevance_score": 0.71},
+        {"index": 1, "relevance_score": 0.45}
+    ],
+    "model": "rerank-model",
+    "usage": {
+        "prompt_tokens": 64,
+        "total_tokens": 64
+    }
+}

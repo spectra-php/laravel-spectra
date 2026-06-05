@@ -61,7 +61,6 @@ class RequestTransformer
             // Dashboard-specific appended attributes
             'provider_display_name',
             'formatted_created_at',
-            'formatted_expires_at',
             'created_at_human',
         ];
     }

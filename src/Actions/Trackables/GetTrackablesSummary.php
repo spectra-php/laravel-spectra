@@ -54,6 +54,8 @@ class GetTrackablesSummary
     /**
      * Build a COUNT(DISTINCT ...) expression that concatenates trackable_type
      * and trackable_id in a way that works across SQLite, MySQL, and PostgreSQL.
+     *
+     * @return literal-string
      */
     private function concatDistinctExpression(): string
     {
