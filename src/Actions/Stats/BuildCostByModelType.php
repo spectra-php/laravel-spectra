@@ -8,7 +8,7 @@ use Spectra\Data\ModelTypeStat;
 class BuildCostByModelType
 {
     /**
-     * @param  \Illuminate\Support\Collection<int, ModelTypeStat>  $modelTypeStats
+     * @param  Collection<int, ModelTypeStat>  $modelTypeStats
      * @return array<string, float>
      */
     public function __invoke(Collection $modelTypeStats): array

@@ -14,7 +14,7 @@ class GetTrackableRequestsByDate
     ) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, RequestByDate>
+     * @return Collection<int, RequestByDate>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {

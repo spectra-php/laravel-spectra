@@ -9,7 +9,7 @@ use Spectra\Support\DateRange;
 class CostsByUserQuery
 {
     /**
-     * @return \Illuminate\Support\Collection<int, SpectraRequest>
+     * @return Collection<int, SpectraRequest>
      */
     public function __invoke(DateRange $dateRange, int $limit = 10): Collection
     {

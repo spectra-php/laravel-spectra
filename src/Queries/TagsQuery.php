@@ -8,7 +8,7 @@ use Spectra\Models\SpectraTag;
 class TagsQuery
 {
     /**
-     * @return \Illuminate\Support\Collection<int, SpectraTag>
+     * @return Collection<int, SpectraTag>
      */
     public function __invoke(): Collection
     {

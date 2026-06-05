@@ -4,13 +4,14 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Mistral\Handlers\ChatHandler;
+use Spectra\Support\ProviderRegistry;
 
 it('returns mistral as provider', function () {
     expect($this->mistralProvider()->getProvider())->toBe('mistral');
 });
 
 it('returns correct display name', function () {
-    expect(app(\Spectra\Support\ProviderRegistry::class)->displayName('mistral'))->toBe('Mistral');
+    expect(app(ProviderRegistry::class)->displayName('mistral'))->toBe('Mistral');
 });
 
 it('returns correct hosts', function () {

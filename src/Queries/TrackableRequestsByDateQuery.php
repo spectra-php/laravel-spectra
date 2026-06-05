@@ -9,7 +9,7 @@ use Spectra\Support\DateRange;
 class TrackableRequestsByDateQuery
 {
     /**
-     * @return \Illuminate\Support\Collection<int, SpectraRequest>
+     * @return Collection<int, SpectraRequest>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {

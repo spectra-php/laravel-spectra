@@ -15,8 +15,8 @@ readonly class Tag extends DataTransferObject
     ) {}
 
     /**
-     * @param  \Illuminate\Support\Collection<int, SpectraTag>  $tags
-     * @return \Illuminate\Support\Collection<int, self>
+     * @param  Collection<int, SpectraTag>  $tags
+     * @return Collection<int, self>
      */
     public static function fromCollection(Collection $tags): Collection
     {

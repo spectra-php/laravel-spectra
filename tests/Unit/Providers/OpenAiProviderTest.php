@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Http;
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Data\AudioMetrics;
 use Spectra\Data\ImageMetrics;
 use Spectra\Data\Metrics;
@@ -589,7 +590,7 @@ it('returns audio placeholder for speech response', function () {
 it('speech handler does not implement ExtractsModelFromResponse', function () {
     $handler = new SpeechHandler;
 
-    expect($handler)->not->toBeInstanceOf(\Spectra\Contracts\ExtractsModelFromResponse::class);
+    expect($handler)->not->toBeInstanceOf(ExtractsModelFromResponse::class);
 });
 
 it('aggregates audio endpoints from all handlers', function () {

@@ -2,8 +2,10 @@
 
 namespace Spectra\Concerns;
 
+use Illuminate\Database\Eloquent\Model;
+
 /**
- * @phpstan-require-extends \Illuminate\Database\Eloquent\Model
+ * @phpstan-require-extends Model
  *
  * @phpstan-ignore trait.unused
  */

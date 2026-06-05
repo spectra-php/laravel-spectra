@@ -9,12 +9,12 @@ readonly class StatsResponse extends DataTransferObject
 {
     /**
      * @param  array<string, float>  $cost_by_model_type
-     * @param  \Illuminate\Support\Collection<int, mixed>  $top_models
-     * @param  \Illuminate\Support\Collection<int, mixed>  $recent_requests
-     * @param  \Illuminate\Support\Collection<int, mixed>  $requests_by_date
-     * @param  \Illuminate\Support\Collection<int, mixed>  $requests_by_provider
-     * @param  \Illuminate\Support\Collection<int, mixed>  $latency_by_model_type
-     * @param  \Illuminate\Support\Collection<int, mixed>|null  $stats_by_model_type
+     * @param  Collection<int, mixed>  $top_models
+     * @param  Collection<int, mixed>  $recent_requests
+     * @param  Collection<int, mixed>  $requests_by_date
+     * @param  Collection<int, mixed>  $requests_by_provider
+     * @param  Collection<int, mixed>  $latency_by_model_type
+     * @param  Collection<int, mixed>|null  $stats_by_model_type
      */
     public function __construct(
         public int $total_requests,

@@ -1,7 +1,9 @@
 <?php
 
+use Illuminate\Database\Migrations\Migrator;
+
 it('does not auto register package schema migrations', function () {
-    /** @var \Illuminate\Database\Migrations\Migrator $migrator */
+    /** @var Migrator $migrator */
     $migrator = app('migrator');
 
     $registeredPaths = collect($migrator->paths())

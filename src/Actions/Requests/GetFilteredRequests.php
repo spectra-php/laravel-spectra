@@ -3,6 +3,7 @@
 namespace Spectra\Actions\Requests;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\DateRange;
@@ -15,7 +16,7 @@ class GetFilteredRequests
     ) {}
 
     /**
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, SpectraRequest>
+     * @return LengthAwarePaginator<int, SpectraRequest>
      */
     public function __invoke(Request $request, DateRange $dateRange): LengthAwarePaginator
     {
@@ -47,7 +48,7 @@ class GetFilteredRequests
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<SpectraRequest>  $query
+     * @param  Builder<SpectraRequest>  $query
      */
     private function applyFilters($query, Request $request): void
     {

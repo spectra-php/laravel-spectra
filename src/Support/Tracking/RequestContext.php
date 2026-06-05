@@ -7,6 +7,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
+use Spectra\Support\Pricing\CostCalculator;
 
 /**
  * In-flight container that accumulates AI request data throughout its lifecycle.
@@ -287,7 +288,7 @@ class RequestContext implements Arrayable
             return;
         }
 
-        $calculator = app(\Spectra\Support\Pricing\CostCalculator::class);
+        $calculator = app(CostCalculator::class);
 
         $pricingTier = null;
         if ($this->pricingTier !== null) {

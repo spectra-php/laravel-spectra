@@ -2,6 +2,7 @@
 
 namespace Spectra\Concerns;
 
+use Illuminate\Database\Eloquent\Model;
 use Spectra\Data\BudgetStatus;
 use Spectra\Data\RemainingBudget;
 use Spectra\Models\SpectraBudget;
@@ -9,7 +10,7 @@ use Spectra\Support\Budget\BudgetBuilder;
 use Spectra\Support\Budget\BudgetEnforcer;
 
 /**
- * @phpstan-require-extends \Illuminate\Database\Eloquent\Model
+ * @phpstan-require-extends Model
  *
  * @phpstan-ignore trait.unused
  */

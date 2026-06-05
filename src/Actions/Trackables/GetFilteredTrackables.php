@@ -13,7 +13,7 @@ class GetFilteredTrackables
     use FiltersTrackables;
 
     /**
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, SpectraRequest>
+     * @return LengthAwarePaginator<int, SpectraRequest>
      */
     public function __invoke(Request $request, DateRange $dateRange): LengthAwarePaginator
     {

@@ -5,6 +5,7 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Providers\OpenAI\Handlers\TextHandler;
 use Spectra\Providers\OpenAI\OpenAI;
+use Spectra\Support\Pricing\CostCalculator;
 
 /*
 |--------------------------------------------------------------------------
@@ -488,7 +489,7 @@ it('stores null tool_call_counts when no tool calls present', function () {
 */
 
 it('uses minute-based pricing for tts models', function (string $model) {
-    $calculator = app(\Spectra\Support\Pricing\CostCalculator::class);
+    $calculator = app(CostCalculator::class);
     $unit = $calculator->getPricingUnit('openai', $model);
 
     expect($unit)->toBe('minute');
@@ -499,7 +500,7 @@ it('uses minute-based pricing for tts models', function (string $model) {
 ]);
 
 it('calculates tts cost by duration', function () {
-    $calculator = app(\Spectra\Support\Pricing\CostCalculator::class);
+    $calculator = app(CostCalculator::class);
 
     $cost = $calculator->calculateByDuration('openai', 'tts-1', 60.0);
 
@@ -507,7 +508,7 @@ it('calculates tts cost by duration', function () {
 });
 
 it('calculates tts-1-hd cost by duration', function () {
-    $calculator = app(\Spectra\Support\Pricing\CostCalculator::class);
+    $calculator = app(CostCalculator::class);
 
     $cost = $calculator->calculateByDuration('openai', 'tts-1-hd', 60.0);
 
@@ -552,7 +553,7 @@ it('records failed request with mock response structure', function () {
 
     $record = Spectra::recordFailure(
         $context,
-        new \Exception('Rate limit exceeded'),
+        new Exception('Rate limit exceeded'),
         429
     );
 

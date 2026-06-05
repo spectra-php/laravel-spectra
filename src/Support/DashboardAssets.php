@@ -2,6 +2,7 @@
 
 namespace Spectra\Support;
 
+use Composer\InstalledVersions;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Js;
 
@@ -93,9 +94,9 @@ class DashboardAssets
 
     public static function version(): string
     {
-        if (class_exists(\Composer\InstalledVersions::class)) {
+        if (class_exists(InstalledVersions::class)) {
             try {
-                return \Composer\InstalledVersions::getPrettyVersion('spectra-php/laravel-spectra') ?? '1.0.0';
+                return InstalledVersions::getPrettyVersion('spectra-php/laravel-spectra') ?? '1.0.0';
             } catch (\Exception) {
                 return '1.0.0';
             }

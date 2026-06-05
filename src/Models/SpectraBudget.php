@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
@@ -29,8 +30,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property array<int, string>|null $allowed_providers
  * @property array<int, string>|null $allowed_models
  * @property bool $is_active
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property-read float|null $daily_limit_in_dollars
  * @property-read float|null $weekly_limit_in_dollars
  * @property-read float|null $monthly_limit_in_dollars
@@ -80,7 +81,7 @@ class SpectraBudget extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo<\Illuminate\Database\Eloquent\Model, $this>
+     * @return MorphTo<Model, $this>
      */
     public function budgetable(): MorphTo
     {
@@ -88,8 +89,8 @@ class SpectraBudget extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeActive(Builder $query): Builder
     {

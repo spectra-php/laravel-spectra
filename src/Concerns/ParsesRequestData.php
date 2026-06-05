@@ -2,6 +2,8 @@
 
 namespace Spectra\Concerns;
 
+use Illuminate\Http\Client\Request;
+
 /**
  * Shared logic for extracting request data from Laravel HTTP client requests.
  *
@@ -11,7 +13,7 @@ namespace Spectra\Concerns;
 trait ParsesRequestData
 {
     /**
-     * @param  \Illuminate\Http\Client\Request  $request
+     * @param  Request  $request
      * @return array<string, mixed>
      */
     protected static function parseRequestData($request): array
@@ -33,7 +35,7 @@ trait ParsesRequestData
     }
 
     /**
-     * @param  \Illuminate\Http\Client\Request  $request
+     * @param  Request  $request
      * @return array<string, mixed>
      */
     protected static function parseMultipartRequestData($request): array

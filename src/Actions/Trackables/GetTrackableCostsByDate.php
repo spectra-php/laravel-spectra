@@ -14,7 +14,7 @@ class GetTrackableCostsByDate
     ) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, CostByDate>
+     * @return Collection<int, CostByDate>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {

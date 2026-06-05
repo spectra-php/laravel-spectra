@@ -4,13 +4,14 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\XAi\Handlers\ChatHandler;
+use Spectra\Support\ProviderRegistry;
 
 it('returns xai as provider', function () {
     expect($this->xAiProvider()->getProvider())->toBe('xai');
 });
 
 it('returns correct display name', function () {
-    expect(app(\Spectra\Support\ProviderRegistry::class)->displayName('xai'))->toBe('xAI');
+    expect(app(ProviderRegistry::class)->displayName('xai'))->toBe('xAI');
 });
 
 it('returns correct hosts', function () {

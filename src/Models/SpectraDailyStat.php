@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * @property string $id
- * @property \Illuminate\Support\Carbon $date
+ * @property Carbon $date
  * @property string $provider
  * @property string $model
  * @property string|null $model_type
@@ -32,8 +32,8 @@ use Illuminate\Support\Facades\DB;
  * @property int $total_latency_ms
  * @property int|null $min_latency_ms
  * @property int|null $max_latency_ms
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property-read float|null $avg_latency_ms
  * @property-read float $success_rate
  * @property-read float $total_cost_in_dollars
@@ -84,7 +84,7 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo<\Illuminate\Database\Eloquent\Model, $this>
+     * @return MorphTo<Model, $this>
      */
     public function trackable(): MorphTo
     {
@@ -119,8 +119,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeDateRange(Builder $query, Carbon|string $start, Carbon|string $end): Builder
     {
@@ -128,8 +128,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeProvider(Builder $query, string $provider): Builder
     {
@@ -137,8 +137,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeModel(Builder $query, string $model): Builder
     {
@@ -146,8 +146,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeForTrackable(Builder $query, Model $trackable): Builder
     {
@@ -156,8 +156,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeGlobal(Builder $query): Builder
     {
@@ -165,8 +165,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeModelType(Builder $query, string $modelType): Builder
     {

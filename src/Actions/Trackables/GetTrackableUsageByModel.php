@@ -14,7 +14,7 @@ class GetTrackableUsageByModel
     ) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, UsageByModel>
+     * @return Collection<int, UsageByModel>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {

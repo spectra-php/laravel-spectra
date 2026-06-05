@@ -5,6 +5,7 @@ namespace Spectra\Watchers;
 use Illuminate\Http\Client\Events\ConnectionFailed;
 use Illuminate\Http\Client\Events\RequestSending;
 use Illuminate\Http\Client\Events\ResponseReceived;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Event;
 use Spectra\Concerns\ParsesRequestData;
 use Spectra\Contracts\ExtractsPricingTierFromRequest;
@@ -13,6 +14,7 @@ use Spectra\Contracts\SkipsResponse;
 use Spectra\Contracts\Watcher;
 use Spectra\Spectra;
 use Spectra\Support\ProviderRegistry;
+use Spectra\Support\Tracking\RequestContext;
 
 /**
  * Watcher for Laravel's HTTP client.
@@ -31,7 +33,7 @@ class HttpWatcher implements Watcher
     /**
      * In-flight request contexts keyed by request hash.
      *
-     * @var array<string, \Spectra\Support\Tracking\RequestContext>
+     * @var array<string, RequestContext>
      */
     protected array $contexts = [];
 
@@ -174,7 +176,7 @@ class HttpWatcher implements Watcher
      * @param  array<string, mixed>  $body
      */
     protected function shouldSkipResponse(
-        \Spectra\Support\Tracking\RequestContext $context,
+        RequestContext $context,
         array $body
     ): bool {
         $providerInstance = $this->getRegistry()->provider($context->provider);
@@ -194,7 +196,7 @@ class HttpWatcher implements Watcher
     }
 
     /**
-     * @param  \Illuminate\Http\Client\Request  $request
+     * @param  Request  $request
      */
     protected function getRequestHash($request): string
     {

@@ -14,7 +14,7 @@ class GetTopModels
     ) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, TopModel>
+     * @return Collection<int, TopModel>
      */
     public function __invoke(DateRange $dateRange, string $layout, int $limit = 5): Collection
     {

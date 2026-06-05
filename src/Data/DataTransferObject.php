@@ -5,13 +5,14 @@ namespace Spectra\Data;
 use ArrayAccess;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Support\Collection;
 use JsonSerializable;
 use ReflectionClass;
 use ReflectionProperty;
 
 /**
- * @implements \ArrayAccess<string, mixed>
- * @implements \Illuminate\Contracts\Support\Arrayable<string, mixed>
+ * @implements ArrayAccess<string, mixed>
+ * @implements Arrayable<string, mixed>
  */
 abstract readonly class DataTransferObject implements Arrayable, ArrayAccess, Jsonable, JsonSerializable
 {
@@ -25,7 +26,7 @@ abstract readonly class DataTransferObject implements Arrayable, ArrayAccess, Js
         foreach ($properties as $property) {
             $value = $property->getValue($this);
 
-            if ($value instanceof DataTransferObject || $value instanceof \Illuminate\Support\Collection) {
+            if ($value instanceof DataTransferObject || $value instanceof Collection) {
                 $value = $value->toArray();
             }
 

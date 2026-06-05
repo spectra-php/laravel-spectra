@@ -17,7 +17,7 @@ class GetCostsByModel
     ) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, CostByModel>
+     * @return Collection<int, CostByModel>
      */
     public function __invoke(DateRange $dateRange, int $limit = 10): Collection
     {

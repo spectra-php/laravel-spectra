@@ -3,11 +3,12 @@
 namespace Spectra\Concerns;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Spectra\Data\UsageStats;
 
 /**
- * @phpstan-require-extends \Illuminate\Database\Eloquent\Model
+ * @phpstan-require-extends Model
  *
  * @phpstan-ignore trait.unused
  */

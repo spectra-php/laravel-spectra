@@ -1,5 +1,33 @@
 <?php
 
+use Spectra\Pricing\AnthropicPricing;
+use Spectra\Pricing\CoherePricing;
+use Spectra\Pricing\FalAiPricing;
+use Spectra\Pricing\GooglePricing;
+use Spectra\Pricing\GroqPricing;
+use Spectra\Pricing\MistralPricing;
+use Spectra\Pricing\OpenAIPricing;
+use Spectra\Pricing\OpenRouterPricing;
+use Spectra\Pricing\ReplicatePricing;
+use Spectra\Pricing\ScalewayPricing;
+use Spectra\Pricing\XAiPricing;
+use Spectra\Providers\Anthropic\Anthropic;
+use Spectra\Providers\Cohere\Cohere;
+use Spectra\Providers\ElevenLabs\ElevenLabs;
+use Spectra\Providers\FalAi\FalAi;
+use Spectra\Providers\Google\Google;
+use Spectra\Providers\Groq\Groq;
+use Spectra\Providers\Mistral\Mistral;
+use Spectra\Providers\Ollama\Ollama;
+use Spectra\Providers\OpenAI\OpenAI;
+use Spectra\Providers\OpenRouter\OpenRouter;
+use Spectra\Providers\Replicate\Replicate;
+use Spectra\Providers\XAi\XAi;
+use Spectra\Support\RequestTransformer;
+use Spectra\Watchers\GuzzleWatcher;
+use Spectra\Watchers\HttpWatcher;
+use Spectra\Watchers\OpenAiWatcher;
+
 return [
 
     /*
@@ -537,17 +565,17 @@ return [
         */
 
         'pricing' => [
-            'openai' => \Spectra\Pricing\OpenAIPricing::class,
-            'anthropic' => \Spectra\Pricing\AnthropicPricing::class,
-            'google' => \Spectra\Pricing\GooglePricing::class,
-            'xai' => \Spectra\Pricing\XAiPricing::class,
-            'mistral' => \Spectra\Pricing\MistralPricing::class,
-            'openrouter' => \Spectra\Pricing\OpenRouterPricing::class,
-            'replicate' => \Spectra\Pricing\ReplicatePricing::class,
-            'cohere' => \Spectra\Pricing\CoherePricing::class,
-            'groq' => \Spectra\Pricing\GroqPricing::class,
-            'falai' => \Spectra\Pricing\FalAiPricing::class,
-            'scaleway' => \Spectra\Pricing\ScalewayPricing::class,
+            'openai' => OpenAIPricing::class,
+            'anthropic' => AnthropicPricing::class,
+            'google' => GooglePricing::class,
+            'xai' => XAiPricing::class,
+            'mistral' => MistralPricing::class,
+            'openrouter' => OpenRouterPricing::class,
+            'replicate' => ReplicatePricing::class,
+            'cohere' => CoherePricing::class,
+            'groq' => GroqPricing::class,
+            'falai' => FalAiPricing::class,
+            'scaleway' => ScalewayPricing::class,
         ],
 
     ],
@@ -649,9 +677,9 @@ return [
         */
 
         'watchers' => [
-            Spectra\Watchers\HttpWatcher::class,
-            Spectra\Watchers\OpenAiWatcher::class,
-            Spectra\Watchers\GuzzleWatcher::class,
+            HttpWatcher::class,
+            OpenAiWatcher::class,
+            GuzzleWatcher::class,
         ],
 
     ],
@@ -675,18 +703,18 @@ return [
     */
 
     'providers' => [
-        'openai' => ['class' => Spectra\Providers\OpenAI\OpenAI::class, 'name' => 'OpenAI'],
-        'anthropic' => ['class' => Spectra\Providers\Anthropic\Anthropic::class, 'name' => 'Anthropic'],
-        'google' => ['class' => Spectra\Providers\Google\Google::class, 'name' => 'Google AI'],
-        'ollama' => ['class' => Spectra\Providers\Ollama\Ollama::class, 'name' => 'Ollama'],
-        'openrouter' => ['class' => Spectra\Providers\OpenRouter\OpenRouter::class, 'name' => 'OpenRouter'],
-        'cohere' => ['class' => Spectra\Providers\Cohere\Cohere::class, 'name' => 'Cohere'],
-        'groq' => ['class' => Spectra\Providers\Groq\Groq::class, 'name' => 'Groq'],
-        'xai' => ['class' => Spectra\Providers\XAi\XAi::class, 'name' => 'xAI'],
-        'elevenlabs' => ['class' => Spectra\Providers\ElevenLabs\ElevenLabs::class, 'name' => 'ElevenLabs'],
-        'replicate' => ['class' => Spectra\Providers\Replicate\Replicate::class, 'name' => 'Replicate'],
-        'mistral' => ['class' => Spectra\Providers\Mistral\Mistral::class, 'name' => 'Mistral'],
-        'falai' => ['class' => Spectra\Providers\FalAi\FalAi::class, 'name' => 'fal.ai'],
+        'openai' => ['class' => OpenAI::class, 'name' => 'OpenAI'],
+        'anthropic' => ['class' => Anthropic::class, 'name' => 'Anthropic'],
+        'google' => ['class' => Google::class, 'name' => 'Google AI'],
+        'ollama' => ['class' => Ollama::class, 'name' => 'Ollama'],
+        'openrouter' => ['class' => OpenRouter::class, 'name' => 'OpenRouter'],
+        'cohere' => ['class' => Cohere::class, 'name' => 'Cohere'],
+        'groq' => ['class' => Groq::class, 'name' => 'Groq'],
+        'xai' => ['class' => XAi::class, 'name' => 'xAI'],
+        'elevenlabs' => ['class' => ElevenLabs::class, 'name' => 'ElevenLabs'],
+        'replicate' => ['class' => Replicate::class, 'name' => 'Replicate'],
+        'mistral' => ['class' => Mistral::class, 'name' => 'Mistral'],
+        'falai' => ['class' => FalAi::class, 'name' => 'fal.ai'],
     ],
 
     /*
@@ -715,7 +743,7 @@ return [
         |
         */
 
-        'request_transformer' => Spectra\Support\RequestTransformer::class,
+        'request_transformer' => RequestTransformer::class,
 
         /*
         |--------------------------------------------------------------------------

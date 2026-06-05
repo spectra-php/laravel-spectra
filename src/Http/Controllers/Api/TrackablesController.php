@@ -12,6 +12,7 @@ use Spectra\Actions\Trackables\ResolveTopModels;
 use Spectra\Actions\Trackables\ResolveTrackableMetadata;
 use Spectra\Data\ModelTypeStat;
 use Spectra\Data\Responses\TrackablesResponse;
+use Spectra\Models\SpectraRequest;
 use Spectra\Queries\TrackablesLatencyByModelTypeQuery;
 use Spectra\Support\DateRange;
 
@@ -32,7 +33,7 @@ class TrackablesController extends BaseApiController
 
         $paginated = $getFilteredTrackables($request, $dateRange);
 
-        /** @var array<int, \Spectra\Models\SpectraRequest> $items */
+        /** @var array<int, SpectraRequest> $items */
         $items = $paginated->items();
         $pageItems = collect($items);
 

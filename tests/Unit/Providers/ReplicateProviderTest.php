@@ -4,13 +4,14 @@ use Spectra\Data\ImageMetrics;
 use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Replicate\Handlers\ImageHandler;
+use Spectra\Support\ProviderRegistry;
 
 it('returns replicate as provider', function () {
     expect($this->replicateProvider()->getProvider())->toBe('replicate');
 });
 
 it('returns correct display name', function () {
-    expect(app(\Spectra\Support\ProviderRegistry::class)->displayName('replicate'))->toBe('Replicate');
+    expect(app(ProviderRegistry::class)->displayName('replicate'))->toBe('Replicate');
 });
 
 it('returns correct hosts', function () {

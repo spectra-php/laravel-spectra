@@ -4,11 +4,12 @@ namespace Spectra\Data\Responses;
 
 use Illuminate\Support\Collection;
 use Spectra\Data\DataTransferObject;
+use Spectra\Data\Tag;
 
 readonly class TagsResponse extends DataTransferObject
 {
     /**
-     * @param  Collection<int, \Spectra\Data\Tag>  $tags
+     * @param  Collection<int, Tag>  $tags
      */
     public function __construct(
         public Collection $tags,
