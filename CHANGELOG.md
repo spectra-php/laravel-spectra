@@ -2,6 +2,12 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## 1.0.0
+
+### Added
+
+- Add support for [Scaleway](https://www.scaleway.com) provider pricing (Generative APIs)
+
 ## 1.0.0-beta.1 - 2026-06-03
 
 ### Added
