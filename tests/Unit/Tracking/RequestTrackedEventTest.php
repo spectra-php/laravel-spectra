@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Event;
 use Spectra\Events\RequestTracked;
+use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\RequestPersister;
 
 it('dispatches RequestTracked event when a request is persisted', function () {
@@ -12,7 +13,7 @@ it('dispatches RequestTracked event when a request is persisted', function () {
 
     $persister = app(RequestPersister::class);
 
-    $context = new \Spectra\Support\Tracking\RequestContext([
+    $context = new RequestContext([
         'provider' => 'openai',
         'model' => 'gpt-4o',
     ]);
@@ -36,7 +37,7 @@ it('RequestTracked event contains transformed data', function () {
 
     $persister = app(RequestPersister::class);
 
-    $context = new \Spectra\Support\Tracking\RequestContext([
+    $context = new RequestContext([
         'provider' => 'anthropic',
         'model' => 'claude-sonnet-4-20250514',
     ]);

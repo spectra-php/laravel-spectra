@@ -4,13 +4,14 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Cohere\Handlers\ChatHandler;
+use Spectra\Support\ProviderRegistry;
 
 it('returns cohere as provider', function () {
     expect($this->cohereProvider()->getProvider())->toBe('cohere');
 });
 
 it('returns correct display name', function () {
-    expect(app(\Spectra\Support\ProviderRegistry::class)->displayName('cohere'))->toBe('Cohere');
+    expect(app(ProviderRegistry::class)->displayName('cohere'))->toBe('Cohere');
 });
 
 it('returns correct hosts', function () {

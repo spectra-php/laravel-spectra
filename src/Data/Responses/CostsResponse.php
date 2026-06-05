@@ -8,11 +8,11 @@ use Spectra\Data\DataTransferObject;
 readonly class CostsResponse extends DataTransferObject
 {
     /**
-     * @param  \Illuminate\Support\Collection<int, mixed>  $costs_by_provider
-     * @param  \Illuminate\Support\Collection<int, mixed>  $costs_by_model
-     * @param  \Illuminate\Support\Collection<int, mixed>  $costs_by_model_type
-     * @param  \Illuminate\Support\Collection<int, mixed>  $costs_by_date
-     * @param  \Illuminate\Support\Collection<int, mixed>  $costs_by_user
+     * @param  Collection<int, mixed>  $costs_by_provider
+     * @param  Collection<int, mixed>  $costs_by_model
+     * @param  Collection<int, mixed>  $costs_by_model_type
+     * @param  Collection<int, mixed>  $costs_by_date
+     * @param  Collection<int, mixed>  $costs_by_user
      */
     public function __construct(
         public float $total_cost_in_cents,

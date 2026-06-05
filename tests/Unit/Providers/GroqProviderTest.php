@@ -4,13 +4,14 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Groq\Handlers\ChatHandler;
+use Spectra\Support\ProviderRegistry;
 
 it('returns groq as provider', function () {
     expect($this->groqProvider()->getProvider())->toBe('groq');
 });
 
 it('returns correct display name', function () {
-    expect(app(\Spectra\Support\ProviderRegistry::class)->displayName('groq'))->toBe('Groq');
+    expect(app(ProviderRegistry::class)->displayName('groq'))->toBe('Groq');
 });
 
 it('returns correct hosts', function () {

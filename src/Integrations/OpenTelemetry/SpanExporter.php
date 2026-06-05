@@ -2,6 +2,7 @@
 
 namespace Spectra\Integrations\OpenTelemetry;
 
+use Composer\InstalledVersions;
 use Spectra\Contracts\SpanBuilder;
 
 /**
@@ -101,9 +102,9 @@ class SpanExporter
 
     protected function getSpectraVersion(): string
     {
-        if (class_exists(\Composer\InstalledVersions::class)) {
+        if (class_exists(InstalledVersions::class)) {
             try {
-                return \Composer\InstalledVersions::getVersion('spectra-php/laravel-spectra') ?? '1.0.0';
+                return InstalledVersions::getVersion('spectra-php/laravel-spectra') ?? '1.0.0';
             } catch (\Exception) {
                 return '1.0.0';
             }

@@ -21,8 +21,8 @@ readonly class CostByModelType extends DataTransferObject
     ) {}
 
     /**
-     * @param  \Illuminate\Support\Collection<int, SpectraRequest>  $items
-     * @return \Illuminate\Support\Collection<int, self>
+     * @param  Collection<int, SpectraRequest>  $items
+     * @return Collection<int, self>
      */
     public static function fromCollection(Collection $items): Collection
     {

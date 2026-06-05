@@ -14,7 +14,7 @@ class GetTrackableUsageByProvider
     ) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, UsageByProvider>
+     * @return Collection<int, UsageByProvider>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {

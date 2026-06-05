@@ -4,11 +4,12 @@ namespace Spectra\Actions\Trackables;
 
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Support\Collection;
+use Spectra\Models\SpectraRequest;
 
 class ResolveTrackableMetadata
 {
     /**
-     * @param  \Illuminate\Support\Collection<int, \Spectra\Models\SpectraRequest>  $pageItems
+     * @param  Collection<int, SpectraRequest>  $pageItems
      * @return array<string, array<string, mixed>>
      */
     public function __invoke(Collection $pageItems): array

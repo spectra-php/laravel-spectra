@@ -7,6 +7,7 @@ use Spectra\Contracts\HasExpiration;
 use Spectra\Contracts\HasMedia;
 use Spectra\Contracts\ReturnsBinaryResponse;
 use Spectra\Contracts\SkipsResponse;
+use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Provider;
 use Spectra\Support\AudioDurationExtractor;
@@ -20,7 +21,7 @@ class ResponseProcessor
      *
      * Returns [responseBody, usage] on success, or null if the response should be skipped.
      *
-     * @return array{0: array<string, mixed>, 1: array<string, int|null>|\Spectra\Data\TokenMetrics|null}|null
+     * @return array{0: array<string, mixed>, 1: array<string, int|null>|TokenMetrics|null}|null
      */
     public function processResponse(RequestContext $context, mixed $response): ?array
     {
@@ -35,7 +36,7 @@ class ResponseProcessor
      * Returns [responseBody, usage] on success, or null if the response should be skipped.
      *
      * @param  array<string, mixed>  $body
-     * @return array{0: array<string, mixed>, 1: array<string, int|null>|\Spectra\Data\TokenMetrics|null}|null
+     * @return array{0: array<string, mixed>, 1: array<string, int|null>|TokenMetrics|null}|null
      */
     public function process(RequestContext $context, array $body): ?array
     {

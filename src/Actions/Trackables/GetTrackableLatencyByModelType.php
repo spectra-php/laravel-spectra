@@ -14,7 +14,7 @@ class GetTrackableLatencyByModelType
     ) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, ModelTypeStat>
+     * @return Collection<int, ModelTypeStat>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {

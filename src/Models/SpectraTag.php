@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
  * @property string $name
  * @property-read string $slug
  * @property-read int|null $requests_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \Spectra\Models\SpectraRequest> $requests
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, SpectraRequest> $requests
  */
 class SpectraTag extends Model
 {
@@ -33,7 +33,7 @@ class SpectraTag extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<\Spectra\Models\SpectraRequest, $this>
+     * @return BelongsToMany<SpectraRequest, $this>
      */
     public function requests(): BelongsToMany
     {

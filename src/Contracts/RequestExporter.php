@@ -2,6 +2,8 @@
 
 namespace Spectra\Contracts;
 
+use Spectra\Support\RequestTransformer;
+
 /**
  * Generic contract for exporting tracked AI requests to external integrations.
  *
@@ -9,7 +11,7 @@ namespace Spectra\Contracts;
  * and are responsible for transforming and sending it to their specific backend
  * (OpenTelemetry, Datadog, webhooks, etc.).
  *
- * @see \Spectra\Support\RequestTransformer
+ * @see RequestTransformer
  */
 interface RequestExporter
 {

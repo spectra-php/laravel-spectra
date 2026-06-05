@@ -14,7 +14,7 @@ class GetRequestsByProvider
     ) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, RequestByProvider>
+     * @return Collection<int, RequestByProvider>
      */
     public function __invoke(DateRange $dateRange, string $layout): Collection
     {

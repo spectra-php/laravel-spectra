@@ -13,7 +13,7 @@ class TrackablesLatencyByModelTypeQuery
     use FiltersTrackables;
 
     /**
-     * @return \Illuminate\Support\Collection<int, SpectraRequest>
+     * @return Collection<int, SpectraRequest>
      */
     public function __invoke(Request $request, DateRange $dateRange): Collection
     {

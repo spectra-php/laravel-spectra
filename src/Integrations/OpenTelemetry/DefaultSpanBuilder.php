@@ -2,6 +2,7 @@
 
 namespace Spectra\Integrations\OpenTelemetry;
 
+use Illuminate\Support\Carbon;
 use Spectra\Contracts\SpanBuilder;
 
 /**
@@ -186,7 +187,7 @@ class DefaultSpanBuilder implements SpanBuilder
      */
     protected function toNano(mixed $timestamp): string
     {
-        if ($timestamp instanceof \Illuminate\Support\Carbon) {
+        if ($timestamp instanceof Carbon) {
             return (string) ((int) $timestamp->getPreciseTimestamp(6) * 1000);
         }
 

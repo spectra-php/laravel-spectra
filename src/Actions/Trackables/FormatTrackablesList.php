@@ -8,7 +8,7 @@ use Spectra\Models\SpectraRequest;
 class FormatTrackablesList
 {
     /**
-     * @param  \Illuminate\Support\Collection<int, SpectraRequest>  $pageItems
+     * @param  Collection<int, SpectraRequest>  $pageItems
      * @param  array<string, string>  $topModels
      * @param  array<string, array<string, mixed>>  $metadata
      * @return array<int, array<string, mixed>>

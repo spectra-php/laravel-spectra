@@ -8,7 +8,7 @@ use Spectra\Models\SpectraRequest;
 class ResolveTopModels
 {
     /**
-     * @param  \Illuminate\Support\Collection<int, SpectraRequest>  $pageItems
+     * @param  Collection<int, SpectraRequest>  $pageItems
      * @return array<string, string>
      */
     public function __invoke(Collection $pageItems): array

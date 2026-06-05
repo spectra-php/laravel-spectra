@@ -14,7 +14,7 @@ class GetModelTypeBreakdown
     ) {}
 
     /**
-     * @return \Illuminate\Support\Collection<int, ModelTypeStat>
+     * @return Collection<int, ModelTypeStat>
      */
     public function __invoke(DateRange $dateRange, string $layout): Collection
     {

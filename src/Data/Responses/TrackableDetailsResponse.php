@@ -9,7 +9,7 @@ readonly class TrackableDetailsResponse extends DataTransferObject
 {
     /**
      * @param  array<string, mixed>  $trackable
-     * @param  \Illuminate\Support\Collection<int, mixed>  $requests
+     * @param  Collection<int, mixed>  $requests
      */
     public function __construct(
         public array $trackable,

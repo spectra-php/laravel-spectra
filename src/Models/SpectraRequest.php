@@ -4,11 +4,13 @@ namespace Spectra\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 use Spectra\Database\Factories\SpectraRequestFactory;
 use Spectra\Support\ProviderRegistry;
 
@@ -49,9 +51,9 @@ use Spectra\Support\ProviderRegistry;
  * @property int|null $status_code
  * @property array<string, mixed>|null $media_storage_path
  * @property array<string, mixed>|null $metadata
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $completed_at
- * @property \Illuminate\Support\Carbon|null $expires_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $completed_at
+ * @property Carbon|null $expires_at
  * @property-read string|null $prompt
  * @property-read string|null $response_text
  * @property-read int $total_tokens
@@ -85,7 +87,7 @@ use Spectra\Support\ProviderRegistry;
  * @property-read mixed $tts_characters
  * @property-read mixed $tts_duration_seconds
  * @property-read mixed $stt_duration_seconds
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \Spectra\Models\SpectraTag> $tags
+ * @property-read Collection<int, SpectraTag> $tags
  */
 class SpectraRequest extends Model
 {
@@ -142,7 +144,7 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo<\Illuminate\Database\Eloquent\Model, $this>
+     * @return MorphTo<Model, $this>
      */
     public function trackable(): MorphTo
     {
@@ -150,7 +152,7 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<\Spectra\Models\SpectraTag, $this>
+     * @return BelongsToMany<SpectraTag, $this>
      */
     public function tags(): BelongsToMany
     {
@@ -163,8 +165,8 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeWithTag(Builder $query, string $tag): Builder
     {
@@ -174,9 +176,9 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
+     * @param  Builder<static>  $query
      * @param  array<int, string>  $tags
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @return Builder<static>
      */
     public function scopeWithAnyTags(Builder $query, array $tags): Builder
     {
@@ -204,8 +206,8 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeProvider(Builder $query, string $provider): Builder
     {
@@ -213,8 +215,8 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeModel(Builder $query, string $model): Builder
     {
@@ -222,8 +224,8 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeSuccessful(Builder $query): Builder
     {
@@ -231,8 +233,8 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeFailed(Builder $query): Builder
     {
@@ -243,8 +245,8 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeModelType(Builder $query, string $modelType): Builder
     {
@@ -252,8 +254,8 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeFinishReason(Builder $query, string $reason): Builder
     {
@@ -261,8 +263,8 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeWithToolCalls(Builder $query): Builder
     {
@@ -270,8 +272,8 @@ class SpectraRequest extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<static>
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeForTrackable(Builder $query, Model $trackable): Builder
     {

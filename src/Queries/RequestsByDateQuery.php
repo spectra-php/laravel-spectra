@@ -12,7 +12,7 @@ class RequestsByDateQuery
     use FiltersByLayout;
 
     /**
-     * @return \Illuminate\Support\Collection<int, SpectraRequest>
+     * @return Collection<int, SpectraRequest>
      */
     public function __invoke(DateRange $dateRange, string $layout): Collection
     {

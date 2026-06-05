@@ -3,6 +3,7 @@
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Providers\Anthropic\Anthropic;
+use Spectra\Providers\Anthropic\Handlers\MessageHandler;
 
 it('records anthropic message response to database', function () {
     $response = $this->loadMockResponse('claude/message.json');
@@ -69,7 +70,7 @@ it('anthropic handler extracts fields from all model responses', function (strin
 ]);
 
 it('anthropic handler matches both standard and simplified response shapes', function () {
-    $handler = new \Spectra\Providers\Anthropic\Handlers\MessageHandler;
+    $handler = new MessageHandler;
 
     expect($handler->matchesResponse([
         'type' => 'message',

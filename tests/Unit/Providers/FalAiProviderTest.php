@@ -1,16 +1,18 @@
 <?php
 
+use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Data\ImageMetrics;
 use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\FalAi\Handlers\ImageHandler;
+use Spectra\Support\ProviderRegistry;
 
 it('returns falai as provider', function () {
     expect($this->falAiProvider()->getProvider())->toBe('falai');
 });
 
 it('returns correct display name', function () {
-    expect(app(\Spectra\Support\ProviderRegistry::class)->displayName('falai'))->toBe('fal.ai');
+    expect(app(ProviderRegistry::class)->displayName('falai'))->toBe('fal.ai');
 });
 
 it('returns correct hosts', function () {
@@ -81,7 +83,7 @@ it('extracts model from endpoint', function () {
 it('does not implement ExtractsModelFromResponse', function () {
     $handler = new ImageHandler;
 
-    expect($handler)->not->toBeInstanceOf(\Spectra\Contracts\ExtractsModelFromResponse::class);
+    expect($handler)->not->toBeInstanceOf(ExtractsModelFromResponse::class);
 });
 
 it('extracts image urls from sync response', function () {

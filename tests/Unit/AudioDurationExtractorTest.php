@@ -19,7 +19,7 @@ it('reports availability correctly', function () {
     $available = AudioDurationExtractor::isAvailable();
 
     expect($available)->toBe(
-        class_exists(\JamesHeinrich\GetID3\GetID3::class) || class_exists(\getID3::class)
+        class_exists(JamesHeinrich\GetID3\GetID3::class) || class_exists(getID3::class)
     );
 });
 

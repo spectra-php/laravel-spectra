@@ -3,6 +3,7 @@
 namespace Spectra\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
+use Spectra\Support\RequestTransformer;
 
 /**
  * Dispatched after an AI request has been persisted and is ready for integrations.
@@ -14,7 +15,7 @@ use Illuminate\Foundation\Events\Dispatchable;
  * The $request array is produced by RequestTransformer and contains a clean
  * snapshot of the request data (provider, model, tokens, costs, etc.).
  *
- * @see \Spectra\Support\RequestTransformer
+ * @see RequestTransformer
  */
 class RequestTracked
 {

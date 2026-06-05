@@ -2,6 +2,9 @@
 
 namespace Spectra\Contracts;
 
+use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
+use Spectra\Support\RequestTransformer;
+
 /**
  * Contract for building OpenTelemetry spans from tracked request data.
  *
@@ -11,8 +14,8 @@ namespace Spectra\Contracts;
  * The data array is produced by RequestTransformer and contains all
  * request metadata (provider, model, tokens, costs, performance, etc.).
  *
- * @see \Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder
- * @see \Spectra\Support\RequestTransformer
+ * @see DefaultSpanBuilder
+ * @see RequestTransformer
  */
 interface SpanBuilder
 {
