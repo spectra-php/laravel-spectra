@@ -213,6 +213,25 @@ it('should get full model data', function () {
         ->and($data['tiers'])->toHaveKey('standard');
 });
 
+it('has pricing for scaleway models', function () {
+    $service = app(PricingLookup::class);
+
+    $llama = $service->get('scaleway', 'llama-3.3-70b-instruct', PricingTier::Standard);
+    expect($llama)->not->toBeNull()
+        ->and($llama['input'])->toBe(90)
+        ->and($llama['output'])->toBe(90);
+
+    $mistral = $service->get('scaleway', 'mistral-medium-3.5-128b', PricingTier::Standard);
+    expect($mistral)->not->toBeNull()
+        ->and($mistral['input'])->toBe(150)
+        ->and($mistral['output'])->toBe(750);
+
+    $embedding = $service->get('scaleway', 'bge-multilingual-gemma2', PricingTier::Standard);
+    expect($embedding)->not->toBeNull()
+        ->and($embedding['input'])->toBe(10)
+        ->and($embedding['output'])->toBe(0);
+});
+
 it('reads pricing from all 7 providers', function () {
     $lookup = app(PricingLookup::class);
 

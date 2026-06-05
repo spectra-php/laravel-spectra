@@ -547,6 +547,7 @@ return [
             'cohere' => \Spectra\Pricing\CoherePricing::class,
             'groq' => \Spectra\Pricing\GroqPricing::class,
             'falai' => \Spectra\Pricing\FalAiPricing::class,
+            'scaleway' => \Spectra\Pricing\ScalewayPricing::class,
         ],
 
     ],
