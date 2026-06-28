@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Pricing;
 
 class OpenAIPricing extends ProviderPricing
@@ -11,6 +13,49 @@ class OpenAIPricing extends ProviderPricing
 
     protected function define(): void
     {
+        $this->model('gpt-5.5', fn ($m) => $m
+            ->displayName('GPT-5.5')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 500, outputPrice: 3000, cachedInputPrice: 50)
+            ->tier('batch', inputPrice: 250, outputPrice: 1500, cachedInputPrice: 25)
+            ->tier('flex', inputPrice: 250, outputPrice: 1500, cachedInputPrice: 25)
+            ->tier('priority', inputPrice: 1250, outputPrice: 7500, cachedInputPrice: 125));
+
+        $this->model('gpt-5.5-pro', fn ($m) => $m
+            ->displayName('GPT-5.5 Pro')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 3000, outputPrice: 18000)
+            ->tier('batch', inputPrice: 1500, outputPrice: 9000));
+
+        $this->model('gpt-5.4', fn ($m) => $m
+            ->displayName('GPT-5.4')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 250, outputPrice: 1500, cachedInputPrice: 25)
+            ->tier('batch', inputPrice: 125, outputPrice: 750, cachedInputPrice: 13)
+            ->tier('flex', inputPrice: 125, outputPrice: 750, cachedInputPrice: 13)
+            ->tier('priority', inputPrice: 500, outputPrice: 3000, cachedInputPrice: 50));
+
+        $this->model('gpt-5.4-mini', fn ($m) => $m
+            ->displayName('GPT-5.4 Mini')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 75, outputPrice: 450, cachedInputPrice: 7.5)
+            ->tier('batch', inputPrice: 37.5, outputPrice: 225, cachedInputPrice: 3.75)
+            ->tier('flex', inputPrice: 37.5, outputPrice: 225, cachedInputPrice: 3.75)
+            ->tier('priority', inputPrice: 150, outputPrice: 900, cachedInputPrice: 15));
+
+        $this->model('gpt-5.4-nano', fn ($m) => $m
+            ->displayName('GPT-5.4 Nano')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 20, outputPrice: 125, cachedInputPrice: 2)
+            ->tier('batch', inputPrice: 10, outputPrice: 62.5, cachedInputPrice: 1)
+            ->tier('flex', inputPrice: 10, outputPrice: 62.5, cachedInputPrice: 1));
+
+        $this->model('gpt-5.4-pro', fn ($m) => $m
+            ->displayName('GPT-5.4 Pro')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 3000, outputPrice: 18000)
+            ->tier('batch', inputPrice: 1500, outputPrice: 9000));
+
         $this->model('gpt-5.2', fn ($m) => $m
             ->displayName('GPT-5.2')
             ->canGenerateText()

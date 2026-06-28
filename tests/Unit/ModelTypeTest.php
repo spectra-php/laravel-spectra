@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Enums\ModelType;
 
 it('returns correct labels for each model type', function () {

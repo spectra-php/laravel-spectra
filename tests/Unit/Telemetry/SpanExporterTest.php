@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Contracts\SpanBuilder;
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
 use Spectra\Integrations\OpenTelemetry\SpanExporter;

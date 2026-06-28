@@ -295,6 +295,10 @@ Associate all requests in the current process with a specific user or Eloquent m
 ```php
 Spectra::forUser($user);
 
+// Pass a user ID and Spectra loads the model for you
+// (resolves config('auth.providers.users.model'))
+Spectra::forUser(1);
+
 // Or attribute to any Eloquent model
 Spectra::forTrackable($team);
 ```

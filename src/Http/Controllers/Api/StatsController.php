@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Http\Controllers\Api;
 
 use Illuminate\Http\Request;

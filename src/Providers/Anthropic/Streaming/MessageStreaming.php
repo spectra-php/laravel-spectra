@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\Anthropic\Streaming;
 
 use Spectra\Support\Tracking\StreamHandler;

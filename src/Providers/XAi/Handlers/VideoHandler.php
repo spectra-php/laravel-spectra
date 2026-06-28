@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\XAi\Handlers;
 
 use Illuminate\Support\Facades\Http;
+use Spectra\Concerns\ExtractsModelField;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasMedia;
@@ -14,6 +17,8 @@ use Spectra\Support\MediaPersister;
 
 class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, SkipsResponse
 {
+    use ExtractsModelField;
+
     public function modelType(): ModelType
     {
         return ModelType::Video;
@@ -51,12 +56,6 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
                 durationSeconds: isset($responseData['video']['duration']) ? (float) $responseData['video']['duration'] : null,
             ),
         );
-    }
-
-    /** @param  array<string, mixed>  $response */
-    public function extractModelFromResponse(array $response): ?string
-    {
-        return $response['model'] ?? null;
     }
 
     /** @param  array<string, mixed>  $response */

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Support\ApiKeyResolver;
 
 it('resolves api key from spectra config', function () {

@@ -56,7 +56,7 @@
     "scripts": {
         "post-autoload-dump": "@composer run prepare",
         "prepare": "@php vendor/bin/testbench package:discover --ansi",
-        "analyse": "vendor/bin/phpstan analyse src tests --no-progress",
+        "analyse": "vendor/bin/phpstan analyse --no-progress",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
         "format": "vendor/bin/pint"

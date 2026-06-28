@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\Scaleway\Handlers;
 
+use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -12,6 +15,7 @@ use Spectra\Enums\ModelType;
 
 class TranscriptionHandler implements ExtractsModelFromResponse, Handler
 {
+    use ExtractsModelField;
     use MatchesParametricEndpoints;
 
     public function modelType(): ModelType
@@ -50,12 +54,6 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
                 durationSeconds: $duration,
             ),
         );
-    }
-
-    /** @param  array<string, mixed>  $response */
-    public function extractModelFromResponse(array $response): ?string
-    {
-        return $response['model'] ?? null;
     }
 
     /** @param  array<string, mixed>  $response */

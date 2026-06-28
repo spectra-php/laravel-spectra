@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Facades;
 
 use Illuminate\Database\Eloquent\Model;
@@ -26,13 +28,32 @@ use Spectra\Testing\SpectraFake;
  * @method static Spectra withMetadata(array<string, mixed> $metadata)
  * @method static Spectra clearGlobals()
  * @method static Spectra forTrackable(Model $trackable)
- * @method static Spectra forUser(Model $user)
+ * @method static Spectra forUser(Model|int $user)
  * @method static RequestContext|null getCurrentContext()
  * @method static UsageQueryBuilder usage()
  * @method static CostQueryBuilder costs()
  * @method static RequestPersister getPersister()
  *
+ * Testing helpers (available after calling Spectra::fake(), which swaps in a SpectraFake):
+ * @method static void assertRequestCount(int $count)
+ * @method static void assertTracked(callable $callback)
+ * @method static void assertProviderUsed(string $provider)
+ * @method static void assertModelUsed(string $model)
+ * @method static void assertTrackedWithTags(array<int, string> $tags)
+ * @method static void assertTrackedWithMetadata(array<string, mixed> $metadata)
+ * @method static void assertNothingTracked()
+ * @method static void assertSuccessful()
+ * @method static void assertFailed()
+ * @method static void assertTotalTokens(int $expectedTokens)
+ * @method static array<int, array<string, mixed>> getRecorded()
+ * @method static array<int, array<string, mixed>> getSuccessful()
+ * @method static array<int, array<string, mixed>> getFailed()
+ * @method static SpectraFake disable()
+ * @method static SpectraFake enable()
+ * @method static SpectraFake reset()
+ *
  * @see \Spectra\Spectra
+ * @see SpectraFake
  */
 class Spectra extends Facade
 {

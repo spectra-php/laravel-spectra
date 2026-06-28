@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;

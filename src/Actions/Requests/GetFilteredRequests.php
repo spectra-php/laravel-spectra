@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Actions\Requests;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;

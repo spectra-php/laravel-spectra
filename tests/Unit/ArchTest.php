@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 arch('data transfer objects are readonly')
     ->expect('Spectra\Data')
     ->toBeReadonly();

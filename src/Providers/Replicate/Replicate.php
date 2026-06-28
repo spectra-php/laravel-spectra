@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\Replicate;
 
 use Spectra\Providers\Provider;

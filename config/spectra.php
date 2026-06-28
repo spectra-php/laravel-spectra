@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Pricing\AnthropicPricing;
 use Spectra\Pricing\CoherePricing;
 use Spectra\Pricing\FalAiPricing;

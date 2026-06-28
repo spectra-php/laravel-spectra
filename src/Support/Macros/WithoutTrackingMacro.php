@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Support\Macros;
 
 use Illuminate\Http\Client\PendingRequest;

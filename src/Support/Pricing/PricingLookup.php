@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Support\Pricing;
 
 use Spectra\Enums\PricingTier;
@@ -32,9 +34,9 @@ class PricingLookup
         $this->resolve();
 
         $tierValue = $tier instanceof PricingTier ? $tier->value : ($tier ?? 'standard');
-        $key = $this->buildKey($provider, $model);
+        $key = $this->resolveKey($provider, $model);
 
-        $modelData = $this->models[$key] ?? null;
+        $modelData = $key !== null ? $this->models[$key] : null;
 
         if ($modelData === null) {
             return null;
@@ -63,11 +65,9 @@ class PricingLookup
      */
     public function getUnit(string $provider, string $model): ?string
     {
-        $this->resolve();
+        $key = $this->resolveKey($provider, $model);
 
-        $key = $this->buildKey($provider, $model);
-
-        return isset($this->models[$key]) ? $this->models[$key]['pricing_unit'] : null;
+        return $key !== null ? $this->models[$key]['pricing_unit'] : null;
     }
 
     /**
@@ -75,11 +75,9 @@ class PricingLookup
      */
     public function getDisplayName(string $provider, string $model): ?string
     {
-        $this->resolve();
+        $key = $this->resolveKey($provider, $model);
 
-        $key = $this->buildKey($provider, $model);
-
-        return isset($this->models[$key]) ? $this->models[$key]['display_name'] : null;
+        return $key !== null ? $this->models[$key]['display_name'] : null;
     }
 
     /**
@@ -87,11 +85,9 @@ class PricingLookup
      */
     public function getModelType(string $provider, string $model): ?string
     {
-        $this->resolve();
+        $key = $this->resolveKey($provider, $model);
 
-        $key = $this->buildKey($provider, $model);
-
-        return isset($this->models[$key]) ? $this->models[$key]['type'] : null;
+        return $key !== null ? $this->models[$key]['type'] : null;
     }
 
     /**
@@ -101,10 +97,8 @@ class PricingLookup
      */
     public function getCapabilities(string $provider, string $model): array
     {
-        $this->resolve();
-
-        $key = $this->buildKey($provider, $model);
-        $modelData = $this->models[$key] ?? null;
+        $key = $this->resolveKey($provider, $model);
+        $modelData = $key !== null ? $this->models[$key] : null;
 
         if ($modelData === null) {
             return ['text' => false, 'images' => false, 'video' => false, 'audio' => false];
@@ -125,11 +119,9 @@ class PricingLookup
      */
     public function getModelData(string $provider, string $model): ?array
     {
-        $this->resolve();
+        $key = $this->resolveKey($provider, $model);
 
-        $key = $this->buildKey($provider, $model);
-
-        return $this->models[$key] ?? null;
+        return $key !== null ? $this->models[$key] : null;
     }
 
     /**
@@ -267,5 +259,36 @@ class PricingLookup
     protected function buildKey(string $provider, string $model): string
     {
         return "{$provider}|{$model}";
+    }
+
+    /**
+     * Resolve the catalog key for a provider/model pair.
+     *
+     * Matches the exact model string first. If that misses, it retries with any
+     * trailing snapshot-date suffix stripped (e.g. `claude-opus-4-8-20260528` →
+     * `claude-opus-4-8`, or `gpt-4o-2024-08-06` → `gpt-4o`), so an undated
+     * catalog entry still matches the dated model id the API returns.
+     */
+    protected function resolveKey(string $provider, string $model): ?string
+    {
+        $this->resolve();
+
+        $key = $this->buildKey($provider, $model);
+
+        if (isset($this->models[$key])) {
+            return $key;
+        }
+
+        $base = preg_replace('/-(\d{8}|\d{4}-\d{2}-\d{2})$/', '', $model);
+
+        if (is_string($base) && $base !== $model) {
+            $baseKey = $this->buildKey($provider, $base);
+
+            if (isset($this->models[$baseKey])) {
+                return $baseKey;
+            }
+        }
+
+        return null;
     }
 }

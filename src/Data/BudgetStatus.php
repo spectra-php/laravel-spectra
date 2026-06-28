@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Data;
 
 use Spectra\Models\SpectraBudget;

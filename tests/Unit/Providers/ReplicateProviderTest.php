@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Data\ImageMetrics;
 use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;

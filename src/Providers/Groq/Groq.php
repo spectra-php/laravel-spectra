@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\Groq;
 
 use Spectra\Providers\Groq\Handlers\ChatHandler;

@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\OpenAI\Handlers;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -18,6 +21,7 @@ use Spectra\Support\MediaPersister;
 
 class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration, HasMedia, SkipsResponse
 {
+    use ExtractsModelField;
     use MatchesParametricEndpoints;
 
     public function modelType(): ModelType
@@ -51,12 +55,6 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
                 durationSeconds: isset($responseData['seconds']) ? (float) $responseData['seconds'] : null,
             ),
         );
-    }
-
-    /** @param  array<string, mixed>  $response */
-    public function extractModelFromResponse(array $response): ?string
-    {
-        return $response['model'] ?? null;
     }
 
     /** @param  array<string, mixed>  $response */

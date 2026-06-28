@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\OpenAI\Handlers;
 
+use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -16,6 +19,7 @@ use Spectra\Support\MediaPersister;
 
 class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, HasMedia, MatchesResponseShape
 {
+    use ExtractsModelField;
     use MatchesEndpoints;
 
     public function modelType(): ModelType
@@ -54,12 +58,6 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
                 count: $this->countImageGenerationCalls($responseData),
             ),
         );
-    }
-
-    /** @param  array<string, mixed>  $response */
-    public function extractModelFromResponse(array $response): ?string
-    {
-        return $response['model'] ?? null;
     }
 
     /** @param  array<string, mixed>  $response */

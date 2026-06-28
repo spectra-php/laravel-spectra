@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -14,7 +16,7 @@ class PruneCommand extends Command
 
     protected $description = 'Prune stale entries from the Spectra database';
 
-    public function handle(): void
+    public function handle(): int
     {
         $hours = (int) $this->option('hours');
         $cutoff = now()->subHours($hours);
@@ -28,5 +30,7 @@ class PruneCommand extends Command
             ->delete();
 
         $this->info("{$requestCount} requests and {$statsCount} daily stats pruned.");
+
+        return self::SUCCESS;
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Facades\Spectra as SpectraFacade;
 use Spectra\Models\SpectraRequest;
 use Spectra\Spectra;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
 
 it('builds a valid OTLP span from request data', function () {

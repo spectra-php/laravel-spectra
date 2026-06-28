@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra;
 
 use Composer\InstalledVersions;
@@ -19,6 +21,7 @@ use Spectra\Support\Budget\BudgetEnforcer;
 use Spectra\Support\HttpMacros;
 use Spectra\Support\Pricing\CostCalculator;
 use Spectra\Support\Pricing\PricingLookup;
+use Spectra\Support\Pricing\RequestCostCalculator;
 use Spectra\Support\ProviderRegistry;
 use Spectra\Support\RequestTransformer;
 use Spectra\Support\StatsAggregator;
@@ -62,7 +65,7 @@ class SpectraServiceProvider extends ServiceProvider
 
         $this->app->singleton(RequestPersister::class, function ($app) {
             return new RequestPersister(
-                $app->make(CostCalculator::class),
+                $app->make(RequestCostCalculator::class),
                 $app->make(StatsAggregator::class),
                 $app->make(RequestExporter::class),
                 $app->make(RequestTransformer::class)

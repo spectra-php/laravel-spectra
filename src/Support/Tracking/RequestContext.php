@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Support\Tracking;
 
 use Illuminate\Contracts\Support\Arrayable;
@@ -7,7 +9,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
-use Spectra\Support\Pricing\CostCalculator;
+use Spectra\Support\Pricing\RequestCostCalculator;
 
 /**
  * In-flight container that accumulates AI request data throughout its lifecycle.
@@ -288,24 +290,15 @@ class RequestContext implements Arrayable
             return;
         }
 
-        $calculator = app(CostCalculator::class);
-
         $pricingTier = null;
         if ($this->pricingTier !== null) {
             $pricingTier = PricingTier::tryFrom($this->pricingTier) ?? $this->pricingTier;
         }
 
-        $costs = $calculator->calculate(
-            $this->provider,
-            $this->model,
-            $this->promptTokens,
-            $this->completionTokens,
-            $this->cachedTokens,
-            $pricingTier
-        );
+        $costs = app(RequestCostCalculator::class)->forContext($this, $pricingTier);
 
-        $this->promptCost = $costs['prompt_cost'];
-        $this->completionCost = $costs['completion_cost'];
+        $this->promptCost = $costs['prompt_cost'] ?? 0;
+        $this->completionCost = $costs['completion_cost'] ?? 0;
         $this->totalCost = $costs['total_cost_in_cents'];
         $this->currency = config('spectra.costs.currency', 'USD');
     }

@@ -1,22 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Support\Tracking;
 
 use Spectra\Contracts\RequestExporter;
-use Spectra\Enums\PricingUnit;
 use Spectra\Events\RequestTracked;
 use Spectra\Jobs\ExportTrackedRequestJob;
 use Spectra\Jobs\PersistSpectraRequestJob;
 use Spectra\Models\SpectraRequest;
-use Spectra\Support\Pricing\CostCalculator;
 use Spectra\Support\Pricing\PricingLookup;
+use Spectra\Support\Pricing\RequestCostCalculator;
 use Spectra\Support\RequestTransformer;
 use Spectra\Support\StatsAggregator;
 
 class RequestPersister
 {
     public function __construct(
-        protected CostCalculator $costCalculator,
+        protected RequestCostCalculator $costCalculator,
         protected StatsAggregator $statsAggregator,
         protected RequestExporter $exporter,
         protected RequestTransformer $transformer
@@ -73,7 +74,7 @@ class RequestPersister
         $pricingTier = $context->pricingTier
             ?? config("spectra.costs.provider_settings.{$context->provider}.default_tier", 'standard');
 
-        $cost = $this->calculateCost($context, $pricingTier);
+        $cost = $this->costCalculator->forContext($context, $pricingTier);
 
         $trackableType = $context->trackableType;
         $trackableId = $context->trackableId;
@@ -118,91 +119,6 @@ class RequestPersister
             'created_at' => $context->getStartedAt(),
             'completed_at' => $context->getCompletedAt(),
         ];
-    }
-
-    /**
-     * @return array{prompt_cost?: float, completion_cost?: float, total_cost_in_cents: float}
-     */
-    protected function calculateCost(RequestContext $context, string $pricingTier): array
-    {
-        $model = $context->model;
-        $pricingUnit = $this->costCalculator->getPricingUnit($context->provider, $model);
-
-        $cost = match ($pricingUnit) {
-            PricingUnit::Minute->value => $this->costCalculator->calculateByDuration(
-                $context->provider,
-                $model,
-                $context->durationSeconds ?? 0,
-                $pricingTier
-            ),
-            PricingUnit::Second->value => $this->costCalculator->calculateByDurationSeconds(
-                $context->provider,
-                $model,
-                $context->durationSeconds ?? 0,
-                $pricingTier
-            ),
-            PricingUnit::Characters->value => $this->costCalculator->calculateByCharacters(
-                $context->provider,
-                $model,
-                $context->inputCharacters ?? 0,
-                $pricingTier
-            ),
-            PricingUnit::Image->value => $this->costCalculator->calculateByImages(
-                $context->provider,
-                $model,
-                $context->imageCount ?? 0,
-                $pricingTier
-            ),
-            PricingUnit::Video->value => $this->costCalculator->calculateByVideos(
-                $context->provider,
-                $model,
-                $context->videoCount ?? 0,
-                $pricingTier
-            ),
-            default => $this->costCalculator->calculate(
-                $context->provider,
-                $model,
-                $context->promptTokens,
-                $context->completionTokens,
-                $context->cachedTokens,
-                $pricingTier
-            ),
-        };
-
-        // Add tool call surcharges (e.g. web_search_call, code_interpreter_call)
-        $toolCallSurcharge = $this->calculateToolCallCost($context);
-        if ($toolCallSurcharge > 0) {
-            $cost['total_cost_in_cents'] = $cost['total_cost_in_cents'] + $toolCallSurcharge;
-        }
-
-        return $cost;
-    }
-
-    /**
-     * Calculate the cost of tool calls based on per-provider pricing.
-     *
-     * Returns cost in cents.
-     */
-    protected function calculateToolCallCost(RequestContext $context): float
-    {
-        if (empty($context->toolCallCounts)) {
-            return 0.0;
-        }
-
-        $pricing = app(PricingLookup::class)->getToolCallPricing($context->provider);
-
-        if (empty($pricing)) {
-            return 0.0;
-        }
-
-        $total = 0.0;
-        foreach ($context->toolCallCounts as $type => $count) {
-            if (isset($pricing[$type])) {
-                $total += $pricing[$type] * $count;
-            }
-        }
-
-        return $total;
     }
 
     protected function resolveDisplayName(string $provider, string $model): string

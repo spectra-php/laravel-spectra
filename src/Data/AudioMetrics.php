@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Data;
 
 readonly class AudioMetrics extends DataTransferObject

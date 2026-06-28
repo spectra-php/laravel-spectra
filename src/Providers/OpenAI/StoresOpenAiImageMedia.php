@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\OpenAI;
 
 use Illuminate\Support\Facades\Http;

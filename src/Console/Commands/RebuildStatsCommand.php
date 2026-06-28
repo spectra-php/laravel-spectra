@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Console\Commands;
 
 use Illuminate\Console\Command;

@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\Scaleway\Handlers;
 
+use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -13,6 +16,7 @@ use Spectra\Enums\ModelType;
 
 class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, MatchesResponseShape
 {
+    use ExtractsModelField;
     use MatchesParametricEndpoints;
 
     public function modelType(): ModelType
@@ -40,12 +44,6 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
                 completionTokens: (int) ($responseData['usage']['completion_tokens'] ?? $responseData['usage']['output_tokens'] ?? 0),
             ),
         );
-    }
-
-    /** @param  array<string, mixed>  $response */
-    public function extractModelFromResponse(array $response): ?string
-    {
-        return $response['model'] ?? null;
     }
 
     /** @param  array<string, mixed>  $response */

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers;
 
 use Spectra\Contracts\ExtractsModelFromRequest;
@@ -198,11 +200,6 @@ abstract class Provider
     public function resolveModelType(string $endpoint, array $requestData = []): ?ModelType
     {
         return $this->resolveHandler($endpoint)?->modelType();
-    }
-
-    public function isStreamingResponse(mixed $response): bool
-    {
-        return false;
     }
 
     /** @return array<string, mixed> */

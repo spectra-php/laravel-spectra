@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Pricing;
 
 class XAiPricing extends ProviderPricing
@@ -11,6 +13,31 @@ class XAiPricing extends ProviderPricing
 
     protected function define(): void
     {
+        $this->model('grok-4.3', fn ($m) => $m
+            ->displayName('Grok 4.3')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 125, outputPrice: 250, cachedInputPrice: 20));
+
+        $this->model('grok-4.20-multi-agent-0309', fn ($m) => $m
+            ->displayName('Grok 4.20 Multi-Agent')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 125, outputPrice: 250, cachedInputPrice: 20));
+
+        $this->model('grok-4.20-0309-reasoning', fn ($m) => $m
+            ->displayName('Grok 4.20 Reasoning')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 125, outputPrice: 250, cachedInputPrice: 20));
+
+        $this->model('grok-4.20-0309-non-reasoning', fn ($m) => $m
+            ->displayName('Grok 4.20 Non-Reasoning')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 125, outputPrice: 250, cachedInputPrice: 20));
+
+        $this->model('grok-build-0.1', fn ($m) => $m
+            ->displayName('Grok Build 0.1')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 100, outputPrice: 200, cachedInputPrice: 20));
+
         $this->model('grok-4-1-fast-reasoning', fn ($m) => $m
             ->displayName('Grok 4.1 Fast Reasoning')
             ->canGenerateText()

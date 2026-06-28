@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\OpenRouter\Handlers;
 
+use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -16,6 +19,7 @@ use Spectra\Support\MediaPersister;
 
 class ImageHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, HasMedia, MatchesResponseShape
 {
+    use ExtractsModelField;
     use MatchesEndpoints;
 
     public function modelType(): ModelType
@@ -43,12 +47,6 @@ class ImageHandler implements ExtractsModelFromResponse, Handler, HasFinishReaso
                 count: $this->countImages($responseData),
             ),
         );
-    }
-
-    /** @param  array<string, mixed>  $response */
-    public function extractModelFromResponse(array $response): ?string
-    {
-        return $response['model'] ?? null;
     }
 
     /** @param  array<string, mixed>  $response */

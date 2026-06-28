@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\Scaleway\Handlers;
 
+use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -11,6 +14,7 @@ use Spectra\Enums\ModelType;
 
 class RerankHandler implements ExtractsModelFromResponse, Handler
 {
+    use ExtractsModelField;
     use MatchesParametricEndpoints;
 
     public function modelType(): ModelType
@@ -35,12 +39,6 @@ class RerankHandler implements ExtractsModelFromResponse, Handler
                 completionTokens: 0,
             ),
         );
-    }
-
-    /** @param  array<string, mixed>  $response */
-    public function extractModelFromResponse(array $response): ?string
-    {
-        return $response['model'] ?? null;
     }
 
     /** @param  array<string, mixed>  $response */

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\Cohere;
 
 use Spectra\Providers\Cohere\Handlers\ChatHandler;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Events;
 
 use Illuminate\Database\Eloquent\Model;

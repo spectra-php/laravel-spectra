@@ -31,7 +31,7 @@ The callback passed to `$this->model()` receives a `ModelDefinition` instance wi
 | --- | --- |
 | `displayName(string)` | Human-readable name shown in the dashboard |
 | `type(string)` | Model type: `text`, `embedding`, `image`, `audio`, `video` (default: `text`) |
-| `pricingUnit(string)` | How cost is calculated: `tokens`, `image`, `video`, `minute`, `second`, `characters` (default: `tokens`) |
+| `pricingUnit(string)` | How cost is calculated: `tokens`, `image`, `video`, `minute`, `second`, `characters`, `search` (default: `tokens`) |
 
 ### Capability Flags
 
@@ -64,7 +64,7 @@ $model->tier(string $tier, ...pricing parameters)
 
 | Parameter | Description |
 | --- | --- |
-| `pricePerUnit` | Cost per unit (image, video, minute, second, or per 1M characters) |
+| `pricePerUnit` | Cost per unit (image, video, minute, second, search, or per 1M characters) |
 
 The `cost()` method is a shorthand for `tier('standard', ...)`:
 
@@ -240,3 +240,30 @@ Register it in your config:
     ],
 ],
 ```
+
+<a name="keeping-prices-current"></a>
+## Keeping Prices Current
+
+The built-in catalog is **hand-maintained** — there is no automatic fetch from provider APIs. Provider prices change, and new models ship regularly, so the catalog needs periodic review.
+
+**Prices last reviewed: 2026-06-28.**
+
+When reviewing, check each provider's official pricing page and update the matching `ProviderPricing` class under `src/Pricing/`:
+
+| Provider | Source |
+| --- | --- |
+| OpenAI | https://platform.openai.com/docs/pricing |
+| Anthropic | https://platform.claude.com/docs/en/about-claude/pricing |
+| Google (Gemini) | https://ai.google.dev/gemini-api/docs/pricing |
+| xAI | https://docs.x.ai/docs/models |
+| Mistral | https://mistral.ai/pricing |
+| Cohere | https://cohere.com/pricing |
+| Groq | https://groq.com/pricing |
+| OpenRouter | https://openrouter.ai/models |
+| Replicate | https://replicate.com/pricing |
+| fal.ai | https://fal.ai/pricing |
+| Scaleway | https://www.scaleway.com/en/pricing/model-as-a-service/ |
+
+::: tip Model name matching
+Cost lookups match the `provider|model` string the API returns. An exact match wins first; if that misses, a trailing snapshot-date suffix is stripped and retried — so a catalog entry named `claude-opus-4-8` still matches a response of `claude-opus-4-8-20260528` (and `gpt-4o` matches `gpt-4o-2024-08-06`). Define models under their **undated** name and the dated snapshots resolve automatically. Names that differ in any other way will not match and the request silently bills **0**, so the `PricingCatalogInvariantsTest` guards the catalog shape.
+:::

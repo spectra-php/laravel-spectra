@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\FalAi;
 
 use Spectra\Providers\FalAi\Handlers\ImageHandler;

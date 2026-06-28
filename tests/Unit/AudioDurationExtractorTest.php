@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Support\AudioDurationExtractor;
 
 it('returns null when getID3 is not installed', function () {

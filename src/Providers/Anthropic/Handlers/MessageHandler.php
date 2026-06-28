@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\Anthropic\Handlers;
 
+use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -16,6 +19,7 @@ use Spectra\Support\Tracking\StreamHandler;
 
 class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, MatchesResponseShape, StreamsResponse
 {
+    use ExtractsModelField;
     use MatchesEndpoints;
 
     public function modelType(): ModelType
@@ -44,12 +48,6 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
                 cacheCreationTokens: (int) ($usage['cache_creation_input_tokens'] ?? 0),
             ),
         );
-    }
-
-    /** @param  array<string, mixed>  $response */
-    public function extractModelFromResponse(array $response): ?string
-    {
-        return $response['model'] ?? null;
     }
 
     /** @param  array<string, mixed>  $response */

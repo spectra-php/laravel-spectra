@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Support\Facades\Route;
 use Spectra\Http\Controllers\Api\ConfigController;
 use Spectra\Http\Controllers\Api\CostsController;

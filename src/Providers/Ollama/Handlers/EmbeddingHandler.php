@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\Ollama\Handlers;
 
+use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -12,6 +15,7 @@ use Spectra\Enums\ModelType;
 
 class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesResponseShape
 {
+    use ExtractsModelField;
     use MatchesEndpoints;
 
     public function modelType(): ModelType
@@ -35,12 +39,6 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
                 promptTokens: (int) ($responseData['prompt_eval_count'] ?? 0),
             ),
         );
-    }
-
-    /** @param  array<string, mixed>  $response */
-    public function extractModelFromResponse(array $response): ?string
-    {
-        return $response['model'] ?? null;
     }
 
     /** @param  array<string, mixed>  $response */

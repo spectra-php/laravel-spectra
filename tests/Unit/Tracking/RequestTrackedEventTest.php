@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Support\Facades\Event;
 use Spectra\Events\RequestTracked;
 use Spectra\Support\Tracking\RequestContext;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;

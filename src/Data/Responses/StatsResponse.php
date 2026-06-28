@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Data\Responses;
 
 use Illuminate\Support\Collection;

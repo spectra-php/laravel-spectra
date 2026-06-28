@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Support\Carbon;
 use Spectra\Contracts\HasExpiration;
 use Spectra\Contracts\SkipsResponse;

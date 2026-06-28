@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Providers\Google\Google;

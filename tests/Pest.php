@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Tests\Concerns\CreatesProviders;
 use Spectra\Tests\Concerns\GeneratesAudio;
 use Spectra\Tests\Concerns\InteractsWithHttpWatcher;

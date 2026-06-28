@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Data\ImageMetrics;
 use Spectra\Data\Metrics;

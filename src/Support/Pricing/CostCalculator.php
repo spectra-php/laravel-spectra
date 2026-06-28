@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Support\Pricing;
 
 use Spectra\Enums\PricingTier;
@@ -192,6 +194,28 @@ class CostCalculator
         }
 
         $totalCost = $videoCount * $pricing['price_per_unit'];
+
+        return ['total_cost_in_cents' => $totalCost];
+    }
+
+    /**
+     * Calculate cost for search-billed models (e.g. Cohere Rerank, priced per search).
+     *
+     * @return array{total_cost_in_cents: float}
+     */
+    public function calculateBySearches(
+        string $provider,
+        string $model,
+        int $searchCount = 1,
+        ?string $pricingTier = null
+    ): array {
+        $pricing = $this->getPricing($provider, $model, $pricingTier);
+
+        if ($pricing === null || ! isset($pricing['price_per_unit'])) {
+            return ['total_cost_in_cents' => 0.0];
+        }
+
+        $totalCost = $searchCount * $pricing['price_per_unit'];
 
         return ['total_cost_in_cents' => $totalCost];
     }

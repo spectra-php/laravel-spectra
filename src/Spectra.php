@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra;
 
 use Illuminate\Contracts\Foundation\Application;
@@ -206,9 +208,24 @@ class Spectra
         return $this;
     }
 
-    public function forUser(Model $user): self
+    public function forUser(Model|int $user): self
     {
+        if (is_int($user)) {
+            $user = $this->resolveUserModel($user);
+        }
+
         return $this->forTrackable($user);
+    }
+
+    /**
+     * Resolve the application's authenticatable user model by primary key.
+     */
+    protected function resolveUserModel(int $id): Model
+    {
+        /** @var class-string<Model> $model */
+        $model = config('auth.providers.users.model') ?? 'App\Models\User';
+
+        return $model::findOrFail($id);
     }
 
     public function getCurrentContext(): ?RequestContext

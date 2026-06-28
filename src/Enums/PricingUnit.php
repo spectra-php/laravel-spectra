@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Enums;
 
 enum PricingUnit: string
@@ -10,4 +12,5 @@ enum PricingUnit: string
     case Characters = 'characters';
     case Image = 'image';
     case Video = 'video';
+    case Search = 'search';
 }

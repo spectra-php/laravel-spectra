@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Spectra\Providers\Google\Handlers\GenerateContentHandler;
 use Spectra\Providers\Google\Handlers\ImageHandler;
 use Spectra\Providers\Google\Handlers\TtsHandler;

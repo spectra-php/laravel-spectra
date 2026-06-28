@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Providers\Google\Streaming;
 
 use Spectra\Support\Tracking\StreamHandler;

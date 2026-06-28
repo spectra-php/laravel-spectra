@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Pricing;
 
 class AnthropicPricing extends ProviderPricing
@@ -11,6 +13,30 @@ class AnthropicPricing extends ProviderPricing
 
     protected function define(): void
     {
+        $this->model('claude-fable-5', fn ($m) => $m
+            ->displayName('Claude Fable 5')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 1000, outputPrice: 5000, cachedInputPrice: 100, cacheWrite5mPrice: 1250, cacheWrite1hPrice: 2000)
+            ->tier('batch', inputPrice: 500, outputPrice: 2500, cachedInputPrice: 50, cacheWrite5mPrice: 625, cacheWrite1hPrice: 1000));
+
+        $this->model('claude-mythos-5', fn ($m) => $m
+            ->displayName('Claude Mythos 5')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 1000, outputPrice: 5000, cachedInputPrice: 100, cacheWrite5mPrice: 1250, cacheWrite1hPrice: 2000)
+            ->tier('batch', inputPrice: 500, outputPrice: 2500, cachedInputPrice: 50, cacheWrite5mPrice: 625, cacheWrite1hPrice: 1000));
+
+        $this->model('claude-opus-4-8', fn ($m) => $m
+            ->displayName('Claude Opus 4.8')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 500, outputPrice: 2500, cachedInputPrice: 50, cacheWrite5mPrice: 625, cacheWrite1hPrice: 1000)
+            ->tier('batch', inputPrice: 250, outputPrice: 1250, cachedInputPrice: 25, cacheWrite5mPrice: 312.5, cacheWrite1hPrice: 500));
+
+        $this->model('claude-opus-4-7', fn ($m) => $m
+            ->displayName('Claude Opus 4.7')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 500, outputPrice: 2500, cachedInputPrice: 50, cacheWrite5mPrice: 625, cacheWrite1hPrice: 1000)
+            ->tier('batch', inputPrice: 250, outputPrice: 1250, cachedInputPrice: 25, cacheWrite5mPrice: 312.5, cacheWrite1hPrice: 500));
+
         $this->model('claude-opus-4-6', fn ($m) => $m
             ->displayName('Claude Opus 4.6')
             ->canGenerateText()
@@ -34,6 +60,12 @@ class AnthropicPricing extends ProviderPricing
             ->canGenerateText()
             ->tier('standard', inputPrice: 1500, outputPrice: 7500, cachedInputPrice: 150, cacheWrite5mPrice: 1875, cacheWrite1hPrice: 3000)
             ->tier('batch', inputPrice: 750, outputPrice: 3750, cachedInputPrice: 75, cacheWrite5mPrice: 937.5, cacheWrite1hPrice: 1500));
+
+        $this->model('claude-sonnet-4-6', fn ($m) => $m
+            ->displayName('Claude Sonnet 4.6')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 300, outputPrice: 1500, cachedInputPrice: 30, cacheWrite5mPrice: 375, cacheWrite1hPrice: 600)
+            ->tier('batch', inputPrice: 150, outputPrice: 750, cachedInputPrice: 15, cacheWrite5mPrice: 187.5, cacheWrite1hPrice: 300));
 
         $this->model('claude-sonnet-4-5-20250929', fn ($m) => $m
             ->displayName('Claude Sonnet 4.5')

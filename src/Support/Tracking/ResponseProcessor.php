@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Spectra\Support\Tracking;
 
 use Spectra\Contracts\ExtractsPricingTierFromResponse;

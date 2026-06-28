@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migrator;
 
 it('does not auto register package schema migrations', function () {
