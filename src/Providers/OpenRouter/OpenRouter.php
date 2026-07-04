@@ -22,9 +22,11 @@ class OpenRouter extends Provider
 
     public function handlers(): array
     {
+        // ImageHandler must come after ChatHandler: both match the same
+        // endpoint, and specialists are resolved from the end of this list.
         return [
-            app(ImageHandler::class),
             app(ChatHandler::class),
+            app(ImageHandler::class),
         ];
     }
 }

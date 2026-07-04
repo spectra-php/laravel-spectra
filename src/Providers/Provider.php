@@ -25,6 +25,13 @@ abstract class Provider
     abstract public function getHosts(): array;
 
     /**
+     * Handlers for this provider's endpoints, generic handlers first.
+     *
+     * When several handlers match the same endpoint, resolution walks this
+     * list in REVERSE and picks the first whose matchesResponse() accepts the
+     * body — so specialists (narrow response shapes) must come after the
+     * generic handler they specialize.
+     *
      * @return Handler[]
      */
     abstract public function handlers(): array;

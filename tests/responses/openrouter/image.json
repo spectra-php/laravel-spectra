@@ -1,0 +1,39 @@
+{
+    "id": "gen-1751600100-QrStUvWxYzAbCdEf",
+    "provider": "Google",
+    "model": "google/gemini-2.5-flash-image-preview",
+    "object": "chat.completion",
+    "created": 1751600100,
+    "choices": [
+        {
+            "logprobs": null,
+            "finish_reason": "stop",
+            "native_finish_reason": "STOP",
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "Here are the images you requested.",
+                "refusal": null,
+                "images": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                        }
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 10,
+        "completion_tokens": 1290,
+        "total_tokens": 1300
+    }
+}
