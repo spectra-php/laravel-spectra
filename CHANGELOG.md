@@ -2,6 +2,51 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## v1.3.0 - 2026-07-04
+
+### 1.3.0 - 2026-07-04
+
+#### Added
+
+- Cohere embed and rerank handlers (`/v1` + `/v2` endpoints, billed via `meta.billed_units`) — embed/rerank requests were previously tracked with zero metrics and $0 cost
+- Groq Whisper transcription handler (per-minute billing from the `verbose_json` duration)
+- Mistral Voxtral audio handlers: transcription (per-minute via `usage.prompt_audio_seconds`) and TTS (per-character, with base64 `audio_data` media persistence)
+- `ElevenLabsPricing` catalog (per-character rates from the published API pricing) — ElevenLabs TTS previously recorded $0; Ollama's deliberate $0 is now documented in the pricing docs
+- `SearchMetrics` and a `searchCount` on the request context, so per-search models bill the actual number of billed search units (and never bill failed requests)
+- Post-persist budget reporting: `BudgetExceeded` (with `wasBlocked = false`) now fires when the request that actually crosses a cost limit is recorded — pre-flight middleware can only see spend from previous requests (documented in the budgets guide)
+- `spectra.storage.store_request_data` config key to control storage of raw API request parameters independently of `store_prompts` (defaults to following `store_prompts`)
+- `PricingTier::Hd` for DALL·E 3 HD and Sora Pro — explicit `'hd'` tier requests previously fell back to standard pricing silently
+- `total_reasoning_tokens` in `SpectraDailyStat::getAggregatedStats()`
+- fal.ai and Scaleway provider logos in the dashboard
+- Provider tracking tests for OpenRouter, Ollama, and Scaleway; endpoint tests for the media, config, and detail controllers; `EnforceBudgetLimit` middleware tests; characterization tests locking the dashboard endpoint numbers
+
+#### Fixed
+
+- OpenRouter image-generation responses were processed by the chat handler (wrong registration order), losing image counts, media persistence, and per-image cost
+- Dashboard cost and latency aggregates were inconsistent: nine queries (overview stats, model-type breakdowns, top models, and the trackable stats/usage/latency endpoints) included failed requests in cost and latency sums while the rest excluded them — cost and latency now aggregate over successful (2xx) requests everywhere, while request counts still include failures
+- `Spectra::costs()->monthly()` crashed on SQLite (`EXTRACT()` is not supported) — replaced with a driver-aware period expression covering SQLite, MySQL, and PostgreSQL
+- Fractional-cent costs were truncated to integers in `UsageQueryBuilder::stats()`, `totalCostCents()`, and the `HasAiUsageStats` trait (`UsageStats::$totalCostInCents` is now a float)
+- 3xx responses were counted in `request_count` but excluded from both `successful_count` and `failed_count`, breaking `success + failed = total`; anything outside 2xx now counts as failed
+- Costs-by-user grouped by `trackable_id` alone, merging different polymorphic types that share an id; it now groups by type + id and resolves a `user_name` for the dashboard
+- A stream that failed before its first chunk leaked its pending Guzzle context to the next stream, which inherited the wrong provider/model; empty streams no longer persist all-zero request rows
+- Budget sums could exceed a limit through float noise alone — sums are rounded to storage precision before the conservative ceil
+- Video downloads always sent `Content-Type: video/mp4`; the real stored extension (webm/mov/avi) is now used for the mime type and filename
+- `spectra:rebuild-stats` silently did nothing when `--from` was after `--to` (now errors), and gained the missing `#[AsCommand]` attribute
+- A typo'd `SPECTRA_DASHBOARD_LAYOUT` silently disabled stat filtering; unknown layouts now log a warning
+- OpenAI Responses API image handler checked `prompt_tokens_details` before `input_tokens_details` for cached tokens
+- Missing `dist/` assets now log an actionable warning instead of rendering a blank, unstyled dashboard; removed favicon references to files that don't ship
+
+#### Changed
+
+- Removed all 21 `src/Queries/` classes — dashboard aggregates now compose an internal `Support\Query\RequestAggregateQuery` fluent builder that owns the shared scaffolding (date ranges, success filtering, layout/trackable scoping, aggregate select bundles); the cost select alias is standardized to `cost`
+- `SpectraRequest` now hides the raw `request`/`response` payloads from serialization by default — the requests list endpoint ships lightweight rows, and the detail endpoint re-exposes them explicitly
+- The requests-list search matches model names and exact ids (request id, response id, trace id) instead of running unindexable `LIKE` scans over the full response payload
+- Streaming detection is shared via `Support\Tracking\StreamDetector` instead of duplicated across the Guzzle middleware and the Http macro
+- `ModelDefinition::pricingUnit()` accepts a `PricingUnit` enum or string and validates it
+- `HasAiBudget::getBudgetStatus()` defaults to the configured budget provider/model instead of a hardcoded `gpt-4`
+- Migrations are published via `publishesMigrations()`; `per_page` is clamped to 100; `composer analyse` sets a 1G memory limit
+- Documentation drift fixed: pricing map (fal.ai, Scaleway, ElevenLabs), budget defaults, new storage key, and budget pre-flight semantics
+
 ## 1.3.0 - 2026-07-04
 
 ### Added
