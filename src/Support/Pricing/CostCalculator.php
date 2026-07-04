@@ -34,6 +34,9 @@ class CostCalculator
         }
 
         $regularPromptTokens = max(0, $promptTokens - $cachedTokens);
+
+        // Models without a cached-input rate bill cached tokens at the full
+        // input price — a conservative fallback, never an undercharge.
         $cachedInputPrice = $pricing['cached_input'] ?? $pricing['input'];
 
         $promptCost = ($regularPromptTokens * $pricing['input'] + $cachedTokens * $cachedInputPrice) / 1_000_000;
@@ -153,6 +156,8 @@ class CostCalculator
             return ['total_cost_in_cents' => 0.0];
         }
 
+        // price_per_unit for character-based models is cents per 1M characters,
+        // matching the cents-per-1M-tokens convention used everywhere else.
         $totalCost = ($characters * $pricing['price_per_unit']) / 1_000_000;
 
         return ['total_cost_in_cents' => $totalCost];

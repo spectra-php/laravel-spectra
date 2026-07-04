@@ -66,7 +66,7 @@ class RequestCostCalculator
             PricingUnit::Search->value => $this->costCalculator->calculateBySearches(
                 $context->provider,
                 $model,
-                1,
+                $context->searchCount ?? 0,
                 $tier
             ),
             default => $this->costCalculator->calculate(
@@ -75,7 +75,7 @@ class RequestCostCalculator
                 $context->promptTokens,
                 $context->completionTokens,
                 $context->cachedTokens,
-                $pricingTier
+                $tier
             ),
         };
 

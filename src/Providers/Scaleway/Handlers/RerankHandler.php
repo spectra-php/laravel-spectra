@@ -9,6 +9,7 @@ use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
 use Spectra\Data\Metrics;
+use Spectra\Data\SearchMetrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 
@@ -38,6 +39,7 @@ class RerankHandler implements ExtractsModelFromResponse, Handler
                 promptTokens: (int) ($responseData['usage']['prompt_tokens'] ?? $responseData['usage']['total_tokens'] ?? 0),
                 completionTokens: 0,
             ),
+            search: new SearchMetrics(count: 1),
         );
     }
 

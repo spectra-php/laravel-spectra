@@ -11,6 +11,7 @@ readonly class Metrics extends DataTransferObject
         public ?ImageMetrics $image = null,
         public ?AudioMetrics $audio = null,
         public ?VideoMetrics $video = null,
+        public ?SearchMetrics $search = null,
     ) {}
 
     public function toArray(): array
