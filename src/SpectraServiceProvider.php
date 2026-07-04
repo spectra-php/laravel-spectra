@@ -235,7 +235,7 @@ class SpectraServiceProvider extends ServiceProvider
                 __DIR__.'/../resources/views/layout.blade.php' => resource_path('views/vendor/spectra/layout.blade.php'),
             ], ['spectra', 'spectra-views']);
 
-            $this->publishes([
+            $this->publishesMigrations([
                 __DIR__.'/../database/migrations' => database_path('migrations'),
             ], ['spectra', 'spectra-migrations']);
         }

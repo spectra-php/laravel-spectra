@@ -22,6 +22,7 @@ enum PricingTier: string
     case Flex = 'flex';
     case Standard = 'standard';
     case Priority = 'priority';
+    case Hd = 'hd';
 
     public static function default(): self
     {
@@ -35,6 +36,7 @@ enum PricingTier: string
             self::Flex => 'Flex (Higher Latency)',
             self::Standard => 'Standard',
             self::Priority => 'Priority (Faster)',
+            self::Hd => 'HD (Higher Quality)',
         };
     }
 
@@ -45,6 +47,7 @@ enum PricingTier: string
             self::Flex => 'Lower cost with higher latency for flexible workloads.',
             self::Standard => 'Regular pricing with standard latency.',
             self::Priority => 'Higher cost for faster processing and guaranteed capacity.',
+            self::Hd => 'Higher cost for higher output quality (e.g. DALL-E 3 HD, Sora Pro).',
         };
     }
 }

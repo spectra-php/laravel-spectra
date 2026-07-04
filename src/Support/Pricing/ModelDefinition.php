@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Pricing;
 
+use Spectra\Enums\PricingUnit;
+
 class ModelDefinition
 {
     protected ?string $displayName = null;
@@ -41,9 +43,13 @@ class ModelDefinition
         return $this;
     }
 
-    public function pricingUnit(string $unit): static
+    public function pricingUnit(PricingUnit|string $unit): static
     {
-        $this->pricingUnit = $unit;
+        if (is_string($unit)) {
+            $unit = PricingUnit::from($unit);
+        }
+
+        $this->pricingUnit = $unit->value;
 
         return $this;
     }

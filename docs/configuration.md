@@ -24,6 +24,7 @@ Controls how and what Spectra persists to the database. These settings let you b
     'store_prompts'        => env('SPECTRA_STORE_PROMPTS', true),
     'store_system_prompts' => env('SPECTRA_STORE_SYSTEM_PROMPTS', true),
     'store_tools'          => env('SPECTRA_STORE_TOOLS', true),
+    'store_request_data'   => env('SPECTRA_STORE_REQUEST_DATA'),
     'store_embeddings'     => env('SPECTRA_STORE_EMBEDDINGS', false),
 ],
 ```
@@ -36,6 +37,7 @@ Controls how and what Spectra persists to the database. These settings let you b
 | `store_prompts` | `bool` | `true` | Store user prompt text and chat messages. Disable for privacy compliance (GDPR, CCPA). |
 | `store_system_prompts` | `bool` | `true` | Store system prompts separately. These often contain proprietary business logic. |
 | `store_tools` | `bool` | `true` | Store function and tool definitions sent to the AI provider. These can be large for complex tool schemas. |
+| `store_request_data` | `bool\|null` | `null` | Store the raw API request parameters (the full JSON body, including sampling settings). When `null`, follows `store_prompts`. |
 | `store_embeddings` | `bool` | `false` | Store embedding vector values in the response column. Embedding requests are always tracked (tokens, costs, latency), but the float-vector arrays can be very large. When disabled, vectors are replaced with `[stripped]`. |
 
 <a name="media-persistence"></a>
@@ -196,6 +198,9 @@ Configure cost calculation and pricing tiers.
         'replicate'  => \Spectra\Pricing\ReplicatePricing::class,
         'cohere'     => \Spectra\Pricing\CoherePricing::class,
         'groq'       => \Spectra\Pricing\GroqPricing::class,
+        'falai'      => \Spectra\Pricing\FalAiPricing::class,
+        'scaleway'   => \Spectra\Pricing\ScalewayPricing::class,
+        'elevenlabs' => \Spectra\Pricing\ElevenLabsPricing::class,
     ],
 ],
 ```
@@ -217,7 +222,7 @@ Configure budget enforcement defaults.
 'budget' => [
     'enabled'          => env('SPECTRA_BUDGET_ENABLED', true),
     'default_provider' => 'openai',
-    'default_model'    => 'gpt-4',
+    'default_model'    => 'gpt-5.2',
 ],
 ```
 
@@ -225,7 +230,7 @@ Configure budget enforcement defaults.
 | --- | --- | --- | --- |
 | `enabled` | `bool` | `true` | Enable budget checking and enforcement. |
 | `default_provider` | `string` | `openai` | Fallback provider when the budget middleware cannot determine the provider from route parameters. |
-| `default_model` | `string` | `gpt-4` | Fallback model for cost estimation in budget checks. |
+| `default_model` | `string` | `gpt-5.2` | Fallback model for cost estimation in budget checks. |
 
 <a name="watcher"></a>
 ## Watcher
