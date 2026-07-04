@@ -46,7 +46,9 @@ class GetFilteredRequests
 
         $this->applyFilters($query, $request);
 
-        return $query->paginate($request->input('per_page', 25));
+        $perPage = min(max((int) $request->input('per_page', 25), 1), 100);
+
+        return $query->paginate($perPage);
     }
 
     /**
@@ -56,7 +58,16 @@ class GetFilteredRequests
     {
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where('response', 'like', "%{$search}%");
+
+            // Search model names and exact ids — deliberately NOT the
+            // request/response longtext columns, which cannot use an index
+            // and turn every keystroke into a full-table scan at volume.
+            $query->where(function (Builder $q) use ($search) {
+                $q->where('model', 'like', "%{$search}%")
+                    ->orWhere('id', $search)
+                    ->orWhere('response_id', $search)
+                    ->orWhere('trace_id', $search);
+            });
         }
 
         if ($request->filled('provider')) {
@@ -73,7 +84,7 @@ class GetFilteredRequests
                 $query->whereBetween('status_code', [200, 299]);
             } elseif ($status === 'error') {
                 $query->where(function ($q) {
-                    $q->where('status_code', '>=', 400)
+                    $q->whereNotBetween('status_code', [200, 299])
                         ->orWhereNull('status_code');
                 });
             }

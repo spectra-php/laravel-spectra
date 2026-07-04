@@ -227,7 +227,7 @@ onUnmounted(() => {
                     :available-reasoning-efforts="availableReasoningEfforts"
                     :sort-options="requestSortOptions"
                     :active-filter-keys="clearableFilterKeys"
-                    search-placeholder="Search requests..."
+                    search-placeholder="Search by model or ID..."
                     @clear="clearFilters"
                 />
             </div>

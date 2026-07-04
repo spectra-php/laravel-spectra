@@ -29,7 +29,7 @@ const props = defineProps({
     },
     searchPlaceholder: {
         type: String,
-        default: 'Search requests...',
+        default: 'Search by model or ID...',
     },
     sortOptions: {
         type: Array,

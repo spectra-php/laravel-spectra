@@ -64,7 +64,6 @@ use Spectra\Support\ProviderRegistry;
  * @property-read string|null $created_at_human
  * @property-read string|null $provider_display_name
  * @property-read float $total_cost_in_dollars
- * @property-read string|null $user_id
  * @property-read mixed $cost_sum
  * @property-read mixed $date
  * @property-read mixed $requests
@@ -80,7 +79,6 @@ use Spectra\Support\ProviderRegistry;
  * @property-read mixed $count
  * @property-read mixed $avg_latency
  * @property-read mixed $total_requests
- * @property-read mixed $model_count
  * @property-read mixed $total_trackables
  * @property-read mixed $total_images
  * @property-read mixed $total_videos
@@ -106,6 +104,15 @@ class SpectraRequest extends Model
     }
 
     protected $guarded = [];
+
+    /**
+     * The raw request/response payloads are heavy and potentially sensitive,
+     * so they are hidden from serialization by default. The request-details
+     * endpoint re-exposes them explicitly via makeVisible().
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['request', 'response'];
 
     protected $appends = ['provider_display_name', 'total_tokens', 'formatted_created_at', 'created_at_human'];
 

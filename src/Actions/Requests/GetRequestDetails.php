@@ -20,11 +20,8 @@ class GetRequestDetails
 
         $request->append('formatted_expires_at');
 
-        $response = $request->response;
-
-        $data = $request->toArray();
+        $data = $request->makeVisible(['request', 'response'])->toArray();
         $data['prompt'] = $request->prompt;
-        $data['response'] = $response;
         $data['tags'] = $request->tags->pluck('name')->toArray();
         $data['model_capabilities'] = $this->pricingLookup->getCapabilities($request->provider ?? '', $request->model);
 

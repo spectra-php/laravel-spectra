@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Support;
 
 use Composer\InstalledVersions;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Js;
 
@@ -18,8 +19,7 @@ class DashboardAssets
         $icons = [
             ['file' => 'favicon.svg', 'rel' => 'icon', 'type' => 'image/svg+xml', 'sizes' => null],
             ['file' => 'favicon.ico', 'rel' => 'icon', 'type' => 'image/x-icon', 'sizes' => null],
-            ['file' => 'favicon-32x32.png', 'rel' => 'icon', 'type' => 'image/png', 'sizes' => '32x32'],
-            ['file' => 'favicon-16x16.png', 'rel' => 'icon', 'type' => 'image/png', 'sizes' => '16x16'],
+            ['file' => 'favicon-96x96.png', 'rel' => 'icon', 'type' => 'image/png', 'sizes' => '96x96'],
             ['file' => 'apple-touch-icon.png', 'rel' => 'apple-touch-icon', 'type' => 'image/png', 'sizes' => '180x180'],
         ];
 
@@ -58,6 +58,8 @@ class DashboardAssets
             HTML);
         }
 
+        Log::warning("Spectra dashboard CSS not found at {$cssPath} — the dashboard will render unstyled. Run `npm run build` in the package to generate the dist assets.");
+
         return new HtmlString('');
     }
 
@@ -76,6 +78,8 @@ class DashboardAssets
                 </script>
             HTML);
         }
+
+        Log::warning("Spectra dashboard JavaScript not found at {$jsPath} — the dashboard will not load. Run `npm run build` in the package to generate the dist assets.");
 
         return new HtmlString('');
     }

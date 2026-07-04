@@ -52,12 +52,21 @@ class ResolveVideo
 
         abort_unless($stream !== null, 404);
 
+        // Handlers store videos under their real extension (mp4, webm, mov, …).
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'mp4';
+        $mime = match ($extension) {
+            'webm' => 'video/webm',
+            'mov' => 'video/quicktime',
+            'avi' => 'video/x-msvideo',
+            default => 'video/mp4',
+        };
+
         return response()->stream(function () use ($stream) {
             fpassthru($stream);
             fclose($stream);
         }, 200, [
-            'Content-Type' => 'video/mp4',
-            'Content-Disposition' => "attachment; filename=\"{$requestId}.mp4\"",
+            'Content-Type' => $mime,
+            'Content-Disposition' => "attachment; filename=\"{$requestId}.{$extension}\"",
         ]);
     }
 }
