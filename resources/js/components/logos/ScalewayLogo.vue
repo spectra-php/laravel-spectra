@@ -1,0 +1,3 @@
+<template>
+    <svg fill="currentColor" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><title>Scaleway</title><path d="M9.5 3H7a4 4 0 00-4 4v5.5a1.25 1.25 0 002.5 0V7A1.5 1.5 0 017 5.5h2.5a1.25 1.25 0 000-2.5zm5 0a1.25 1.25 0 000 2.5H17A1.5 1.5 0 0118.5 7v2.5a1.25 1.25 0 002.5 0V7a4 4 0 00-4-4h-2.5zM3 17v-1.5h2.5V17A1.5 1.5 0 007 18.5h2.5a1.25 1.25 0 010 2.5H7a4 4 0 01-4-4zm18-2.5a1.25 1.25 0 00-2.5 0V17a1.5 1.5 0 01-1.5 1.5h-2.5a1.25 1.25 0 000 2.5H17a4 4 0 004-4v-2.5zM8.75 10.75h6.5a1.25 1.25 0 010 2.5h-6.5a1.25 1.25 0 010-2.5z"></path></svg>
+</template>

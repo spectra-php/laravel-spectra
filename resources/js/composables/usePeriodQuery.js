@@ -71,11 +71,11 @@ export function usePeriodQuery(options = {}) {
             params.set('end_date', endDate.value);
         }
 
-        // Append filter keys if provided
+        // Set filter keys if provided (single-valued, so set() not append())
         if (options.filterKeys && options.getFilters) {
             const filters = options.getFilters();
             for (const key of options.filterKeys) {
-                if (filters[key]) params.append(key, filters[key]);
+                if (filters[key]) params.set(key, filters[key]);
             }
         }
 
