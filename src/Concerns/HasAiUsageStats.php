@@ -38,7 +38,7 @@ trait HasAiUsageStats
             ->selectRaw('
                 COUNT(*) as request_count,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as successful_count,
-                SUM(CASE WHEN status_code >= 400 OR status_code IS NULL THEN 1 ELSE 0 END) as failed_count,
+                SUM(CASE WHEN status_code IS NULL OR status_code NOT BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as failed_count,
                 SUM(prompt_tokens + completion_tokens) as total_tokens,
                 SUM(total_cost_in_cents) as total_cost_in_cents,
                 AVG(latency_ms) as avg_latency_ms
@@ -53,8 +53,8 @@ trait HasAiUsageStats
                 ? round(($stats->successful_count / $stats->request_count) * 100, 2)
                 : 0,
             totalTokens: (int) $stats->total_tokens,
-            totalCostInCents: (int) $stats->total_cost_in_cents,
-            totalCost: round((int) $stats->total_cost_in_cents / 100, 4),
+            totalCostInCents: (float) $stats->total_cost_in_cents,
+            totalCost: round((float) $stats->total_cost_in_cents / 100, 4),
             avgLatencyMs: round((float) $stats->avg_latency_ms, 2),
         );
     }
@@ -78,8 +78,8 @@ trait HasAiUsageStats
                 $item->provider => [
                     'request_count' => (int) $item->request_count,
                     'total_tokens' => (int) $item->total_tokens,
-                    'total_cost_in_cents' => (int) $item->total_cost_in_cents,
-                    'total_cost' => round((int) $item->total_cost_in_cents / 100, 4),
+                    'total_cost_in_cents' => (float) $item->total_cost_in_cents,
+                    'total_cost' => round((float) $item->total_cost_in_cents / 100, 4),
                 ],
             ])
             ->toArray();
@@ -106,8 +106,8 @@ trait HasAiUsageStats
                 'model' => $item->model,
                 'request_count' => (int) $item->request_count,
                 'total_tokens' => (int) $item->total_tokens,
-                'total_cost_in_cents' => (int) $item->total_cost_in_cents,
-                'total_cost' => round((int) $item->total_cost_in_cents / 100, 4),
+                'total_cost_in_cents' => (float) $item->total_cost_in_cents,
+                'total_cost' => round((float) $item->total_cost_in_cents / 100, 4),
             ])
             ->toArray();
     }

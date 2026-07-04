@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Spectra\Data\CostBreakdown;
 use Spectra\Models\SpectraRequest;
 
@@ -215,27 +216,47 @@ class CostQueryBuilder
      */
     public function monthly(int $months = 12): Collection
     {
+        $period = $this->monthlyPeriodExpression();
+
         // @phpstan-ignore-next-line return.type
         return $this->between(now()->subMonths($months), now())
             ->query
-            ->selectRaw('
-                EXTRACT(YEAR FROM created_at) as year,
-                EXTRACT(MONTH FROM created_at) as month,
+            ->selectRaw("
+                {$period} as period,
                 SUM(total_cost_in_cents) as total_cost,
                 COUNT(*) as request_count
-            ')
-            ->groupBy('year', 'month')
-            ->orderBy('year')
-            ->orderBy('month')
+            ")
+            ->groupBy('period')
+            ->orderBy('period')
             ->get()
-            ->map(fn (SpectraRequest $item) => [
-                'year' => (int) $item->year, // @phpstan-ignore property.notFound
-                'month' => (int) $item->month, // @phpstan-ignore property.notFound
-                'period' => sprintf('%d-%02d', $item->year, $item->month), // @phpstan-ignore property.notFound, property.notFound
-                'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
-                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => (float) $item->total_cost / 100, // @phpstan-ignore property.notFound
-            ]);
+            ->map(function (SpectraRequest $item) {
+                [$year, $month] = explode('-', (string) $item->period); // @phpstan-ignore property.notFound
+
+                return [
+                    'year' => (int) $year,
+                    'month' => (int) $month,
+                    'period' => (string) $item->period, // @phpstan-ignore property.notFound
+                    'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
+                    'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
+                    'total_cost' => (float) $item->total_cost / 100, // @phpstan-ignore property.notFound
+                ];
+            });
+    }
+
+    /**
+     * Build a driver-portable "YYYY-MM" expression for monthly grouping.
+     *
+     * @return literal-string
+     */
+    protected function monthlyPeriodExpression(): string
+    {
+        $driver = DB::connection(config('spectra.storage.connection'))->getDriverName();
+
+        return match ($driver) {
+            'sqlite' => "strftime('%Y-%m', created_at)",
+            'pgsql' => "TO_CHAR(created_at, 'YYYY-MM')",
+            default => "DATE_FORMAT(created_at, '%Y-%m')",
+        };
     }
 
     /**

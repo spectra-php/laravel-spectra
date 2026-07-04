@@ -14,7 +14,7 @@ readonly class UsageStats extends DataTransferObject
         public int $promptTokens = 0,
         public int $completionTokens = 0,
         public int $totalTokens = 0,
-        public int $totalCostInCents = 0,
+        public float $totalCostInCents = 0,
         public float $totalCost = 0,
         public float $avgLatencyMs = 0,
         public int $minLatencyMs = 0,

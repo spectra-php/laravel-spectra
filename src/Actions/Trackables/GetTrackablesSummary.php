@@ -8,11 +8,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Spectra\Data\Responses\TrackablesSummaryResponse;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Concerns\AggregatesSuccessfulRequests;
 use Spectra\Support\Concerns\FiltersTrackables;
 use Spectra\Support\DateRange;
 
 class GetTrackablesSummary
 {
+    use AggregatesSuccessfulRequests;
     use FiltersTrackables;
 
     public function __invoke(Request $request, DateRange $dateRange): TrackablesSummaryResponse
@@ -35,7 +37,7 @@ class GetTrackablesSummary
             ->selectRaw('COALESCE(SUM(CASE WHEN model_type = \'tts\' THEN input_characters ELSE 0 END), 0) as tts_characters_sum')
             ->selectRaw('COALESCE(SUM(CASE WHEN model_type = \'tts\' THEN duration_seconds ELSE 0 END), 0) as tts_duration_sum')
             ->selectRaw('COALESCE(SUM(CASE WHEN model_type = \'stt\' THEN duration_seconds ELSE 0 END), 0) as stt_duration_sum')
-            ->selectRaw('SUM(total_cost_in_cents) as cost_sum')
+            ->selectRaw($this->successfulCostSum('cost_sum'))
             ->selectRaw('COALESCE(AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END), 0) as avg_latency')
             ->first();
 

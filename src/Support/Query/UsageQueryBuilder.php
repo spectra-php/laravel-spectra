@@ -90,12 +90,14 @@ class UsageQueryBuilder
     }
 
     /**
-     * Filter for failed requests only (4xx/5xx or null status codes).
+     * Filter for failed requests only (anything that is not a 2xx, including
+     * null status codes), so successful() and failed() together cover every
+     * request exactly once.
      */
     public function failed(): self
     {
         $this->query->where(function ($q) {
-            $q->where('status_code', '>=', 400)
+            $q->whereNotBetween('status_code', [200, 299])
                 ->orWhereNull('status_code');
         });
 
@@ -143,9 +145,9 @@ class UsageQueryBuilder
         return round((float) $this->query->avg('latency_ms'), 2);
     }
 
-    public function totalCostCents(): int
+    public function totalCostCents(): float
     {
-        return (int) $this->query->sum('total_cost_in_cents');
+        return (float) $this->query->sum('total_cost_in_cents');
     }
 
     public function totalCostDollars(): float
@@ -159,7 +161,7 @@ class UsageQueryBuilder
             ->selectRaw('
                 COUNT(*) as request_count,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as successful_count,
-                SUM(CASE WHEN status_code >= 400 OR status_code IS NULL THEN 1 ELSE 0 END) as failed_count,
+                SUM(CASE WHEN status_code IS NULL OR status_code NOT BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as failed_count,
                 SUM(prompt_tokens) as prompt_tokens,
                 SUM(completion_tokens) as completion_tokens,
                 SUM(prompt_tokens + completion_tokens) as total_tokens,
@@ -198,8 +200,8 @@ class UsageQueryBuilder
             promptTokens: (int) $result->prompt_tokens,
             completionTokens: (int) $result->completion_tokens,
             totalTokens: (int) $result->total_tokens,
-            totalCostInCents: (int) $result->total_cost,
-            totalCost: round((int) $result->total_cost / 100, 4),
+            totalCostInCents: (float) $result->total_cost,
+            totalCost: round((float) $result->total_cost / 100, 4),
             avgLatencyMs: round((float) $result->avg_latency_ms, 2),
             minLatencyMs: (int) $result->min_latency_ms,
             maxLatencyMs: (int) $result->max_latency_ms,
@@ -226,8 +228,8 @@ class UsageQueryBuilder
                 'provider' => $item->provider,
                 'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
                 'total_tokens' => (int) $item->total_tokens,
-                'total_cost_in_cents' => (int) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => round((int) $item->total_cost / 100, 4), // @phpstan-ignore property.notFound
+                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
+                'total_cost' => round((float) $item->total_cost / 100, 4), // @phpstan-ignore property.notFound
                 'avg_latency_ms' => round((float) $item->avg_latency_ms, 2), // @phpstan-ignore property.notFound
             ]);
     }
@@ -254,8 +256,8 @@ class UsageQueryBuilder
                 'model' => $item->model,
                 'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
                 'total_tokens' => (int) $item->total_tokens,
-                'total_cost_in_cents' => (int) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => round((int) $item->total_cost / 100, 4), // @phpstan-ignore property.notFound
+                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
+                'total_cost' => round((float) $item->total_cost / 100, 4), // @phpstan-ignore property.notFound
                 'avg_latency_ms' => round((float) $item->avg_latency_ms, 2), // @phpstan-ignore property.notFound
             ]);
     }
@@ -281,8 +283,8 @@ class UsageQueryBuilder
                 'date' => $item->date,
                 'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
                 'total_tokens' => (int) $item->total_tokens,
-                'total_cost_in_cents' => (int) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => round((int) $item->total_cost / 100, 4), // @phpstan-ignore property.notFound
+                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
+                'total_cost' => round((float) $item->total_cost / 100, 4), // @phpstan-ignore property.notFound
             ]);
     }
 

@@ -323,6 +323,7 @@ class SpectraDailyStat extends Model
             SUM(total_videos) as total_videos,
             SUM(total_duration_seconds) as total_duration_seconds,
             SUM(total_input_characters) as total_input_characters,
+            SUM(total_reasoning_tokens) as total_reasoning_tokens,
             SUM(total_cost_in_cents) as total_cost_in_cents,
             SUM(total_latency_ms) as total_latency_ms,
             MIN(min_latency_ms) as min_latency_ms,
@@ -347,6 +348,7 @@ class SpectraDailyStat extends Model
             'total_videos' => (int) ($stats->total_videos ?? 0),
             'total_duration_seconds' => (float) ($stats->total_duration_seconds ?? 0),
             'total_input_characters' => (int) ($stats->total_input_characters ?? 0),
+            'total_reasoning_tokens' => (int) ($stats->total_reasoning_tokens ?? 0),
             'total_cost_in_cents' => (float) ($stats->total_cost_in_cents ?? 0),
             'total_cost' => (float) ($stats->total_cost_in_cents ?? 0) / 100,
             'avg_latency_ms' => $totalRequests > 0

@@ -7,7 +7,9 @@ namespace Spectra\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Spectra\Support\StatsAggregator;
+use Symfony\Component\Console\Attribute\AsCommand;
 
+#[AsCommand(name: 'spectra:rebuild-stats')]
 class RebuildStatsCommand extends Command
 {
     protected $signature = 'spectra:rebuild-stats
@@ -35,10 +37,16 @@ class RebuildStatsCommand extends Command
             ? Carbon::parse($this->option('to'))
             : null;
 
+        if ($from && $to && $from->gt($to)) {
+            $this->error("The --from date ({$from->format('Y-m-d')}) must be before --to ({$to->format('Y-m-d')}).");
+
+            return self::FAILURE;
+        }
+
         if ($from && $to) {
             $this->info("Rebuilding stats from {$from->format('Y-m-d')} to {$to->format('Y-m-d')}...");
         } elseif ($from) {
-            $this->info("Rebuilding stats from {$from->format('Y-m-d')}...");
+            $this->info("Rebuilding stats from {$from->format('Y-m-d')} to now...");
         } elseif ($to) {
             $this->info("Rebuilding stats up to {$to->format('Y-m-d')}...");
         } else {
