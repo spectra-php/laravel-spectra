@@ -561,3 +561,50 @@ it('sets manual usage with reasoning tokens', function () {
         ->and($usage['cached_tokens'])->toBe(25)
         ->and($usage['reasoning_tokens'])->toBe(30);
 });
+
+it('skips recording entirely for empty streams', function () {
+    $tracker = Spectra::stream('openai', 'gpt-4o');
+
+    foreach ($tracker->track([]) as $text) {
+        // consume nothing
+    }
+
+    $tracker->finish();
+
+    Spectra::assertRequestCount(0);
+});
+
+it('does not leak a pending stream context to the next tracker when a stream dies early', function () {
+    $manager = app(\Spectra\Spectra::class);
+    $pendingContext = $manager->startRequest('openai', 'gpt-4o', [
+        'endpoint' => '/v1/chat/completions',
+    ]);
+    $manager->setPendingStreamContext($pendingContext);
+
+    $failing = Spectra::stream();
+    $brokenStream = (function () {
+        throw new RuntimeException('connection dropped');
+        yield 'never';
+    })();
+
+    try {
+        foreach ($failing->track($brokenStream) as $text) {
+            // consume
+        }
+    } catch (RuntimeException) {
+        // expected
+    }
+
+    // A later, unrelated stream must not inherit the dead stream's context.
+    $tracker = Spectra::stream('anthropic', 'claude-sonnet-4-5');
+    $chunks = [
+        ['type' => 'message_delta', 'delta' => ['stop_reason' => 'end_turn'], 'usage' => ['output_tokens' => 5]],
+    ];
+
+    foreach ($tracker->track($chunks) as $text) {
+        // consume
+    }
+
+    expect($tracker->getContext()->provider)->toBe('anthropic')
+        ->and($tracker->getContext()->endpoint)->not->toBe('/v1/chat/completions');
+});

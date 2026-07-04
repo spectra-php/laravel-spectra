@@ -9,6 +9,7 @@ use Spectra\Events\RequestTracked;
 use Spectra\Jobs\ExportTrackedRequestJob;
 use Spectra\Jobs\PersistSpectraRequestJob;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Budget\BudgetEnforcer;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Pricing\RequestCostCalculator;
 use Spectra\Support\RequestTransformer;
@@ -146,9 +147,23 @@ class RequestPersister
         }
 
         $this->statsAggregator->recordRequest($request);
+        $this->reportBudgetUsage($request);
         $this->exportToIntegrations($request);
 
         return $request;
+    }
+
+    /**
+     * Announce budget threshold/exceeded events based on the actual recorded
+     * cost (pre-flight enforcement only sees spend from previous requests).
+     */
+    protected function reportBudgetUsage(SpectraRequest $request): void
+    {
+        if (! config('spectra.budget.enabled', true)) {
+            return;
+        }
+
+        app(BudgetEnforcer::class)->reportRecordedRequest($request);
     }
 
     /**

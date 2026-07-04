@@ -102,6 +102,9 @@ class RequestContext implements Arrayable
 
     public ?int $videoCount = null;
 
+    /** Billable search/rerank operations for per-search pricing (e.g. Cohere rerank). */
+    public ?int $searchCount = null;
+
     public ?Carbon $expiresAt = null;
 
     public float $promptCost = 0;
@@ -416,7 +419,6 @@ class RequestContext implements Arrayable
             'error_type' => $this->errorType,
             'error_message' => $this->errorMessage,
             'media_storage_path' => $this->mediaStoragePath,
-            'http_status' => $this->httpStatus,
             'retry_count' => $this->retryCount,
             'request_source' => $this->requestSource,
             'laravel_request_id' => $this->laravelRequestId,
@@ -433,14 +435,11 @@ class RequestContext implements Arrayable
 
         if (config('spectra.storage.store_prompts', true)) {
             $data['prompt'] = $this->prompt;
+            $data['messages'] = $this->messages;
         }
 
         if (config('spectra.storage.store_system_prompts', true)) {
             $data['system_prompt'] = $this->systemPrompt;
-        }
-
-        if (config('spectra.storage.store_prompts', true)) {
-            $data['messages'] = $this->messages;
         }
 
         if (config('spectra.storage.store_responses', true)) {
@@ -452,7 +451,10 @@ class RequestContext implements Arrayable
             $data['tools'] = $this->tools;
         }
 
-        if (config('spectra.storage.store_prompts', true)) {
+        // Raw request parameters are broader than prompt content, so they get
+        // their own switch; it falls back to store_prompts for installs that
+        // disabled prompt storage before this key existed.
+        if (config('spectra.storage.store_request_data') ?? config('spectra.storage.store_prompts', true)) {
             $data['request_data'] = $this->requestData;
         }
 

@@ -12,6 +12,7 @@ use Spectra\Contracts\ReturnsBinaryResponse;
 use Spectra\Contracts\SkipsResponse;
 use Spectra\Spectra;
 use Spectra\Support\ProviderRegistry;
+use Spectra\Support\Tracking\StreamDetector;
 
 class WithTrackingMacro
 {
@@ -70,7 +71,7 @@ class WithTrackingMacro
                         return $response;
                     }
 
-                    if (self::isStreamingResponse($response, $provider, $endpoint, $context->requestData ?? [])) {
+                    if (StreamDetector::isStreamingResponse($response, $provider, $endpoint, $context->requestData ?? [])) {
                         $manager->setPendingStreamContext($context);
 
                         return $response;
@@ -96,38 +97,5 @@ class WithTrackingMacro
                     return $response;
                 });
         });
-    }
-
-    /**
-     * @param  array<string, mixed>  $requestData
-     */
-    protected static function isStreamingResponse(ResponseInterface $response, string $provider, string $endpoint, array $requestData = []): bool
-    {
-        if ($endpoint !== '') {
-            $handler = app(ProviderRegistry::class)->provider($provider)?->resolveHandler($endpoint);
-            if ($handler instanceof ReturnsBinaryResponse) {
-                return false;
-            }
-        }
-
-        // Check if the request explicitly asked for streaming
-        if (! empty($requestData['stream'])) {
-            return true;
-        }
-
-        $contentType = $response->getHeaderLine('Content-Type');
-
-        if (str_contains($contentType, 'text/event-stream')) {
-            return true;
-        }
-
-        $transferEncoding = $response->getHeaderLine('Transfer-Encoding');
-        if (str_contains($transferEncoding, 'chunked') && ! $response->hasHeader('Content-Length')) {
-            if (! str_contains($contentType, 'application/json')) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

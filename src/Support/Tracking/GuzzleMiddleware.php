@@ -109,7 +109,7 @@ class GuzzleMiddleware
             function (ResponseInterface $response) use ($context, $requestData) {
                 // Skip automatic tracking for streaming responses
                 // User should use Spectra::stream() for these
-                if ($this->isStreamingResponse($requestData, $response, $context->provider, $context->endpoint)) {
+                if (StreamDetector::isStreamingResponse($response, $context->provider, $context->endpoint, $requestData)) {
                     $this->manager->setPendingStreamContext($context);
 
                     return $response;
@@ -266,39 +266,5 @@ class GuzzleMiddleware
 
         return $registry->detectProvider($hostWithPort)
             ?? $registry->detectProvider($host);
-    }
-
-    /**
-     * @param  array<string, mixed>  $requestData
-     */
-    protected function isStreamingResponse(array $requestData, ResponseInterface $response, string $provider, ?string $endpoint): bool
-    {
-        if ($endpoint !== null) {
-            $handler = app(ProviderRegistry::class)->provider($provider)?->resolveHandler($endpoint);
-            if ($handler instanceof ReturnsBinaryResponse) {
-                return false;
-            }
-        }
-
-        // Check if the request explicitly asked for streaming
-        if (! empty($requestData['stream'])) {
-            return true;
-        }
-
-        $contentType = $response->getHeaderLine('Content-Type');
-
-        if (str_contains($contentType, 'text/event-stream')) {
-            return true;
-        }
-
-        // Chunked without content-length and not JSON indicates streaming
-        $transferEncoding = $response->getHeaderLine('Transfer-Encoding');
-        if (str_contains($transferEncoding, 'chunked') && ! $response->hasHeader('Content-Length')) {
-            if (! str_contains($contentType, 'application/json')) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

@@ -53,6 +53,9 @@ class StreamingTracker
 
     protected bool $contextInitialized = false;
 
+    /** Whether any stream chunk, manual content, or manual usage was recorded. */
+    protected bool $sawStreamData = false;
+
     /** @var array<string, string> */
     protected static array $streamClassMap = [
         'OpenAI\Responses\StreamResponse' => 'openai',
@@ -168,6 +171,7 @@ class StreamingTracker
                     $this->initializeContext();
                 }
 
+                $this->sawStreamData = true;
                 $text = $this->processChunk($chunk);
 
                 if ($text !== null && $text !== '') {
@@ -176,6 +180,19 @@ class StreamingTracker
             }
         } catch (Throwable $e) {
             $this->error = $e;
+
+            // If the stream died before its context was claimed, discard the
+            // pending context from GuzzleMiddleware — otherwise the next
+            // stream in this request would silently inherit it.
+            if (! $this->contextInitialized) {
+                $pending = app(SpectraManager::class)->consumePendingStreamContext();
+
+                if ($pending !== null) {
+                    $this->context = $pending;
+                    $this->contextInitialized = true;
+                }
+            }
+
             throw $e;
         }
     }
@@ -438,6 +455,20 @@ class StreamingTracker
 
     public function finish(): SpectraRequest
     {
+        // Nothing streamed, nothing set manually, no error: skip recording
+        // instead of persisting an all-zero request row.
+        if (! $this->contextInitialized
+            && $this->error === null
+            && ! $this->sawStreamData
+            && $this->content === ''
+            && empty($this->usage)
+            && empty($this->completedResponse)
+        ) {
+            app(SpectraManager::class)->consumePendingStreamContext();
+
+            return new SpectraRequest;
+        }
+
         if (! $this->contextInitialized) {
             $this->initializeContext();
         }

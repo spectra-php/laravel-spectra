@@ -108,6 +108,9 @@ class ResponseProcessor
             $context->videoCount = $metrics->video->count;
             $context->durationSeconds = $metrics->video->durationSeconds ?? $context->durationSeconds;
         }
+        if ($metrics?->search !== null) {
+            $context->searchCount = $metrics->search->count;
+        }
 
         // Extract audio duration from binary TTS responses using getID3 (if installed).
         // Must happen before media storage clears rawResponseBody.
@@ -125,7 +128,7 @@ class ResponseProcessor
 
         if ($handler instanceof HasMedia && config('spectra.storage.media.enabled')) {
             $mediaBody = $body;
-            if ($handler instanceof ReturnsBinaryResponse && ! empty($context->requestData)) {
+            if (! empty($context->requestData)) {
                 $mediaBody = array_merge($mediaBody, ['_request_data' => $context->requestData]);
             }
 
@@ -502,6 +505,23 @@ class ResponseProcessor
             foreach ($body['generatedImages'] as $i => $image) {
                 if (isset($image['image']['imageBytes'])) {
                     $body['generatedImages'][$i]['image']['imageBytes'] = '[stripped]';
+                }
+            }
+        }
+
+        // Mistral TTS: audio_data (base64 audio)
+        if (isset($body['audio_data']) && is_string($body['audio_data']) && strlen($body['audio_data']) > 1000) {
+            $body['audio_data'] = '[stripped]';
+        }
+
+        // OpenRouter image generation: choices[].message.images[].image_url.url (base64 data URLs)
+        if (isset($body['choices']) && is_array($body['choices'])) {
+            foreach ($body['choices'] as $ci => $choice) {
+                foreach ($choice['message']['images'] ?? [] as $ii => $image) {
+                    $url = $image['image_url']['url'] ?? null;
+                    if (is_string($url) && str_starts_with($url, 'data:') && strlen($url) > 1000) {
+                        $body['choices'][$ci]['message']['images'][$ii]['image_url']['url'] = '[stripped]';
+                    }
                 }
             }
         }
