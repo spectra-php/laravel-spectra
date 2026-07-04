@@ -1,0 +1,22 @@
+{
+    "task": "transcribe",
+    "language": "English",
+    "duration": 120.5,
+    "text": "This is a transcription of the audio file produced by Whisper on Groq.",
+    "segments": [
+        {
+            "id": 0,
+            "seek": 0,
+            "start": 0.0,
+            "end": 4.2,
+            "text": "This is a transcription of the audio file",
+            "temperature": 0.0,
+            "avg_logprob": -0.18,
+            "compression_ratio": 1.2,
+            "no_speech_prob": 0.01
+        }
+    ],
+    "x_groq": {
+        "id": "req_01jz9c1abcdefgh"
+    }
+}

@@ -45,7 +45,9 @@ abstract class OpenAiCompatibleChatHandler implements ExtractsModelFromResponse,
             tokens: new TokenMetrics(
                 promptTokens: (int) ($responseData['usage']['prompt_tokens'] ?? 0),
                 completionTokens: (int) ($responseData['usage']['completion_tokens'] ?? 0),
-                cachedTokens: (int) ($responseData['usage']['prompt_tokens_details']['cached_tokens'] ?? 0),
+                cachedTokens: is_array($responseData['usage']['prompt_tokens_details'] ?? null)
+                    ? (int) ($responseData['usage']['prompt_tokens_details']['cached_tokens'] ?? 0)
+                    : 0,
             ),
         );
     }

@@ -52,7 +52,7 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
             tokens: new TokenMetrics(
                 promptTokens: (int) ($responseData['usage']['input_tokens'] ?? 0),
                 completionTokens: (int) ($responseData['usage']['output_tokens'] ?? 0),
-                cachedTokens: (int) ($responseData['usage']['prompt_tokens_details']['cached_tokens'] ?? $responseData['usage']['input_tokens_details']['cached_tokens'] ?? 0),
+                cachedTokens: (int) ($responseData['usage']['input_tokens_details']['cached_tokens'] ?? $responseData['usage']['prompt_tokens_details']['cached_tokens'] ?? 0),
             ),
             image: new ImageMetrics(
                 count: $this->countImageGenerationCalls($responseData),

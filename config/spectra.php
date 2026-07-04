@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Spectra\Pricing\AnthropicPricing;
 use Spectra\Pricing\CoherePricing;
+use Spectra\Pricing\ElevenLabsPricing;
 use Spectra\Pricing\FalAiPricing;
 use Spectra\Pricing\GooglePricing;
 use Spectra\Pricing\GroqPricing;
@@ -140,6 +141,20 @@ return [
         */
 
         'store_tools' => env('SPECTRA_STORE_TOOLS', true),
+
+        /*
+        |--------------------------------------------------------------------------
+        | Store Request Data
+        |--------------------------------------------------------------------------
+        |
+        | Whether to store the raw API request parameters (the full JSON body
+        | sent to the provider). This is broader than prompts alone — it also
+        | includes sampling settings, response formats, etc. When unset, it
+        | follows the store_prompts setting.
+        |
+        */
+
+        'store_request_data' => env('SPECTRA_STORE_REQUEST_DATA'),
 
         /*
         |--------------------------------------------------------------------------
@@ -579,6 +594,7 @@ return [
             'groq' => GroqPricing::class,
             'falai' => FalAiPricing::class,
             'scaleway' => ScalewayPricing::class,
+            'elevenlabs' => ElevenLabsPricing::class,
         ],
 
     ],

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\Groq;
 
 use Spectra\Providers\Groq\Handlers\ChatHandler;
+use Spectra\Providers\Groq\Handlers\TranscriptionHandler;
 use Spectra\Providers\Provider;
 
 class Groq extends Provider
@@ -23,6 +24,7 @@ class Groq extends Provider
     {
         return [
             app(ChatHandler::class),
+            app(TranscriptionHandler::class),
         ];
     }
 }

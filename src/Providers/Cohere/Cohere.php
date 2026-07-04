@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Spectra\Providers\Cohere;
 
 use Spectra\Providers\Cohere\Handlers\ChatHandler;
+use Spectra\Providers\Cohere\Handlers\EmbeddingHandler;
+use Spectra\Providers\Cohere\Handlers\RerankHandler;
 use Spectra\Providers\Provider;
 
 class Cohere extends Provider
@@ -23,6 +25,8 @@ class Cohere extends Provider
     {
         return [
             app(ChatHandler::class),
+            app(EmbeddingHandler::class),
+            app(RerankHandler::class),
         ];
     }
 }

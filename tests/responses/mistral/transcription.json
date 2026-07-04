@@ -1,0 +1,12 @@
+{
+    "model": "voxtral-mini-latest",
+    "text": "This is a transcription of the audio file produced by Voxtral.",
+    "language": "en",
+    "segments": [],
+    "usage": {
+        "prompt_audio_seconds": 120,
+        "prompt_tokens": 0,
+        "total_tokens": 0,
+        "completion_tokens": 0
+    }
+}

@@ -263,6 +263,13 @@ When reviewing, check each provider's official pricing page and update the match
 | Replicate | https://replicate.com/pricing |
 | fal.ai | https://fal.ai/pricing |
 | Scaleway | https://www.scaleway.com/en/pricing/model-as-a-service/ |
+| ElevenLabs | https://elevenlabs.io/pricing/api |
+
+::: info Providers without token pricing
+**Ollama** runs models locally, so its requests are deliberately tracked at **$0** — there is no `OllamaPricing` class.
+
+**ElevenLabs** bills subscription plans in credits rather than per request. The bundled `ElevenLabsPricing` uses the published pay-as-you-go per-character API rates as an approximation; if your plan's effective rate differs, extend the class and override the prices.
+:::
 
 ::: tip Model name matching
 Cost lookups match the `provider|model` string the API returns. An exact match wins first; if that misses, a trailing snapshot-date suffix is stripped and retried — so a catalog entry named `claude-opus-4-8` still matches a response of `claude-opus-4-8-20260528` (and `gpt-4o` matches `gpt-4o-2024-08-06`). Define models under their **undated** name and the dated snapshots resolve automatically. Names that differ in any other way will not match and the request silently bills **0**, so the `PricingCatalogInvariantsTest` guards the catalog shape.

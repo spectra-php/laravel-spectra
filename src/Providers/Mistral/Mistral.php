@@ -6,6 +6,8 @@ namespace Spectra\Providers\Mistral;
 
 use Spectra\Providers\Mistral\Handlers\ChatHandler;
 use Spectra\Providers\Mistral\Handlers\EmbeddingHandler;
+use Spectra\Providers\Mistral\Handlers\SpeechHandler;
+use Spectra\Providers\Mistral\Handlers\TranscriptionHandler;
 use Spectra\Providers\Provider;
 
 class Mistral extends Provider
@@ -25,6 +27,8 @@ class Mistral extends Provider
         return [
             app(EmbeddingHandler::class),
             app(ChatHandler::class),
+            app(TranscriptionHandler::class),
+            app(SpeechHandler::class),
         ];
     }
 }
