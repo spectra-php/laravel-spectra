@@ -18,10 +18,6 @@ arch('actions are invokable')
     ->expect('Spectra\Actions')
     ->toHaveMethod('__invoke');
 
-arch('queries are invokable')
-    ->expect('Spectra\Queries')
-    ->toHaveMethod('__invoke');
-
 arch('controllers extend base controller')
     ->expect('Spectra\Http\Controllers\Api')
     ->toExtend('Spectra\Http\Controllers\Api\BaseApiController');

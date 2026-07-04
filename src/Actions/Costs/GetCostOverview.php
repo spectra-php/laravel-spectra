@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Costs;
 
+use Illuminate\Support\Carbon;
 use Spectra\Data\Responses\CostOverviewResponse;
-use Spectra\Queries\CostOverviewQuery;
+use Spectra\Support\DateRange;
+use Spectra\Support\Query\RequestAggregateQuery;
 
 class GetCostOverview
 {
-    public function __construct(
-        private readonly CostOverviewQuery $query,
-    ) {}
-
     public function __invoke(): CostOverviewResponse
     {
         $startOfThisWeek = now()->startOfWeek();
@@ -20,11 +18,18 @@ class GetCostOverview
         $endOfLastWeek = $startOfThisWeek->copy()->subSecond();
 
         return new CostOverviewResponse(
-            today: ($this->query)(now()->startOfDay()),
-            this_week: ($this->query)($startOfThisWeek),
-            last_week: ($this->query)($startOfLastWeek, $endOfLastWeek),
-            this_month: ($this->query)(now()->startOfMonth()),
-            this_year: ($this->query)(now()->startOfYear()),
+            today: $this->costSince(now()->startOfDay()),
+            this_week: $this->costSince($startOfThisWeek),
+            last_week: $this->costSince($startOfLastWeek, $endOfLastWeek),
+            this_month: $this->costSince(now()->startOfMonth()),
+            this_year: $this->costSince(now()->startOfYear()),
         );
+    }
+
+    protected function costSince(Carbon $from, ?Carbon $to = null): float
+    {
+        return RequestAggregateQuery::make(new DateRange($from, $to))
+            ->successfulOnly()
+            ->sumCost();
     }
 }

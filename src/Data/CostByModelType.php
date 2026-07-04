@@ -39,7 +39,7 @@ readonly class CostByModelType extends DataTransferObject
             videos: (int) $item->videos_sum,
             input_characters: (int) $item->input_characters_sum,
             duration_seconds: (float) $item->duration_seconds_sum,
-            cost: (float) $item->cost_sum,
+            cost: (float) $item->cost,
         ));
     }
 }

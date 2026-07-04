@@ -6,20 +6,24 @@ namespace Spectra\Actions\Trackables;
 
 use Illuminate\Support\Collection;
 use Spectra\Data\ModelTypeStat;
-use Spectra\Queries\TrackableLatencyByModelTypeQuery;
 use Spectra\Support\DateRange;
+use Spectra\Support\Query\RequestAggregateQuery;
 
 class GetTrackableLatencyByModelType
 {
-    public function __construct(
-        private readonly TrackableLatencyByModelTypeQuery $query,
-    ) {}
-
     /**
      * @return Collection<int, ModelTypeStat>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {
-        return ModelTypeStat::fromCollection(($this->query)($type, $id, $dateRange));
+        return ModelTypeStat::fromCollection(
+            RequestAggregateQuery::make($dateRange)
+                ->forTrackable($type, $id)
+                ->groupByColumns('model_type')
+                ->countAs()
+                ->successfulCost()
+                ->successfulLatency()
+                ->get()
+        );
     }
 }

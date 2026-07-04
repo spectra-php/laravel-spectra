@@ -7,14 +7,13 @@ namespace Spectra\Actions\Costs;
 use Illuminate\Support\Collection;
 use Spectra\Data\CostByModel;
 use Spectra\Models\SpectraRequest;
-use Spectra\Queries\CostsByModelQuery;
 use Spectra\Support\DateRange;
 use Spectra\Support\Pricing\PricingLookup;
+use Spectra\Support\Query\RequestAggregateQuery;
 
 class GetCostsByModel
 {
     public function __construct(
-        private readonly CostsByModelQuery $query,
         private readonly PricingLookup $pricingLookup,
     ) {}
 
@@ -23,7 +22,16 @@ class GetCostsByModel
      */
     public function __invoke(DateRange $dateRange, int $limit = 10): Collection
     {
-        return ($this->query)($dateRange, $limit)
+        return RequestAggregateQuery::make($dateRange)
+            ->successfulOnly()
+            ->groupByColumns('model', 'provider', 'model_type')
+            ->countAs('requests')
+            ->tokenSum()
+            ->usageSums()
+            ->selectRaw('SUM(total_cost_in_cents) as cost')
+            ->orderByDesc('cost')
+            ->limit($limit)
+            ->get()
             ->map(fn (SpectraRequest $item) => new CostByModel(
                 model: $item->model,
                 provider: $item->provider,

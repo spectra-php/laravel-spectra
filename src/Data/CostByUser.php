@@ -13,18 +13,25 @@ readonly class CostByUser extends DataTransferObject
         public mixed $user_id,
         public int $requests,
         public float $cost,
+        public ?string $user_name = null,
     ) {}
 
     /**
      * @param  Collection<int, SpectraRequest>  $items
+     * @param  array<string, array<string, mixed>>  $metadata  "{trackable_type}:{trackable_id}" => ['name' => ..., 'email' => ...]
      * @return Collection<int, self>
      */
-    public static function fromCollection(Collection $items): Collection
+    public static function fromCollection(Collection $items, array $metadata = []): Collection
     {
-        return $items->map(fn (SpectraRequest $item) => new self(
-            user_id: $item->user_id,
-            requests: (int) $item->requests,
-            cost: (float) $item->cost_sum,
-        ));
+        return $items->map(function (SpectraRequest $item) use ($metadata) {
+            $meta = $metadata[$item->trackable_type.':'.$item->trackable_id] ?? [];
+
+            return new self(
+                user_id: $item->trackable_id,
+                requests: (int) $item->requests,
+                cost: (float) $item->cost,
+                user_name: $meta['name'] ?? null,
+            );
+        });
     }
 }

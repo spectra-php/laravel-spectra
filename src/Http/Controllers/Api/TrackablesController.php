@@ -15,8 +15,8 @@ use Spectra\Actions\Trackables\ResolveTrackableMetadata;
 use Spectra\Data\ModelTypeStat;
 use Spectra\Data\Responses\TrackablesResponse;
 use Spectra\Models\SpectraRequest;
-use Spectra\Queries\TrackablesLatencyByModelTypeQuery;
 use Spectra\Support\DateRange;
+use Spectra\Support\Query\RequestAggregateQuery;
 
 class TrackablesController extends BaseApiController
 {
@@ -29,7 +29,6 @@ class TrackablesController extends BaseApiController
         ResolveTopModels $resolveTopModels,
         ResolveTrackableMetadata $resolveTrackableMetadata,
         FormatTrackablesList $formatTrackablesList,
-        TrackablesLatencyByModelTypeQuery $latencyByModelTypeQuery,
     ): TrackablesResponse {
         $dateRange = DateRange::fromRequest($request);
 
@@ -44,7 +43,14 @@ class TrackablesController extends BaseApiController
         $filters = $getAvailableFilters();
 
         $latencyByModelType = ModelTypeStat::fromCollection(
-            $latencyByModelTypeQuery($request, $dateRange),
+            RequestAggregateQuery::make($dateRange)
+                ->withTrackable()
+                ->filteredBy($request)
+                ->groupByColumns('model_type')
+                ->countAs()
+                ->successfulCost()
+                ->successfulLatency()
+                ->get(),
         );
 
         return new TrackablesResponse(
