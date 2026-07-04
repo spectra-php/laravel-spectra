@@ -12,6 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Events\RequestTracked;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Budget\BudgetEnforcer;
 use Spectra\Support\RequestTransformer;
 use Spectra\Support\StatsAggregator;
 
@@ -44,6 +45,10 @@ class PersistSpectraRequestJob implements ShouldQueue
         }
 
         $statsAggregator->recordRequest($request);
+
+        if (config('spectra.budget.enabled', true)) {
+            app(BudgetEnforcer::class)->reportRecordedRequest($request);
+        }
 
         $data = $transformer->transform($request);
 

@@ -39,11 +39,15 @@ trait HasAiBudget
         return ! $result->allowed;
     }
 
-    public function getBudgetStatus(string $provider = 'openai', string $model = 'gpt-4'): BudgetStatus
+    public function getBudgetStatus(?string $provider = null, ?string $model = null): BudgetStatus
     {
         $enforcer = app(BudgetEnforcer::class);
 
-        return $enforcer->check($this, $provider, $model);
+        return $enforcer->check(
+            $this,
+            $provider ?? config('spectra.budget.default_provider', 'openai'),
+            $model ?? config('spectra.budget.default_model', 'gpt-5.2')
+        );
     }
 
     public function getRemainingBudget(): RemainingBudget

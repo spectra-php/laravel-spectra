@@ -6,6 +6,7 @@ namespace Spectra\Support\Budget;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Spectra\Data\BudgetLimits;
 use Spectra\Data\BudgetStatus;
 use Spectra\Data\BudgetUsage;
@@ -118,6 +119,87 @@ class BudgetEnforcer
 
         $usage = $this->getUsage($budgetable);
         $this->checkThresholds($budgetable, $budget, $usage);
+        $this->reportExceededLimits($budgetable, $budget, $usage);
+    }
+
+    /**
+     * Post-persist pass for a tracked request. Pre-flight enforcement can only
+     * see spend from previous requests, so the request that actually crosses a
+     * limit is detected here and announced via BudgetExceeded — without ever
+     * blocking the already-completed request.
+     */
+    public function reportRecordedRequest(SpectraRequest $request): void
+    {
+        $type = $request->trackable_type;
+        $id = $request->trackable_id;
+
+        if (! $type || $id === null) {
+            return;
+        }
+
+        // Cheap existence check first — most requests have no budget, and
+        // resolving the trackable model costs an extra query.
+        $hasBudget = SpectraBudget::query()
+            ->where('budgetable_type', $type)
+            ->where('budgetable_id', (string) $id)
+            ->active()
+            ->exists();
+
+        if (! $hasBudget) {
+            return;
+        }
+
+        $budgetable = $this->resolveBudgetable($type, (string) $id);
+
+        if ($budgetable === null) {
+            return;
+        }
+
+        $this->recordUsage(
+            $budgetable,
+            (int) ceil((float) $request->total_cost_in_cents),
+            ($request->prompt_tokens ?? 0) + ($request->completion_tokens ?? 0)
+        );
+    }
+
+    protected function resolveBudgetable(string $morphType, string $id): ?Model
+    {
+        $class = Relation::getMorphedModel($morphType) ?? $morphType;
+
+        if (! class_exists($class) || ! is_subclass_of($class, Model::class)) {
+            return null;
+        }
+
+        return $class::query()->find($id);
+    }
+
+    /**
+     * Emit BudgetExceeded (wasBlocked: false) once per limit type when the
+     * recorded spend has crossed a cost limit.
+     */
+    protected function reportExceededLimits(Model $budgetable, SpectraBudget $budget, BudgetUsage $usage): void
+    {
+        $checks = [
+            'daily' => [$usage->dailyCost, $budget->daily_limit],
+            'weekly' => [$usage->weeklyCost, $budget->weekly_limit],
+            'monthly' => [$usage->monthlyCost, $budget->monthly_limit],
+            'total' => [$usage->totalCostInCents, $budget->total_limit],
+        ];
+
+        foreach ($checks as $type => [$current, $limit]) {
+            if ($limit === null || $limit <= 0 || $current < $limit) {
+                continue;
+            }
+
+            $key = $budgetable->getMorphClass().':'.$budgetable->getKey().':'.$type.':exceeded';
+
+            if (isset($this->thresholdsFired[$key])) {
+                continue;
+            }
+
+            $this->thresholdsFired[$key] = true;
+            $this->dispatchExceeded($budgetable, $budget, $type, $current, $limit, false);
+        }
     }
 
     protected function checkCostLimits(Model $budgetable, SpectraBudget $budget): void
@@ -411,12 +493,18 @@ class BudgetEnforcer
         return empty($percentages) ? 0.0 : max($percentages);
     }
 
+    /**
+     * Budgets are enforced in whole cents, rounding up so fractional usage
+     * always counts against the limit (a 0.2-cent request consumes 1 cent).
+     * The sum is first rounded to the storage precision (6 decimals) so float
+     * noise from SUM() can never push an exactly-on-limit total over it.
+     */
     protected function toWholeCents(float|int $cost): int
     {
         if ($cost <= 0) {
             return 0;
         }
 
-        return (int) ceil($cost);
+        return (int) ceil(round((float) $cost, 6));
     }
 }

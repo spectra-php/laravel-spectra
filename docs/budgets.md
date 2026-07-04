@@ -181,6 +181,10 @@ Route::middleware(['auth', 'spectra.budget'])
 
 When `softLimit()` is configured, the middleware allows the request to proceed but still fires budget events, enabling you to implement soft warning behaviors such as sending notifications or displaying banners to the user.
 
+::: info Enforcement is pre-flight
+The middleware checks budgets **before** the request runs, using the spend recorded from *previous* requests — it cannot know what the current request will cost. The request that actually crosses a limit therefore always completes; Spectra detects the overage right after its cost is recorded and dispatches a `BudgetExceeded` event (with `wasBlocked = false`), and every *subsequent* request is then blocked by the hard limit. Listen for `BudgetExceeded` if you need to react to the crossing itself.
+:::
+
 <a name="events"></a>
 ## Events
 
