@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Spectra\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\UniqueConstraintViolationException;
-use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
- * @property Carbon $date
+ * @property CarbonInterface $date
  * @property string $provider
  * @property string $model
  * @property string|null $model_type
@@ -37,8 +37,8 @@ use Illuminate\Support\Carbon;
  * @property int $total_latency_ms
  * @property int|null $min_latency_ms
  * @property int|null $max_latency_ms
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonInterface|null $created_at
+ * @property CarbonInterface|null $updated_at
  * @property-read float|null $avg_latency_ms
  * @property-read float $success_rate
  * @property-read float $total_cost_in_dollars
@@ -130,7 +130,7 @@ class SpectraDailyStat extends Model
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
-    public function scopeDateRange(Builder $query, Carbon|string $start, Carbon|string $end): Builder
+    public function scopeDateRange(Builder $query, CarbonInterface|string $start, CarbonInterface|string $end): Builder
     {
         return $query->whereBetween('date', [$start, $end]);
     }
@@ -320,8 +320,8 @@ class SpectraDailyStat extends Model
      * @return array<string, mixed>
      */
     public static function getAggregatedStats(
-        Carbon|string $start,
-        Carbon|string $end,
+        CarbonInterface|string $start,
+        CarbonInterface|string $end,
         ?string $provider = null,
         ?string $model = null,
         ?Model $trackable = null,
@@ -403,8 +403,8 @@ class SpectraDailyStat extends Model
      * @return array<int, array<string, mixed>>
      */
     public static function getDailyBreakdown(
-        Carbon|string $start,
-        Carbon|string $end,
+        CarbonInterface|string $start,
+        CarbonInterface|string $end,
         ?string $provider = null,
         ?Model $trackable = null
     ): array {
@@ -442,8 +442,8 @@ class SpectraDailyStat extends Model
      * @return array<int, array<string, mixed>>
      */
     public static function getStatsByProvider(
-        Carbon|string $start,
-        Carbon|string $end,
+        CarbonInterface|string $start,
+        CarbonInterface|string $end,
         ?Model $trackable = null
     ): array {
         $query = static::query()
@@ -472,8 +472,8 @@ class SpectraDailyStat extends Model
      * @return array<int, array<string, mixed>>
      */
     public static function getStatsByModel(
-        Carbon|string $start,
-        Carbon|string $end,
+        CarbonInterface|string $start,
+        CarbonInterface|string $end,
         ?string $provider = null,
         ?Model $trackable = null
     ): array {

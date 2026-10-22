@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
@@ -132,7 +132,7 @@ class RequestContext implements Arrayable
     /** Billable search/rerank operations for per-search pricing (e.g. Cohere rerank). */
     public ?int $searchCount = null;
 
-    public ?Carbon $expiresAt = null;
+    public ?CarbonInterface $expiresAt = null;
 
     public float $promptCost = 0;
 
@@ -218,9 +218,9 @@ class RequestContext implements Arrayable
 
     public ?int $conversationTurn = null;
 
-    protected Carbon $startedAt;
+    protected CarbonInterface $startedAt;
 
-    protected ?Carbon $completedAt = null;
+    protected ?CarbonInterface $completedAt = null;
 
     /**
      * @param  array<string, mixed>  $attributes
@@ -448,12 +448,12 @@ class RequestContext implements Arrayable
         return $this;
     }
 
-    public function getStartedAt(): Carbon
+    public function getStartedAt(): CarbonInterface
     {
         return $this->startedAt;
     }
 
-    public function getCompletedAt(): ?Carbon
+    public function getCompletedAt(): ?CarbonInterface
     {
         return $this->completedAt;
     }

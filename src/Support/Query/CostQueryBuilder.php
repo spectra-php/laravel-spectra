@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Query;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -44,10 +45,10 @@ class CostQueryBuilder
         return $this;
     }
 
-    public function between(Carbon|string $start, Carbon|string $end): self
+    public function between(CarbonInterface|string $start, CarbonInterface|string $end): self
     {
-        $start = $start instanceof Carbon ? $start : Carbon::parse($start);
-        $end = $end instanceof Carbon ? $end : Carbon::parse($end);
+        $start = $start instanceof CarbonInterface ? $start : Carbon::parse($start);
+        $end = $end instanceof CarbonInterface ? $end : Carbon::parse($end);
 
         $this->query->whereBetween('created_at', [$start, $end]);
 

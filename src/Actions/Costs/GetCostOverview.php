@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Costs;
 
-use Illuminate\Support\Carbon;
+use Carbon\CarbonInterface;
 use Spectra\Data\Responses\CostOverviewResponse;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
@@ -26,7 +26,7 @@ class GetCostOverview
         );
     }
 
-    protected function costSince(Carbon $from, ?Carbon $to = null): float
+    protected function costSince(CarbonInterface $from, ?CarbonInterface $to = null): float
     {
         return RequestAggregateQuery::make(new DateRange($from, $to))
             ->successfulOnly()

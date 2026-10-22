@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Spectra\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
@@ -32,8 +32,8 @@ use Illuminate\Support\Carbon;
  * @property array<int, string>|null $allowed_providers
  * @property array<int, string>|null $allowed_models
  * @property bool $is_active
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonInterface|null $created_at
+ * @property CarbonInterface|null $updated_at
  * @property-read float|null $daily_limit_in_dollars
  * @property-read float|null $weekly_limit_in_dollars
  * @property-read float|null $monthly_limit_in_dollars
