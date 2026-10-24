@@ -60,7 +60,8 @@
         "analyse": "vendor/bin/phpstan analyse --no-progress --memory-limit=1G",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
-        "format": "vendor/bin/pint"
+        "format": "vendor/bin/pint",
+        "pricing-drift": "@php vendor/bin/testbench spectra:pricing-drift"
     },
     "config": {
         "sort-packages": true,

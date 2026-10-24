@@ -415,6 +415,18 @@ When reviewing, check each provider's official pricing page and update the match
 | Scaleway | https://www.scaleway.com/en/pricing/model-as-a-service/ |
 | ElevenLabs | https://elevenlabs.io/pricing/api |
 
+### Drift Check Against models.dev
+
+To spot prices that need a review, the repository has a maintainer command (not shipped with the package) that compares the catalog with the community-maintained [models.dev](https://models.dev) catalog:
+
+```bash
+vendor/bin/testbench spectra:pricing-drift
+```
+
+It lists token prices that differ (including long-context prices, and fallbacks such as a missing cached-input price billing at the input price) and models that models.dev prices but the catalog doesn't have. Per-unit models (images, audio, video), catalogs in another currency (Scaleway), and providers models.dev doesn't cover (Replicate, fal.ai, ElevenLabs) are skipped. Models missing from the OpenRouter catalog aren't listed, because OpenRouter reports each request's cost itself.
+
+models.dev is not a price source: check every finding against the provider's pricing page. When a difference is intentional (models.dev is wrong, or it counts something differently), record it with `--update-baseline` and commit `workbench/pricing-drift-baseline.json`. A recorded difference is reported again if models.dev changes that price. The `pricing-drift` workflow runs the check every Monday and keeps one open issue with the unreviewed findings.
+
 When a provider renames a model, keep the old id in `aliases()`. When a provider shuts a model down, keep the entry and add `retiredOn()`, so older requests keep their prices. The `PricingCatalogInvariantsTest` checks the shape of the catalog.
 
 ::: info Providers without token pricing

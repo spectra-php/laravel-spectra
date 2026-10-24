@@ -1,0 +1,65 @@
+name: pricing-drift
+
+# Compares the pricing catalog with models.dev every Monday and keeps one open
+# issue listing the differences nobody has reviewed yet.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    name: Pricing drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v4
+
+      - name: Compare with models.dev
+        id: drift
+        run: |
+          set +e
+          vendor/bin/testbench spectra:pricing-drift --markdown=drift.md
+          status=$?
+          # No report means models.dev could not be loaded: fail the run.
+          [ -f drift.md ] || exit "$status"
+          echo "found=$([ "$status" -ne 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the drift issue
+        if: steps.drift.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create pricing-drift --color FBCA04 --description "Pricing catalog differs from models.dev" --force
+          issue=$(gh issue list --label pricing-drift --state open --json number --jq '.[0].number')
+          if [ -n "$issue" ]; then
+            gh issue edit "$issue" --body-file drift.md
+          else
+            gh issue create --title "Pricing catalog differs from models.dev" --label pricing-drift --body-file drift.md
+          fi
+
+      - name: Close the drift issue when nothing is left
+        if: steps.drift.outputs.found == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          issue=$(gh issue list --label pricing-drift --state open --json number --jq '.[0].number')
+          [ -z "$issue" ] || gh issue close "$issue" --comment "No new differences from models.dev."
