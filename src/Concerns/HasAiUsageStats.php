@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Spectra\Concerns;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Spectra\Data\UsageStats;
 
 /**
@@ -31,7 +31,7 @@ trait HasAiUsageStats
         return $this->getAiUsageForPeriod(now()->startOfMonth(), now());
     }
 
-    public function getAiUsageForPeriod(Carbon|string $start, Carbon|string $end): UsageStats
+    public function getAiUsageForPeriod(CarbonInterface|string $start, CarbonInterface|string $end): UsageStats
     {
         $stats = $this->aiRequests()
             ->whereBetween('created_at', [$start, $end])
@@ -59,7 +59,7 @@ trait HasAiUsageStats
         );
     }
 
-    public function getAiUsageByProvider(Carbon|string|null $start = null, Carbon|string|null $end = null): array
+    public function getAiUsageByProvider(CarbonInterface|string|null $start = null, CarbonInterface|string|null $end = null): array
     {
         $start = $start ?? now()->startOfMonth();
         $end = $end ?? now();
@@ -85,7 +85,7 @@ trait HasAiUsageStats
             ->toArray();
     }
 
-    public function getAiUsageByModel(Carbon|string|null $start = null, Carbon|string|null $end = null): array
+    public function getAiUsageByModel(CarbonInterface|string|null $start = null, CarbonInterface|string|null $end = null): array
     {
         $start = $start ?? now()->startOfMonth();
         $end = $end ?? now();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
@@ -12,7 +13,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Support\Carbon;
 use Spectra\Database\Factories\SpectraRequestFactory;
 use Spectra\Support\ProviderRegistry;
 
@@ -66,9 +66,9 @@ use Spectra\Support\ProviderRegistry;
  * @property int|null $status_code
  * @property array<string, mixed>|null $media_storage_path
  * @property array<string, mixed>|null $metadata
- * @property Carbon|null $created_at
- * @property Carbon|null $completed_at
- * @property Carbon|null $expires_at
+ * @property CarbonInterface|null $created_at
+ * @property CarbonInterface|null $completed_at
+ * @property CarbonInterface|null $expires_at
  * @property-read string|null $prompt
  * @property-read string|null $response_text
  * @property-read int $total_tokens

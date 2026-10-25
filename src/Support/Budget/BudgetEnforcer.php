@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Budget;
 
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Spectra\Data\BudgetLimits;
 use Spectra\Data\BudgetStatus;
@@ -509,7 +509,7 @@ class BudgetEnforcer
     }
 
     /**
-     * @return array{0: string, 1: Carbon}
+     * @return array{0: string, 1: CarbonInterface}
      */
     protected function period(string $limitType): array
     {

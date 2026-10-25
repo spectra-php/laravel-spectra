@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Carbon;
+use Carbon\CarbonInterface;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\RequestTransformer;
 
@@ -75,8 +75,8 @@ it('transforms a spectra request into a clean data array', function () {
         ->and($data['image_count'])->toBe(2)
         ->and($data['video_count'])->toBe(1)
         ->and($data['metadata'])->toBe(['key' => 'value'])
-        ->and($data['started_at'])->toBeInstanceOf(Carbon::class)
-        ->and($data['completed_at'])->toBeInstanceOf(Carbon::class);
+        ->and($data['started_at'])->toBeInstanceOf(CarbonInterface::class)
+        ->and($data['completed_at'])->toBeInstanceOf(CarbonInterface::class);
 });
 
 it('marks a failed request as is_failed', function () {

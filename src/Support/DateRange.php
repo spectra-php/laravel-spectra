@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -12,8 +13,8 @@ use Spectra\Models\SpectraRequest;
 readonly class DateRange
 {
     public function __construct(
-        public ?Carbon $start,
-        public ?Carbon $end,
+        public ?CarbonInterface $start,
+        public ?CarbonInterface $end,
     ) {}
 
     public static function fromRequest(Request $request, string $period = 'month'): self

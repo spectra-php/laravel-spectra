@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Query;
 
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -18,9 +19,9 @@ class UsageQueryBuilder
     /** @var Builder<SpectraRequest> */
     protected Builder $query;
 
-    protected ?Carbon $startDate = null;
+    protected ?CarbonInterface $startDate = null;
 
-    protected ?Carbon $endDate = null;
+    protected ?CarbonInterface $endDate = null;
 
     public function __construct()
     {
@@ -49,10 +50,10 @@ class UsageQueryBuilder
         return $this;
     }
 
-    public function between(Carbon|string $start, Carbon|string $end): self
+    public function between(CarbonInterface|string $start, CarbonInterface|string $end): self
     {
-        $this->startDate = $start instanceof Carbon ? $start : Carbon::parse($start);
-        $this->endDate = $end instanceof Carbon ? $end : Carbon::parse($end);
+        $this->startDate = $start instanceof CarbonInterface ? $start : Carbon::parse($start);
+        $this->endDate = $end instanceof CarbonInterface ? $end : Carbon::parse($end);
 
         $this->query->whereBetween('created_at', [$this->startDate, $this->endDate]);
 

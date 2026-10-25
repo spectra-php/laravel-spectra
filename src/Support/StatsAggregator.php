@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support;
 
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
@@ -108,7 +109,7 @@ class StatsAggregator
     /**
      * Useful for backfilling or fixing stat inconsistencies.
      */
-    public function rebuild(?Carbon $startDate = null, ?Carbon $endDate = null): int
+    public function rebuild(?CarbonInterface $startDate = null, ?CarbonInterface $endDate = null): int
     {
         $query = SpectraDailyStat::query();
 
@@ -143,9 +144,9 @@ class StatsAggregator
         return $count;
     }
 
-    public function rebuildForDate(Carbon|string $date): int
+    public function rebuildForDate(CarbonInterface|string $date): int
     {
-        $date = $date instanceof Carbon ? $date : Carbon::parse($date);
+        $date = $date instanceof CarbonInterface ? $date : Carbon::parse($date);
 
         return $this->rebuild($date->copy()->startOfDay(), $date->copy()->endOfDay());
     }
