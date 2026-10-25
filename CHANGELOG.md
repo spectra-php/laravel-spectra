@@ -2,11 +2,12 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
-## Unreleased
+## v2.3.1 - 2026-10-25
 
 #### Fixed
 
 - Apps that opt into immutable dates with `Date::use(CarbonImmutable::class)` crashed on every dashboard request: the package type-hinted `Illuminate\Support\Carbon` but fed it values from `now()` and model datetime casts, which are then `Carbon\CarbonImmutable`. Date parameters, properties and return types now accept any `Carbon\CarbonInterface`. This also fixes OpenTelemetry span export, where the `instanceof` check silently turned every timestamp into `0`
+- A subclass that overrides one of these methods with a `Carbon` parameter type (for example `UsageQueryBuilder::between()`) must widen it to `CarbonInterface`
 
 ## v2.3.0 - 2026-10-24
 
