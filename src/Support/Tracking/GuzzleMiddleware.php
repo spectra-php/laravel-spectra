@@ -12,6 +12,7 @@ use Spectra\Concerns\ParsesRequestData;
 use Spectra\Contracts\ExtractsPricingTierFromRequest;
 use Spectra\Contracts\ReturnsBinaryResponse;
 use Spectra\Contracts\SkipsResponse;
+use Spectra\Providers\Provider;
 use Spectra\Spectra;
 use Spectra\Support\ProviderRegistry;
 use Throwable;
@@ -276,54 +277,120 @@ class GuzzleMiddleware
 
         if ($handler instanceof SkipsResponse && $handler->shouldSkipResponse($body)) {
             // An async job was submitted or is still running; the poll that
-            // sees it finish is recorded, and may not name the model again.
-            $this->rememberJobModel($context, $jobId);
+            // sees it finish is recorded, and may not name the model or carry
+            // the request body again.
+            $this->rememberJob($context, $jobId);
 
             return;
         }
 
-        $this->restoreJobModel($context, $jobId);
+        $this->restoreJob($context, $providerInstance, $jobId);
 
         app(Spectra::class)->recordSuccess($context, $body);
     }
 
-    protected function rememberJobModel(RequestContext $context, ?string $jobId): void
-    {
-        if ($jobId === null || $jobId === '' || $context->model === '' || $context->model === 'unknown') {
-            return;
-        }
-
-        try {
-            Cache::put($this->jobModelKey($context->provider, $jobId), $context->model, now()->addDay());
-        } catch (Throwable) {
-            // Without a cache the poll keeps whatever model it can see.
-        }
-    }
-
     /**
-     * Use the model remembered from the job's submit request when the poll
-     * doesn't name one, or names only a prefix of it (fal's result URLs drop
-     * the model's sub-path, e.g. `fal-ai/flux` for `fal-ai/flux/dev`).
+     * Remember the job's model and request body (its length, resolution and
+     * other priced options) for the poll that records it. A later poll only
+     * adds to what the submit left: it doesn't replace a full model with the
+     * prefix a result URL names, or a body with an empty one.
      */
-    protected function restoreJobModel(RequestContext $context, ?string $jobId): void
+    protected function rememberJob(RequestContext $context, ?string $jobId): void
     {
         if ($jobId === null || $jobId === '') {
             return;
         }
 
         try {
-            $remembered = Cache::get($this->jobModelKey($context->provider, $jobId));
+            $job = $this->rememberedJob($context->provider, $jobId);
+            $model = $context->model;
+
+            if ($model !== '' && $model !== 'unknown' && ! str_starts_with($job['model'] ?? '', rtrim($model, '/').'/')) {
+                $job['model'] = $model;
+            }
+
+            $request = $this->withoutInlineFiles($context->requestData ?? []);
+
+            if ($request !== []) {
+                $job['request'] = $request;
+            }
+
+            if ($job !== []) {
+                Cache::put($this->jobModelKey($context->provider, $jobId), $job, now()->addDay());
+            }
+        } catch (Throwable) {
+            // Without a cache the poll keeps whatever it can see.
+        }
+    }
+
+    /**
+     * Use the model remembered from the job's submit request when the poll
+     * doesn't name one, or names only a prefix of it (fal's result URLs drop
+     * the model's sub-path, e.g. `fal-ai/flux` for `fal-ai/flux/dev`), and
+     * the submit's body under the poll's own (usually empty) one.
+     */
+    protected function restoreJob(RequestContext $context, ?Provider $providerInstance, ?string $jobId): void
+    {
+        if ($jobId === null || $jobId === '') {
+            return;
+        }
+
+        try {
+            $job = $this->rememberedJob($context->provider, $jobId);
         } catch (Throwable) {
             return;
         }
 
-        if (! is_string($remembered) || $remembered === $context->model) {
-            return;
-        }
+        $remembered = $job['model'] ?? null;
 
-        if ($context->model === 'unknown' || $context->model === '' || str_starts_with($remembered, rtrim($context->model, '/').'/')) {
+        if ($remembered !== null && $remembered !== $context->model
+            && ($context->model === 'unknown' || $context->model === '' || str_starts_with($remembered, rtrim($context->model, '/').'/'))) {
             $context->model = $remembered;
         }
+
+        if (isset($job['request'])) {
+            $context->requestData = array_replace($job['request'], $context->requestData ?? []);
+
+            if ($context->requestedPricingTier === null && $providerInstance instanceof ExtractsPricingTierFromRequest) {
+                $context->requestedPricingTier = $providerInstance->extractPricingTierFromRequest($context->requestData);
+            }
+        }
+    }
+
+    /**
+     * Earlier versions cached only the model, as a string.
+     *
+     * @return array{model?: string, request?: array<string, mixed>}
+     */
+    protected function rememberedJob(string $provider, string $jobId): array
+    {
+        $job = Cache::get($this->jobModelKey($provider, $jobId));
+
+        if (is_string($job)) {
+            return ['model' => $job];
+        }
+
+        return is_array($job) ? $job : [];
+    }
+
+    /**
+     * The request body without inline files (data URIs), which can be
+     * megabytes and say nothing about the price.
+     *
+     * @param  array<mixed>  $data
+     * @return array<mixed>
+     */
+    protected function withoutInlineFiles(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = $this->withoutInlineFiles($value);
+            } elseif (is_string($value) && str_starts_with($value, 'data:')) {
+                unset($data[$key]);
+            }
+        }
+
+        return $data;
     }
 
     protected function jobModelKey(string $provider, string $jobId): string

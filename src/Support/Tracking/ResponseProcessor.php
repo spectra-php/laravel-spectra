@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Support\Tracking;
 
 use Spectra\Contracts\ExtractsCostMultiplier;
+use Spectra\Contracts\ExtractsCostMultiplierForModel;
 use Spectra\Contracts\ExtractsPricingTierFromResponse;
 use Spectra\Contracts\HasExpiration;
 use Spectra\Contracts\HasMedia;
@@ -96,6 +97,10 @@ class ResponseProcessor
 
         if ($providerInstance instanceof ExtractsCostMultiplier) {
             $context->costMultiplier = $providerInstance->extractCostMultiplier($body, $context->requestData ?? []) ?? $context->costMultiplier;
+        }
+
+        if ($providerInstance instanceof ExtractsCostMultiplierForModel) {
+            $context->costMultiplier = $providerInstance->extractCostMultiplierForModel($context->model, $body, $context->requestData ?? []) ?? $context->costMultiplier;
         }
 
         $metrics = $providerInstance?->extractMetrics($body, $endpoint, $context->requestData ?? []);

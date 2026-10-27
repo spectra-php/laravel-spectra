@@ -2,6 +2,17 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## Unreleased
+
+#### Added
+
+- fal.ai video prices: Kling 3.0 Pro (`fal-ai/kling-video/v3/pro/text-to-video`), Veo 3.1, Veo 3.1 Fast, Veo 3.1 Lite and Wan 2.2 A14B (`fal-ai/wan/v2.2-a14b/text-to-video`), per second of video. The price follows the request's `resolution` and `generate_audio`, and Wan's `num_frames` is counted at 16 frames per second, as fal bills it. Previously fal.ai videos were recorded at $0
+- `ExtractsCostMultiplierForModel` contract: a cost multiplier that depends on the model as well as the request
+
+#### Fixed
+
+- A polled async job was measured from its result fetch alone, which has no request body, so anything only the submit request states was lost. A queued fal.ai video had no length and cost nothing. Spectra now remembers the submit request's body with the job's model (in the cache, for a day, without inline `data:` files) and uses it for the result. When request data is stored, the result row keeps that body too, so it shows the prompt
+
 ## v2.3.1 - 2026-10-25
 
 #### Fixed

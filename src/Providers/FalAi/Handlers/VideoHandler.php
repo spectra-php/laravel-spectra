@@ -22,12 +22,16 @@ use Spectra\Support\MediaPersister;
  * carry a `video` file instead of `images`.
  *
  * Per-second models need the length, which only the request states
- * (`duration`, e.g. `5` or `"8s"`). A queued result is fetched with a body-
- * less GET, so its length is unknown.
+ * (`duration`, e.g. `5` or `"8s"`, or `num_frames`, which fal bills as
+ * seconds at 16 frames per second). A queued result is fetched with a
+ * body-less GET, so it is measured with its submit request's body.
  */
 class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason, HasMedia, MatchesResponseShape, SkipsResponse
 {
     use HandlesFalRequests;
+
+    /** Frames in one billed second of a model that takes `num_frames`. */
+    protected const BILLED_FPS = 16;
 
     public function modelType(): ModelType
     {
@@ -121,6 +125,12 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
             $duration = rtrim(trim($duration), 's');
         }
 
-        return is_numeric($duration) && (float) $duration > 0 ? (float) $duration : null;
+        if (is_numeric($duration) && (float) $duration > 0) {
+            return (float) $duration;
+        }
+
+        $frames = $requestData['num_frames'] ?? null;
+
+        return is_numeric($frames) && (float) $frames > 0 ? (float) $frames / self::BILLED_FPS : null;
     }
 }

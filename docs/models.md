@@ -86,7 +86,7 @@ Video generation is usually asynchronous: you submit a creation request and then
 | Video count | `video_count` | Number of videos generated |
 | Duration | `duration_seconds` | Total duration of the generated video in seconds |
 
-Video models are priced **per second** of video or **per video**, depending on the model. When the provider reports how long the job took to generate, that time is stored as the latency, not the time of the last poll. Media persistence works the same way as for images.
+Video models are priced **per second** of video or **per video**, depending on the model. The poll that fetches a result usually has no request body, so Spectra remembers the submit request's body (without inline `data:` files) in your cache for a day, and measures and prices the result with it: its length (`duration`, or fal.ai's `num_frames`), resolution and audio. When the provider reports how long the job took to generate, that time is stored as the latency, not the time of the last poll. Media persistence works the same way as for images.
 
 <a name="text-to-speech"></a>
 ### Text-to-Speech

@@ -123,7 +123,9 @@ Some providers charge for built-in tools, such as web search or code interpreter
 
 Some providers charge more for certain requests. For example, Anthropic charges 1.1 times the price for US-only inference, which the response shows in `usage.inference_geo`. Spectra reads this from the response and multiplies the model cost (`prompt_cost`, `completion_cost`, and the total) by it. Tool call fees are not multiplied.
 
-Custom providers can do the same with the [`ExtractsCostMultiplier`](/custom-providers#extracts-cost-multiplier) contract.
+fal.ai video models cost more or less than their catalog price at another resolution or without audio. Spectra reads `resolution` and `generate_audio` from the request and scales the price the same way.
+
+Custom providers can do the same with the [`ExtractsCostMultiplier`](/custom-providers#extracts-cost-multiplier) contract, or with [`ExtractsCostMultiplierForModel`](/custom-providers#extracts-cost-multiplier-for-model) when the multiplier depends on the model.
 
 <a name="reported-cost"></a>
 ## Reported Cost

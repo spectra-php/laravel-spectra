@@ -557,6 +557,25 @@ class MyProvider extends Provider implements ExtractsCostMultiplier
 }
 ```
 
+<a name="extracts-cost-multiplier-for-model"></a>
+### `ExtractsCostMultiplierForModel`
+
+The same, with the model id. Use it when the surcharge depends on the model, such as fal.ai video models, which cost more or less than their catalog price at another resolution or without audio, by a different amount for each model:
+
+```php
+use Spectra\Contracts\ExtractsCostMultiplierForModel;
+
+class MyProvider extends Provider implements ExtractsCostMultiplierForModel
+{
+    public function extractCostMultiplierForModel(string $model, array $responseData, array $requestData): ?float
+    {
+        return $model === 'my-video-model' && ($requestData['generate_audio'] ?? true) === false ? 0.5 : null;
+    }
+}
+```
+
+For a polled async job, `$requestData` is the body of the request that submitted it.
+
 <a name="metrics-dtos"></a>
 ## Metrics DTOs
 
