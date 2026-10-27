@@ -8,6 +8,9 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 - fal.ai video prices: Kling 3.0 Pro (`fal-ai/kling-video/v3/pro/text-to-video`), Veo 3.1, Veo 3.1 Fast, Veo 3.1 Lite and Wan 2.2 A14B (`fal-ai/wan/v2.2-a14b/text-to-video`), per second of video. The price follows the request's `resolution` and `generate_audio`, and Wan's `num_frames` is counted at 16 frames per second, as fal bills it. Previously fal.ai videos were recorded at $0
 - `ExtractsCostMultiplierForModel` contract: a cost multiplier that depends on the model as well as the request
+- `Spectra::propagationHeaders()` and the `spectra.trace` middleware continue a trace and its tags across your own services. The caller sends a W3C `baggage` header with the trace id and its current tags, and the AI calls of the receiving route (and its jobs) join that trace with those tags. Previously a loopback call, such as a tool on your own MCP server, started a new, untagged trace
+- Queued jobs inherit the tags of the work that dispatched them: global tags and the `withTags()` tags around the dispatch, down a chain of jobs too. Set `spectra.tracking.propagate_tags` (`SPECTRA_PROPAGATE_TAGS`) to `false` to turn this off
+- `Spectra::currentTags()` returns the tags a request tracked right now would get
 
 #### Fixed
 

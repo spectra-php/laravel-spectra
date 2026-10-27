@@ -345,6 +345,26 @@ service), Spectra uses its trace id. Spectra's
 [OpenTelemetry](/opentelemetry#trace-correlation) spans then appear inside
 that trace, under the caller's span.
 
+**Your own services join the trace.** When one of your services calls
+another over HTTP (an internal API, a loopback MCP server), the second one
+starts its own trace. Send the trace and the tags along with
+`Spectra::propagationHeaders()`, and put the `spectra.trace` middleware on
+the receiving routes:
+
+```php
+// The caller
+Http::withHeaders(Spectra::propagationHeaders())->post($internalUrl, $payload);
+
+// The receiving service
+Route::post('/internal/tools', ToolController::class)->middleware('spectra.trace');
+```
+
+The header is a W3C `baggage` header with the trace id and the tags the
+caller's AI calls would get at that point (see [Tags](/tags#inherited-tags)).
+The AI calls of the receiving request, and of the jobs it dispatches, then join
+the caller's trace and carry its tags. Put the middleware only on routes your
+own services call: whoever can reach the route can name the trace and tags.
+
 In the dashboard, the request page shows a **Trace** card when a trace has
 more than one call: every call in order, a timeline, and the total cost,
 tokens, and time. You can also filter the requests list by trace id.

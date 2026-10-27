@@ -200,14 +200,42 @@ class Spectra
     }
 
     /**
-     * The global and scoped tags, then the request's own, without repeats.
+     * The tags a request tracked right now would get: the inherited, global
+     * and scoped tags. Queued jobs dispatched now inherit them.
+     *
+     * @return array<int, string>
+     */
+    public function currentTags(): array
+    {
+        return $this->mergedTags([]);
+    }
+
+    /**
+     * Headers that carry the current trace and tags to another of your own
+     * services, which continues them with the `spectra.trace` middleware:
+     *
+     *   Http::withHeaders(Spectra::propagationHeaders())->post($internalUrl, $payload);
+     *
+     * Send them only to your own services: they name your trace and tags.
+     *
+     * @return array<string, string>
+     */
+    public function propagationHeaders(): array
+    {
+        $baggage = TraceContext::toBaggage($this->currentTraceId(), $this->currentTags());
+
+        return $baggage === null ? [] : ['baggage' => $baggage];
+    }
+
+    /**
+     * The inherited, global and scoped tags, then the request's own, without repeats.
      *
      * @param  array<int, string>  $tags
      * @return array<int, string>
      */
     protected function mergedTags(array $tags): array
     {
-        return array_values(array_unique(array_merge($this->globalTags, $this->scopedTags, $tags)));
+        return array_values(array_unique(array_merge(TraceContext::tags(), $this->globalTags, $this->scopedTags, $tags)));
     }
 
     public function withPricingTier(string $tier): self
@@ -287,6 +315,7 @@ class Spectra
     public function clearGlobals(): self
     {
         $this->globalTags = [];
+        TraceContext::forgetTags();
         $this->globalTrackableType = null;
         $this->globalTrackableId = null;
         $this->globalPricingTier = null;

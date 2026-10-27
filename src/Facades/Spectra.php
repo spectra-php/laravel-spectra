@@ -24,6 +24,8 @@ use Spectra\Testing\SpectraFake;
  * @method static StreamingTracker stream(?string $provider = null, ?string $model = null, array<string, mixed> $options = [])
  * @method static Spectra addGlobalTags(array<int, string> $tags)
  * @method static mixed withTags(array<int, string> $tags, callable $callback)
+ * @method static array<int, string> currentTags()
+ * @method static array<string, string> propagationHeaders()
  * @method static Spectra withPricingTier(string $tier)
  * @method static Spectra withTraceId(string $traceId)
  * @method static string|null currentTraceId()

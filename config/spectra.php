@@ -404,6 +404,19 @@ return [
 
         'use_traceparent' => env('SPECTRA_USE_TRACEPARENT', true),
 
+        /*
+        |--------------------------------------------------------------------------
+        | Propagate Tags
+        |--------------------------------------------------------------------------
+        |
+        | When enabled, a queued job inherits the tags of the request or job that
+        | dispatched it: its global tags and the Spectra::withTags() tags around
+        | the dispatch. The job's AI calls then carry them next to their own.
+        |
+        */
+
+        'propagate_tags' => env('SPECTRA_PROPAGATE_TAGS', true),
+
     ],
 
     /*

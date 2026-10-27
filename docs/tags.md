@@ -69,6 +69,22 @@ Global tags are merged with scoped and request-specific tags. Clear global tags 
 Spectra::clearGlobals();
 ```
 
+<a name="inherited-tags"></a>
+## Inherited Tags
+
+Tags carry on like the [trace](/usage#traces):
+
+- **Queued jobs.** A job inherits the tags its AI calls would get where it is dispatched: the global tags, and the `withTags()` tags around the dispatch. A job that dispatches another job hands them on. The job's own tags are added to the inherited ones.
+- **Your own services.** `Spectra::propagationHeaders()` sends the current tags (and the trace) to another of your services, where the `spectra.trace` middleware picks them up. See [Your own services join the trace](/usage#traces).
+
+```php
+// A chat reply asks for a video. The job's fal.ai calls are tagged
+// `chat-reply` as well as their own `video-generation`.
+Spectra::withTags(['chat-reply'], fn () => GenerateVideoJob::dispatch($prompt));
+```
+
+`Spectra::currentTags()` returns the tags a request tracked right now would get. To stop jobs inheriting tags, set `SPECTRA_PROPAGATE_TAGS=false`. `Spectra::clearGlobals()` forgets the inherited tags too.
+
 <a name="filtering-by-tag"></a>
 ## Filtering by Tag
 

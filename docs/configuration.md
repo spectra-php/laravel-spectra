@@ -135,6 +135,7 @@ Configure what contextual information Spectra captures automatically with each t
     'capture_request_id' => true,
     'trace_per_request'  => true,
     'use_traceparent'    => true,
+    'propagate_tags'     => true,
 ],
 ```
 
@@ -146,6 +147,7 @@ Configure what contextual information Spectra captures automatically with each t
 | `capture_request_id` | `bool` | `true` | Store a request ID for correlation with your logs in the `laravel_request_id` column. Uses the `X-Request-ID` header if present, otherwise generates one. |
 | `trace_per_request` | `bool` | `true` | Give every AI call of the same HTTP request, queued job, or Artisan command one trace id. Queued jobs dispatched during a request keep its trace. Env: `SPECTRA_TRACE_PER_REQUEST`. See [Traces](/usage#traces). |
 | `use_traceparent` | `bool` | `true` | When the incoming HTTP request has a W3C `traceparent` header, use its trace id, so Spectra's spans join that trace. Env: `SPECTRA_USE_TRACEPARENT`. |
+| `propagate_tags` | `bool` | `true` | A queued job inherits the tags of the request or job that dispatched it (global tags and the `withTags()` tags around the dispatch). Env: `SPECTRA_PROPAGATE_TAGS`. See [Inherited Tags](/tags#inherited-tags). |
 
 These values come from the current HTTP request. In Artisan commands and queue workers there is no real client, so they don't mean much there. Spectra also stores where the call came from in the `request_source` column: `web`, `api` (the request expects JSON), or `console` (Artisan commands and queue workers). Turn the `capture_*` options off if you don't want these values stored.
 

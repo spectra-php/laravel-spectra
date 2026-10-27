@@ -193,11 +193,18 @@ class SpectraServiceProvider extends ServiceProvider
 
     /**
      * Give every queued job the trace of the request that dispatched it, even
-     * when the job is dispatched before the request's first AI call.
+     * when the job is dispatched before the request's first AI call, and the
+     * tags its AI calls would get right now (global and withTags() ones too).
      */
     protected function registerTracePropagation(): void
     {
         Context::dehydrating(function (ContextRepository $context): void {
+            if (! config('spectra.tracking.propagate_tags', true)) {
+                $context->forgetHidden(TraceContext::TAGS);
+            } elseif (($tags = $this->app->make(Spectra::class)->currentTags()) !== []) {
+                $context->addHidden(TraceContext::TAGS, $tags);
+            }
+
             if (! config('spectra.tracking.trace_per_request', true)) {
                 return;
             }
@@ -303,6 +310,7 @@ class SpectraServiceProvider extends ServiceProvider
     {
         $this->callAfterResolving('router', function (Router $router) {
             $router->aliasMiddleware('spectra.budget', Http\Middleware\EnforceBudgetLimit::class);
+            $router->aliasMiddleware('spectra.trace', Http\Middleware\ContinueTrace::class);
         });
     }
 
