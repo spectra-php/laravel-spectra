@@ -71,6 +71,18 @@ class OpenAIPricing extends ProviderPricing
             ->tier('ultrafast', inputPrice: 1200, outputPrice: 6000, cachedInputPrice: 60, cacheWrite5mPrice: 1500)
             ->tier('ultrafast', inputPrice: 2400, outputPrice: 9000, cachedInputPrice: 120, cacheWrite5mPrice: 3000, aboveInputTokens: 272_000));
 
+        $this->model('gpt-6.1-terra', fn ($m) => $m
+            ->displayName('GPT-6.1 Terra')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 100, outputPrice: 500, cachedInputPrice: 5, cacheWrite5mPrice: 125)
+            ->tier('standard', inputPrice: 200, outputPrice: 750, cachedInputPrice: 10, cacheWrite5mPrice: 250, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 50, outputPrice: 250, cachedInputPrice: 2.5, cacheWrite5mPrice: 62.5)
+            ->tier('batch', inputPrice: 100, outputPrice: 375, cachedInputPrice: 5, cacheWrite5mPrice: 125, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 50, outputPrice: 250, cachedInputPrice: 2.5, cacheWrite5mPrice: 62.5)
+            ->tier('flex', inputPrice: 100, outputPrice: 375, cachedInputPrice: 5, cacheWrite5mPrice: 125, aboveInputTokens: 272_000)
+            ->tier('priority', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 10, cacheWrite5mPrice: 250)
+            ->tier('priority', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 20, cacheWrite5mPrice: 500, aboveInputTokens: 272_000));
+
         $this->model('gpt-6-sol', fn ($m) => $m
             ->displayName('GPT-6 Sol')
             ->canGenerateText()
@@ -143,17 +155,18 @@ class OpenAIPricing extends ProviderPricing
             ->displayName('GPT-5.5')
             ->canGenerateText()
             ->tier('standard', inputPrice: 500, outputPrice: 3000, cachedInputPrice: 50)
-            ->tier('standard', inputPrice: 1000, outputPrice: 4500, cachedInputPrice: 50, aboveInputTokens: 272_000)
+            ->tier('standard', inputPrice: 1000, outputPrice: 4500, cachedInputPrice: 100, aboveInputTokens: 272_000)
             ->tier('batch', inputPrice: 250, outputPrice: 1500, cachedInputPrice: 25)
-            ->tier('batch', inputPrice: 500, outputPrice: 2250, cachedInputPrice: 25, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 500, outputPrice: 2250, cachedInputPrice: 50, aboveInputTokens: 272_000)
             ->tier('flex', inputPrice: 250, outputPrice: 1500, cachedInputPrice: 25)
-            ->tier('flex', inputPrice: 500, outputPrice: 2250, cachedInputPrice: 25, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 500, outputPrice: 2250, cachedInputPrice: 50, aboveInputTokens: 272_000)
             ->tier('priority', inputPrice: 1250, outputPrice: 7500, cachedInputPrice: 125));
 
         $this->model('gpt-5.5-pro', fn ($m) => $m
             ->displayName('GPT-5.5 Pro')
             ->canGenerateText()
             ->tier('standard', inputPrice: 3000, outputPrice: 18000)
+            ->tier('standard', inputPrice: 6000, outputPrice: 27000, aboveInputTokens: 272_000)
             ->tier('batch', inputPrice: 1500, outputPrice: 9000)
             ->tier('flex', inputPrice: 1500, outputPrice: 9000));
 
@@ -161,11 +174,11 @@ class OpenAIPricing extends ProviderPricing
             ->displayName('GPT-5.4')
             ->canGenerateText()
             ->tier('standard', inputPrice: 250, outputPrice: 1500, cachedInputPrice: 25)
-            ->tier('standard', inputPrice: 500, outputPrice: 2250, cachedInputPrice: 25, aboveInputTokens: 272_000)
+            ->tier('standard', inputPrice: 500, outputPrice: 2250, cachedInputPrice: 50, aboveInputTokens: 272_000)
             ->tier('batch', inputPrice: 125, outputPrice: 750, cachedInputPrice: 13)
-            ->tier('batch', inputPrice: 250, outputPrice: 1125, cachedInputPrice: 13, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 250, outputPrice: 1125, cachedInputPrice: 25, aboveInputTokens: 272_000)
             ->tier('flex', inputPrice: 125, outputPrice: 750, cachedInputPrice: 13)
-            ->tier('flex', inputPrice: 250, outputPrice: 1125, cachedInputPrice: 13, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 250, outputPrice: 1125, cachedInputPrice: 25, aboveInputTokens: 272_000)
             ->tier('priority', inputPrice: 500, outputPrice: 3000, cachedInputPrice: 50));
 
         $this->model('gpt-5.4-mini', fn ($m) => $m

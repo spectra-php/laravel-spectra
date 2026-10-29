@@ -396,7 +396,7 @@ Register it in your config:
 
 The built-in catalog is **hand-maintained**. Spectra does not fetch prices from provider APIs. Provider prices change, and new models ship often, so the catalog needs a review from time to time.
 
-**Prices last reviewed: 2026-10-15.**
+**Prices last reviewed: 2026-10-29.**
 
 When reviewing, check each provider's official pricing page and update the matching `ProviderPricing` class under `src/Pricing/`:
 
@@ -406,7 +406,7 @@ When reviewing, check each provider's official pricing page and update the match
 | Anthropic | https://platform.claude.com/docs/en/about-claude/pricing |
 | Google (Gemini) | https://ai.google.dev/gemini-api/docs/pricing |
 | xAI | https://docs.x.ai/developers/pricing |
-| Mistral | https://mistral.ai/pricing |
+| Mistral | https://docs.mistral.ai/inference/pricing |
 | Cohere | https://cohere.com/pricing |
 | Groq | https://console.groq.com/docs/models |
 | OpenRouter | https://openrouter.ai/models |

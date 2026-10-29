@@ -7,8 +7,11 @@ namespace Spectra\Pricing;
 /**
  * Mistral AI prices, from docs.mistral.ai (API pricing page and model cards).
  *
- * The Batch API is 50% off for models that support batching, and the batch
- * discount applies to every token type. Model cards list each model's dated
+ * Cached input is 10% of the input price on every model the pricing page
+ * lists (GLM 5.3 Flash: 20%, DeepSeek V4.1 Flash: 2.3%). The Batch API is 50% off for models that
+ * support batching, and the batch discount applies to every token type.
+ * Retired models predate prompt caching, so they carry no cached price and
+ * bill cached tokens at the input rate. Model cards list each model's dated
  * ids (`mistral-medium-2508`, ...); those resolve through aliases or their own
  * entry when the price differs. Retirement dates are the ones the model cards
  * publish. A priority `service_tier` is recorded, but Mistral publishes no
@@ -23,21 +26,22 @@ class MistralPricing extends ProviderPricing
 
     protected function define(): void
     {
-        // Mistral Large 4 is in public preview at a sale price (regular:
-        // $1.36 in / $0.14 cached / $4.18 out). No end date is published.
+        // Mistral Large 4 is in public preview. Its launch sale ($0.68 / $2.09,
+        // list $1.36 / $4.18) is over; the model card and pricing page now show
+        // $0.70 / $0.07 cached / $2.10 with no list price.
         $this->model('mistral-large-4', fn ($m) => $m
             ->displayName('Mistral Large 4')
             ->aliases('mistral-large-4-0')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 68, outputPrice: 209, cachedInputPrice: 7)
-            ->tier('batch', inputPrice: 34, outputPrice: 104.5, cachedInputPrice: 3.5));
+            ->tier('standard', inputPrice: 70, outputPrice: 210, cachedInputPrice: 7)
+            ->tier('batch', inputPrice: 35, outputPrice: 105, cachedInputPrice: 3.5));
 
         $this->model('mistral-large-latest', fn ($m) => $m
             ->displayName('Mistral Large 3')
             ->aliases('mistral-large-2512')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 50, outputPrice: 150)
-            ->tier('batch', inputPrice: 25, outputPrice: 75));
+            ->tier('standard', inputPrice: 50, outputPrice: 150, cachedInputPrice: 5)
+            ->tier('batch', inputPrice: 25, outputPrice: 75, cachedInputPrice: 2.5));
 
         $this->model('mistral-large-2411', fn ($m) => $m
             ->displayName('Mistral Large 2.1')
@@ -48,10 +52,10 @@ class MistralPricing extends ProviderPricing
 
         $this->model('mistral-medium-latest', fn ($m) => $m
             ->displayName('Mistral Medium 3.5')
-            ->aliases('mistral-medium-3-5', 'mistral-medium-3')
+            ->aliases('mistral-medium-2604', 'mistral-medium-3-5', 'mistral-medium-3')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 150, outputPrice: 750)
-            ->tier('batch', inputPrice: 75, outputPrice: 375));
+            ->tier('standard', inputPrice: 150, outputPrice: 750, cachedInputPrice: 15)
+            ->tier('batch', inputPrice: 75, outputPrice: 375, cachedInputPrice: 7.5));
 
         $this->model('mistral-medium-2508', fn ($m) => $m
             ->displayName('Mistral Medium 3.1')
@@ -71,8 +75,8 @@ class MistralPricing extends ProviderPricing
             ->displayName('Mistral Small 4')
             ->aliases('mistral-small-2603')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 15, outputPrice: 60)
-            ->tier('batch', inputPrice: 7.5, outputPrice: 30));
+            ->tier('standard', inputPrice: 15, outputPrice: 60, cachedInputPrice: 1.5)
+            ->tier('batch', inputPrice: 7.5, outputPrice: 30, cachedInputPrice: 0.75));
 
         $this->model('mistral-small-2506', fn ($m) => $m
             ->displayName('Mistral Small 3.2')
@@ -101,8 +105,8 @@ class MistralPricing extends ProviderPricing
             ->displayName('Ministral 3B')
             ->aliases('ministral-3b-2512')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 10, outputPrice: 10)
-            ->tier('batch', inputPrice: 5, outputPrice: 5));
+            ->tier('standard', inputPrice: 10, outputPrice: 10, cachedInputPrice: 1)
+            ->tier('batch', inputPrice: 5, outputPrice: 5, cachedInputPrice: 0.5));
 
         $this->model('ministral-3b-2410', fn ($m) => $m
             ->displayName('Ministral 3B 24.10')
@@ -115,8 +119,8 @@ class MistralPricing extends ProviderPricing
             ->displayName('Ministral 8B')
             ->aliases('ministral-8b-2512')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 15, outputPrice: 15)
-            ->tier('batch', inputPrice: 7.5, outputPrice: 7.5));
+            ->tier('standard', inputPrice: 15, outputPrice: 15, cachedInputPrice: 1.5)
+            ->tier('batch', inputPrice: 7.5, outputPrice: 7.5, cachedInputPrice: 0.75));
 
         $this->model('ministral-8b-2410', fn ($m) => $m
             ->displayName('Ministral 8B 24.10')
@@ -129,8 +133,8 @@ class MistralPricing extends ProviderPricing
             ->displayName('Ministral 14B')
             ->aliases('ministral-14b-2512')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 20, outputPrice: 20)
-            ->tier('batch', inputPrice: 10, outputPrice: 10));
+            ->tier('standard', inputPrice: 20, outputPrice: 20, cachedInputPrice: 2)
+            ->tier('batch', inputPrice: 10, outputPrice: 10, cachedInputPrice: 1));
 
         // `mistral-nemo` is not a Mistral API id; it is kept as an alias so
         // older code keeps resolving to Mistral NeMo 12B.
@@ -178,8 +182,8 @@ class MistralPricing extends ProviderPricing
             ->displayName('Codestral')
             ->aliases('codestral-2508', 'codestral-2501')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 30, outputPrice: 90)
-            ->tier('batch', inputPrice: 15, outputPrice: 45));
+            ->tier('standard', inputPrice: 30, outputPrice: 90, cachedInputPrice: 3)
+            ->tier('batch', inputPrice: 15, outputPrice: 45, cachedInputPrice: 1.5));
 
         $this->model('devstral-medium-latest', fn ($m) => $m
             ->displayName('Devstral 2')
@@ -213,6 +217,18 @@ class MistralPricing extends ProviderPricing
             ->canGenerateText()
             ->tier('standard', inputPrice: 140, outputPrice: 440, cachedInputPrice: 14)
             ->tier('batch', inputPrice: 70, outputPrice: 220, cachedInputPrice: 7));
+
+        $this->model('zai-glm-5-3-flash', fn ($m) => $m
+            ->displayName('Z.ai GLM 5.3 Flash')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 15, outputPrice: 50, cachedInputPrice: 3)
+            ->tier('batch', inputPrice: 7.5, outputPrice: 25, cachedInputPrice: 1.5));
+
+        $this->model('deepseek-v4-1-flash-1017', fn ($m) => $m
+            ->displayName('DeepSeek V4.1 Flash')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 30, outputPrice: 120, cachedInputPrice: 0.7)
+            ->tier('batch', inputPrice: 15, outputPrice: 60, cachedInputPrice: 0.35));
 
         // Retires on 2026-10-31 (replaced by zai-glm-5-3).
         $this->model('zai-glm-5-2', fn ($m) => $m
@@ -251,21 +267,21 @@ class MistralPricing extends ProviderPricing
             ->displayName('Mistral Embed')
             ->aliases('mistral-embed-2312')
             ->type('embedding')
-            ->tier('standard', inputPrice: 10, outputPrice: 0)
-            ->tier('batch', inputPrice: 5, outputPrice: 0));
+            ->tier('standard', inputPrice: 10, outputPrice: 0, cachedInputPrice: 1)
+            ->tier('batch', inputPrice: 5, outputPrice: 0, cachedInputPrice: 0.5));
 
         $this->model('codestral-embed', fn ($m) => $m
             ->displayName('Codestral Embed')
             ->aliases('codestral-embed-2505')
             ->type('embedding')
-            ->tier('standard', inputPrice: 15, outputPrice: 0)
-            ->tier('batch', inputPrice: 7.5, outputPrice: 0));
+            ->tier('standard', inputPrice: 15, outputPrice: 0, cachedInputPrice: 1.5)
+            ->tier('batch', inputPrice: 7.5, outputPrice: 0, cachedInputPrice: 0.75));
 
         $this->model('codestral-embed-latest', fn ($m) => $m
             ->displayName('Codestral Embed')
             ->type('embedding')
-            ->tier('standard', inputPrice: 15, outputPrice: 0)
-            ->tier('batch', inputPrice: 7.5, outputPrice: 0));
+            ->tier('standard', inputPrice: 15, outputPrice: 0, cachedInputPrice: 1.5)
+            ->tier('batch', inputPrice: 7.5, outputPrice: 0, cachedInputPrice: 0.75));
 
         // OCR: per page ($4 / 1K pages for OCR 4.1). Pages with a document or
         // bounding-box annotation format cost $5 / 1K ($3 / 1K for OCR 3 and

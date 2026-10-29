@@ -18,7 +18,7 @@ namespace Spectra\Pricing;
  *
  * Source: https://www.scaleway.com/en/pricing/model-as-a-service/ (Paris)
  * and https://www.scaleway.com/en/docs/generative-apis/reference-content/supported-models/
- * (last reviewed 2026-10-15).
+ * (last reviewed 2026-10-29).
  */
 class ScalewayPricing extends ProviderPricing
 {
@@ -46,6 +46,7 @@ class ScalewayPricing extends ProviderPricing
 
         $this->model('deepseek-v4.1-flash', fn ($m) => $m
             ->displayName('DeepSeek V4.1 Flash')
+            ->aliases('deepseek-v4.1-flash-1017')
             ->canGenerateText()
             ->tier('standard', inputPrice: 60, outputPrice: 180, cachedInputPrice: 12));
 

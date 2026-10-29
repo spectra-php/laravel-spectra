@@ -2,6 +2,22 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## v2.5.0 - 2026-10-29
+
+#### Added
+
+- Google: Gemini 3.8 Live, Gemini 3.8 Live Extended Thinking, Gemini 3.1 Flash Live Preview, Gemini 3.5 Live Translate Preview and Gemini Omni Flash (`gemini-omni-1.1-flash`); `gemini-3.1-flash-image-preview` resolves to Gemini 3.1 Flash Image
+- Mistral: Z.ai GLM 5.3 Flash and DeepSeek V4.1 Flash (`deepseek-v4-1-flash-1017`); `mistral-medium-2604` resolves to Mistral Medium 3.5
+- OpenAI: GPT-6.1 Terra
+- Scaleway: `deepseek-v4.1-flash-1017`, the dated id the price list now uses, resolves to DeepSeek V4.1 Flash
+
+#### Fixed
+
+- OpenAI: GPT-5.5 and GPT-5.4 cached input above 272K tokens was billed at the short-context rate (it doubles, like input and output). GPT-5.5 Pro had no long-context price at all ($60 / $270 above 272K)
+- Google: Gemini Embedding 2 audio ($6.50) and image ($0.45) input was billed at the text rate ($0.20). Gemini 2.5 Computer Use Preview had no long-context price ($2.50 / $15.00 above 200K)
+- Mistral: cached input tokens were billed at the full input price. Every current Mistral model now carries its cached price (10% of input). Mistral Large 4 is $0.70 / $2.10 (its launch sale is over)
+- OpenRouter: Gemini cache writes were billed at the input price. They now use OpenRouter's `input_cache_write` rate, the context-cache storage price for the 5-minute TTL
+
 ## v2.4.0 - 2026-10-29
 
 #### Added

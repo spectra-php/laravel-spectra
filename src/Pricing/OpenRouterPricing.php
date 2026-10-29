@@ -14,8 +14,10 @@ namespace Spectra\Pricing;
  *
  * Source: https://openrouter.ai/api/v1/models and
  * https://openrouter.ai/api/v1/images/models/{author}/{slug}/endpoints
- * (last reviewed 2026-10-15). Long-context rows come from the per-model
- * `pricing.overrides` (`min_prompt_tokens`).
+ * (last reviewed 2026-10-29). Long-context rows come from the per-model
+ * `pricing.overrides` (`min_prompt_tokens`). Gemini cache writes are priced
+ * at OpenRouter's `input_cache_write`, which is the context-cache storage
+ * rate for the default 5-minute TTL rather than the input price.
  */
 class OpenRouterPricing extends ProviderPricing
 {
@@ -105,25 +107,25 @@ class OpenRouterPricing extends ProviderPricing
             ->displayName('Gemini 3.1 Pro Preview')
             ->aliases('google/gemini-3.1-pro-preview-20260219')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 200, outputPrice: 1200, cachedInputPrice: 20, audioInputPrice: 200)
-            ->tier('standard', inputPrice: 400, outputPrice: 1800, cachedInputPrice: 40, audioInputPrice: 400, aboveInputTokens: 200_000));
+            ->tier('standard', inputPrice: 200, outputPrice: 1200, cachedInputPrice: 20, cacheWrite5mPrice: 37.5, audioInputPrice: 200)
+            ->tier('standard', inputPrice: 400, outputPrice: 1800, cachedInputPrice: 40, cacheWrite5mPrice: 37.5, audioInputPrice: 400, aboveInputTokens: 200_000));
 
         $this->model('google/gemini-3.8-flash', fn ($m) => $m
             ->displayName('Gemini 3.8 Flash')
             ->aliases('google/gemini-3.8-flash-20260902')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 75, outputPrice: 375, cachedInputPrice: 7.5, audioInputPrice: 75));
+            ->tier('standard', inputPrice: 75, outputPrice: 375, cachedInputPrice: 7.5, cacheWrite5mPrice: 4.1667, audioInputPrice: 75));
 
         // Gemini 2.5 Flash and Flash Lite expire on OpenRouter on 2026-10-20.
         $this->model('google/gemini-2.5-flash', fn ($m) => $m
             ->displayName('Gemini 2.5 Flash')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 30, outputPrice: 250, cachedInputPrice: 3, audioInputPrice: 100));
+            ->tier('standard', inputPrice: 30, outputPrice: 250, cachedInputPrice: 3, cacheWrite5mPrice: 8.3333, audioInputPrice: 100));
 
         $this->model('google/gemini-2.5-flash-lite', fn ($m) => $m
             ->displayName('Gemini 2.5 Flash Lite')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 10, outputPrice: 40, cachedInputPrice: 1, audioInputPrice: 30));
+            ->tier('standard', inputPrice: 10, outputPrice: 40, cachedInputPrice: 1, cacheWrite5mPrice: 8.3333, audioInputPrice: 30));
 
         // Others
         $this->model('x-ai/grok-4.7', fn ($m) => $m
@@ -169,7 +171,7 @@ class OpenRouterPricing extends ProviderPricing
             ->type('image')
             ->canGenerateText()
             ->canGenerateImages()
-            ->tier('standard', inputPrice: 30, outputPrice: 250, cachedInputPrice: 3, audioInputPrice: 100, imageOutputPrice: 3000));
+            ->tier('standard', inputPrice: 30, outputPrice: 250, cachedInputPrice: 3, cacheWrite5mPrice: 8.3333, audioInputPrice: 100, imageOutputPrice: 3000));
 
         $this->model('openai/gpt-image-1', fn ($m) => $m
             ->displayName('GPT Image 1')

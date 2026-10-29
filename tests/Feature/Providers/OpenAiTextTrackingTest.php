@@ -237,9 +237,9 @@ it('doubles input and raises output by half for gpt-5.4 long context, keeping th
 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.4', 'input' => 'x']);
 
-    // gpt-5.4 long context: in 500, cached 25 (not restated by OpenAI), out 2250.
-    // (300000*500 + 100000*25 + 2000*2250) / 1M = 157.0
-    expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(157.0, 1e-9);
+    // gpt-5.4 long context: in 500, cached 50, out 2250 (all double above 272K).
+    // (300000*500 + 100000*50 + 2000*2250) / 1M = 159.5
+    expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(159.5, 1e-9);
 });
 
 it('prices gpt-rosalind-research from the day billing began', function () {

@@ -22,15 +22,15 @@ it('tracks a reasoning response with thinking chunks and cache hits', function (
 
     $row = SpectraRequest::sole();
 
-    // Mistral Large 4 (sale price): 200 uncached × 68 + 1,000 cached × 7 + 1,114 × 209
-    // = 253,426 / 1M = 0.253426 cents. Thinking tokens are already in completion_tokens.
+    // Mistral Large 4: 200 uncached × 70 + 1,000 cached × 7 + 1,114 × 210
+    // = 254,940 / 1M = 0.25494 cents. Thinking tokens are already in completion_tokens.
     expect($row->model)->toBe('Mistral Large 4')
         ->and($row->response['choices'][0]['message']['content'][1]['text'])->toBe('John is 22 years old.')
         ->and($row->prompt_tokens)->toBe(1_200)
         ->and($row->cached_tokens)->toBe(1_000)
         ->and($row->completion_tokens)->toBe(1_114)
         ->and($row->is_reasoning)->toBeTrue()
-        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.253426, 1e-9);
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.25494, 1e-9);
 });
 
 it('extracts only the answer text from thinking chunks', function () {

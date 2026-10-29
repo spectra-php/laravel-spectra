@@ -177,6 +177,43 @@ class GooglePricing extends ProviderPricing
             ->tier('priority', inputPrice: 90, outputPrice: 1080)
             ->tier('priority', inputPrice: 180, outputPrice: 2160, since: '2027-01-01'));
 
+        // Live (image and video input, $1.00, bill at the text rate because
+        // usage doesn't split them). The three models share one price.
+        $this->model('gemini-3.8-live', fn ($m) => $m
+            ->displayName('Gemini 3.8 Live')
+            ->canGenerateText()
+            ->canGenerateAudio()
+            ->tier('standard', inputPrice: 75, outputPrice: 450, audioInputPrice: 300, audioOutputPrice: 1200));
+
+        $this->model('gemini-3.8-live-extended-thinking', fn ($m) => $m
+            ->displayName('Gemini 3.8 Live Extended Thinking')
+            ->canGenerateText()
+            ->canGenerateAudio()
+            ->tier('standard', inputPrice: 75, outputPrice: 450, audioInputPrice: 300, audioOutputPrice: 1200));
+
+        $this->model('gemini-3.1-flash-live-preview', fn ($m) => $m
+            ->displayName('Gemini 3.1 Flash Live Preview')
+            ->canGenerateText()
+            ->canGenerateAudio()
+            ->tier('standard', inputPrice: 75, outputPrice: 450, audioInputPrice: 300, audioOutputPrice: 1200));
+
+        // Audio in, audio out only.
+        $this->model('gemini-3.5-live-translate-preview', fn ($m) => $m
+            ->displayName('Gemini 3.5 Live Translate Preview')
+            ->type('audio')
+            ->canGenerateAudio()
+            ->tier('standard', inputPrice: 350, outputPrice: 2100));
+
+        // Omni: every input modality is $1.50. Video output ($17.50, at 5,792
+        // tokens per second of 720p video) has no price field and bills at the
+        // text output rate.
+        $this->model('gemini-omni-1.1-flash', fn ($m) => $m
+            ->displayName('Gemini Omni Flash')
+            ->aliases('gemini-omni-flash-preview')
+            ->canGenerateText()
+            ->canGenerateVideo()
+            ->tier('standard', inputPrice: 150, outputPrice: 900));
+
         $this->model('gemini-3.1-flash-tts-preview', fn ($m) => $m
             ->displayName('Gemini 3.1 Flash TTS')
             ->type('audio')
@@ -209,6 +246,7 @@ class GooglePricing extends ProviderPricing
 
         $this->model('gemini-3.1-flash-image', fn ($m) => $m
             ->displayName('Gemini 3.1 Flash Image')
+            ->aliases('gemini-3.1-flash-image-preview')
             ->type('image')
             ->canGenerateText()
             ->canGenerateImages()
@@ -283,14 +321,16 @@ class GooglePricing extends ProviderPricing
             ->displayName('Gemini 2.5 Computer Use Preview')
             ->retiredOn('2026-07-28')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 125, outputPrice: 1000));
+            ->tier('standard', inputPrice: 125, outputPrice: 1000)
+            ->tier('standard', inputPrice: 250, outputPrice: 1500, aboveInputTokens: 200_000));
 
-        // Embedding
+        // Embedding. Embedding 2 also takes video ($12.00 per 1M tokens), which
+        // has no price field and bills at the text rate.
         $this->model('gemini-embedding-2', fn ($m) => $m
             ->displayName('Gemini Embedding 2')
             ->type('embedding')
-            ->tier('standard', inputPrice: 20, outputPrice: 0)
-            ->tier('batch', inputPrice: 10, outputPrice: 0));
+            ->tier('standard', inputPrice: 20, outputPrice: 0, audioInputPrice: 650, imageInputPrice: 45)
+            ->tier('batch', inputPrice: 10, outputPrice: 0, audioInputPrice: 325, imageInputPrice: 22.5));
 
         $this->model('gemini-embedding-001', fn ($m) => $m
             ->displayName('Gemini Embedding')
