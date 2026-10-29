@@ -35,6 +35,13 @@ class DatabaseSeeder extends Seeder
         ['xai', 'grok-4.3', 'text', '/v1/chat/completions', 3, [300, 5_000], [80, 1_200]],
         ['groq', 'whisper-large-v3-turbo', 'stt', '/openai/v1/audio/transcriptions', 2, [0, 0], [0, 0]],
         ['openai', 'gpt-image-1.5', 'image', '/v1/images/generations', 2, [40, 200], [4_000, 6_000]],
+        ['openrouter', 'anthropic/claude-sonnet-4.6', 'text', '/api/v1/chat/completions', 5, [500, 20_000], [100, 2_000]],
+        ['openrouter', 'deepseek/deepseek-v4-flash', 'text', '/api/v1/chat/completions', 3, [300, 10_000], [80, 1_500]],
+        ['groq', 'llama-3.3-70b-versatile', 'text', '/openai/v1/chat/completions', 4, [200, 4_000], [50, 900]],
+        ['replicate', 'black-forest-labs/flux-1.1-pro', 'image', '/v1/models/black-forest-labs/flux-1.1-pro/predictions', 2, [0, 0], [0, 0]],
+        ['openai', 'tts-1', 'tts', '/v1/audio/speech', 3, [0, 0], [0, 0]],
+        ['elevenlabs', 'eleven_flash_v2_5', 'tts', '/v1/text-to-speech/21m00Tcm4TlvDq8rNA0T', 2, [0, 0], [0, 0]],
+        ['google', 'veo-3.1-fast-generate-001', 'video', '/v1beta/models/veo-3.1-fast-generate-001:predictLongRunning', 1, [0, 0], [0, 0]],
     ];
 
     /** @var list<string> */
@@ -58,7 +65,7 @@ class DatabaseSeeder extends Seeder
 
         for ($day = 29; $day >= 0; $day--) {
             $date = $today->copy()->subDays($day);
-            $count = (int) round((40 + 30 * sin($day / 3)) * ($date->isWeekend() ? 0.6 : 1.0));
+            $count = (int) round((110 + 45 * sin($day / 3)) * ($date->isWeekend() ? 0.6 : 1.0));
 
             for ($i = 0; $i < $count;) {
                 $at = $date->copy()->addSeconds(mt_rand(7 * 3600, 22 * 3600));
@@ -114,7 +121,9 @@ class DatabaseSeeder extends Seeder
         $context->requestSource = $source;
 
         $latency = match ($type) {
+            'video' => mt_rand(40_000, 140_000),
             'image' => mt_rand(6_000, 22_000),
+            'tts' => mt_rand(500, 4_000),
             'stt' => mt_rand(600, 3_500),
             'embedding' => mt_rand(80, 600),
             default => mt_rand(400, 9_000),
@@ -148,9 +157,24 @@ class DatabaseSeeder extends Seeder
             $context->imageCount = 1;
         }
 
-        $body = match ($type) {
-            'image' => ['created' => $at->timestamp, 'data' => [['url' => 'https://example.test/demo.png']], 'usage' => ['input_tokens' => $prompt, 'output_tokens' => $completion, 'input_tokens_details' => ['text_tokens' => $prompt, 'image_tokens' => 0]]],
-            'stt' => ['text' => 'Demo transcript.', 'duration' => $context->durationSeconds, 'x_groq' => ['id' => 'req_'.bin2hex(random_bytes(6))]],
+        // Media handlers read their billing units from the request, as they do live.
+        $context->requestData = match ($type) {
+            'tts' => [$provider === 'elevenlabs' ? 'text' : 'input' => str_repeat('Thanks for calling, how can I help you today? ', mt_rand(2, 60))],
+            'video' => ['instances' => [['prompt' => 'A drone shot over a coastline at sunset']], 'parameters' => ['durationSeconds' => [4, 6, 8][mt_rand(0, 2)]]],
+            default => null,
+        };
+
+        if ($type === 'tts') {
+            // ~15 characters per second of speech.
+            $context->durationSeconds = round(mb_strlen((string) reset($context->requestData)) / 15, 1);
+        }
+
+        $body = match (true) {
+            $type === 'video' => ['name' => 'operations/'.bin2hex(random_bytes(6)), 'done' => true, 'response' => ['generateVideoResponse' => ['generatedSamples' => [['video' => ['uri' => 'https://example.test/demo.mp4']]]]]],
+            $type === 'tts' => [],
+            $provider === 'replicate' => ['id' => bin2hex(random_bytes(8)), 'model' => $model, 'status' => 'succeeded', 'output' => 'https://example.test/demo.webp', 'metrics' => ['image_count' => 1]],
+            $type === 'image' => ['created' => $at->timestamp, 'data' => [['url' => 'https://example.test/demo.png']], 'usage' => ['input_tokens' => $prompt, 'output_tokens' => $completion, 'input_tokens_details' => ['text_tokens' => $prompt, 'image_tokens' => 0]]],
+            $type === 'stt' => ['text' => 'Demo transcript.', 'duration' => $context->durationSeconds, 'x_groq' => ['id' => 'req_'.bin2hex(random_bytes(6))]],
             default => ['id' => 'demo_'.bin2hex(random_bytes(8)), 'model' => $model, 'content' => 'Demo response.'],
         };
 
