@@ -28,6 +28,11 @@ class GooglePricing extends ProviderPricing
         return 'google';
     }
 
+    public function sources(): array
+    {
+        return ['https://ai.google.dev/gemini-api/docs/pricing'];
+    }
+
     protected function define(): void
     {
         // Prices double on 2026-12-01.

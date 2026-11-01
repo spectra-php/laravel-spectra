@@ -1,6 +1,6 @@
 # Artisan Commands
 
-Spectra provides three Artisan commands for installation, data retention, and statistics maintenance.
+Spectra provides four Artisan commands for installation, data retention, statistics maintenance, and pricing updates.
 
 <a name="spectra-install"></a>
 ## `spectra:install`
@@ -119,6 +119,37 @@ If you want to ensure statistics stay fresh, schedule a nightly rebuild:
 Schedule::command('spectra:rebuild-stats --yesterday')->dailyAt('01:00');
 ```
 
+<a name="spectra-pricing-scrape"></a>
+## `spectra:pricing-scrape`
+
+Reads the providers' pricing pages with [Firecrawl](https://firecrawl.dev) and saves the prices that differ from the built-in catalog to the [scraped prices file](/pricing#scraped-prices). Needs `FIRECRAWL_API_KEY` in your `.env` file. Set `SPECTRA_USE_SCRAPED_PRICES=true` to bill with the saved prices.
+
+```shell
+php artisan spectra:pricing-scrape [provider*] [--all] [--url=*] [--path=] [--dry-run]
+```
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| `provider*` | The providers to scrape. Default: the providers in `SPECTRA_SCRAPE_PROVIDERS`, else the providers your app has tracked requests for. See [Which Providers Are Scraped](/pricing#scraped-providers). |
+| `--all` | Scrape every provider with pricing pages. |
+| `--url=*` | Scrape these pages instead of the provider's own. Needs exactly one provider. |
+| `--path=` | Read and write this file instead of `spectra.costs.scraped_prices_path`. |
+| `--dry-run` | Print the changes without writing the file. |
+
+### Examples
+
+```shell
+# Scrape the providers your app uses and save the changes
+php artisan spectra:pricing-scrape
+
+# Check OpenAI only, without writing anything
+php artisan spectra:pricing-scrape openai --dry-run
+```
+
+See [Scraping Prices with Firecrawl](/pricing#scraping-prices) for how rows are matched and checked.
+
 ## Command Summary
 
 | Command | Purpose | Typical Usage |
@@ -126,3 +157,4 @@ Schedule::command('spectra:rebuild-stats --yesterday')->dailyAt('01:00');
 | `spectra:install` | Interactive setup; publishes missing migrations | After `composer require` and after upgrading |
 | `spectra:prune --hours=168` | Delete old request data and media | Scheduled daily for retention management |
 | `spectra:rebuild-stats --yesterday` | Rebuild aggregated statistics | Scheduled daily, after data corrections, or once after upgrading |
+| `spectra:pricing-scrape` | Save new provider prices to the scraped prices file | Before a release picks them up; review and commit the file |

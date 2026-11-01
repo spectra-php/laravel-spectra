@@ -22,6 +22,11 @@ class GroqPricing extends ProviderPricing
         return 'groq';
     }
 
+    public function sources(): array
+    {
+        return ['https://console.groq.com/docs/models'];
+    }
+
     protected function define(): void
     {
         $this->model('openai/gpt-oss-120b', fn ($m) => $m

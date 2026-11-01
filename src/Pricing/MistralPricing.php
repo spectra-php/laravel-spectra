@@ -24,6 +24,11 @@ class MistralPricing extends ProviderPricing
         return 'mistral';
     }
 
+    public function sources(): array
+    {
+        return ['https://docs.mistral.ai/inference/pricing'];
+    }
+
     protected function define(): void
     {
         // Mistral Large 4 is in public preview. Its launch sale ($0.68 / $2.09,

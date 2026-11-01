@@ -22,6 +22,11 @@ class ElevenLabsPricing extends ProviderPricing
         return 'elevenlabs';
     }
 
+    public function sources(): array
+    {
+        return ['https://elevenlabs.io/pricing/api'];
+    }
+
     protected function define(): void
     {
         // Text to speech

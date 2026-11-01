@@ -391,10 +391,170 @@ Register it in your config:
 ],
 ```
 
+<a name="scraped-prices"></a>
+## Scraped Prices
+
+Spectra can bill with prices from a file next to the built-in catalog: the prices [`spectra:pricing-scrape`](#scraping-prices) reads from the providers' pricing pages, or a few prices you write yourself without a PHP class.
+
+Scraped prices are off by default. Turn them on in your `.env` file:
+
+```bash
+SPECTRA_USE_SCRAPED_PRICES=true
+# Optional, the default is resources/spectra/scraped-prices.json
+SPECTRA_SCRAPED_PRICES_PATH=/path/to/scraped-prices.json
+```
+
+| `use_scraped_prices` | Prices come from |
+| --- | --- |
+| `false` (default) | The pricing classes in `costs.pricing`. The file is ignored. |
+| `true` | The file first. Each model in the file replaces the built-in model with the same id. Every model the file doesn't list keeps its built-in price. |
+
+Because the built-in catalog fills the gaps, the file only needs the models you want to change. Commit the file, so every environment bills the same prices.
+
+::: info Nothing changes until you opt in
+With `use_scraped_prices` off, Spectra prices requests exactly as before: the file is never read, and tracking never calls Firecrawl. You don't need to publish the config again either. If your `config/spectra.php` was published before these options existed, Spectra adds `use_scraped_prices`, `scraped_prices_path` and `firecrawl` with their defaults, so `SPECTRA_USE_SCRAPED_PRICES` and `FIRECRAWL_API_KEY` work right away. Every class in `costs.pricing` is still used, including two classes for the same provider.
+:::
+
+### File Format
+
+The file is JSON. Models are keyed by id and use the same fields as the [Model Definition API](#model-definition-api), in `snake_case`. Prices are cents, like the PHP catalog: cents per 1M tokens, or cents per unit.
+
+```json
+{
+    "providers": {
+        "openai": {
+            "currency": "USD",
+            "models": {
+                "gpt-4o": {
+                    "display_name": "GPT-4o",
+                    "capabilities": ["text"],
+                    "aliases": ["gpt-4o-2024-08-06"],
+                    "tiers": [
+                        { "tier": "standard", "input_price": 250, "output_price": 1000, "cached_input_price": 125 },
+                        { "tier": "batch", "input_price": 125, "output_price": 500 }
+                    ]
+                },
+                "dall-e-3": {
+                    "type": "image",
+                    "pricing_unit": "image",
+                    "capabilities": ["images"],
+                    "tiers": [{ "tier": "standard", "price_per_unit": 4 }]
+                }
+            }
+        }
+    }
+}
+```
+
+| Model field | Default | Description |
+| --- | --- | --- |
+| `display_name` | none | Name shown in the dashboard |
+| `type` | `text` | `text`, `embedding`, `image`, `audio` or `video` |
+| `pricing_unit` | `tokens` | See [Pricing Units](#pricing-units) |
+| `capabilities` | `[]` | Any of `text`, `images`, `video`, `audio` |
+| `aliases` | `[]` | Other ids that bill like this model |
+| `retired_on` | none | `Y-m-d` |
+| `tiers` | required | One object per row. Fields: `tier`, `input_price`, `output_price`, `cached_input_price`, `cache_write_5m_price`, `cache_write_1h_price`, `price_per_unit`, `audio_input_price`, `audio_output_price`, `image_input_price`, `image_output_price`, `above_input_tokens`, `since`. A missing price works like a missing parameter in `tier()`. |
+
+A model in the file replaces the **whole** built-in model, so list every row it needs: other tiers, [long-context prices](#long-context-prices) and [dated prices](#dated-prices). `spectra:pricing-scrape` copies those rows from the built-in model for you.
+
+The provider's `currency` defaults to its built-in catalog's currency. A provider whose currency differs from its built-in catalog is skipped, because its prices would be converted with the wrong rate. You can also add providers that have no built-in catalog.
+
+::: info Problems never stop cost tracking
+If the file is missing or isn't valid JSON, Spectra logs a warning and uses the built-in prices. A model that can't be read (an unknown tier, a price that isn't a number, a bad date) is skipped with a warning, and the rest of the file still loads.
+:::
+
+<a name="scraping-prices"></a>
+## Scraping Prices with Firecrawl
+
+`spectra:pricing-scrape` reads the providers' pricing pages with [Firecrawl](https://firecrawl.dev) and saves the prices that differ from the built-in catalog to the [scraped prices file](#scraped-prices). Use it to pick up a price change or a new model before the next Spectra release.
+
+Add your Firecrawl API key to your `.env` file:
+
+```bash
+FIRECRAWL_API_KEY=fc-...
+```
+
+Then run the command, review the changes it prints, and turn scraped prices on:
+
+```shell
+php artisan spectra:pricing-scrape            # the providers your app uses
+php artisan spectra:pricing-scrape openai anthropic
+php artisan spectra:pricing-scrape --dry-run  # show the changes, write nothing
+```
+
+```bash
+SPECTRA_USE_SCRAPED_PRICES=true
+```
+
+Only the command calls Firecrawl. Tracking reads the saved file and never makes a network call.
+
+<a name="scraped-providers"></a>
+### Which Providers Are Scraped
+
+Each page costs Firecrawl credits, so the command only scrapes the providers you use. Without provider names, it picks, in this order:
+
+1. The providers you name: `php artisan spectra:pricing-scrape openai`.
+2. The providers in `SPECTRA_SCRAPE_PROVIDERS`, for example `SPECTRA_SCRAPE_PROVIDERS=openai,anthropic`.
+3. The providers Spectra has tracked requests for. An app that only calls OpenAI only scrapes OpenAI.
+
+If none of these gives a provider with pricing pages (a new app that hasn't tracked anything yet), the command stops without calling Firecrawl. Pass `--all` to scrape every provider.
+
+### How It Works
+
+1. For each provider, Firecrawl renders the pages from the pricing class's `sources()` method. Its [JSON extraction](https://docs.firecrawl.dev/features/llm-extract) fills a schema with one row per model, tier and long-context threshold, and the same call returns the page text. The schema only offers the tiers and price fields the provider's catalog uses, and the prompt lists the catalog's model ids, so the page's names map to API ids.
+2. The extraction copies prices as printed, with the quantity they are for (per 1M tokens, per 1K characters, per image). Spectra converts them to cents. The LLM never does the arithmetic.
+3. Spectra compares the rows with the built-in catalog. A model matches by id, alias, dated snapshot, or display name, whatever the word order (`Claude Haiku 3.5` matches `claude-3-5-haiku`). Only the prices in the row that is in effect today change. The other rows (other tiers, long-context and dated prices) are kept. A page label for a tier the catalog names differently counts as the catalog's tier: OpenAI's "Fast" is `priority`.
+4. Only **changed** and **new** models are saved. A model whose prices match the catalog stays out of the file, so it keeps following the built-in catalog when you upgrade Spectra.
+5. Each run replaces the sections of the providers it scraped. A provider whose prices all match is removed from the file. A provider Firecrawl couldn't read keeps its current entries.
+
+LLM extraction makes mistakes: on real pricing pages it copies prices from the next row, reads an Audio row as the text prices, multiplies prices by 1000, and invents prices that aren't there. Spectra checks every row and prints why it skipped one:
+
+- **The page must show the price next to the model**: on the table row that names the model (or its "Text" / "Audio" continuation rows), or below a heading that names it. Numbers inside model names and long prose lines don't count.
+- **The quantity must match the page**: a price said to be per 1K must be on a line that says per 1K, and the reverse.
+- **Our price is kept while the page still shows it next to the model**: a different number on the same row is more likely another column or tier.
+- **No column mix-ups**: a scraped price that equals another price of the same catalog row (the audio input price read as the input price) skips the row.
+- **No impossible prices**: cached input above input, output below input, or long-context prices below the regular ones. No row in the built-in catalog does this.
+- **No outliers**: a price 10 times higher or lower than the catalog's.
+- **Only what billing can use**: a unit price for a token model (or the reverse), a price in a different unit than the catalog's, a per-character price for a single character, a new tier or model missing a price billing needs, or a new model without a `standard` price.
+
+The checks favour skipping a real change over saving a wrong one, so a run can miss some changes. Run it again later, or add them to the file by hand. Review the printed changes, and the file diff, before you deploy it. New models get a type and capabilities guessed from their pricing unit.
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| `provider*` | The providers to scrape. Default: see [Which Providers Are Scraped](#scraped-providers). |
+| `--all` | Scrape every provider whose pricing class returns pages from `sources()`. |
+| `--url=*` | Scrape these pages instead of the provider's own. Needs exactly one provider. |
+| `--path=` | Read and write this file instead of `spectra.costs.scraped_prices_path`. |
+| `--dry-run` | Print the changes without writing the file. |
+
+### Pricing Pages
+
+Each built-in pricing class lists its pages in `sources()`. They are the pages in the [table below](#keeping-prices-current). OpenRouter has none, because it reports each request's cost itself. To scrape other pages, or a provider of your own, override `sources()`:
+
+```php
+class MyProviderPricing extends ProviderPricing
+{
+    public function sources(): array
+    {
+        return ['https://my-provider.example/pricing'];
+    }
+}
+```
+
+| Config key | Env | Default | Description |
+| --- | --- | --- | --- |
+| `costs.firecrawl.api_key` | `FIRECRAWL_API_KEY` | none | Your Firecrawl API key |
+| `costs.firecrawl.url` | `FIRECRAWL_API_URL` | `https://api.firecrawl.dev/v2` | The API base URL, for a self-hosted Firecrawl |
+| `costs.firecrawl.timeout` | `FIRECRAWL_TIMEOUT` | `180` | Seconds to wait for each page (Firecrawl allows up to 300) |
+| `costs.firecrawl.providers` | `SPECTRA_SCRAPE_PROVIDERS` | none | Comma-separated providers to scrape when you don't name any, e.g. `openai,anthropic` |
+
 <a name="keeping-prices-current"></a>
 ## Keeping Prices Current
 
-The built-in catalog is **hand-maintained**. Spectra does not fetch prices from provider APIs. Provider prices change, and new models ship often, so the catalog needs a review from time to time.
+The built-in catalog is **hand-maintained**. Spectra does not fetch prices from provider APIs. Provider prices change, and new models ship often, so the catalog needs a review from time to time. Between releases, you can pick up new prices yourself with [`spectra:pricing-scrape`](#scraping-prices).
 
 **Prices last reviewed: 2026-10-29.**
 

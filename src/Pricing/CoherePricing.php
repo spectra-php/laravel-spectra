@@ -21,6 +21,11 @@ class CoherePricing extends ProviderPricing
         return 'cohere';
     }
 
+    public function sources(): array
+    {
+        return ['https://cohere.com/pricing'];
+    }
+
     protected function define(): void
     {
         $this->model('command-a-03-2025', fn ($m) => $m

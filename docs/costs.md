@@ -1,6 +1,6 @@
 # Costs
 
-Spectra automatically calculates the cost of every tracked AI request. Costs are computed using the [pricing catalog](/pricing) and the metrics extracted from each response — tokens, image count, audio duration, page count, or character count depending on the model type.
+Spectra automatically calculates the cost of every tracked AI request. Costs are computed using the [pricing catalog](/pricing) (or your [scraped prices](/pricing#scraped-prices), when you turn them on) and the metrics extracted from each response — tokens, image count, audio duration, page count, or character count depending on the model type.
 
 All costs are stored in **cents** of your reporting currency (`spectra.costs.currency`, default `USD`) with decimal precision (for example, `0.004200` cents). This gives sub-cent accuracy for high-volume operations. Each request also stores its currency in the `currency` column.
 

@@ -657,6 +657,49 @@ return [
             'elevenlabs' => ElevenLabsPricing::class,
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | Scraped Prices
+        |--------------------------------------------------------------------------
+        |
+        | `php artisan spectra:pricing-scrape` reads the providers' pricing
+        | pages through Firecrawl and saves the prices that differ from the
+        | built-in catalog to this file. Turn `use_scraped_prices` on to bill
+        | with them: a model in the file replaces the built-in model with the
+        | same id, and every other model keeps its built-in price. Tracking
+        | only reads the file; it never calls Firecrawl.
+        |
+        | Commit the file, so every environment bills the same prices.
+        |
+        */
+
+        'use_scraped_prices' => (bool) env('SPECTRA_USE_SCRAPED_PRICES', false),
+
+        'scraped_prices_path' => env('SPECTRA_SCRAPED_PRICES_PATH', resource_path('spectra/scraped-prices.json')),
+
+        /*
+        |--------------------------------------------------------------------------
+        | Firecrawl
+        |--------------------------------------------------------------------------
+        |
+        | `spectra:pricing-scrape` uses Firecrawl's JSON extraction to read
+        | the providers' pricing pages. Only the command needs a key; tracking
+        | never calls Firecrawl. Timeout is in seconds, per page.
+        |
+        | `providers` are the ones the command scrapes when you don't name
+        | any, e.g. SPECTRA_SCRAPE_PROVIDERS=openai,anthropic. Left empty, it
+        | scrapes the providers your app has tracked requests for, so you
+        | don't spend Firecrawl credits on providers you don't use.
+        |
+        */
+
+        'firecrawl' => [
+            'api_key' => env('FIRECRAWL_API_KEY'),
+            'url' => env('FIRECRAWL_API_URL', 'https://api.firecrawl.dev/v2'),
+            'timeout' => (int) env('FIRECRAWL_TIMEOUT', 180),
+            'providers' => array_values(array_filter(array_map('trim', explode(',', (string) env('SPECTRA_SCRAPE_PROVIDERS', ''))))),
+        ],
+
     ],
 
     /*

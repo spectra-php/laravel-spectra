@@ -21,6 +21,11 @@ class ReplicatePricing extends ProviderPricing
         return 'replicate';
     }
 
+    public function sources(): array
+    {
+        return ['https://replicate.com/pricing'];
+    }
+
     protected function define(): void
     {
         $this->model('anthropic/claude-sonnet-5', fn ($m) => $m

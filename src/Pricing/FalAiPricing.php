@@ -70,6 +70,11 @@ class FalAiPricing extends ProviderPricing
         return 'falai';
     }
 
+    public function sources(): array
+    {
+        return ['https://fal.ai/pricing'];
+    }
+
     protected function define(): void
     {
         $this->model('fal-ai/flux/dev', fn ($m) => $m

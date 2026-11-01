@@ -26,6 +26,11 @@ class AnthropicPricing extends ProviderPricing
         return 'anthropic';
     }
 
+    public function sources(): array
+    {
+        return ['https://platform.claude.com/docs/en/about-claude/pricing'];
+    }
+
     /**
      * Web search is $10 per 1,000 searches. Web fetch is free, so it has no
      * entry. Code execution is billed per container-hour beyond a free

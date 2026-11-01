@@ -29,6 +29,11 @@ class OpenAIPricing extends ProviderPricing
         return 'openai';
     }
 
+    public function sources(): array
+    {
+        return ['https://developers.openai.com/api/docs/pricing'];
+    }
+
     protected function define(): void
     {
         $this->defineFlagshipModels();

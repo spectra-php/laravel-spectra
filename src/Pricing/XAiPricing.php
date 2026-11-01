@@ -30,6 +30,11 @@ class XAiPricing extends ProviderPricing
         return 'xai';
     }
 
+    public function sources(): array
+    {
+        return ['https://docs.x.ai/developers/pricing'];
+    }
+
     /**
      * Server-side tool fees in cents (web search, code execution and file
      * attachments: $5 / 1K calls; collections search: $2.50 / 1K calls;

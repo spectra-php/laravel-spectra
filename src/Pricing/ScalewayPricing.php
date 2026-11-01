@@ -27,6 +27,11 @@ class ScalewayPricing extends ProviderPricing
         return 'scaleway';
     }
 
+    public function sources(): array
+    {
+        return ['https://www.scaleway.com/en/pricing/model-as-a-service/'];
+    }
+
     public function currency(): string
     {
         return 'EUR';

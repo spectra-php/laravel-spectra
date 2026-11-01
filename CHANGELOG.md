@@ -2,6 +2,19 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## Unreleased
+
+#### Added
+
+- Scraped prices: set `SPECTRA_USE_SCRAPED_PRICES=true` and the models in `resources/spectra/scraped-prices.json` (`SPECTRA_SCRAPED_PRICES_PATH`) replace the built-in models with the same id; everything else keeps its built-in price. Off by default, so nothing changes until you turn it on. A missing or broken file logs a warning and falls back to the built-in prices
+- `spectra:pricing-scrape` reads the providers' pricing pages with Firecrawl's JSON extraction (`FIRECRAWL_API_KEY`) and saves the prices that differ from the built-in catalog, and new models, to the scraped prices file. Every extracted price must appear next to its model in the page text, and rows with mixed-up columns, impossible prices (cached above input, output below input), outliers or wrong units are skipped and reported. It only scrapes the providers you use: the ones you name, else `SPECTRA_SCRAPE_PROVIDERS`, else the providers Spectra has tracked requests for (`--all` scrapes every provider). `--dry-run` prints the changes only
+- `ProviderPricing::sources()`: the pricing pages a catalog is scraped from. Every built-in catalog except OpenRouter lists its pages
+
+#### Upgrading
+
+- Nothing to do. With `use_scraped_prices` off (the default), requests are priced as before, and a published `config/spectra.php` gets the new `costs.use_scraped_prices`, `costs.scraped_prices_path` and `costs.firecrawl` keys with their defaults, so you don't need to publish it again
+- If one of your pricing classes already has a method called `sources()`, it now overrides `ProviderPricing::sources()`: it must be public and return the list of pricing page URLs (or `[]`)
+
 ## v2.5.0 - 2026-10-29
 
 #### Added

@@ -35,6 +35,18 @@ abstract class ProviderPricing implements Arrayable
     }
 
     /**
+     * The pricing pages `spectra:pricing-scrape` reads for this provider.
+     *
+     * Return an empty array to leave the provider out of scraping.
+     *
+     * @return list<string>
+     */
+    public function sources(): array
+    {
+        return [];
+    }
+
+    /**
      * Define the built-in models for this provider.
      *
      * Override in each provider pricing class to register models.

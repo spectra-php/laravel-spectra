@@ -8,6 +8,7 @@ use Composer\InstalledVersions;
 use Exception;
 use Illuminate\Contracts\Auth\Access\Gate;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Foundation\CachesConfiguration;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Log\Context\Repository as ContextRepository;
 use Illuminate\Routing\Router;
@@ -22,6 +23,7 @@ use Spectra\Support\ApiKeyResolver;
 use Spectra\Support\Budget\BudgetEnforcer;
 use Spectra\Support\HttpMacros;
 use Spectra\Support\Pricing\CostCalculator;
+use Spectra\Support\Pricing\PricingCatalog;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Pricing\RequestCostCalculator;
 use Spectra\Support\ProviderRegistry;
@@ -38,6 +40,8 @@ class SpectraServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             __DIR__.'/../config/spectra.php', 'spectra'
         );
+
+        $this->mergeNestedConfigDefaults();
 
         // Scoped, so global tags, trackables, pricing tier and metadata are
         // reset between queued jobs and Octane requests instead of leaking.
@@ -87,14 +91,7 @@ class SpectraServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(PricingLookup::class, function () {
-            $classes = config('spectra.costs.pricing', []);
-
-            $pricingClasses = array_map(
-                fn (string $class) => $this->app->make($class),
-                array_values($classes)
-            );
-
-            return new PricingLookup($pricingClasses);
+            return new PricingLookup(PricingCatalog::active());
         });
 
         $this->app->alias(PricingLookup::class, 'spectra.pricing');
@@ -282,6 +279,39 @@ class SpectraServiceProvider extends ServiceProvider
         }
     }
 
+    /**
+     * Keys added to existing config sections after release.
+     *
+     * mergeConfigFrom() only merges top-level keys, so a config published
+     * before these keys existed would not have them, and their env variables
+     * would silently do nothing.
+     */
+    protected const NESTED_CONFIG_DEFAULTS = [
+        'costs.use_scraped_prices',
+        'costs.scraped_prices_path',
+        'costs.firecrawl',
+    ];
+
+    protected function mergeNestedConfigDefaults(): void
+    {
+        if ($this->app instanceof CachesConfiguration && $this->app->configurationIsCached()) {
+            return;
+        }
+
+        $config = $this->app->make('config');
+        $missing = array_filter(self::NESTED_CONFIG_DEFAULTS, fn (string $key) => ! $config->has("spectra.{$key}"));
+
+        if ($missing === []) {
+            return;
+        }
+
+        $defaults = require __DIR__.'/../config/spectra.php';
+
+        foreach ($missing as $key) {
+            $config->set("spectra.{$key}", data_get($defaults, $key));
+        }
+    }
+
     protected function registerCommands(): void
     {
         if ($this->app->runningInConsole()) {
@@ -289,6 +319,7 @@ class SpectraServiceProvider extends ServiceProvider
                 Console\Commands\InstallCommand::class,
                 Console\Commands\PruneCommand::class,
                 Console\Commands\RebuildStatsCommand::class,
+                Console\Commands\ScrapePricingCommand::class,
             ]);
 
             AboutCommand::add('Spectra', fn () => [

@@ -213,6 +213,16 @@ Configure cost calculation and pricing tiers.
         'scaleway'   => \Spectra\Pricing\ScalewayPricing::class,
         'elevenlabs' => \Spectra\Pricing\ElevenLabsPricing::class,
     ],
+
+    'use_scraped_prices'  => (bool) env('SPECTRA_USE_SCRAPED_PRICES', false),
+    'scraped_prices_path' => env('SPECTRA_SCRAPED_PRICES_PATH', resource_path('spectra/scraped-prices.json')),
+
+    'firecrawl' => [
+        'api_key'   => env('FIRECRAWL_API_KEY'),
+        'url'       => env('FIRECRAWL_API_URL', 'https://api.firecrawl.dev/v2'),
+        'timeout'   => (int) env('FIRECRAWL_TIMEOUT', 180),
+        'providers' => array_values(array_filter(array_map('trim', explode(',', (string) env('SPECTRA_SCRAPE_PROVIDERS', ''))))),
+    ],
 ],
 ```
 
@@ -224,6 +234,9 @@ Configure cost calculation and pricing tiers.
 | `currency_symbol` | `string` | `$` | Symbol shown before cost values in the dashboard. Display only. |
 | `provider_settings.*.default_tier` | `string` | `standard` | The tier used when you did not set one (with `Spectra::withPricingTier()` or the `pricing_tier` option), and neither the request nor the response says which tier was used. Tiers: `standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, `hd`. Any provider slug may be listed. See [Which Tier Is Used](/costs#tier-order). |
 | `pricing` | `array` | See above | Map provider slugs to their `ProviderPricing` class. See [Pricing](/pricing) for customization. |
+| `use_scraped_prices` | `bool` | `false` | Bill with the models in `scraped_prices_path`: each replaces the built-in model with the same id. Off, the file is ignored. A config published before these keys existed doesn't need them: Spectra adds them with their defaults. See [Scraped Prices](/pricing#scraped-prices). |
+| `scraped_prices_path` | `string` | `resources/spectra/scraped-prices.json` | The scraped prices file (JSON), written by `spectra:pricing-scrape`. |
+| `firecrawl.*` | `array` | See above | API key, base URL, per-page timeout (seconds) and the default providers for [`spectra:pricing-scrape`](/pricing#scraping-prices). Without `providers`, it scrapes the providers your app has tracked requests for. Tracking never calls Firecrawl. |
 
 <a name="budget"></a>
 ## Budget
@@ -396,6 +409,12 @@ SPECTRA_WATCHER_ENABLED=true
 # Costs
 SPECTRA_OPENAI_PRICING_TIER=standard
 SPECTRA_ANTHROPIC_PRICING_TIER=standard
+SPECTRA_USE_SCRAPED_PRICES=false
+SPECTRA_SCRAPED_PRICES_PATH=
+FIRECRAWL_API_KEY=
+FIRECRAWL_API_URL=https://api.firecrawl.dev/v2
+FIRECRAWL_TIMEOUT=180
+SPECTRA_SCRAPE_PROVIDERS=
 
 # Budget
 SPECTRA_BUDGET_ENABLED=true
