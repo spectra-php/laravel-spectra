@@ -2,7 +2,7 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
-## Unreleased
+## v2.6.0 - 2026-11-01
 
 #### Added
 
