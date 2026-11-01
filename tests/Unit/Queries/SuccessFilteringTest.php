@@ -131,7 +131,7 @@ it('groups monthly costs without EXTRACT so SQLite works', function () {
     SpectraRequest::factory()->create([
         'status_code' => 200,
         'total_cost_in_cents' => 150,
-        'created_at' => now()->subMonth(),
+        'created_at' => now()->subMonthNoOverflow(),
     ]);
     SpectraRequest::factory()->create([
         'status_code' => 200,
