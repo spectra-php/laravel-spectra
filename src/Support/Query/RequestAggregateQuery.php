@@ -84,7 +84,67 @@ class RequestAggregateQuery
         return $this;
     }
 
-    /** Apply the trackables screen's request filters. */
+    /** Only rows that belong to a trace. */
+    public function withTrace(): self
+    {
+        $this->query->whereNotNull('trace_id');
+
+        return $this;
+    }
+
+    /**
+     * Only the calls of the given traces.
+     *
+     * @param  array<int, string>  $traceIds
+     */
+    public function forTraces(array $traceIds): self
+    {
+        $this->query->whereIn('trace_id', $traceIds);
+
+        return $this;
+    }
+
+    /** Only the calls of one trace. */
+    public function forTrace(string $traceId): self
+    {
+        $this->query->forTrace($traceId);
+
+        return $this;
+    }
+
+    /**
+     * Only rows of the traces the given query's trace ids name, so a trace
+     * keeps all its calls in its totals even when only one call matched.
+     *
+     * @param  Builder<SpectraRequest>  $traceIds  a query selecting trace_id
+     */
+    public function inTraces(Builder $traceIds): self
+    {
+        $this->query->whereIn('trace_id', $traceIds);
+
+        return $this;
+    }
+
+    /**
+     * One trace's totals: calls, failures, cost (2xx only), tokens, start and
+     * duration. A call ends at its start plus its latency (completed_at is
+     * stored to the second), and rows saved before started_at existed start
+     * at created_at.
+     */
+    public function traceTotals(): self
+    {
+        $start = $this->epochMilliseconds('COALESCE(started_at, created_at)');
+
+        return $this
+            ->countAs('request_count')
+            ->selectRaw('COALESCE(SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 0 ELSE 1 END), 0) as failed_count')
+            ->successfulCost()
+            ->tokenSum('tokens')
+            ->selectRaw('MIN(COALESCE(started_at, created_at)) as first_started_at')
+            ->selectRaw("MAX({$start} + COALESCE(latency_ms, 0)) - MIN({$start}) as duration_ms")
+            ->selectRaw('COUNT(DISTINCT model) as model_count');
+    }
+
     public function filteredBy(Request $request): self
     {
         $this->applyTrackableFilters($this->query, $request);
@@ -212,6 +272,33 @@ class RequestAggregateQuery
         $this->query->limit($limit);
 
         return $this;
+    }
+
+    /**
+     * Milliseconds since the Unix epoch of a date expression, keeping its
+     * fraction. Each driver spells this differently.
+     *
+     * @param  literal-string  $expression
+     * @return literal-string
+     */
+    protected function epochMilliseconds(string $expression): string
+    {
+        return match ($this->query->getModel()->getConnection()->getDriverName()) {
+            'sqlite' => "((julianday({$expression}) - 2440587.5) * 86400000.0)",
+            'pgsql' => "(EXTRACT(EPOCH FROM {$expression}) * 1000)",
+            'sqlsrv' => "CAST(DATEDIFF_BIG(millisecond, '1970-01-01', {$expression}) AS FLOAT)",
+            default => "(UNIX_TIMESTAMP({$expression}) * 1000)",
+        };
+    }
+
+    /**
+     * The built query, for wrapping it as a subquery.
+     *
+     * @return Builder<SpectraRequest>
+     */
+    public function toQuery(): Builder
+    {
+        return $this->query;
     }
 
     /** @return Collection<int, SpectraRequest> */

@@ -47,6 +47,16 @@ class DatabaseSeeder extends Seeder
     /** @var list<string> */
     protected array $tags = ['support-bot', 'search', 'summaries', 'agent', 'onboarding'];
 
+    /**
+     * Where a unit of work starts: the route of a web request, or the job class of a queued one.
+     *
+     * @var array<string, list<string>>
+     */
+    protected array $origins = [
+        'web' => ['POST /api/chat', 'POST /api/chats/{chat}/messages', 'POST /search', 'POST /documents/{document}/summary', 'GET /dashboard'],
+        'queue' => ['App\\Jobs\\SummarizeDocument', 'App\\Jobs\\ClassifyTicket', 'App\\Jobs\\GenerateWeeklyDigest'],
+    ];
+
     public function run(): void
     {
         $users = collect(['Ava Chen', 'Noah Patel', 'Mia Rossi', 'Liam Novak', 'Zoe Martin', 'Omar Haddad', 'Ines Silva', 'Jonas Berg'])
@@ -75,6 +85,7 @@ class DatabaseSeeder extends Seeder
                 Spectra::newTrace();
                 $user = $users->random();
                 $source = mt_rand(0, 3) === 0 ? 'queue' : 'web';
+                $origin = $this->origins[$source][mt_rand(0, count($this->origins[$source]) - 1)];
                 $steps = [1, 1, 1, 1, 1, 2, 2, 3, 4, 5][mt_rand(0, 9)];
 
                 for ($step = 0; $step < $steps && $i < $count; $step++, $i++) {
@@ -87,7 +98,7 @@ class DatabaseSeeder extends Seeder
                         ? $this->mix[2]
                         : $this->mix[$this->pick($weights)];
 
-                    $at = $this->recordOne($spec, $at, $user, $source)->addMilliseconds(mt_rand(40, 900));
+                    $at = $this->recordOne($spec, $at, $user, $source, $origin)->addMilliseconds(mt_rand(40, 900));
                 }
 
                 if ($step === 0) {
@@ -102,7 +113,7 @@ class DatabaseSeeder extends Seeder
     /**
      * @param  array{0: string, 1: string, 2: string, 3: string, 4: int, 5: array{int, int}, 6: array{int, int}}  $spec
      */
-    protected function recordOne(array $spec, Carbon $at, User $user, string $source): Carbon
+    protected function recordOne(array $spec, Carbon $at, User $user, string $source, string $origin): Carbon
     {
         [$provider, $model, $type, $endpoint, , $promptRange, $completionRange] = $spec;
 
@@ -114,6 +125,7 @@ class DatabaseSeeder extends Seeder
             'operation' => 'POST',
             'trackable_type' => $user->getMorphClass(),
             'trackable_id' => $user->getKey(),
+            'origin' => $origin,
             'tags' => mt_rand(1, 100) <= 60 ? [$this->tags[array_rand($this->tags)]] : [],
         ]);
         $context->modelType = $type;

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Concerns\FiltersRequests;
 use Spectra\Support\DateRange;
 use Spectra\Support\Pricing\PricingLookup;
 
@@ -18,6 +19,8 @@ use Spectra\Support\Pricing\PricingLookup;
  */
 class GetFilteredRequests
 {
+    use FiltersRequests;
+
     public function __construct(
         private readonly PricingLookup $pricingLookup,
     ) {}
@@ -83,75 +86,6 @@ class GetFilteredRequests
             });
         }
 
-        if ($request->filled('provider')) {
-            $query->where('provider', $request->input('provider'));
-        }
-
-        if ($request->filled('model')) {
-            $query->where('model', 'like', "%{$request->input('model')}%");
-        }
-
-        if ($request->filled('status')) {
-            $status = $request->input('status');
-            if ($status === 'success') {
-                $query->whereBetween('status_code', [200, 299]);
-            } elseif ($status === 'error') {
-                $query->failed();
-            }
-        }
-
-        if ($request->filled('model_type')) {
-            $query->where('model_type', $request->input('model_type'));
-        }
-
-        if ($request->filled('capability')) {
-            $modelNames = match ($request->input('capability')) {
-                'text' => $this->pricingLookup->canGenerateText(),
-                'images' => $this->pricingLookup->canGenerateImages(),
-                'video' => $this->pricingLookup->canGenerateVideo(),
-                'audio' => $this->pricingLookup->canGenerateAudio(),
-                default => [],
-            };
-            $query->whereIn('model', $modelNames);
-        }
-
-        if ($request->filled('finish_reason')) {
-            $query->where('finish_reason', $request->input('finish_reason'));
-        }
-
-        if ($request->filled('has_tool_calls')) {
-            $query->where('has_tool_calls', filter_var($request->input('has_tool_calls'), FILTER_VALIDATE_BOOLEAN));
-        }
-
-        if ($request->filled('is_reasoning')) {
-            $query->where('is_reasoning', filter_var($request->input('is_reasoning'), FILTER_VALIDATE_BOOLEAN));
-        }
-
-        if ($request->filled('reasoning_effort')) {
-            $query->where('reasoning_effort', $request->input('reasoning_effort'));
-        }
-
-        if ($request->filled('trace_id')) {
-            $query->forTrace((string) $request->input('trace_id'));
-        }
-
-        if ($request->filled('trackable_type')) {
-            $query->where('trackable_type', $request->input('trackable_type'));
-        }
-
-        if ($request->filled('trackable_id')) {
-            $query->where('trackable_id', $request->input('trackable_id'));
-        }
-
-        if ($request->filled('tag')) {
-            $query->withTag($request->input('tag'));
-        }
-
-        if ($request->filled('tags')) {
-            $tags = is_array($request->input('tags'))
-                ? $request->input('tags')
-                : explode(',', $request->input('tags'));
-            $query->withAnyTags($tags);
-        }
+        $this->applyRequestFilters($query, $request, $this->pricingLookup);
     }
 }

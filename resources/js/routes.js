@@ -1,6 +1,8 @@
 import Dashboard from './screens/dashboard/index.vue';
 import Requests from './screens/requests/index.vue';
 import RequestPreview from './screens/requests/preview.vue';
+import Traces from './screens/traces/index.vue';
+import TraceDetail from './screens/traces/detail.vue';
 import Costs from './screens/costs/index.vue';
 import Trackables from './screens/trackables/index.vue';
 import TrackableDetail from './screens/trackables/detail.vue';
@@ -20,6 +22,16 @@ export default [
         path: '/requests/:id',
         name: 'request-preview',
         component: RequestPreview,
+    },
+    {
+        path: '/traces',
+        name: 'traces',
+        component: Traces,
+    },
+    {
+        path: '/traces/:traceId',
+        name: 'trace-detail',
+        component: TraceDetail,
     },
     {
         path: '/costs',

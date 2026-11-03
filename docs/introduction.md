@@ -26,7 +26,7 @@ You can add more providers by creating a custom provider class. See [Custom Prov
 - **Multimodal support.** Track text completions, embeddings, image generation, video generation, text-to-speech, and speech-to-text across all major providers.
 - **Cost calculation.** A built-in pricing catalog with token-based (including prompt-cache reads and writes, reasoning, audio, and image tokens), per-image, per-megapixel, per-video, per-minute, per-second, per-character, per-page, and per-request pricing. Each model can have several pricing tiers (standard, batch, flex, priority, fast, ultrafast), long-context prices and dated prices. Catalogs can also use other currencies.
 - **Budget enforcement.** Set cost, token, and request-count limits per user, team, or any Eloquent model. Enforce them with middleware that either blocks requests (hard limit) or only fires warning events (soft limit).
-- **Real-time dashboard.** A built-in dashboard for exploring requests, analyzing costs, and viewing per-user analytics.
+- **Real-time dashboard.** A built-in dashboard for exploring requests and traces, analyzing costs, and viewing per-user analytics.
 - **Streaming support.** Streamed responses are tracked automatically as your code reads them, with time-to-first-token metrics and full token counts. This includes streamed image generation through OpenAI's Responses API.
 - **Media persistence.** Download generated images and videos to any Laravel filesystem disk before the provider URLs expire.
 - **Tags and metadata.** Attach labels and structured metadata to any request, then filter and group by them in the dashboard.

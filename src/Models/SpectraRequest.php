@@ -119,6 +119,10 @@ use Spectra\Support\ProviderRegistry;
  * @property-read mixed $tts_duration_sum
  * @property-read mixed $stt_duration_sum
  * @property-read mixed $avg_latency_ms
+ * @property-read mixed $failed_count
+ * @property-read mixed $tokens
+ * @property-read mixed $first_started_at
+ * @property-read mixed $duration_ms
  * @property-read Collection<int, SpectraTag> $tags
  */
 class SpectraRequest extends Model

@@ -377,9 +377,24 @@ Each call also stores its start time to the millisecond in `started_at`, so
 the calls of a fast agent loop keep their order and spacing on the timeline.
 `created_at` is still stored to the second.
 
-In the dashboard, the request page shows a **Trace** card when a trace has
-more than one call: every call in order, a timeline, and the total cost,
-tokens, and time. You can also filter the requests list by trace id.
+In the dashboard, the **Traces** screen lists one row per trace: its origin,
+its calls and failed calls, the models it used, its trackable, its duration
+and its cost. Above the list are totals for every trace you filter for: how
+many traces there are, how many had a failed call, and what a trace costs and
+takes on average. The filters are the same as on the requests list. A trace
+stays in the list when one of its calls matches, and its totals still count
+all of its calls, so filtering by `gpt-4o` shows every trace that used it at
+its full cost. Search matches an exact trace id or part of an origin.
+
+Open a trace to see its calls on one timeline, in the order they started, to
+the millisecond. A new lane starts when the origin changes, for example when a
+request dispatches a job. The trace page also shows the cost, calls and tokens
+per model, the tags, the trackable and the parent span from `traceparent`.
+
+The request page shows a **Trace** card when a trace has more than one call,
+with an **Open trace** link. As everywhere in the dashboard, cost counts
+successful calls only. Duration runs from the start of the first call to the
+end of the last one.
 
 ### Setting the Trace Yourself
 

@@ -270,7 +270,7 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                             <div v-if="request.trace_id">
                                 <dt>Trace</dt>
                                 <dd>
-                                    <router-link :to="{ name: 'requests', query: { trace_id: request.trace_id } }" class="font-mono text-xs text-primary-600 hover:underline dark:text-primary-400" :title="request.trace_id">{{ request.trace_id }}</router-link>
+                                    <router-link :to="{ name: 'trace-detail', params: { traceId: request.trace_id } }" class="font-mono text-xs text-primary-600 hover:underline dark:text-primary-400" :title="request.trace_id">{{ request.trace_id }}</router-link>
                                 </dd>
                             </div>
                             <div v-if="request.conversation_id">

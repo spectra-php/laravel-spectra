@@ -9,6 +9,8 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Every call stores where it came from in the new `origin` column: the queued job class, the Artisan command (`artisan reports:send`) or the route pattern of the HTTP request (`POST /chats/{chat}`, never the URL). A synchronous job run inside a request is named by the job. Turn it off with `tracking.capture_origin` (`SPECTRA_CAPTURE_ORIGIN`)
 - Every call stores its start time to the millisecond in the new `started_at` column (`created_at` is stored to the second). OpenTelemetry spans start at it, and never end before it
 - An async job that is polled again keeps the origin and start time of the call that started it
+- Dashboard: a Traces screen lists one row per trace (origin, calls, failures, models, trackable, duration, cost) with totals for the filtered traces. It has the same filters as the requests list; a trace stays when one of its calls matches, with all its calls in its totals
+- Dashboard: a trace page shows a trace's calls on one millisecond timeline, with a lane per origin, cost per model, tags and trackable. The request page's Trace card links to it
 - `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL` and `SPECTRA_FIRECRAWL_TIMEOUT`. The unprefixed `FIRECRAWL_*` names still work
 - `SpectraRequest::forTrace()` scope
 - The costs dashboard's top spenders include `trackable_type`, so a user and a team with the same id no longer collide
