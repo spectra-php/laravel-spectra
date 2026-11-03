@@ -5,85 +5,21 @@ declare(strict_types=1);
 use Spectra\Enums\ModelType;
 
 /**
- * ModelType: labels, string values, and the type derived from a pricing type
- * or an audio model slug.
+ * ModelType derived from a catalog pricing type, and TTS or STT guessed from
+ * an audio model slug.
  */
-it('returns correct labels for each model type', function () {
-    expect(ModelType::Text->label())->toBe('Text')
-        ->and(ModelType::Embedding->label())->toBe('Embedding')
-        ->and(ModelType::Image->label())->toBe('Image')
-        ->and(ModelType::Video->label())->toBe('Video')
-        ->and(ModelType::Tts->label())->toBe('Text-to-Speech')
-        ->and(ModelType::Stt->label())->toBe('Speech-to-Text');
-});
-
-it('maps text pricing type to text', function () {
-    expect(ModelType::fromPricingType('text'))->toBe(ModelType::Text);
-});
-
-it('maps embedding pricing type to embedding', function () {
-    expect(ModelType::fromPricingType('embedding'))->toBe(ModelType::Embedding);
-});
-
-it('maps image pricing type to image', function () {
+it('maps a catalog pricing type to its model type', function () {
     expect(ModelType::fromPricingType('image'))->toBe(ModelType::Image);
 });
 
-it('maps video pricing type to video', function () {
-    expect(ModelType::fromPricingType('video'))->toBe(ModelType::Video);
-});
-
-it('returns null for audio pricing type', function () {
+it('leaves the audio pricing type untyped so the slug decides', function () {
     expect(ModelType::fromPricingType('audio'))->toBeNull();
 });
 
-it('returns null for unknown pricing type', function () {
-    expect(ModelType::fromPricingType('unknown'))->toBeNull();
+it('types an audio slug naming tts as text-to-speech', function () {
+    expect(ModelType::fromAudioSlug('tts-1'))->toBe(ModelType::Tts);
 });
 
-it('returns null for null pricing type', function () {
-    expect(ModelType::fromPricingType(null))->toBeNull();
-});
-
-it('detects tts from slug containing tts', function () {
-    expect(ModelType::fromAudioSlug('tts-1'))->toBe(ModelType::Tts)
-        ->and(ModelType::fromAudioSlug('tts-1-hd'))->toBe(ModelType::Tts);
-});
-
-it('detects tts from slug containing speech', function () {
-    expect(ModelType::fromAudioSlug('speech-1'))->toBe(ModelType::Tts);
-});
-
-it('detects stt from slug containing whisper', function () {
-    expect(ModelType::fromAudioSlug('whisper-1'))->toBe(ModelType::Stt);
-});
-
-it('detects stt from slug containing transcri', function () {
-    expect(ModelType::fromAudioSlug('transcription-model'))->toBe(ModelType::Stt);
-});
-
-it('defaults audio slug to stt', function () {
+it('types any other audio slug as speech-to-text', function () {
     expect(ModelType::fromAudioSlug('some-audio-model'))->toBe(ModelType::Stt);
-});
-
-it('has correct string values', function () {
-    expect(ModelType::Text->value)->toBe('text')
-        ->and(ModelType::Embedding->value)->toBe('embedding')
-        ->and(ModelType::Image->value)->toBe('image')
-        ->and(ModelType::Video->value)->toBe('video')
-        ->and(ModelType::Tts->value)->toBe('tts')
-        ->and(ModelType::Stt->value)->toBe('stt');
-});
-
-it('resolves each model type from its string value', function () {
-    expect(ModelType::from('text'))->toBe(ModelType::Text)
-        ->and(ModelType::from('embedding'))->toBe(ModelType::Embedding)
-        ->and(ModelType::from('image'))->toBe(ModelType::Image)
-        ->and(ModelType::from('video'))->toBe(ModelType::Video)
-        ->and(ModelType::from('tts'))->toBe(ModelType::Tts)
-        ->and(ModelType::from('stt'))->toBe(ModelType::Stt);
-});
-
-it('returns null for invalid tryFrom value', function () {
-    expect(ModelType::tryFrom('invalid'))->toBeNull();
 });

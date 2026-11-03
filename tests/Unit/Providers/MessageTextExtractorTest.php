@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\MessageTextExtractor;
-use Spectra\Tests\Concerns\LoadsMockResponses;
 
 /**
  * The plain text of a stored call for the conversation transcript: the last
  * user message from each request shape chat APIs use, and the reply through
  * the provider's handler or a streamed call's accumulated text.
  */
-uses(LoadsMockResponses::class);
 
+/**
+ * A stored call of the provider and endpoint, holding the given response.
+ */
 function storedCall(string $provider, string $endpoint, mixed $response): SpectraRequest
 {
     return new SpectraRequest(['provider' => $provider, 'endpoint' => $endpoint, 'response' => $response]);

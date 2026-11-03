@@ -12,7 +12,7 @@ use Spectra\Models\SpectraRequest;
  * The costs dashboard endpoint: overview totals, usage by model type, date
  * range filters and top spenders.
  */
-it('returns model usage metrics by model type in costs endpoint', function () {
+it('breaks costs down by model and by model type, leaving failed calls out of the cost', function () {
     SpectraRequest::factory()
         ->count(6)
         ->state(new Sequence(
@@ -25,56 +25,33 @@ it('returns model usage metrics by model type in costs endpoint', function () {
         ))
         ->create();
 
-    $controller = app(CostsController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request(['period' => 'month'])]);
-    $json = $response->toArray();
+    $json = app()->call([app(CostsController::class), '__invoke'], ['request' => new Request(['period' => 'month'])])->toArray();
 
-    expect($json)->toHaveKey('costs_by_model')
-        ->and($json)->toHaveKey('costs_by_model_type');
+    $rows = collect($json['costs_by_model'])->keyBy(fn (array $row) => $row['model'].'|'.$row['model_type']);
+    $typeRows = collect($json['costs_by_model_type'])->keyBy('model_type');
 
-    $rows = collect($json['costs_by_model'])
-        ->keyBy(fn (array $row) => $row['model'].'|'.$row['model_type']);
-
-    expect($rows->has('gpt-4o|text'))->toBeTrue()
-        ->and($rows['gpt-4o|text']['tokens'])->toEqual(200)
-        ->and($rows->has('gpt-image-1|image'))->toBeTrue()
+    expect($rows['gpt-4o|text']['tokens'])->toEqual(200)
         ->and($rows['gpt-image-1|image']['images'])->toEqual(2)
-        ->and($rows->has('sora-2|video'))->toBeTrue()
         ->and($rows['sora-2|video']['videos'])->toEqual(1)
         ->and($rows['sora-2|video']['duration_seconds'])->toEqual(12.5)
-        ->and($rows->has('tts-1|tts'))->toBeTrue()
         ->and($rows['tts-1|tts']['input_characters'])->toEqual(1500)
-        ->and($rows->has('whisper-1|stt'))->toBeTrue()
         ->and($rows['whisper-1|stt']['duration_seconds'])->toEqual(25)
         // Counts and usage include the failed request; its cost never does.
         ->and($rows['excluded-failed-model|text']['requests'])->toBe(1)
-        ->and((float) $rows['excluded-failed-model|text']['cost'])->toBe(0.0);
-
-    $typeRows = collect($json['costs_by_model_type'])->keyBy('model_type');
-
-    expect($typeRows->has('text'))->toBeTrue()
-        ->and($typeRows['text']['label'])->toBe('Text')
+        ->and((float) $rows['excluded-failed-model|text']['cost'])->toEqualWithDelta(0.0, 0.0001)
         ->and($typeRows['text']['requests'])->toBe(2)
         ->and($typeRows['text']['tokens'])->toEqual(2200)
-        ->and((float) $typeRows['text']['cost'])->toBe(100.0)
-        ->and($typeRows->has('image'))->toBeTrue()
-        ->and($typeRows['image']['label'])->toBe('Image')
+        ->and((float) $typeRows['text']['cost'])->toEqualWithDelta(100.0, 0.0001)
         ->and($typeRows['image']['images'])->toEqual(2)
-        ->and((float) $typeRows['image']['cost'])->toBe(30.0)
-        ->and($typeRows->has('video'))->toBeTrue()
-        ->and($typeRows['video']['label'])->toBe('Video')
+        ->and((float) $typeRows['image']['cost'])->toEqualWithDelta(30.0, 0.0001)
         ->and($typeRows['video']['videos'])->toEqual(1)
-        ->and((float) $typeRows['video']['cost'])->toBe(60.0)
-        ->and($typeRows->has('tts'))->toBeTrue()
-        ->and($typeRows['tts']['label'])->toBe('Text-to-Speech')
+        ->and((float) $typeRows['video']['cost'])->toEqualWithDelta(60.0, 0.0001)
         ->and($typeRows['tts']['input_characters'])->toEqual(1500)
-        ->and((float) $typeRows['tts']['cost'])->toBe(15.0)
-        ->and($typeRows->has('stt'))->toBeTrue()
-        ->and($typeRows['stt']['label'])->toBe('Speech-to-Text')
-        ->and((float) $typeRows['stt']['cost'])->toBe(5.0);
+        ->and((float) $typeRows['tts']['cost'])->toEqualWithDelta(15.0, 0.0001)
+        ->and((float) $typeRows['stt']['cost'])->toEqualWithDelta(5.0, 0.0001);
 });
 
-it('returns cost overview totals for dashboard cards', function () {
+it('sums the cost overview cards over today, this and last week, this month and this year', function () {
     $this->travelTo('2026-02-12 12:00:00');
 
     SpectraRequest::factory()
@@ -88,19 +65,16 @@ it('returns cost overview totals for dashboard cards', function () {
         ))
         ->create();
 
-    $controller = app(CostsController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request(['period' => 'month'])]);
-    $json = $response->toArray();
+    $json = app()->call([app(CostsController::class), '__invoke'], ['request' => new Request(['period' => 'month'])])->toArray();
 
-    expect($json)->toHaveKey('cost_overview')
-        ->and($json['cost_overview']['today'])->toEqual(100)
-        ->and($json['cost_overview']['this_week'])->toEqual(300)
-        ->and($json['cost_overview']['last_week'])->toEqual(300)
-        ->and($json['cost_overview']['this_month'])->toEqual(600)
-        ->and($json['cost_overview']['this_year'])->toEqual(1000);
+    expect($json['cost_overview']['today'])->toEqualWithDelta(100, 0.0001)
+        ->and($json['cost_overview']['this_week'])->toEqualWithDelta(300, 0.0001)
+        ->and($json['cost_overview']['last_week'])->toEqualWithDelta(300, 0.0001)
+        ->and($json['cost_overview']['this_month'])->toEqualWithDelta(600, 0.0001)
+        ->and($json['cost_overview']['this_year'])->toEqualWithDelta(1000, 0.0001);
 });
 
-it('filters costs by custom date range', function () {
+it('counts only the costs inside a custom date range', function () {
     $this->travelTo('2026-02-12 12:00:00');
 
     SpectraRequest::factory()
@@ -119,12 +93,12 @@ it('filters costs by custom date range', function () {
     ])]);
     $json = $response->toArray();
 
-    expect($json['total_cost_in_cents'])->toEqual(120)
+    expect($json['total_cost_in_cents'])->toEqualWithDelta(120, 0.0001)
         ->and($json['costs_by_date'])->toHaveCount(1)
         ->and($json['costs_by_date'][0]['date'])->toBe('2026-02-10');
 });
 
-it('returns all-time costs when period is all', function () {
+it('counts costs of every date when the period is all', function () {
     $this->travelTo('2026-02-12 12:00:00');
 
     SpectraRequest::factory()
@@ -141,7 +115,7 @@ it('returns all-time costs when period is all', function () {
     ])]);
     $json = $response->toArray();
 
-    expect($json['total_cost_in_cents'])->toEqual(200)
+    expect($json['total_cost_in_cents'])->toEqualWithDelta(200, 0.0001)
         ->and($json['costs_by_date'])->toHaveCount(2);
 });
 

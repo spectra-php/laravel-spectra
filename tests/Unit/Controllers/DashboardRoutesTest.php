@@ -34,6 +34,6 @@ it('serves a request by its UUID', function () {
     $this->getJson("/spectra/api/requests/{$request->id}")->assertOk()->assertJsonPath('id', $request->id);
 });
 
-it('still serves the dashboard for its own screens', function () {
+it('serves the dashboard SPA for its own screens', function () {
     $this->get('/spectra/requests')->assertOk();
 });

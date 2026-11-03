@@ -62,7 +62,7 @@ it('records a cancelled background response', function () {
 
     expect($row->finish_reason)->toBe('cancelled')
         ->and($row->prompt_tokens)->toBe(0)
-        ->and((float) $row->total_cost_in_cents)->toBe(0.0);
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0, 1e-12);
 });
 
 it('does not record again a stored response fetched later', function () {
@@ -84,7 +84,9 @@ it('records a finished sora video with its generation time as latency', function
     $row = SpectraRequest::sole();
 
     // sora-2: 10¢ per second, 10 seconds = 100¢. completed_at - created_at = 63 s.
-    expect($row->model)->toBe('Sora 2')
+    expect($row->provider)->toBe('openai')
+        ->and($row->model)->toBe('Sora 2')
+        ->and($row->model_type)->toBe('video')
         ->and($row->latency_ms)->toBe(63_000)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(100.0, 1e-9);
 });
@@ -99,7 +101,9 @@ it('bills gpt-image output as image tokens and the text part at the text rate', 
     // gpt-image-1.5: text in 500, image in 800, text out 1000, image out 3200.
     // Input 20 text + 100 image; output 444 text + 1056 image.
     // (20*500 + 100*800 + 444*1000 + 1056*3200) / 1M = 3.9132
-    expect($row->model)->toBe('GPT Image 1.5')
+    expect($row->provider)->toBe('openai')
+        ->and($row->model)->toBe('GPT Image 1.5')
+        ->and($row->model_type)->toBe('image')
         ->and($row->image_count)->toBe(1)
         ->and($row->prompt_tokens)->toBe(120)
         ->and($row->completion_tokens)->toBe(1500)
@@ -142,7 +146,9 @@ it('bills token-priced transcriptions on audio input tokens', function () {
     $row = SpectraRequest::sole();
 
     // gpt-4o-transcribe (in 250, out 1000): (14*250 + 45*1000) / 1M = 0.0485
-    expect($row->model)->toBe('GPT-4o Transcribe')
+    expect($row->provider)->toBe('openai')
+        ->and($row->model)->toBe('GPT-4o Transcribe')
+        ->and($row->model_type)->toBe('stt')
         ->and($row->prompt_tokens)->toBe(14)
         ->and($row->completion_tokens)->toBe(45)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0485, 1e-9);
@@ -174,7 +180,7 @@ it('does not fail on plain-text transcription formats', function () {
     // The text format has no duration, so it can't be priced.
     expect($row->model)->toBe('Whisper')
         ->and($row->status_code)->toBe(200)
-        ->and((float) $row->total_cost_in_cents)->toBe(0.0);
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0, 1e-12);
 });
 
 it('bills tts-1 per input character', function () {
@@ -185,7 +191,8 @@ it('bills tts-1 per input character', function () {
     $row = SpectraRequest::sole();
 
     // tts-1: $15 per 1M characters, 11 characters → 11 * 1500 / 1M = 0.0165
-    expect($row->model)->toBe('TTS')
+    expect($row->provider)->toBe('openai')
+        ->and($row->model)->toBe('TTS')
         ->and($row->model_type)->toBe('tts')
         ->and($row->input_characters)->toBe(11)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0165, 1e-9);

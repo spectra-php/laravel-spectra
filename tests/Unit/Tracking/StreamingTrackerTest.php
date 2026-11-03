@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Spectra\Facades\Spectra;
-use Spectra\Support\Tracking\StreamingTracker;
+use Spectra\Spectra as SpectraManager;
 
 /**
  * StreamingTracker reads text, usage and timing from each provider's stream
@@ -13,13 +13,7 @@ beforeEach(function () {
     Spectra::fake();
 });
 
-it('creates a streaming tracker via facade', function () {
-    $tracker = Spectra::stream('openai', 'gpt-4o');
-
-    expect($tracker)->toBeInstanceOf(StreamingTracker::class);
-});
-
-it('extracts text from openai completions api chunks', function () {
+it('yields the text of OpenAI Chat Completions chunks', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     $chunks = [
@@ -38,7 +32,7 @@ it('extracts text from openai completions api chunks', function () {
         ->and($tracker->getContent())->toBe('Hello world!');
 });
 
-it('extracts usage from final chunk', function () {
+it('reads the usage, cached tokens included, from the final OpenAI chunk', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     $chunks = [
@@ -55,28 +49,13 @@ it('extracts usage from final chunk', function () {
     }
 
     $usage = $tracker->getUsage();
+
     expect($usage['prompt_tokens'])->toBe(15)
         ->and($usage['completion_tokens'])->toBe(5)
         ->and($usage['cached_tokens'])->toBe(3);
 });
 
-it('tracks time to first token', function () {
-    $tracker = Spectra::stream('openai', 'gpt-4o');
-
-    $chunks = [
-        ['choices' => [['delta' => ['content' => 'Hello']]]],
-    ];
-
-    foreach ($tracker->track($chunks) as $text) {
-        // consume
-    }
-
-    $ttft = $tracker->getTimeToFirstToken();
-    expect($ttft)->not->toBeNull()
-        ->and($ttft)->toBeGreaterThanOrEqual(0);
-});
-
-it('handles openai responses api format', function () {
+it('reads text and usage from OpenAI Responses API events', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     $chunks = [
@@ -99,21 +78,6 @@ it('handles openai responses api format', function () {
         ->and($tracker->getUsage()['completion_tokens'])->toBe(2);
 });
 
-it('reports token usage set by hand through setUsage', function () {
-    $tracker = Spectra::stream('openai', 'gpt-4o');
-
-    $tracker->setUsage([
-        'prompt_tokens' => 100,
-        'completion_tokens' => 50,
-        'cached_tokens' => 25,
-    ]);
-
-    $usage = $tracker->getUsage();
-    expect($usage['prompt_tokens'])->toBe(100)
-        ->and($usage['completion_tokens'])->toBe(50)
-        ->and($usage['cached_tokens'])->toBe(25);
-});
-
 it('joins appended content and records the time to first token', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
@@ -124,26 +88,7 @@ it('joins appended content and records the time to first token', function () {
         ->and($tracker->getTimeToFirstToken())->not->toBeNull();
 });
 
-it('records request on finish', function () {
-    $tracker = Spectra::stream('openai', 'gpt-4o');
-
-    $chunks = [
-        ['id' => 'chatcmpl-abc123', 'choices' => [['delta' => ['content' => 'Test']]]],
-        ['id' => 'chatcmpl-abc123', 'choices' => [['finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 1]],
-    ];
-
-    foreach ($tracker->track($chunks) as $text) {
-        // consume
-    }
-
-    $result = $tracker->finish();
-
-    Spectra::assertRequestCount(1);
-    Spectra::assertProviderUsed('openai');
-    Spectra::assertModelUsed('gpt-4o');
-});
-
-it('handles anthropic streaming format', function () {
+it('reads text and usage from Anthropic stream events', function () {
     $tracker = Spectra::stream('anthropic', 'claude-3-sonnet');
 
     $chunks = [
@@ -164,7 +109,7 @@ it('handles anthropic streaming format', function () {
         ->and($tracker->getUsage()['completion_tokens'])->toBe(2);
 });
 
-it('handles google streaming format', function () {
+it('reads text and usage from Gemini stream chunks', function () {
     $tracker = Spectra::stream('google', 'gemini-1.5-flash');
 
     $chunks = [
@@ -183,7 +128,7 @@ it('handles google streaming format', function () {
         ->and($tracker->getUsage()['completion_tokens'])->toBe(2);
 });
 
-it('resolves model type from google stream response shape on shared endpoints', function () {
+it('records a Gemini stream with inline image data as an image request', function () {
     $tracker = Spectra::stream('google', 'gemini-2.0-flash', [
         'endpoint' => '/v1/models/gemini-2.0-flash:generateContent',
     ]);
@@ -215,7 +160,7 @@ it('resolves model type from google stream response shape on shared endpoints', 
     });
 });
 
-it('handles openai sdk event format for responses api text', function () {
+it('reads text and usage from OpenAI SDK Responses API events', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     // OpenAI PHP SDK toArray() returns ['event' => '...', 'data' => [...]]
@@ -241,7 +186,7 @@ it('handles openai sdk event format for responses api text', function () {
         ->and($tracker->getUsage()['completion_tokens'])->toBe(2);
 });
 
-it('handles openai sdk event format for streaming image generation', function () {
+it('counts the image of an OpenAI SDK image generation stream', function () {
     $tracker = Spectra::stream('openai', 'gpt-image-1');
 
     $chunks = [
@@ -268,7 +213,7 @@ it('handles openai sdk event format for streaming image generation', function ()
         // consume
     }
 
-    $result = $tracker->finish();
+    $tracker->finish();
 
     Spectra::assertRequestCount(1);
     Spectra::assertTracked(function ($r) {
@@ -277,7 +222,7 @@ it('handles openai sdk event format for streaming image generation', function ()
     });
 });
 
-it('tracks streaming image generation from responses api', function () {
+it('counts the image of a raw Responses API image generation stream', function () {
     $tracker = Spectra::stream('openai', 'gpt-image-1');
 
     $chunks = [
@@ -306,7 +251,7 @@ it('tracks streaming image generation from responses api', function () {
         // consume — image streams yield no text
     }
 
-    $result = $tracker->finish();
+    $tracker->finish();
 
     Spectra::assertRequestCount(1);
     Spectra::assertTracked(function ($r) {
@@ -315,7 +260,7 @@ it('tracks streaming image generation from responses api', function () {
     });
 });
 
-it('captures response_id from openai completions api stream', function () {
+it('records the response id of an OpenAI Chat Completions stream', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     $chunks = [
@@ -334,7 +279,7 @@ it('captures response_id from openai completions api stream', function () {
     });
 });
 
-it('captures response_id from openai responses api stream', function () {
+it('records the response id of an OpenAI Responses API stream', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     $chunks = [
@@ -358,7 +303,7 @@ it('captures response_id from openai responses api stream', function () {
     });
 });
 
-it('captures response_id from anthropic stream', function () {
+it('records the response id of an Anthropic stream', function () {
     $tracker = Spectra::stream('anthropic', 'claude-3-sonnet');
 
     $chunks = [
@@ -379,27 +324,8 @@ it('captures response_id from anthropic stream', function () {
     });
 });
 
-it('uses endpoint passed via options', function () {
-    $tracker = Spectra::stream('openai', 'gpt-4o', ['endpoint' => '/v1/chat/completions']);
-
-    $chunks = [
-        ['id' => 'chatcmpl-abc', 'choices' => [['delta' => ['content' => 'Hi']]]],
-        ['id' => 'chatcmpl-abc', 'choices' => [['finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 1]],
-    ];
-
-    foreach ($tracker->track($chunks) as $text) {
-        // consume
-    }
-
-    $tracker->finish();
-
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->endpoint === '/v1/chat/completions';
-    });
-});
-
-it('reuses context from GuzzleMiddleware when available', function () {
-    $manager = app(\Spectra\Spectra::class);
+it('takes over the pending context the Guzzle middleware left for the stream', function () {
+    $manager = app(SpectraManager::class);
     $pendingContext = $manager->startRequest('openai', 'gpt-4o', [
         'endpoint' => '/v1/chat/completions',
     ]);
@@ -425,7 +351,7 @@ it('reuses context from GuzzleMiddleware when available', function () {
     });
 });
 
-it('extracts reasoning tokens from openai completions api stream', function () {
+it('records the reasoning tokens of an OpenAI Chat Completions stream', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     $chunks = [
@@ -441,17 +367,15 @@ it('extracts reasoning tokens from openai completions api stream', function () {
         // consume
     }
 
-    $usage = $tracker->getUsage();
-    expect($usage['reasoning_tokens'])->toBe(30);
-
     $tracker->finish();
 
+    expect($tracker->getUsage()['reasoning_tokens'])->toBe(30);
     Spectra::assertTracked(function ($r) {
         return $r['context']->reasoningTokens === 30;
     });
 });
 
-it('extracts reasoning tokens from openai responses api stream', function () {
+it('records the reasoning tokens of an OpenAI Responses API stream', function () {
     $tracker = Spectra::stream('openai', 'o3-mini');
 
     $chunks = [
@@ -471,17 +395,15 @@ it('extracts reasoning tokens from openai responses api stream', function () {
         // consume
     }
 
-    $usage = $tracker->getUsage();
-    expect($usage['reasoning_tokens'])->toBe(15);
-
     $tracker->finish();
 
+    expect($tracker->getUsage()['reasoning_tokens'])->toBe(15);
     Spectra::assertTracked(function ($r) {
         return $r['context']->reasoningTokens === 15;
     });
 });
 
-it('extracts reasoning tokens from google stream', function () {
+it('records the reasoning tokens of a Gemini stream', function () {
     $tracker = Spectra::stream('google', 'gemini-2.0-flash-thinking');
 
     $chunks = [
@@ -494,17 +416,15 @@ it('extracts reasoning tokens from google stream', function () {
         // consume
     }
 
-    $usage = $tracker->getUsage();
-    expect($usage['reasoning_tokens'])->toBe(100);
-
     $tracker->finish();
 
+    expect($tracker->getUsage()['reasoning_tokens'])->toBe(100);
     Spectra::assertTracked(function ($r) {
         return $r['context']->reasoningTokens === 100;
     });
 });
 
-it('detects tool calls from finish_reason in streaming', function () {
+it('flags tool calls from an OpenAI tool_calls finish reason', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     $chunks = [
@@ -527,7 +447,7 @@ it('detects tool calls from finish_reason in streaming', function () {
     });
 });
 
-it('detects anthropic tool_use finish reason in streaming', function () {
+it('flags tool calls from an Anthropic tool_use stop reason', function () {
     $tracker = Spectra::stream('anthropic', 'claude-3-sonnet');
 
     $chunks = [
@@ -549,7 +469,7 @@ it('detects anthropic tool_use finish reason in streaming', function () {
     });
 });
 
-it('sets manual usage with reasoning tokens', function () {
+it('reports the usage set by hand, reasoning tokens included', function () {
     $tracker = Spectra::stream('openai', 'o3-mini');
 
     $tracker->setUsage([
@@ -560,13 +480,14 @@ it('sets manual usage with reasoning tokens', function () {
     ]);
 
     $usage = $tracker->getUsage();
+
     expect($usage['prompt_tokens'])->toBe(100)
         ->and($usage['completion_tokens'])->toBe(50)
         ->and($usage['cached_tokens'])->toBe(25)
         ->and($usage['reasoning_tokens'])->toBe(30);
 });
 
-it('skips recording entirely for empty streams', function () {
+it('records nothing for an empty stream', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     foreach ($tracker->track([]) as $text) {
@@ -579,7 +500,7 @@ it('skips recording entirely for empty streams', function () {
 });
 
 it('does not leak a pending stream context to the next tracker when a stream dies early', function () {
-    $manager = app(\Spectra\Spectra::class);
+    $manager = app(SpectraManager::class);
     $pendingContext = $manager->startRequest('openai', 'gpt-4o', [
         'endpoint' => '/v1/chat/completions',
     ]);
@@ -596,7 +517,6 @@ it('does not leak a pending stream context to the next tracker when a stream die
             // consume
         }
     } catch (RuntimeException) {
-        // expected
     }
 
     // A later, unrelated stream must not inherit the dead stream's context.

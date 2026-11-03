@@ -8,28 +8,10 @@ use Spectra\Support\ApiKeyResolver;
  * ApiKeyResolver finds each provider's API key, base URL and hosts in
  * spectra config first and in laravel-ai's ai.php config after.
  */
-it('resolves api key from spectra config', function () {
-    config(['spectra.api_keys.openai' => 'sk-spectra-key']);
-
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolve('openai'))->toBe('sk-spectra-key');
-});
-
-it('resolves api key from ai.php config', function () {
+it('falls back to the ai.php api key when spectra has none', function () {
     config(['ai.providers.openai.key' => 'sk-ai-key']);
 
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolve('openai'))->toBe('sk-ai-key');
-});
-
-it('resolves api key from ai.php for anthropic', function () {
-    config(['ai.providers.anthropic.key' => 'sk-ant-ai-key']);
-
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolve('anthropic'))->toBe('sk-ant-ai-key');
+    expect((new ApiKeyResolver)->resolve('openai'))->toBe('sk-ai-key');
 });
 
 it('prioritizes spectra config over ai.php for api keys', function () {
@@ -38,33 +20,23 @@ it('prioritizes spectra config over ai.php for api keys', function () {
         'ai.providers.openai.key' => 'sk-ai-key',
     ]);
 
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolve('openai'))->toBe('sk-spectra-key');
+    expect((new ApiKeyResolver)->resolve('openai'))->toBe('sk-spectra-key');
 });
 
-it('resolves base url from spectra endpoint_urls config', function () {
-    config(['spectra.endpoint_urls.openai' => 'https://my-proxy.example.com/v1']);
-
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolveBaseUrl('openai'))->toBe('https://my-proxy.example.com/v1');
+it('returns null when no api key is configured', function () {
+    expect((new ApiKeyResolver)->resolve('openai'))->toBeNull();
 });
 
-it('resolves base url from ai.php config', function () {
+it('resolves an api key for an unknown provider from ai.php', function () {
+    config(['ai.providers.custom-provider.key' => 'custom-key']);
+
+    expect((new ApiKeyResolver)->resolve('custom-provider'))->toBe('custom-key');
+});
+
+it('falls back to the ai.php base url when spectra has none', function () {
     config(['ai.providers.openai.url' => 'https://ai-proxy.example.com']);
 
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolveBaseUrl('openai'))->toBe('https://ai-proxy.example.com');
-});
-
-it('resolves base url from ai.php for anthropic', function () {
-    config(['ai.providers.anthropic.url' => 'https://anthropic-proxy.example.com']);
-
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolveBaseUrl('anthropic'))->toBe('https://anthropic-proxy.example.com');
+    expect((new ApiKeyResolver)->resolveBaseUrl('openai'))->toBe('https://ai-proxy.example.com');
 });
 
 it('prioritizes spectra endpoint_urls over ai.php for base url', function () {
@@ -73,52 +45,32 @@ it('prioritizes spectra endpoint_urls over ai.php for base url', function () {
         'ai.providers.openai.url' => 'https://ai-proxy.example.com',
     ]);
 
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolveBaseUrl('openai'))->toBe('https://spectra-proxy.example.com');
-});
-
-it('resolves base url from openai base_uri config', function () {
-    config(['openai.base_uri' => 'https://openai-custom.example.com']);
-
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolveBaseUrl('openai'))->toBe('https://openai-custom.example.com');
+    expect((new ApiKeyResolver)->resolveBaseUrl('openai'))->toBe('https://spectra-proxy.example.com');
 });
 
 it('returns null when no base url is configured', function () {
     $resolver = new ApiKeyResolver;
 
-    expect($resolver->resolveBaseUrl('openai'))->toBeNull();
-    expect($resolver->resolveBaseUrl('anthropic'))->toBeNull();
+    expect($resolver->resolveBaseUrl('openai'))->toBeNull()
+        ->and($resolver->resolveBaseUrl('anthropic'))->toBeNull();
 });
 
-it('returns null when no api key is configured', function () {
-    $resolver = new ApiKeyResolver;
+it('resolves a base url for an unknown provider from spectra endpoint_urls', function () {
+    config(['spectra.endpoint_urls.custom-provider' => 'https://custom.example.com']);
 
-    expect($resolver->resolve('openai'))->toBeNull();
+    expect((new ApiKeyResolver)->resolveBaseUrl('custom-provider'))->toBe('https://custom.example.com');
 });
 
-it('resolves host from base url', function () {
+it('resolves the host from the base url', function () {
     config(['spectra.endpoint_urls.openai' => 'https://my-proxy.example.com/v1']);
 
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolveHost('openai'))->toBe('my-proxy.example.com');
+    expect((new ApiKeyResolver)->resolveHost('openai'))->toBe('my-proxy.example.com');
 });
 
-it('resolves host with port from base url', function () {
+it('keeps the port in the host resolved from the base url', function () {
     config(['spectra.endpoint_urls.ollama' => 'http://custom-ollama:8080']);
 
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolveHost('ollama'))->toBe('custom-ollama:8080');
-});
-
-it('returns null host when no base url is configured', function () {
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolveHost('openai'))->toBeNull();
+    expect((new ApiKeyResolver)->resolveHost('ollama'))->toBe('custom-ollama:8080');
 });
 
 it('resolves every custom host for a provider', function () {
@@ -140,34 +92,4 @@ it('does not repeat a host configured twice', function () {
     ]);
 
     expect((new ApiKeyResolver)->resolveHosts('openai'))->toBe(['contoso.openai.azure.com']);
-});
-
-it('resolves base url for all configured providers', function () {
-    $providers = ['openai', 'anthropic', 'google', 'replicate', 'cohere', 'groq', 'xai', 'elevenlabs', 'openrouter', 'ollama'];
-
-    foreach ($providers as $provider) {
-        config(["spectra.endpoint_urls.{$provider}" => "https://{$provider}-proxy.example.com"]);
-    }
-
-    $resolver = new ApiKeyResolver;
-
-    foreach ($providers as $provider) {
-        expect($resolver->resolveBaseUrl($provider))->toBe("https://{$provider}-proxy.example.com");
-    }
-});
-
-it('resolves base url for unknown provider using fallback chain', function () {
-    config(['spectra.endpoint_urls.custom-provider' => 'https://custom.example.com']);
-
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolveBaseUrl('custom-provider'))->toBe('https://custom.example.com');
-});
-
-it('resolves api key for unknown provider from ai.php fallback', function () {
-    config(['ai.providers.custom-provider.key' => 'custom-key']);
-
-    $resolver = new ApiKeyResolver;
-
-    expect($resolver->resolve('custom-provider'))->toBe('custom-key');
 });

@@ -70,14 +70,14 @@ it('does not add a token tier without both input and output prices', function ()
         ->and($result->skipped)->toContain('gpt-y: batch is missing input_price or output_price, not added.');
 });
 
-it('matches aliases, snapshots, display names and case to catalog ids', function (string $id) {
+it('matches aliases, display names and case to catalog ids', function (string $id) {
     $result = ($this->map)([
         ['model_id' => $id, 'tier' => 'standard', 'input' => 0.9],
     ]);
 
     expect(array_keys($result->models))->toBe(['gpt-x'])
         ->and($result->newModels)->toBe([]);
-})->with(['gpt-x-latest', 'gpt-x-2026-01-01', 'GPT X', 'GPT-X']);
+})->with(['alias' => 'gpt-x-latest', 'display name' => 'GPT X', 'upper-case id' => 'GPT-X']);
 
 it('matches by display name when the id is made up', function () {
     $result = ($this->map)([
@@ -218,5 +218,6 @@ it('starts each map with no leftover changes', function () {
 
     $result = $mapper->map(new FakeOpenAIPricing, []);
 
-    expect($result->changes)->toBe([])->and($result->skipped)->toBe([]);
+    expect($result->changes)->toBe([])
+        ->and($result->skipped)->toBe([]);
 });

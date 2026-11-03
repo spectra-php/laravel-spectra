@@ -17,7 +17,7 @@ use Workbench\App\Models\User;
  * The trackables list endpoint: filters, sorting, input limits, success-only
  * cost and latency, and how trackable ids, types and names are resolved.
  */
-it('applies request-style filters in trackables endpoint', function () {
+it('counts only the requests matching every request filter per trackable', function () {
     [$included] = SpectraRequest::factory()
         ->count(3)
         ->state(new Sequence(
@@ -48,12 +48,10 @@ it('applies request-style filters in trackables endpoint', function () {
         ->and($json['data'][0]['trackable_type'])->toBe('App\\Models\\User')
         ->and($json['data'][0]['trackable_id'])->toBe('1')
         ->and($json['data'][0]['requests'])->toBe(1)
-        ->and($json)->toHaveKey('available_tags')
-        ->and($json)->toHaveKey('available_finish_reasons')
         ->and($json['available_tags'])->toContain('priority');
 });
 
-it('filters trackables by custom date range', function () {
+it('lists only the trackables with requests inside a custom date range', function () {
     $this->travelTo('2026-02-12 12:00:00');
 
     SpectraRequest::factory()
@@ -111,7 +109,7 @@ it('counts failed requests but leaves their cost and latency out of each trackab
     $row = callTrackables([])['data'][0];
 
     expect($row['requests'])->toBe(2)
-        ->and($row['cost'])->toBe(100.0)
+        ->and($row['cost'])->toEqualWithDelta(100.0, 0.0001)
         ->and($row['avg_latency'])->toBe(100.0);
 });
 

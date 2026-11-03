@@ -17,7 +17,7 @@ function cohereSse(array ...$events): string
     ));
 }
 
-it('records billed units for v2 chat', function () {
+it('bills a v2 chat on its billed tokens, with cached tokens at the input rate', function () {
     Http::fake(['api.cohere.com/*' => Http::response($this->loadMockResponse('cohere/chat-v2.json'))]);
 
     Http::post('https://api.cohere.com/v2/chat', ['model' => 'command-r-08-2024', 'messages' => [['role' => 'user', 'content' => 'Tell me about LLMs']]]);
@@ -26,7 +26,9 @@ it('records billed units for v2 chat', function () {
 
     // Command R: 1,200 billed input × 15 + 418 output × 60 = 43,080 / 1M cents.
     // Cached tokens have no separate price, so they bill at the input rate.
-    expect($row->model)->toBe('Command R')
+    expect($row->provider)->toBe('cohere')
+        ->and($row->model)->toBe('Command R')
+        ->and($row->model_type)->toBe('text')
         ->and($row->response_id)->toBe('c14c80c3-18eb-4519-9460-6c92edd8cfb4')
         ->and($row->prompt_tokens)->toBe(1_200)
         ->and($row->cached_tokens)->toBe(1_024)
@@ -65,12 +67,9 @@ it('tracks a streamed v2 chat from its message-end usage', function () {
 });
 
 it('bills embed image tokens on top of text tokens', function () {
-    Http::fake(['api.cohere.ai/*' => Http::response([
-        'id' => 'embed-img-1',
-        'embeddings' => ['float' => [[0.0121, -0.0342, 0.0456]]],
-        'images' => [['width' => 400, 'height' => 400, 'format' => 'jpeg', 'bit_depth' => 24]],
-        'meta' => ['api_version' => ['version' => '2'], 'billed_units' => ['input_tokens' => 10, 'image_tokens' => 1_000]],
-    ])]);
+    $body = $this->loadMockResponse('cohere/embed.json');
+    $body['meta']['billed_units'] = ['input_tokens' => 10, 'image_tokens' => 1_000];
+    Http::fake(['api.cohere.ai/*' => Http::response($body)]);
 
     Http::post('https://api.cohere.ai/v2/embed', ['model' => 'embed-v4.0', 'input_type' => 'image', 'embedding_types' => ['float'], 'images' => ['data:image/jpeg;base64,AAAA']]);
 
@@ -89,9 +88,11 @@ it('bills rerank per search unit', function () {
 
     Http::post('https://api.cohere.com/v2/rerank', ['model' => 'rerank-v4.0-pro', 'query' => 'q', 'documents' => ['a', 'b', 'c']]);
 
+    $row = SpectraRequest::sole();
+
     // Rerank 4 Pro: 3 searches × 0.25 cents.
-    expect(SpectraRequest::sole()->model)->toBe('Rerank 4 Pro')
-        ->and((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.75, 1e-12);
+    expect($row->model)->toBe('Rerank 4 Pro')
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.75, 1e-12);
 });
 
 it('bills parse per page', function () {
@@ -102,7 +103,9 @@ it('bills parse per page', function () {
     $row = SpectraRequest::sole();
 
     // Parse 5: 2 pages × 0.15 cents.
-    expect($row->model)->toBe('Parse 5')
+    expect($row->provider)->toBe('cohere')
+        ->and($row->model)->toBe('Parse 5')
+        ->and($row->model_type)->toBe('text')
         ->and($row->page_count)->toBe(2)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.3, 1e-12);
 });

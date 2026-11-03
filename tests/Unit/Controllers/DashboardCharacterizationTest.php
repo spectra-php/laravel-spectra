@@ -8,8 +8,9 @@ use Spectra\Http\Controllers\Api\StatsController;
 use Spectra\Models\SpectraRequest;
 
 /**
- * Characterization tests locking the dashboard endpoint numbers across the
- * Queries/ consolidation — the refactor must not change any value here.
+ * Characterization tests locking the dashboard endpoint numbers: counts
+ * include failed calls, cost and latency only successful ones. A change that
+ * moves a value here must be deliberate.
  */
 function seedDashboardDataset(): void
 {
@@ -37,30 +38,26 @@ beforeEach(function () {
 it('reports the stats endpoint numbers', function () {
     seedDashboardDataset();
 
-    $response = app()->call([app(StatsController::class), '__invoke'], ['request' => new Request(['period' => 'month'])]);
-    $json = $response->toArray();
+    $json = app()->call([app(StatsController::class), '__invoke'], ['request' => new Request(['period' => 'month'])])->toArray();
+
+    $providers = collect($json['requests_by_provider'])->keyBy('provider');
+    $topModels = collect($json['top_models'])->keyBy('model');
+    $types = collect($json['latency_by_model_type'])->keyBy('model_type');
 
     // Counts include failures; cost and latency only successes.
     expect($json['total_requests'])->toBe(5)
         ->and($json['total_tokens'])->toBe(205)
-        ->and((float) $json['total_cost_in_cents'])->toBe(390.0)
+        ->and((float) $json['total_cost_in_cents'])->toEqualWithDelta(390.0, 0.0001)
         ->and((float) $json['avg_latency'])->toBe(250.0)
-        ->and($json['total_images'])->toBe(2);
-
-    $providers = collect($json['requests_by_provider'])->keyBy('provider');
-    expect((int) $providers['openai']['count'])->toBe(3)
-        ->and((int) $providers['anthropic']['count'])->toBe(2);
-
-    expect(collect($json['requests_by_date'])->sum('count'))->toEqual(5);
-
-    $topModels = collect($json['top_models'])->keyBy('model');
-    expect((int) $topModels['gpt-4o']['count'])->toBe(2)
-        ->and((float) $topModels['gpt-4o']['cost'])->toBe(300.0)
+        ->and($json['total_images'])->toBe(2)
+        ->and((int) $providers['openai']['count'])->toBe(3)
+        ->and((int) $providers['anthropic']['count'])->toBe(2)
+        ->and(collect($json['requests_by_date'])->sum('count'))->toEqual(5)
+        ->and((int) $topModels['gpt-4o']['count'])->toBe(2)
+        ->and((float) $topModels['gpt-4o']['cost'])->toEqualWithDelta(300.0, 0.0001)
         ->and((int) $topModels['claude-x']['count'])->toBe(2)
-        ->and((float) $topModels['claude-x']['cost'])->toBe(40.0);
-
-    $types = collect($json['latency_by_model_type'])->keyBy('model_type');
-    expect((int) $types['text']['count'])->toBe(4)
+        ->and((float) $topModels['claude-x']['cost'])->toEqualWithDelta(40.0, 0.0001)
+        ->and((int) $types['text']['count'])->toBe(4)
         ->and((float) $types['text']['avg_latency'])->toEqualWithDelta(266.67, 0.01)
         ->and((int) $types['image']['count'])->toBe(1)
         ->and((float) $types['image']['avg_latency'])->toBe(200.0);
@@ -69,30 +66,25 @@ it('reports the stats endpoint numbers', function () {
 it('reports the trackable detail numbers', function () {
     seedDashboardDataset();
 
-    $response = app()->call(
+    $trackable = app()->call(
         [app(ShowTrackableController::class), '__invoke'],
         ['request' => new Request(['period' => 'month', 'type' => 'App\\Models\\User']), 'id' => '1']
-    );
-    $json = $response->toArray();
-
-    $trackable = $json['trackable'];
-
-    expect($trackable['total_requests'])->toBe(3)
-        ->and((float) $trackable['total_cost'])->toBe(300.0)
-        ->and((float) $trackable['avg_latency'])->toBe(200.0)
-        ->and($trackable['total_tokens'])->toBe(180);
+    )->toArray()['trackable'];
 
     $byModel = collect($trackable['usage_by_model'])->keyBy('model');
-    expect((int) $byModel['gpt-4o']['requests'])->toBe(2)
-        ->and((float) $byModel['gpt-4o']['cost'])->toBe(300.0)
-        ->and((int) $byModel['claude-x']['requests'])->toBe(1)
-        ->and((float) $byModel['claude-x']['cost'])->toBe(0.0);
-
     $byProvider = collect($trackable['usage_by_provider'])->keyBy('provider');
-    expect((int) $byProvider['openai']['requests'])->toBe(2)
-        ->and((float) $byProvider['openai']['cost'])->toBe(300.0)
-        ->and((int) $byProvider['anthropic']['requests'])->toBe(1)
-        ->and((float) $byProvider['anthropic']['cost'])->toBe(0.0);
 
-    expect(collect($trackable['costs_by_date'])->sum('cost'))->toEqual(300.0);
+    expect($trackable['total_requests'])->toBe(3)
+        ->and((float) $trackable['total_cost'])->toEqualWithDelta(300.0, 0.0001)
+        ->and((float) $trackable['avg_latency'])->toBe(200.0)
+        ->and($trackable['total_tokens'])->toBe(180)
+        ->and((int) $byModel['gpt-4o']['requests'])->toBe(2)
+        ->and((float) $byModel['gpt-4o']['cost'])->toEqualWithDelta(300.0, 0.0001)
+        ->and((int) $byModel['claude-x']['requests'])->toBe(1)
+        ->and((float) $byModel['claude-x']['cost'])->toEqualWithDelta(0.0, 0.0001)
+        ->and((int) $byProvider['openai']['requests'])->toBe(2)
+        ->and((float) $byProvider['openai']['cost'])->toEqualWithDelta(300.0, 0.0001)
+        ->and((int) $byProvider['anthropic']['requests'])->toBe(1)
+        ->and((float) $byProvider['anthropic']['cost'])->toEqualWithDelta(0.0, 0.0001)
+        ->and(collect($trackable['costs_by_date'])->sum('cost'))->toEqualWithDelta(300.0, 0.0001);
 });

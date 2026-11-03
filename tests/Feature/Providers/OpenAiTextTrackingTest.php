@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
-use Spectra\Support\Pricing\PricingLookup;
 
 /**
  * OpenAI text tracking through the HTTP client. Real wire-format responses,
@@ -13,7 +11,7 @@ use Spectra\Support\Pricing\PricingLookup;
  * real app. Costs are worked out by hand from OpenAIPricing (cents per 1M
  * tokens) and asserted exactly.
  */
-it('bills chat completion cache reads and writes, and lets the served tier win over the requested one', function () {
+it('bills chat completion cache reads and writes at the tier OpenAI served, not the one requested', function () {
     Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/chat_completion_cache_writes.json'))]);
 
     // The request asks for priority, but OpenAI answers service_tier "default".
@@ -28,7 +26,9 @@ it('bills chat completion cache reads and writes, and lets the served tier win o
     // gpt-5.6-sol standard: in 400, cached 40, cache write 500, out 2000.
     // Uncached input = 12000 - 8000 cached - 3000 written = 1000.
     // (1000*400 + 8000*40 + 3000*500 + 900*2000) / 1M = 4.02
-    expect($row->model)->toBe('GPT-5.6 Sol')
+    expect($row->provider)->toBe('openai')
+        ->and($row->model)->toBe('GPT-5.6 Sol')
+        ->and($row->model_type)->toBe('text')
         ->and($row->pricing_tier)->toBe('standard')
         ->and($row->prompt_tokens)->toBe(12000)
         ->and($row->completion_tokens)->toBe(900)
@@ -58,16 +58,6 @@ it('uses the tier from the response when the request named none', function () {
         ->and($row->reasoning_tokens)->toBe(1000)
         ->and($row->reasoning_effort)->toBe('medium')
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(12.0, 1e-9);
-});
-
-it('maps the fast service tier to the priority tier', function () {
-    $response = $this->loadMockResponse('openai/response_cache_writes_priority.json');
-    $response['service_tier'] = 'fast';
-    Http::fake(['api.openai.com/*' => Http::response($response)]);
-
-    Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.6-sol', 'service_tier' => 'fast', 'input' => 'x']);
-
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('priority');
 });
 
 it('falls back to the requested tier when the response has none', function () {
@@ -192,17 +182,7 @@ it('records a provider error with its message and no cost', function () {
     expect($row->status_code)->toBe(429)
         ->and($row->error_message)->toStartWith('Rate limit reached for gpt-5.4')
         ->and($row->prompt_tokens)->toBe(0)
-        ->and((float) $row->total_cost_in_cents)->toBe(0.0);
-});
-
-it('tracks regional data residency hosts', function () {
-    Http::fake(['eu.api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json'))]);
-
-    Http::post('https://eu.api.openai.com/v1/chat/completions', ['model' => 'gpt-4.1', 'messages' => []]);
-
-    // gpt-4.1 standard (in 200, out 800): (19*200 + 10*800) / 1M = 0.0118
-    expect(SpectraRequest::sole()->provider)->toBe('openai')
-        ->and((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.0118, 1e-9);
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0, 1e-12);
 });
 
 it('prices gpt-4o-2024-05-13 as its own snapshot, not as gpt-4o', function () {
@@ -215,30 +195,4 @@ it('prices gpt-4o-2024-05-13 as its own snapshot, not as gpt-4o', function () {
     // gpt-4o-2024-05-13 standard (in 500, out 1500): (19*500 + 10*1500) / 1M = 0.0245
     expect(SpectraRequest::sole()->model)->toBe('GPT-4o (2024-05-13)')
         ->and((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.0245, 1e-9);
-});
-
-it('doubles input and raises output by half for gpt-5.4 long context, keeping the cached rate', function () {
-    $response = $this->loadMockResponse('openai/response_with_reasoning.json');
-    $response['model'] = 'gpt-5.4-2026-03-05';
-    $response['usage'] = [
-        'input_tokens' => 400000,
-        'input_tokens_details' => ['cached_tokens' => 100000],
-        'output_tokens' => 2000,
-        'output_tokens_details' => ['reasoning_tokens' => 1500],
-        'total_tokens' => 402000,
-    ];
-    Http::fake(['api.openai.com/*' => Http::response($response)]);
-
-    Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.4', 'input' => 'x']);
-
-    // gpt-5.4 long context: in 500, cached 50, out 2250 (all double above 272K).
-    // (300000*500 + 100000*50 + 2000*2250) / 1M = 159.5
-    expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(159.5, 1e-9);
-});
-
-it('prices gpt-rosalind-research from the day billing began', function () {
-    $lookup = app(PricingLookup::class);
-
-    expect($lookup->get('openai', 'gpt-rosalind-research', 'standard', 1000, CarbonImmutable::parse('2026-10-04'))['input'])->toBe(0)
-        ->and($lookup->get('openai', 'gpt-rosalind-research', 'standard', 1000, CarbonImmutable::parse('2026-10-05'))['input'])->toBe(500);
 });

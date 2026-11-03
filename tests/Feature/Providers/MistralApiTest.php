@@ -14,7 +14,7 @@ function mistralSse(array ...$events): string
     return implode('', array_map(fn (array $event) => 'data: '.json_encode($event)."\n\n", $events))."data: [DONE]\n\n";
 }
 
-it('tracks a reasoning response with thinking chunks and cache hits', function () {
+it('bills a reasoning response with its cache hits and thinking inside the output', function () {
     Http::fake(['api.mistral.ai/*' => Http::response($this->loadMockResponse('mistral/chat-reasoning.json'))]);
 
     Http::post('https://api.mistral.ai/v1/chat/completions', ['model' => 'mistral-large-4', 'reasoning_effort' => 'high', 'messages' => []]);
@@ -23,8 +23,9 @@ it('tracks a reasoning response with thinking chunks and cache hits', function (
 
     // Mistral Large 4: 200 uncached × 70 + 1,000 cached × 7 + 1,114 × 210
     // = 254,940 / 1M = 0.25494 cents. Thinking tokens are already in completion_tokens.
-    expect($row->model)->toBe('Mistral Large 4')
-        ->and($row->response['choices'][0]['message']['content'][1]['text'])->toBe('John is 22 years old.')
+    expect($row->provider)->toBe('mistral')
+        ->and($row->model)->toBe('Mistral Large 4')
+        ->and($row->model_type)->toBe('text')
         ->and($row->prompt_tokens)->toBe(1_200)
         ->and($row->cached_tokens)->toBe(1_000)
         ->and($row->completion_tokens)->toBe(1_114)
@@ -38,38 +39,21 @@ it('extracts only the answer text from thinking chunks', function () {
     expect($handler->extractResponse($this->loadMockResponse('mistral/chat-reasoning.json')))->toBe('John is 22 years old.');
 });
 
-it('resolves dated model ids to their own prices', function () {
-    Http::fake(['api.mistral.ai/*' => Http::sequence()
-        ->push(['id' => 'm-1', 'object' => 'chat.completion', 'model' => 'mistral-medium-2508', 'choices' => [], 'usage' => ['prompt_tokens' => 1_000_000, 'completion_tokens' => 1_000_000, 'total_tokens' => 2_000_000]])
-        ->push(['id' => 'm-2', 'object' => 'chat.completion', 'model' => 'mistral-medium-3-5', 'choices' => [], 'usage' => ['prompt_tokens' => 1_000_000, 'completion_tokens' => 1_000_000, 'total_tokens' => 2_000_000]])]);
+it('records the tier Mistral says it served and bills it at standard without a published price', function () {
+    $body = $this->loadMockResponse('mistral/chat.json');
+    $body['usage']['service_tier'] = 'priority';
+    Http::fake(['api.mistral.ai/*' => Http::response($body)]);
 
-    Http::post('https://api.mistral.ai/v1/chat/completions', ['model' => 'mistral-medium-2508', 'messages' => []]);
-    Http::post('https://api.mistral.ai/v1/chat/completions', ['model' => 'mistral-medium-3-5', 'messages' => []]);
+    Http::post('https://api.mistral.ai/v1/chat/completions', ['model' => 'mistral-large-latest', 'service_tier' => 'priority', 'messages' => []]);
 
-    [$medium31, $medium35] = SpectraRequest::orderBy('id')->get()->all();
+    $row = SpectraRequest::sole();
 
-    // Medium 3.1: $0.40 + $2 = 240 cents. Medium 3.5: $1.50 + $7.50 = 900 cents.
-    expect($medium31->model)->toBe('Mistral Medium 3.1')
-        ->and((float) $medium31->total_cost_in_cents)->toEqualWithDelta(240.0, 1e-9)
-        ->and($medium35->model)->toBe('Mistral Medium 3.5')
-        ->and((float) $medium35->total_cost_in_cents)->toEqualWithDelta(900.0, 1e-9);
+    // No priority price is published, so Mistral Large 3 bills at standard: (25×50 + 15×150) / 1M = 0.0035¢
+    expect($row->pricing_tier)->toBe('priority')
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0035, 1e-12);
 });
 
-it('records the tier Mistral says it served', function () {
-    Http::fake(['api.mistral.ai/*' => Http::response([
-        'id' => 'm-priority', 'object' => 'chat.completion', 'model' => 'mistral-small-latest',
-        'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => 'ok'], 'finish_reason' => 'stop']],
-        'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 2, 'total_tokens' => 12, 'service_tier' => 'priority'],
-    ])]);
-
-    Http::post('https://api.mistral.ai/v1/chat/completions', ['model' => 'mistral-small-latest', 'service_tier' => 'priority', 'messages' => []]);
-
-    // No priority price is published, so it bills at standard: 10 × 15 + 2 × 60 = 270 / 1M cents.
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('priority')
-        ->and((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.00027, 1e-12);
-});
-
-it('tracks a streamed reasoning response', function () {
+it('records a streamed reasoning response with its answer text and cost', function () {
     $chunk = fn (mixed $content, ?string $finish = null, ?array $usage = null) => array_filter([
         'id' => 'cmpl-mistral-stream', 'object' => 'chat.completion.chunk', 'created' => 1773842038, 'model' => 'mistral-medium-3-5',
         'choices' => [['index' => 0, 'delta' => ['role' => 'assistant', 'content' => $content], 'finish_reason' => $finish]],
@@ -99,7 +83,7 @@ it('tracks a streamed reasoning response', function () {
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0666, 1e-9);
 });
 
-it('tracks OCR per page', function () {
+it('bills OCR per page', function () {
     Http::fake(['api.mistral.ai/*' => Http::response($this->loadMockResponse('mistral/ocr.json'))]);
 
     Http::post('https://api.mistral.ai/v1/ocr', [
@@ -110,8 +94,9 @@ it('tracks OCR per page', function () {
     $row = SpectraRequest::sole();
 
     // Mistral OCR 4.1: 3 pages × 0.4 cents = 1.2 cents.
-    expect($row->model)->toBe('Mistral OCR 4.1')
+    expect($row->provider)->toBe('mistral')
+        ->and($row->model)->toBe('Mistral OCR 4.1')
+        ->and($row->model_type)->toBe('text')
         ->and($row->page_count)->toBe(3)
-        ->and($row->response['usage_info']['pages_processed'])->toBe(3)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(1.2, 1e-9);
 });

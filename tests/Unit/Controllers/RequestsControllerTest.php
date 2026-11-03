@@ -11,7 +11,7 @@ use Spectra\Models\SpectraRequest;
 /**
  * The requests list endpoint: date range, sort, search and trace id filters.
  */
-it('filters requests by custom date range', function () {
+it('lists only the requests inside a custom date range', function () {
     $this->travelTo('2026-02-12 12:00:00');
 
     SpectraRequest::factory()
@@ -41,7 +41,7 @@ function callRequests(array $query): array
     return app()->call([app(RequestsController::class), '__invoke'], ['request' => new Request(['period' => 'all', ...$query])])->toArray();
 }
 
-it('sorts requests by token usage', function () {
+it('sorts requests by total tokens', function () {
     SpectraRequest::factory()->create(['model' => 'small', 'prompt_tokens' => 5, 'completion_tokens' => 5]);
     SpectraRequest::factory()->create(['model' => 'large', 'prompt_tokens' => 500, 'completion_tokens' => 5]);
 
@@ -50,7 +50,7 @@ it('sorts requests by token usage', function () {
     expect(collect($json['data'])->pluck('model')->all())->toBe(['large', 'small']);
 });
 
-it('finds a request by its id and searches models with any other text', function () {
+it('finds a request by its exact id or by part of its model', function () {
     $byId = SpectraRequest::factory()->create(['model' => 'gpt-4o']);
     SpectraRequest::factory()->create(['model' => 'claude-x']);
 
@@ -58,7 +58,7 @@ it('finds a request by its id and searches models with any other text', function
         ->and(collect(callRequests(['search' => 'claude'])['data'])->pluck('model')->all())->toBe(['claude-x']);
 });
 
-it('filters requests by a custom trace id', function () {
+it('lists only the requests of the given trace id', function () {
     SpectraRequest::factory()->create(['model' => 'in-trace', 'trace_id' => 'checkout-flow']);
     SpectraRequest::factory()->create(['model' => 'elsewhere']);
 

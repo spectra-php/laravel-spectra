@@ -131,7 +131,7 @@ it('does not truncate fractional-cent costs in usage stats', function () {
     expect($stats->totalCostInCents)->toEqualWithDelta(0.4567, 0.0001);
 });
 
-it('groups monthly costs without EXTRACT so SQLite works', function () {
+it('groups costs into one row per calendar month on SQLite', function () {
     SpectraRequest::factory()->create([
         'status_code' => 200,
         'total_cost_in_cents' => 150,

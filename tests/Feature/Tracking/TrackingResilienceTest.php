@@ -137,7 +137,7 @@ describe('ResponseProcessor', function () {
         config()->set('spectra.storage.media.enabled', true);
         config()->set('spectra.storage.media.disk', 'spectra-test');
         Storage::fake('spectra-test');
-        $body = json_decode((string) file_get_contents(__DIR__.'/../../responses/google/generate-content-image.json'), true);
+        $body = $this->loadMockResponse('google/generate-content-image.json');
         $body['modelVersion'] = ['gemini-3.1-flash-image'];
         $body['candidates'][0]['content']['parts'][] = 'not a part';
         $body['candidates'][0]['content']['parts'][] = ['inlineData' => ['mimeType' => ['image/png'], 'data' => 42]];

@@ -21,7 +21,8 @@ it('bills text to speech per character of the request text', function () {
     $record = SpectraRequest::sole();
 
     // eleven_flash_v2_5: $0.04 per 1,000 characters → 2,500 × 4000 / 1M = 10 cents
-    expect($record->model)->toBe('Eleven Flash v2.5')
+    expect($record->provider)->toBe('elevenlabs')
+        ->and($record->model)->toBe('Eleven Flash v2.5')
         ->and($record->model_type)->toBe('tts')
         ->and($record->input_characters)->toBe(2500)
         ->and($record->total_cost_in_cents)->toEqualWithDelta(10.0, 0.000001);
@@ -103,17 +104,26 @@ it('does not record a speech to text webhook receipt', function () {
     expect(SpectraRequest::count())->toBe(0);
 });
 
-it('bills sound effects and music per minute of requested audio', function () {
+it('bills sound effects per minute of requested audio', function () {
     Http::fake(['api.elevenlabs.io/*' => Http::response('fake-mp3-bytes', 200, ['Content-Type' => 'audio/mpeg'])]);
 
     Http::post('https://api.elevenlabs.io/v1/sound-generation', ['text' => 'Thunder rolling in', 'duration_seconds' => 5]);
+
+    $record = SpectraRequest::sole();
+
+    // Sound effects: $0.12 per minute → 5 s = 1 cent.
+    expect($record->model)->toBe('Eleven Sound Effects v2')
+        ->and($record->total_cost_in_cents)->toEqualWithDelta(1.0, 0.000001);
+});
+
+it('bills music per minute of requested audio', function () {
+    Http::fake(['api.elevenlabs.io/*' => Http::response('fake-mp3-bytes', 200, ['Content-Type' => 'audio/mpeg'])]);
+
     Http::post('https://api.elevenlabs.io/v1/music', ['prompt' => 'Calm piano', 'music_length_ms' => 30000]);
 
-    [$sound, $music] = SpectraRequest::orderBy('created_at')->orderBy('id')->get()->all();
+    $record = SpectraRequest::sole();
 
-    // Sound effects: $0.12 per minute → 5 s = 1 cent. Music: $0.15 per minute → 30 s = 7.5 cents.
-    expect($sound->model)->toBe('Eleven Sound Effects v2')
-        ->and($sound->total_cost_in_cents)->toEqualWithDelta(1.0, 0.000001)
-        ->and($music->model)->toBe('Eleven Music v1')
-        ->and($music->total_cost_in_cents)->toEqualWithDelta(7.5, 0.000001);
+    // Music: $0.15 per minute → 30 s = 7.5 cents.
+    expect($record->model)->toBe('Eleven Music v1')
+        ->and($record->total_cost_in_cents)->toEqualWithDelta(7.5, 0.000001);
 });

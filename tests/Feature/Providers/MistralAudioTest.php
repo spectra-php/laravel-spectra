@@ -9,7 +9,7 @@ use Spectra\Spectra;
  * Mistral Voxtral audio recorded by hand: transcription is billed per
  * minute, speech per character.
  */
-it('records mistral voxtral transcription with per-minute cost', function () {
+it('bills a voxtral transcription per minute of audio', function () {
     $manager = app(Spectra::class);
 
     $context = $manager->startRequest('mistral', 'voxtral-mini-latest', [
@@ -19,17 +19,17 @@ it('records mistral voxtral transcription with per-minute cost', function () {
 
     $manager->recordSuccess($context, $this->loadMockResponse('mistral/transcription.json'));
 
-    $record = SpectraRequest::latest()->first();
+    $record = SpectraRequest::sole();
 
     // voxtral-mini-latest: 0.3 cents/minute × (120s / 60) = 0.6 cents
-    expect($record)->not->toBeNull()
-        ->and($record->provider)->toBe('mistral')
+    expect($record->provider)->toBe('mistral')
+        ->and($record->model)->toBe('Voxtral Mini Transcribe')
         ->and($record->model_type)->toBe('stt')
         ->and((float) $record->duration_seconds)->toBe(120.0)
         ->and((float) $record->total_cost_in_cents)->toEqualWithDelta(0.6, 0.001);
 });
 
-it('records mistral voxtral tts with per-character cost', function () {
+it('bills voxtral speech per input character without storing the audio', function () {
     $manager = app(Spectra::class);
 
     $input = str_repeat('a', 1000);
@@ -43,11 +43,11 @@ it('records mistral voxtral tts with per-character cost', function () {
         'audio_data' => base64_encode(str_repeat('x', 2000)),
     ]);
 
-    $record = SpectraRequest::latest()->first();
+    $record = SpectraRequest::sole();
 
     // voxtral-mini-tts-latest: 1600 cents per 1M chars × 1000 chars = 1.6 cents
-    expect($record)->not->toBeNull()
-        ->and($record->provider)->toBe('mistral')
+    expect($record->provider)->toBe('mistral')
+        ->and($record->model)->toBe('Voxtral Mini TTS')
         ->and($record->model_type)->toBe('tts')
         ->and($record->input_characters)->toBe(1000)
         ->and((float) $record->total_cost_in_cents)->toEqualWithDelta(1.6, 0.001)

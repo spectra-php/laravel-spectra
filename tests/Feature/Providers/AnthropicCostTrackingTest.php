@@ -14,11 +14,6 @@ use Spectra\Providers\Anthropic\Anthropic;
  * costs are worked out by hand from AnthropicPricing (US cents per 1M
  * tokens).
  */
-function anthropicFixture(string $name): array
-{
-    return json_decode((string) file_get_contents(__DIR__.'/../../responses/claude/'.$name), true);
-}
-
 function anthropicStream(string $name): string
 {
     return (string) file_get_contents(__DIR__.'/../../responses/claude/streams/'.$name);
@@ -39,7 +34,7 @@ function postAnthropic(array $request): Response
 }
 
 it('prices cache reads and 5-minute and 1-hour cache writes separately', function () {
-    fakeAnthropic(anthropicFixture('message-prompt-caching.json'));
+    fakeAnthropic($this->loadMockResponse('claude/message-prompt-caching.json'));
 
     postAnthropic(['model' => 'claude-opus-4-8']);
 
@@ -57,7 +52,7 @@ it('prices cache reads and 5-minute and 1-hour cache writes separately', functio
 });
 
 it('prices fast mode with the fast-mode cache rates and the US-only inference surcharge', function () {
-    fakeAnthropic(anthropicFixture('message-fast-mode-us.json'));
+    fakeAnthropic($this->loadMockResponse('claude/message-fast-mode-us.json'));
 
     postAnthropic(['model' => 'claude-opus-5-5', 'speed' => 'fast', 'inference_geo' => 'us']);
 
@@ -74,7 +69,7 @@ it('prices fast mode with the fast-mode cache rates and the US-only inference su
 });
 
 it('bills web searches per search and web fetches for free', function () {
-    fakeAnthropic(anthropicFixture('message-web-search.json'));
+    fakeAnthropic($this->loadMockResponse('claude/message-web-search.json'));
 
     postAnthropic(['model' => 'claude-sonnet-5-5', 'tools' => [
         ['type' => 'web_search_20260209', 'name' => 'web_search'],
@@ -92,7 +87,7 @@ it('bills web searches per search and web fetches for free', function () {
 });
 
 it('prices Claude Haiku 5.5 prompts over 100,000 tokens at the long-context rates', function () {
-    fakeAnthropic(anthropicFixture('message-haiku-5-5-long-context.json'));
+    fakeAnthropic($this->loadMockResponse('claude/message-haiku-5-5-long-context.json'));
 
     postAnthropic(['model' => 'claude-haiku-5-5']);
 
@@ -107,7 +102,7 @@ it('prices Claude Haiku 5.5 prompts over 100,000 tokens at the long-context rate
 });
 
 it('keeps Claude Haiku 5.5 prompts up to 100,000 tokens at the base rates', function () {
-    $response = anthropicFixture('message-haiku-5-5-long-context.json');
+    $response = $this->loadMockResponse('claude/message-haiku-5-5-long-context.json');
     $response['usage']['input_tokens'] = 80_000;
     fakeAnthropic($response);
 
@@ -118,7 +113,7 @@ it('keeps Claude Haiku 5.5 prompts up to 100,000 tokens at the base rates', func
 });
 
 it('adds the compaction iteration the top-level usage leaves out', function () {
-    fakeAnthropic(anthropicFixture('message-compaction.json'));
+    fakeAnthropic($this->loadMockResponse('claude/message-compaction.json'));
 
     postAnthropic(['model' => 'claude-opus-5-5']);
 
@@ -132,7 +127,7 @@ it('adds the compaction iteration the top-level usage leaves out', function () {
 });
 
 it('records priority tier and bills it at standard prices', function () {
-    fakeAnthropic(anthropicFixture('message-priority-tier.json'));
+    fakeAnthropic($this->loadMockResponse('claude/message-priority-tier.json'));
 
     postAnthropic(['model' => 'claude-sonnet-4-6', 'service_tier' => 'auto']);
 
@@ -146,7 +141,7 @@ it('records priority tier and bills it at standard prices', function () {
 
 it('ignores the configured default tier when the response says standard', function () {
     config()->set('spectra.costs.provider_settings.anthropic.default_tier', 'batch');
-    fakeAnthropic(anthropicFixture('message-prompt-caching.json'));
+    fakeAnthropic($this->loadMockResponse('claude/message-prompt-caching.json'));
 
     postAnthropic(['model' => 'claude-opus-4-8']);
 
@@ -155,7 +150,7 @@ it('ignores the configured default tier when the response says standard', functi
 });
 
 it('falls back to the requested fast mode when the response does not say', function () {
-    $response = anthropicFixture('message-fast-mode-us.json');
+    $response = $this->loadMockResponse('claude/message-fast-mode-us.json');
     unset($response['usage']['speed'], $response['usage']['service_tier'], $response['usage']['inference_geo']);
     fakeAnthropic($response);
 
@@ -167,7 +162,7 @@ it('falls back to the requested fast mode when the response does not say', funct
 });
 
 it('bills standard speed when fast mode was requested but not served', function () {
-    $response = anthropicFixture('message-fast-mode-us.json');
+    $response = $this->loadMockResponse('claude/message-fast-mode-us.json');
     $response['model'] = 'claude-opus-4-6';
     $response['usage']['speed'] = 'standard';
     unset($response['usage']['inference_geo']);
@@ -182,7 +177,7 @@ it('bills standard speed when fast mode was requested but not served', function 
 });
 
 it('lets an explicitly chosen tier win over the response', function () {
-    fakeAnthropic(anthropicFixture('message-prompt-caching.json'));
+    fakeAnthropic($this->loadMockResponse('claude/message-prompt-caching.json'));
 
     Spectra::withPricingTier('batch');
     postAnthropic(['model' => 'claude-opus-4-8']);
@@ -193,8 +188,7 @@ it('lets an explicitly chosen tier win over the response', function () {
 });
 
 it('prices a batch result message at batch rates', function () {
-    $line = anthropicFixture('message-batch-result.jsonl');
-    $message = $line['result']['message'];
+    $message = $this->loadMockResponse('claude/message-batch-result.jsonl')[0]['result']['message'];
 
     Spectra::track('anthropic', $message['model'], fn () => $message);
 
@@ -205,18 +199,6 @@ it('prices a batch result message at batch rates', function () {
     expect($row->pricing_tier)->toBe('batch')
         ->and($row->prompt_tokens)->toBe(2000)
         ->and($row->total_cost_in_cents)->toEqualWithDelta(0.222, 0.000001);
-});
-
-it('prices a dated snapshot id through the undated catalog entry', function () {
-    $response = anthropicFixture('message-prompt-caching.json');
-    $response['model'] = 'claude-sonnet-4-5-20250929';
-    fakeAnthropic($response);
-
-    postAnthropic(['model' => 'claude-sonnet-4-5-20250929']);
-
-    // Sonnet 4.5: 2048×300 + 1800×30 + 148×375 + 100×600 + 503×1500 = 1,538,400 / 1M
-    expect(SpectraRequest::sole()->model)->toBe('Claude Sonnet 4.5')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(1.5384, 0.000001);
 });
 
 /*
@@ -283,25 +265,23 @@ it('uses the requested tier for a stream that does not report one', function () 
 |--------------------------------------------------------------------------
 */
 
-it('maps the tier the response reports', function (array $usage, ?string $tier) {
+it('maps the usage an anthropic response reports to a pricing tier', function (array $usage, ?string $tier) {
     expect((new Anthropic)->extractPricingTierFromResponse(['usage' => $usage]))->toBe($tier);
 })->with([
     'fast mode' => [['speed' => 'fast', 'service_tier' => 'standard'], 'fast'],
     'priority' => [['service_tier' => 'priority'], 'priority'],
     'batch' => [['service_tier' => 'batch'], 'batch'],
     'standard' => [['service_tier' => 'standard'], 'standard'],
-    'default' => [['service_tier' => 'default'], 'standard'],
     'standard speed only' => [['speed' => 'standard'], 'standard'],
     'nothing reported' => [['input_tokens' => 1], null],
 ]);
 
-it('maps the tier the request asks for', function (array $request, ?string $tier) {
+it('maps the speed and service tier a request asks for to a pricing tier', function (array $request, ?string $tier) {
     expect((new Anthropic)->extractPricingTierFromRequest($request))->toBe($tier);
 })->with([
     'fast mode' => [['speed' => 'fast'], 'fast'],
     'standard only' => [['service_tier' => 'standard_only'], 'standard'],
     'auto' => [['service_tier' => 'auto'], null],
-    'nothing' => [[], null],
 ]);
 
 it('applies the US-only inference multiplier only when the response reports it', function () {

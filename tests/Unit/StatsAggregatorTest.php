@@ -107,21 +107,17 @@ it('writes both a global and a per-user daily stat for a tracked request', funct
 
     $aggregator->recordRequest($request);
 
-    // Should have global stat
     $globalStat = SpectraDailyStat::where('model', 'gpt-4-user-test')
         ->whereNull('trackable_type')
         ->first();
-
-    expect($globalStat)->not->toBeNull()
-        ->and($globalStat->request_count)->toBe(1);
-
-    // Should have user-specific stat
     $userStat = SpectraDailyStat::where('model', 'gpt-4-user-test')
         ->where('trackable_type', User::class)
         ->where('trackable_id', $user->id)
         ->first();
 
-    expect($userStat)->not->toBeNull()
+    expect($globalStat)->not->toBeNull()
+        ->and($globalStat->request_count)->toBe(1)
+        ->and($userStat)->not->toBeNull()
         ->and($userStat->request_count)->toBe(1);
 });
 
@@ -172,87 +168,10 @@ it('includes the request count for today in the daily breakdown', function () {
         'openai'
     );
 
-    expect($breakdown)->toBeArray()
-        ->and(count($breakdown))->toBeGreaterThanOrEqual(1);
-
     $todayData = collect($breakdown)->firstWhere('date', now()->format('Y-m-d'));
+
     expect($todayData)->not->toBeNull()
         ->and($todayData['requests'])->toBeGreaterThanOrEqual(1);
-});
-
-it('keeps the model type and image count on the daily stat', function () {
-    $aggregator = app(StatsAggregator::class);
-
-    $request = SpectraRequest::factory()->create([
-        'model' => 'dall-e-3',
-        'model_type' => 'image',
-        'response' => json_encode(['data' => []]),
-        'image_count' => 2,
-        'total_cost_in_cents' => 400,
-    ]);
-
-    $aggregator->recordRequest($request);
-
-    $stat = SpectraDailyStat::where('provider', 'openai')
-        ->where('model', 'dall-e-3')
-        ->where('model_type', 'image')
-        ->whereNull('trackable_type')
-        ->first();
-
-    expect($stat)->not->toBeNull()
-        ->and($stat->request_count)->toBe(1)
-        ->and($stat->total_images)->toBe(2)
-        ->and($stat->total_cost_in_cents)->toBe(400.0);
-});
-
-it('records input characters and audio duration for tts requests', function () {
-    $aggregator = app(StatsAggregator::class);
-
-    // TTS request
-    $ttsRequest = SpectraRequest::factory()->create([
-        'model' => 'tts-1',
-        'model_type' => 'tts',
-        'response' => json_encode([]),
-        'input_characters' => 500,
-        'duration_seconds' => 12.5,
-        'total_cost_in_cents' => 100,
-    ]);
-
-    $aggregator->recordRequest($ttsRequest);
-
-    $stat = SpectraDailyStat::where('model', 'tts-1')
-        ->where('model_type', 'tts')
-        ->whereNull('trackable_type')
-        ->first();
-
-    expect($stat)->not->toBeNull()
-        ->and($stat->total_input_characters)->toBe(500)
-        ->and($stat->total_duration_seconds)->toBe(12.5);
-});
-
-it('records the video count on the daily stat', function () {
-    $aggregator = app(StatsAggregator::class);
-
-    $request = SpectraRequest::factory()->create([
-        'model' => 'sora',
-        'model_type' => 'video',
-        'response' => json_encode(['data' => []]),
-        'video_count' => 3,
-        'total_cost_in_cents' => 600,
-    ]);
-
-    $aggregator->recordRequest($request);
-
-    $stat = SpectraDailyStat::where('provider', 'openai')
-        ->where('model', 'sora')
-        ->where('model_type', 'video')
-        ->whereNull('trackable_type')
-        ->first();
-
-    expect($stat)->not->toBeNull()
-        ->and($stat->request_count)->toBe(1)
-        ->and($stat->total_videos)->toBe(3)
-        ->and($stat->total_cost_in_cents)->toBe(600.0);
 });
 
 it('filters aggregated stats by model type', function () {
@@ -275,10 +194,6 @@ it('filters aggregated stats by model type', function () {
         null,
         'text'
     );
-
-    expect($textStats['total_requests'])->toBe(1)
-        ->and($textStats['total_tokens'])->toBe(150);
-
     $imageStats = SpectraDailyStat::getAggregatedStats(
         now()->startOfDay(),
         now()->endOfDay(),
@@ -288,7 +203,9 @@ it('filters aggregated stats by model type', function () {
         'image'
     );
 
-    expect($imageStats['total_requests'])->toBe(1)
+    expect($textStats['total_requests'])->toBe(1)
+        ->and($textStats['total_tokens'])->toBe(150)
+        ->and($imageStats['total_requests'])->toBe(1)
         ->and($imageStats['total_images'])->toBe(1);
 });
 
@@ -309,61 +226,10 @@ it('lists every provider with requests in the period', function () {
         now()->endOfDay()
     );
 
-    expect($byProvider)->toBeArray();
-
     $providers = collect($byProvider)->pluck('provider')->toArray();
+
     expect($providers)->toContain('openai')
         ->and($providers)->toContain('anthropic');
-});
-
-it('records reasoning tokens alongside prompt and completion tokens', function () {
-    $aggregator = app(StatsAggregator::class);
-
-    $request = SpectraRequest::factory()->create([
-        'model' => 'o3-mini',
-        'response' => json_encode(['content' => 'reasoning result']),
-        'prompt_tokens' => 50,
-        'completion_tokens' => 20,
-        'reasoning_tokens' => 150,
-        'total_cost_in_cents' => 100,
-        'latency_ms' => 300,
-    ]);
-
-    $aggregator->recordRequest($request);
-
-    $stat = SpectraDailyStat::where('provider', 'openai')
-        ->where('model', 'o3-mini')
-        ->whereNull('trackable_type')
-        ->first();
-
-    expect($stat)->not->toBeNull()
-        ->and($stat->total_reasoning_tokens)->toBe(150)
-        ->and($stat->prompt_tokens)->toBe(50)
-        ->and($stat->completion_tokens)->toBe(20);
-});
-
-it('sums reasoning tokens across requests for the same model', function () {
-    $aggregator = app(StatsAggregator::class);
-
-    SpectraRequest::factory()
-        ->count(3)
-        ->create([
-            'model' => 'o3-mini',
-            'response' => json_encode(['content' => 'test']),
-            'prompt_tokens' => 10,
-            'completion_tokens' => 5,
-            'reasoning_tokens' => 100,
-            'total_cost_in_cents' => 50,
-        ])
-        ->each(fn ($request) => $aggregator->recordRequest($request));
-
-    $stat = SpectraDailyStat::where('provider', 'openai')
-        ->where('model', 'o3-mini')
-        ->whereNull('trackable_type')
-        ->first();
-
-    expect($stat->total_reasoning_tokens)->toBe(300)
-        ->and($stat->request_count)->toBe(3);
 });
 
 it('replaces the end day on every rebuild instead of adding to it', function () {

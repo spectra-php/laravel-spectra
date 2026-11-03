@@ -112,14 +112,16 @@ it('switches to long-context prices above the threshold', function () {
     $short = $calculator->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 200_000), at: $at);
     $long = $calculator->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 200_001), at: $at);
 
-    expect($short['prompt_cost'])->toBe(20.0)
-        ->and($long['prompt_cost'])->toBe(200_001 * 200 / 1_000_000);
+    // 200K × 100 / 1M at the regular price; 200,001 × 200 / 1M once above the threshold
+    expect($short['prompt_cost'])->toEqualWithDelta(20.0, 1e-9)
+        ->and($long['prompt_cost'])->toEqualWithDelta(40.0002, 1e-9);
 });
 
 it('applies dated prices from their start date', function () {
     $calculator = app(CostCalculator::class);
     $tokens = new TokenMetrics(promptTokens: 100_000);
 
+    // 100K × 100 / 1M before 2027-01-01, 100K × 150 / 1M from then on
     expect($calculator->forTokens('acme', 'acme-1', $tokens, at: Carbon::parse('2026-12-31'))['prompt_cost'])->toEqualWithDelta(10.0, 1e-9)
         ->and($calculator->forTokens('acme', 'acme-1', $tokens, at: Carbon::parse('2027-01-01'))['prompt_cost'])->toEqualWithDelta(15.0, 1e-9);
 });
@@ -129,6 +131,7 @@ it('falls back to standard prices for a tier the model lacks', function () {
     $tokens = new TokenMetrics(promptTokens: 100_000);
     $at = Carbon::parse('2026-10-15');
 
+    // 100K × 50 (batch) / 1M; priority isn't offered, so 100K × 100 (standard) / 1M
     expect($calculator->forTokens('acme', 'acme-1', $tokens, 'batch', $at)['prompt_cost'])->toEqualWithDelta(5.0, 1e-9)
         ->and($calculator->forTokens('acme', 'acme-1', $tokens, 'priority', $at)['prompt_cost'])->toEqualWithDelta(10.0, 1e-9);
 });
@@ -148,7 +151,10 @@ it('prefers an explicit dated catalog entry over the date-stripped one', functio
 });
 
 it('prices page-billed models per page', function () {
-    expect(app(CostCalculator::class)->calculateByPages('acme', 'acme-ocr', 10)['total_cost_in_cents'])->toBe(4.0);
+    $cost = app(CostCalculator::class)->calculateByPages('acme', 'acme-ocr', 10);
+
+    // 0.4 cents/page × 10 pages
+    expect($cost['total_cost_in_cents'])->toEqualWithDelta(4.0, 1e-9);
 });
 
 it('converts catalog prices into the reporting currency', function () {
@@ -157,10 +163,12 @@ it('converts catalog prices into the reporting currency', function () {
 
     $cost = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Carbon::parse('2026-10-15'));
 
+    // 100K × 100 / 1M = 10 EUR cents × 1.5
     expect($cost['prompt_cost'])->toEqualWithDelta(15.0, 1e-9);
 });
 
 it('counts a missing exchange rate as 1:1 and warns once', function () {
+    $this->travelTo('2026-10-15');
     useAcmePricing('EUR');
     Log::spy();
     $calculator = new CostCalculator;
@@ -168,6 +176,7 @@ it('counts a missing exchange rate as 1:1 and warns once', function () {
     $calculator->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000));
     $cost = $calculator->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000));
 
+    // 100K × 100 / 1M EUR cents, counted 1:1
     expect($cost['prompt_cost'])->toEqualWithDelta(10.0, 1e-9);
     Log::shouldHaveReceived('warning')->once();
 });
@@ -270,7 +279,7 @@ it('bills a pricing unit the enum does not know as tokens', function () {
     expect($cost['total_cost_in_cents'])->toEqualWithDelta(10.0, 1e-9);
 });
 
-it('round-trips usage arrays', function () {
+it('reads provider usage keys and round-trips its own usage array', function () {
     $tokens = TokenMetrics::fromArray(['input_tokens' => 10, 'output_tokens' => 5, 'cache_write_tokens' => 3, 'cached_tokens' => 2]);
 
     expect($tokens->promptTokens)->toBe(10)

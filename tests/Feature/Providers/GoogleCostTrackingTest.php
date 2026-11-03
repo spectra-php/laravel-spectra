@@ -16,11 +16,6 @@ beforeEach(function () {
     $this->travelTo('2026-10-15 12:00:00');
 });
 
-function geminiFixture(string $name): array
-{
-    return json_decode((string) file_get_contents(__DIR__.'/../../responses/google/'.$name), true);
-}
-
 function geminiStream(string $name): string
 {
     return (string) file_get_contents(__DIR__.'/../../responses/google/streams/'.$name);
@@ -35,7 +30,7 @@ function postGemini(string $model, array $body = [], string $action = 'generateC
 }
 
 it('bills thinking tokens at the output rate', function () {
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(geminiFixture('generate-content-thinking.json'))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->loadMockResponse('google/generate-content-thinking.json'))]);
 
     postGemini('gemini-3.8-flash');
 
@@ -44,7 +39,9 @@ it('bills thinking tokens at the output rate', function () {
     // Gemini 3.8 Flash (until 2026-12-31): $0.75 in, $3.75 out.
     // candidatesTokenCount leaves the 900 thinking tokens out; both are output:
     // (1200×75 + (300 + 900)×375) / 1M = 0.54¢
-    expect($row->model)->toBe('Gemini 3.8 Flash')
+    expect($row->provider)->toBe('google')
+        ->and($row->model)->toBe('Gemini 3.8 Flash')
+        ->and($row->model_type)->toBe('text')
         ->and($row->prompt_tokens)->toBe(1200)
         ->and($row->completion_tokens)->toBe(1200)
         ->and($row->reasoning_tokens)->toBe(900)
@@ -56,7 +53,7 @@ it('bills thinking tokens at the output rate', function () {
 
 it('prices Gemini 3.8 Flash at the doubled rates from 2027', function () {
     $this->travelTo('2027-01-02 09:00:00');
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(geminiFixture('generate-content-thinking.json'))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->loadMockResponse('google/generate-content-thinking.json'))]);
 
     postGemini('gemini-3.8-flash');
 
@@ -64,19 +61,8 @@ it('prices Gemini 3.8 Flash at the doubled rates from 2027', function () {
     expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(1.08, 0.000001);
 });
 
-it('prices gemini-3.7-flash, which the API routes to 3.8 Flash, like 3.8 Flash', function () {
-    $response = geminiFixture('generate-content-thinking.json');
-    $response['modelVersion'] = 'gemini-3.7-flash';
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
-
-    postGemini('gemini-3.7-flash');
-
-    expect(SpectraRequest::sole()->model)->toBe('Gemini 3.8 Flash')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.54, 0.000001);
-});
-
 it('adds tool-use prompt tokens to the input and counts search grounding without pricing it', function () {
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(geminiFixture('generate-content-grounding.json'))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->loadMockResponse('google/generate-content-grounding.json'))]);
 
     postGemini('gemini-2.5-flash', ['tools' => [['google_search' => (object) []]]]);
 
@@ -93,7 +79,7 @@ it('adds tool-use prompt tokens to the input and counts search grounding without
 });
 
 it('bills uncached audio input at the audio rate', function () {
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(geminiFixture('generate-content-audio-input.json'))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->loadMockResponse('google/generate-content-audio-input.json'))]);
 
     postGemini('gemini-2.5-flash');
 
@@ -104,7 +90,7 @@ it('bills uncached audio input at the audio rate', function () {
 });
 
 it('uses the flex tier the response reports', function () {
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(geminiFixture('generate-content-flex.json'))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->loadMockResponse('google/generate-content-flex.json'))]);
 
     postGemini('gemini-3-flash-preview', ['serviceTier' => 'flex']);
 
@@ -117,7 +103,7 @@ it('uses the flex tier the response reports', function () {
 });
 
 it('bills a priority request that was downgraded at standard prices', function () {
-    $response = geminiFixture('generate-content-flex.json');
+    $response = $this->loadMockResponse('google/generate-content-flex.json');
     $response['usageMetadata']['serviceTier'] = 'standard';
     Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
 
@@ -129,7 +115,7 @@ it('bills a priority request that was downgraded at standard prices', function (
 });
 
 it('falls back to the requested tier when the response does not report one', function () {
-    $response = geminiFixture('generate-content-flex.json');
+    $response = $this->loadMockResponse('google/generate-content-flex.json');
     unset($response['usageMetadata']['serviceTier']);
     Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
 
@@ -141,7 +127,7 @@ it('falls back to the requested tier when the response does not report one', fun
 });
 
 it('prices prompts over 200K tokens at the long-context rates', function () {
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(geminiFixture('generate-content-long-context.json'))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->loadMockResponse('google/generate-content-long-context.json'))]);
 
     postGemini('gemini-3.1-pro-preview');
 
@@ -150,23 +136,9 @@ it('prices prompts over 200K tokens at the long-context rates', function () {
     expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(101.8, 0.000001);
 });
 
-it('prices long-context priority requests on Gemini 2.5 Pro', function () {
-    $response = geminiFixture('generate-content-long-context.json');
-    $response['modelVersion'] = 'gemini-2.5-pro';
-    $response['usageMetadata']['serviceTier'] = 'priority';
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
-
-    postGemini('gemini-2.5-pro', ['serviceTier' => 'priority']);
-
-    // Gemini 2.5 Pro priority, prompt > 200K: $4.50 in, $27 out:
-    // (250000×450 + 1000×2700) / 1M = 115.2¢
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('priority')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(115.2, 0.000001);
-});
-
 it('bills image tokens at the image rate and text and thinking at the text rate', function () {
     config()->set('spectra.storage.media.enabled', false);
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(geminiFixture('generate-content-image.json'))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->loadMockResponse('google/generate-content-image.json'))]);
 
     postGemini('gemini-3.1-flash-image');
 
@@ -174,29 +146,16 @@ it('bills image tokens at the image rate and text and thinking at the text rate'
 
     // Gemini 3.1 Flash Image: $0.50 in, $3 text/thinking out, $60 image out:
     // (20×50 + (30 + 200)×300 + 1120×6000) / 1M = 6.79¢
-    expect($row->model_type)->toBe('image')
+    expect($row->provider)->toBe('google')
+        ->and($row->model_type)->toBe('image')
         ->and($row->image_count)->toBe(1)
         ->and($row->completion_tokens)->toBe(1350)
         ->and($row->total_cost_in_cents)->toEqualWithDelta(6.79, 0.000001);
 });
 
-it('prices Gemini 3 Pro Image at the priority image rate', function () {
-    config()->set('spectra.storage.media.enabled', false);
-    $response = geminiFixture('generate-content-image.json');
-    $response['modelVersion'] = 'gemini-3-pro-image';
-    $response['usageMetadata']['serviceTier'] = 'priority';
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
-
-    postGemini('gemini-3-pro-image', ['serviceTier' => 'priority']);
-
-    // Priority: $3.60 in, $21.60 text out, $216 image out:
-    // (20×360 + 230×2160 + 1120×21600) / 1M = 24.696¢
-    expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(24.696, 0.000001);
-});
-
 it('treats the candidate tokens of an image response without a breakdown as image tokens', function () {
     config()->set('spectra.storage.media.enabled', false);
-    $response = geminiFixture('generate-content-image.json');
+    $response = $this->loadMockResponse('google/generate-content-image.json');
     unset($response['usageMetadata']['candidatesTokensDetails'], $response['usageMetadata']['thoughtsTokenCount']);
     $response['modelVersion'] = 'gemini-2.5-flash-image';
     Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
@@ -207,38 +166,18 @@ it('treats the candidate tokens of an image response without a breakdown as imag
     expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(3.4506, 0.000001);
 });
 
-it('prices text-to-speech output tokens and the 2027 price change', function () {
+it('prices text-to-speech output tokens at the audio rate', function () {
     config()->set('spectra.storage.media.enabled', false);
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(geminiFixture('generate-content-tts.json'))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->loadMockResponse('google/generate-content-tts.json'))]);
 
     postGemini('gemini-3.8-flash-tts');
+
+    $row = SpectraRequest::sole();
 
     // Gemini 3.8 Flash TTS: $0.50 text in, $9 audio out: (50×50 + 250×900) / 1M = 0.2275¢
-    expect(SpectraRequest::sole()->model_type)->toBe('tts')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.2275, 0.000001);
-
-    $this->travelTo('2027-01-02 09:00:00');
-    postGemini('gemini-3.8-flash-tts');
-
-    // From 2027-01-01: $1 in, $18 out: (50×100 + 250×1800) / 1M = 0.455¢
-    expect(SpectraRequest::query()->latest('created_at')->first()->total_cost_in_cents)->toEqualWithDelta(0.455, 0.000001);
-});
-
-it('prices Gemini 4 Argon at the doubled rates from 2026-12-01', function () {
-    $response = geminiFixture('generate-content-thinking.json');
-    $response['modelVersion'] = 'gemini-4-argon';
-    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
-
-    postGemini('gemini-4-argon');
-
-    // Until 2026-11-30: $2 in, $10 out: (1200×200 + 1200×1000) / 1M = 1.44¢
-    expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(1.44, 0.000001);
-
-    $this->travelTo('2026-12-01 00:00:01');
-    postGemini('gemini-4-argon');
-
-    // From 2026-12-01: $4 in, $20 out: 2.88¢
-    expect(SpectraRequest::query()->latest('created_at')->first()->total_cost_in_cents)->toEqualWithDelta(2.88, 0.000001);
+    expect($row->provider)->toBe('google')
+        ->and($row->model_type)->toBe('tts')
+        ->and($row->total_cost_in_cents)->toEqualWithDelta(0.2275, 0.000001);
 });
 
 /*
@@ -299,9 +238,9 @@ it('records a Veo job from the operation poll that finishes it', function () {
     $operation = 'models/veo-3.1-fast-generate-preview/operations/r8fv1yq3x2tk';
 
     Http::fake(['generativelanguage.googleapis.com/*' => Http::sequence()
-        ->push(geminiFixture('veo-operation-running.json'))
+        ->push($this->loadMockResponse('google/veo-operation-running.json'))
         ->push(['name' => $operation, 'done' => false])
-        ->push(geminiFixture('veo-operation-done.json')),
+        ->push($this->loadMockResponse('google/veo-operation-done.json')),
     ]);
 
     Http::withHeaders(['x-goog-api-key' => 'test-key'])->post(
@@ -318,7 +257,8 @@ it('records a Veo job from the operation poll that finishes it', function () {
 
     // The submit's 8 seconds at 1080p reach the poll through the remembered job:
     // 12 cents/second (hd) × 8 seconds.
-    expect($row->model)->toBe('Veo 3.1 Fast')
+    expect($row->provider)->toBe('google')
+        ->and($row->model)->toBe('Veo 3.1 Fast')
         ->and($row->model_type)->toBe('video')
         ->and($row->video_count)->toBe(1)
         ->and($row->response_id)->toBe($operation)

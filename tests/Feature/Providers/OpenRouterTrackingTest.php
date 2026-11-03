@@ -12,22 +12,20 @@ use Spectra\Models\SpectraRequest;
  * wins over the catalog, with fallbacks to catalog prices, and chat, image,
  * video and embedding calls are each recorded once.
  */
-it('records openrouter chat response to database', function () {
+it('records a tracked openrouter chat response with its model, tokens and cost', function () {
     $response = $this->loadMockResponse('openrouter/chat.json');
 
-    Spectra::track('openrouter', 'openai/gpt-5-mini', function ($context) use ($response) {
-        return $response;
-    });
+    Spectra::track('openrouter', 'openai/gpt-5-mini', fn () => $response);
 
-    $record = SpectraRequest::latest()->first();
+    $record = SpectraRequest::sole();
 
-    expect($record)->not->toBeNull()
-        ->and($record->provider)->toBe('openrouter')
+    // GPT-5 Mini catalog (in 25, out 200): (25×25 + 15×200) / 1M = 0.003625¢
+    expect($record->provider)->toBe('openrouter')
+        ->and($record->model)->toBe('GPT-5 Mini')
         ->and($record->model_type)->toBe('text')
-        ->and($record->status_code)->toBe(200)
         ->and($record->prompt_tokens)->toBe(25)
         ->and($record->completion_tokens)->toBe(15)
-        ->and($record->total_cost_in_cents)->toBeGreaterThan(0);
+        ->and((float) $record->total_cost_in_cents)->toEqualWithDelta(0.003625, 1e-9);
 });
 
 it('resolves image responses to the image handler, not the chat handler', function () {
@@ -36,17 +34,14 @@ it('resolves image responses to the image handler, not the chat handler', functi
     // registration order it swallowed image responses.
     $response = $this->loadMockResponse('openrouter/image.json');
 
-    Spectra::track('openrouter', 'google/gemini-2.5-flash-image-preview', function ($context) use ($response) {
-        return $response;
-    });
+    Spectra::track('openrouter', 'google/gemini-2.5-flash-image-preview', fn () => $response);
 
-    $record = SpectraRequest::latest()->first();
+    $record = SpectraRequest::sole();
 
-    expect($record)->not->toBeNull()
-        ->and($record->provider)->toBe('openrouter')
-        ->and($record->model_type)->toBe('image')
+    // Gemini 2.5 Flash Image Preview: 3 cents per image × 2 images = 6 cents
+    expect($record->model_type)->toBe('image')
         ->and($record->image_count)->toBe(2)
-        ->and($record->total_cost_in_cents)->toBeGreaterThan(0);
+        ->and((float) $record->total_cost_in_cents)->toEqualWithDelta(6.0, 1e-9);
 });
 
 it('records the cost openrouter reports, with cache reads, cache writes and reasoning', function () {

@@ -230,7 +230,7 @@ describe('choosing providers', function () {
     });
 });
 
-it('needs a Firecrawl API key', function () {
+it('fails without a Firecrawl API key', function () {
     config(['spectra.costs.firecrawl.api_key' => null]);
     Http::fake();
 
@@ -241,7 +241,7 @@ it('needs a Firecrawl API key', function () {
     Http::assertNothingSent();
 });
 
-it('rejects unknown providers', function () {
+it('rejects an unknown provider named on the command line', function () {
     Http::fake();
 
     $this->artisan('spectra:pricing-scrape', ['provider' => ['nope']])
@@ -249,7 +249,7 @@ it('rejects unknown providers', function () {
         ->assertFailed();
 });
 
-it('needs exactly one provider with --url', function () {
+it('fails when --url is not given exactly one provider', function () {
     Http::fake();
 
     $this->artisan('spectra:pricing-scrape', ['--url' => ['https://example.test/a']])

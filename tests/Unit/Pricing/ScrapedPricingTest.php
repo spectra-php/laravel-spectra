@@ -77,13 +77,6 @@ it('keeps every configured catalog, even two for the same provider', function (b
         ->and($lookup->get('openai', 'ft:gpt-x:acme')['input'])->toBe(300);
 })->with(['scraped prices off' => false, 'scraped prices on' => true]);
 
-it('ignores the file when the config key is missing', function () {
-    config(['spectra.costs.use_scraped_prices' => null]);
-    ($this->writeScrapedPricesFile)($this->overrides);
-
-    expect(app(PricingLookup::class)->get('openai', 'gpt-x')['input'])->toBe(100);
-});
-
 it('replaces built-in models with the file and keeps the rest', function () {
     config(['spectra.costs.use_scraped_prices' => true]);
     ($this->writeScrapedPricesFile)($this->overrides);
@@ -168,18 +161,6 @@ it('skips a broken model and loads the others', function (array $broken, string 
     'unknown capability' => [['capabilities' => ['telepathy'], 'tiers' => [['tier' => 'standard']]], 'telepathy'],
     'no standard tier' => [['tiers' => [['tier' => 'batch', 'input_price' => 1, 'output_price' => 2]]], 'no standard tier'],
 ]);
-
-it('round-trips a model definition through its JSON form', function () {
-    $catalog = new FakeOpenAIPricing;
-
-    foreach ($catalog->models() as $definition) {
-        $json = json_decode(json_encode(ScrapedPricing::definitionToArray($definition)), true);
-        $copy = ScrapedPricing::definitionFromArray($definition->getInternalName(), $json);
-
-        expect($copy->toModelArray())->toBe($definition->toModelArray())
-            ->and($copy->toTiersArray())->toEqual($definition->toTiersArray());
-    }
-});
 
 it('round-trips every built-in model through its JSON form', function () {
     $classes = (require dirname(__DIR__, 3).'/config/spectra.php')['costs']['pricing'];

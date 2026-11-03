@@ -117,7 +117,7 @@ it('records a chat stream without include_usage with zero tokens', function () {
         ->and($row->prompt_tokens)->toBe(0)
         ->and($row->completion_tokens)->toBe(0)
         ->and($row->finish_reason)->toBe('stop')
-        ->and((float) $row->total_cost_in_cents)->toBe(0.0);
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0, 1e-12);
 });
 
 it('records a streamed transcription from its final event', function () {

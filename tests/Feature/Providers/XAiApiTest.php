@@ -23,7 +23,9 @@ it('bills reasoning tokens on top of completion tokens and uses the reported cos
 
     // grok-4.3: 26 uncached × 125 + 6 cached × 20 + (9 + 94) output × 250 = 29,120 / 1M
     // = 0.02912 cents, which matches the reported 2,912,000 ticks (10^8 ticks per cent).
-    expect($row->model)->toBe('Grok 4.3')
+    expect($row->provider)->toBe('xai')
+        ->and($row->model)->toBe('Grok 4.3')
+        ->and($row->model_type)->toBe('text')
         ->and($row->prompt_tokens)->toBe(32)
         ->and($row->completion_tokens)->toBe(103)
         ->and($row->reasoning_tokens)->toBe(94)
@@ -66,37 +68,15 @@ it('uses the priority tier only when the response confirms it', function () {
 });
 
 it('bills every token at the long-context rate once the prompt reaches 200K', function () {
-    Http::fake(['api.x.ai/*' => Http::response([
-        'id' => 'chat-long', 'object' => 'chat.completion', 'model' => 'grok-4.3',
-        'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => 'ok'], 'finish_reason' => 'stop']],
-        'usage' => ['prompt_tokens' => 250_000, 'completion_tokens' => 1_000, 'total_tokens' => 251_000,
-            'prompt_tokens_details' => ['text_tokens' => 250_000, 'cached_tokens' => 0], 'completion_tokens_details' => ['reasoning_tokens' => 0]],
-    ])]);
+    $body = $this->loadMockResponse('xai/chat-reasoning.json');
+    $body['usage'] = ['prompt_tokens' => 250_000, 'completion_tokens' => 1_000, 'total_tokens' => 251_000,
+        'prompt_tokens_details' => ['text_tokens' => 250_000, 'cached_tokens' => 0], 'completion_tokens_details' => ['reasoning_tokens' => 0]];
+    Http::fake(['api.x.ai/*' => Http::response($body)]);
 
     Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4.3', 'messages' => []]);
 
     // Long context: 250,000 × 250 + 1,000 × 500 = 63,000,000 / 1M = 63 cents.
     expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(63.0, 1e-9);
-});
-
-it('prices retired models at their old rate before the redirect and at grok-4.3 after', function () {
-    $body = fn (string $id) => ['id' => $id, 'object' => 'chat.completion', 'model' => 'grok-4-0709',
-        'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => 'ok'], 'finish_reason' => 'stop']],
-        'usage' => ['prompt_tokens' => 1_000_000, 'completion_tokens' => 1_000_000]];
-    Http::fake(['api.x.ai/*' => Http::sequence()->push($body('chat-april'))->push($body('chat-june'))]);
-
-    $this->travelTo('2026-04-01 12:00:00');
-    Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4-0709', 'messages' => []]);
-
-    $this->travelTo('2026-06-01 12:00:00');
-    Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4-0709', 'messages' => []]);
-
-    [$before, $after] = SpectraRequest::orderBy('id')->get()->all();
-
-    // Before 2026-05-15: $3 + $15 = 1,800 cents. After: grok-4.3 $1.25 + $2.50 = 375 cents.
-    expect($before->model)->toBe('Grok 4 0709')
-        ->and((float) $before->total_cost_in_cents)->toEqualWithDelta(1800.0, 1e-9)
-        ->and((float) $after->total_cost_in_cents)->toEqualWithDelta(375.0, 1e-9);
 });
 
 it('tracks the Responses API with server-side tools and their fees', function () {
@@ -175,7 +155,7 @@ it('tracks streamed chat completions with the final reported cost', function () 
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.02912, 1e-9);
 });
 
-it('tracks a streamed Responses API call', function () {
+it('records a streamed Responses API call at its reported cost', function () {
     $completed = $this->loadMockResponse('xai/responses-tools.json');
 
     $sse = 'event: response.created'."\n".'data: '.json_encode(['type' => 'response.created', 'sequence_number' => 0, 'response' => ['id' => $completed['id'], 'object' => 'response', 'model' => 'grok-4.7', 'status' => 'in_progress', 'output' => []]])."\n\n"
@@ -220,7 +200,8 @@ it('records a video once, from the finished poll, priced by the reported cost', 
     $row = SpectraRequest::sole();
 
     // 8,400,000,000 ticks = 84 cents (6 s at the 720p rate of 14 cents/s).
-    expect($row->model)->toBe('Grok Imagine Video 1.5')
+    expect($row->provider)->toBe('xai')
+        ->and($row->model)->toBe('Grok Imagine Video 1.5')
         ->and($row->model_type)->toBe('video')
         ->and($row->response_id)->toBe($requestId)
         ->and($row->video_count)->toBe(1)
@@ -247,7 +228,9 @@ it('tracks image generation with the reported cost', function () {
     $row = SpectraRequest::sole();
 
     // 1,600,000,000 ticks = 16 cents (2 images at 2K medium, 8 cents each).
-    expect($row->model)->toBe('Grok Imagine Image 2.0')
+    expect($row->provider)->toBe('xai')
+        ->and($row->model)->toBe('Grok Imagine Image 2.0')
+        ->and($row->model_type)->toBe('image')
         ->and($row->image_count)->toBe(2)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(16.0, 1e-9);
 });

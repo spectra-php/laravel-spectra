@@ -27,14 +27,6 @@ function runAsQueuedJob(?array $payload, Closure $job): mixed
     return $job();
 }
 
-function fakeOpenAiChat(): void
-{
-    Http::fake(['api.openai.com/*' => Http::response([
-        'id' => 'chatcmpl-tags', 'object' => 'chat.completion', 'model' => 'gpt-4o', 'choices' => [],
-        'usage' => ['prompt_tokens' => 1, 'completion_tokens' => 1],
-    ])]);
-}
-
 function tagsOfLatestRequest(): array
 {
     return SpectraRequest::with('tags')->latest('created_at')->firstOrFail()->tags->pluck('name')->sort()->values()->all();
@@ -93,7 +85,7 @@ it('sends no header when there is no trace and no tag', function () {
 });
 
 it('continues the caller trace and tags in a route with the spectra.trace middleware', function () {
-    fakeOpenAiChat();
+    Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json'))]);
     Route::post('/internal/tool', function () {
         Spectra::withTags(['tool'], fn () => Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']));
 
@@ -118,7 +110,7 @@ it('continues the caller trace and tags in a route with the spectra.trace middle
 });
 
 it('round-trips propagationHeaders() through the middleware', function () {
-    fakeOpenAiChat();
+    Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json'))]);
     Route::post('/internal/tool', fn () => Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o'])->json())
         ->middleware('spectra.trace');
 

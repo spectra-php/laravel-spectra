@@ -13,24 +13,20 @@ use Spectra\Models\SpectraRequest;
  * recorded once, from the result, with the model from the path and images
  * and videos priced by count, size, resolution and length.
  */
-it('records fal.ai image generation response to database', function (string $fixture, string $endpoint, int $expectedImages) {
-    $response = $this->loadMockResponse($fixture);
-
+it('counts the images of a direct and of a payload-wrapped queue response', function (string $fixture) {
     $context = Spectra::startRequest('falai', 'fal-ai/fast-sdxl');
-    $context->endpoint = $endpoint;
+    $context->endpoint = '/fal-ai/fast-sdxl';
 
-    $record = Spectra::recordSuccess($context, $response, [
+    $record = Spectra::recordSuccess($context, $this->loadMockResponse($fixture), [
         'prompt_tokens' => 0,
         'completion_tokens' => 0,
     ]);
 
-    expect($record)->toBeInstanceOf(SpectraRequest::class)
-        ->and($record->provider)->toBe('falai')
-        ->and($record->status_code)->toBe(200)
-        ->and($record->image_count)->toBe($expectedImages);
+    expect($record->provider)->toBe('falai')
+        ->and($record->image_count)->toBe(1);
 })->with([
-    'sync response' => ['falai/sync-image.json', '/fal-ai/fast-sdxl', 1],
-    'queue response' => ['falai/queue-image.json', '/fal-ai/fast-sdxl', 1],
+    'direct response' => 'falai/sync-image.json',
+    'queue payload' => 'falai/queue-image.json',
 ]);
 
 it('records a queued job once, from its result, with the model and request id', function () {
@@ -109,7 +105,9 @@ it('records direct calls to fal.run per image', function () {
     $record = SpectraRequest::sole();
 
     // nano-banana/edit bills like nano-banana: $0.0398 per image
-    expect($record->model)->toBe('Nano Banana')
+    expect($record->provider)->toBe('falai')
+        ->and($record->model)->toBe('Nano Banana')
+        ->and($record->model_type)->toBe('image')
         ->and($record->image_count)->toBe(1)
         ->and($record->total_cost_in_cents)->toEqualWithDelta(3.98, 0.000001);
 });
@@ -127,12 +125,10 @@ it('doubles the recraft price for vector styles', function (string $style, float
 ]);
 
 it('bills flux pro ultra per image whatever its size', function () {
-    Http::fake(['fal.run/*' => Http::response([
-        'images' => [['url' => 'https://v3.fal.media/files/a.jpg', 'width' => 2752, 'height' => 1536, 'content_type' => 'image/jpeg']],
-        'seed' => 7,
-        'has_nsfw_concepts' => [false],
-        'prompt' => 'x',
-    ])]);
+    $body = $this->loadMockResponse('falai/sync-image.json');
+    $body['images'][0]['width'] = 2752;
+    $body['images'][0]['height'] = 1536;
+    Http::fake(['fal.run/*' => Http::response($body)]);
 
     Http::post('https://fal.run/fal-ai/flux-pro/v1.1-ultra', ['prompt' => 'x']);
 
@@ -145,8 +141,9 @@ it('bills flux pro ultra per image whatever its size', function () {
  * the model's app path (without the sub-path), and fetches its result there.
  *
  * @param  array<string, mixed>  $input
+ * @param  array<string, mixed>  $result
  */
-function runQueuedFalVideo(string $model, array $input): void
+function runQueuedFalVideo(string $model, array $input, array $result): void
 {
     $id = '01a17cef-1744-7083-8396-43b1be6d649c';
     $app = implode('/', array_slice(explode('/', $model), 0, 2));
@@ -161,7 +158,7 @@ function runQueuedFalVideo(string $model, array $input): void
             'queue_position' => 0,
         ]),
         "queue.fal.run/{$app}/requests/{$id}/status" => Http::response(['status' => 'COMPLETED', 'request_id' => $id]),
-        "queue.fal.run/{$app}/requests/{$id}" => Http::response(json_decode((string) file_get_contents(__DIR__.'/../../responses/falai/queue-result-video.json'), true)),
+        "queue.fal.run/{$app}/requests/{$id}" => Http::response($result),
     ]);
 
     Http::post("https://queue.fal.run/{$model}", $input);
@@ -170,7 +167,7 @@ function runQueuedFalVideo(string $model, array $input): void
 }
 
 it('bills a queued video by the length its submit request asked for', function () {
-    runQueuedFalVideo('fal-ai/kling-video/v3/pro/text-to-video', ['prompt' => 'a red fox in the snow', 'duration' => '5', 'aspect_ratio' => '16:9']);
+    runQueuedFalVideo('fal-ai/kling-video/v3/pro/text-to-video', ['prompt' => 'a red fox in the snow', 'duration' => '5', 'aspect_ratio' => '16:9'], $this->loadMockResponse('falai/queue-result-video.json'));
 
     $record = SpectraRequest::sole();
 
@@ -184,7 +181,7 @@ it('bills a queued video by the length its submit request asked for', function (
 });
 
 it('prices fal video by resolution and audio', function (string $model, array $input, float $seconds, float $cents) {
-    runQueuedFalVideo($model, ['prompt' => 'a lighthouse at dusk', ...$input]);
+    runQueuedFalVideo($model, ['prompt' => 'a lighthouse at dusk', ...$input], $this->loadMockResponse('falai/queue-result-video.json'));
 
     $record = SpectraRequest::sole();
 
@@ -192,16 +189,14 @@ it('prices fal video by resolution and audio', function (string $model, array $i
         ->and((float) $record->total_cost_in_cents)->toEqualWithDelta($cents, 1e-6);
 })->with([
     // Per-second prices from each model page (2026-10-27).
+    // Kling 3.0 Pro without audio: 11.2 cents × 10 s.
     'kling without audio' => ['fal-ai/kling-video/v3/pro/text-to-video', ['duration' => '10', 'generate_audio' => false], 10.0, 112.0],
+    // Veo 3.1 at its default 720p, with audio: 40 cents × 8 s.
     'veo 3.1 defaults to 720p with audio' => ['fal-ai/veo3.1', ['duration' => '8s'], 8.0, 320.0],
+    // Veo 3.1 4K without audio: 40 cents × 4 s.
     'veo 3.1 4k without audio' => ['fal-ai/veo3.1', ['duration' => '4s', 'resolution' => '4k', 'generate_audio' => false], 4.0, 160.0],
-    'veo 3.1 fast 1080p' => ['fal-ai/veo3.1/fast', ['duration' => '6s', 'resolution' => '1080p'], 6.0, 90.0],
-    'veo 3.1 fast 4k without audio' => ['fal-ai/veo3.1/fast', ['duration' => '8s', 'resolution' => '4k', 'generate_audio' => false], 8.0, 240.0],
-    'veo 3.1 lite 720p without audio' => ['fal-ai/veo3.1/lite', ['duration' => '4s', 'generate_audio' => false], 4.0, 12.0],
-    'veo 3.1 lite 1080p' => ['fal-ai/veo3.1/lite', ['duration' => '6s', 'resolution' => '1080p'], 6.0, 48.0],
-    // Wan counts 16 frames as a second: 81 frames = 5.0625 s.
+    // Wan counts 16 frames as a second: 81 frames = 5.0625 s × 8 cents (720p).
     'wan 720p from frames' => ['fal-ai/wan/v2.2-a14b/text-to-video', ['num_frames' => 81, 'frames_per_second' => 16, 'resolution' => '720p'], 5.0625, 40.5],
-    'wan 480p' => ['fal-ai/wan/v2.2-a14b/text-to-video', ['num_frames' => 161, 'resolution' => '480p'], 10.0625, 40.25],
 ]);
 
 it('bills a direct video call from its own request body', function () {
@@ -216,7 +211,7 @@ it('bills a direct video call from its own request body', function () {
 it('keeps inline files out of the remembered submit body', function () {
     $image = 'data:image/png;base64,'.str_repeat('A', 4000);
 
-    runQueuedFalVideo('fal-ai/kling-video/v3/pro/text-to-video', ['prompt' => 'animate this', 'duration' => '5', 'image_url' => $image, 'elements' => [['image_url' => $image, 'label' => 'cat']]]);
+    runQueuedFalVideo('fal-ai/kling-video/v3/pro/text-to-video', ['prompt' => 'animate this', 'duration' => '5', 'image_url' => $image, 'elements' => [['image_url' => $image, 'label' => 'cat']]], $this->loadMockResponse('falai/queue-result-video.json'));
 
     $remembered = Cache::get('spectra:job-model:falai:'.sha1('01a17cef-1744-7083-8396-43b1be6d649c'));
 

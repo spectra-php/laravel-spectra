@@ -12,6 +12,7 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\StatsAggregator;
+use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\RequestWriter;
 use Workbench\App\Models\User;
 
@@ -126,16 +127,14 @@ it('records a stream error event as a failure', function () {
 });
 
 it('reads one-pass JSON bodies only as the app reads them', function () {
-    $json = json_encode(['id' => 'chatcmpl-np', 'object' => 'chat.completion', 'model' => 'gpt-4o', 'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => 'ok'], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 1]]);
+    fakeOneShotResponse((string) json_encode($this->loadMockResponse('openai/completion.json')), 'application/json');
 
-    fakeOneShotResponse($json, 'application/json');
+    $response = Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4.1']);
 
-    $response = Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
-
-    expect($response->json('choices.0.message.content'))->toBe('ok');
+    expect($response->json('choices.0.message.content'))->toBe('Hello! How can I assist you today?');
 
     $row = SpectraRequest::sole();
-    expect($row->prompt_tokens)->toBe(5)
+    expect($row->prompt_tokens)->toBe(19)
         ->and($row->is_streaming)->toBeFalse();
 });
 
@@ -147,7 +146,7 @@ it('records provider error responses with the provider message', function () {
     $row = SpectraRequest::sole();
     expect($row->status_code)->toBe(429)
         ->and($row->error_message)->toBe('Rate limit reached')
-        ->and((float) $row->total_cost_in_cents)->toBe(0.0);
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0, 1e-9);
 });
 
 it('records connection failures and still throws them to the app', function () {
@@ -168,9 +167,9 @@ it('never lets a tracking failure reach the app', function () {
         }
     });
     app()->forgetInstance(RequestWriter::class);
-    app()->forgetInstance(Spectra\Support\Tracking\RequestPersister::class);
+    app()->forgetInstance(RequestPersister::class);
 
-    Http::fake(['api.openai.com/*' => Http::response(['id' => 'chatcmpl-x', 'object' => 'chat.completion', 'model' => 'gpt-4o', 'choices' => [], 'usage' => ['prompt_tokens' => 1, 'completion_tokens' => 1]])]);
+    Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json'))]);
 
     $response = Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
@@ -179,7 +178,7 @@ it('never lets a tracking failure reach the app', function () {
 
 it('keeps raw request data out of storage when request storage is off', function () {
     config(['spectra.storage.store_prompts' => false, 'spectra.storage.store_request_data' => false]);
-    Http::fake(['api.openai.com/*' => Http::response(['id' => 'chatcmpl-p', 'object' => 'chat.completion', 'model' => 'gpt-4o', 'choices' => [], 'usage' => ['prompt_tokens' => 1, 'completion_tokens' => 1]])]);
+    Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json'))]);
 
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o', 'messages' => [['role' => 'user', 'content' => 'secret']]]);
 
@@ -201,7 +200,7 @@ it('counts a polled job once and keeps its original start time', function () {
         ->and(SpectraRequest::first()->created_at->equalTo($first->created_at))->toBeTrue()
         ->and($global->request_count)->toBe(1)
         ->and($global->prompt_tokens)->toBe(100)
-        ->and((float) $global->total_cost_in_cents)->toBe(5.0);
+        ->and((float) $global->total_cost_in_cents)->toEqualWithDelta(5.0, 1e-9);
 });
 
 it('stores the trackable morph alias so budgets and usage find it', function () {
@@ -210,7 +209,8 @@ it('stores the trackable morph alias so budgets and usage find it', function () 
     $user = User::create(['name' => 'a', 'email' => 'a@example.test', 'password' => 'x']);
     Spectra::forTrackable($user);
 
-    Http::fake(['api.openai.com/*' => Http::response(['id' => 'chatcmpl-m', 'object' => 'chat.completion', 'model' => 'gpt-4o', 'choices' => [], 'usage' => ['prompt_tokens' => 1, 'completion_tokens' => 1]])]);
+    Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json'))]);
+
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
     expect(SpectraRequest::first()->trackable_type)->toBe('user')
@@ -244,7 +244,7 @@ it('resets global settings between queued jobs', function () {
 });
 
 it('reads the model from multipart bodies even when the file comes first', function () {
-    Http::fake(['api.openai.com/*' => Http::response(['text' => 'hello', 'usage' => ['type' => 'duration', 'seconds' => 3]])]);
+    Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/transcription_duration_usage.json'))]);
 
     Http::attach('file', str_repeat('A', 300_000), 'audio.mp3')
         ->post('https://api.openai.com/v1/audio/transcriptions', ['model' => 'whisper-1']);
@@ -281,8 +281,11 @@ it('merges per-request tags and metadata with the global ones', function () {
 });
 
 it('tags only the requests sent inside withTags()', function () {
-    $reply = fn (string $id) => Http::response(['id' => $id, 'object' => 'chat.completion', 'model' => 'gpt-4o', 'choices' => [], 'usage' => ['prompt_tokens' => 1, 'completion_tokens' => 1]]);
-    Http::fake(['api.openai.com/*' => Http::sequence([$reply('chatcmpl-1'), $reply('chatcmpl-2')])]);
+    $completion = $this->loadMockResponse('openai/completion.json');
+    Http::fake(['api.openai.com/*' => Http::sequence([
+        Http::response([...$completion, 'id' => 'chatcmpl-1']),
+        Http::response([...$completion, 'id' => 'chatcmpl-2']),
+    ])]);
     Spectra::addGlobalTags(['global']);
 
     Spectra::withTags(['summary'], fn () => Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']));
@@ -318,10 +321,6 @@ it('nests withTags() calls and restores the outer tags, even after an exception'
         ->and(Spectra::startRequest('openai', 'gpt-4o')->tags)->toBe([]);
 });
 
-it('returns the value of the withTags() callback', function () {
-    expect(Spectra::withTags(['x'], fn (): int => 42))->toBe(42);
-});
-
 it('keeps Spectra::stream() options when it takes over a tracked stream', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o', ['tags' => ['wrapped'], 'metadata' => ['source' => 'manual']]);
     $response = streamedRequest(openAiStreamBody());
@@ -346,7 +345,7 @@ it('prices a stream at the tier the request asked for', function () {
 });
 
 it('stores the provider model id even when the response echoes the request', function () {
-    Http::fake(['api.openai.com/*' => Http::response(['id' => 'chatcmpl-id', 'object' => 'chat.completion', 'model' => 'gpt-4o', 'choices' => [], 'usage' => ['prompt_tokens' => 1, 'completion_tokens' => 1]])]);
+    Http::fake(['api.openai.com/*' => Http::response([...$this->loadMockResponse('openai/completion.json'), 'model' => 'gpt-4o'])]);
 
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 

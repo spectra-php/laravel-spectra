@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
-use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 
@@ -12,28 +11,9 @@ use Spectra\Models\SpectraRequest;
  * recorded once, when it succeeds, with video priced by length and
  * resolution and language models by their token metrics.
  */
-it('records replicate prediction response to database', function () {
+it('records a prediction with iso timestamps and takes its latency from them', function () {
     // The fixture keeps Replicate's ISO-8601 timestamps; they used to crash
     // the persister, which subtracted them as numbers.
-    $response = $this->loadMockResponse('replicate/prediction.json');
-
-    $context = Spectra::startRequest('replicate', 'stability-ai/stable-diffusion');
-    $context->endpoint = '/v1/models/stability-ai/stable-diffusion/predictions';
-
-    $record = Spectra::recordSuccess($context, $response, [
-        'prompt_tokens' => 0,
-        'completion_tokens' => 0,
-    ]);
-
-    expect($record)->toBeInstanceOf(SpectraRequest::class)
-        ->and($record->provider)->toBe('replicate')
-        ->and($record->status_code)->toBe(200)
-        ->and($record->image_count)->toBe(2)
-        // completed_at − created_at (no started_at) = 4 s
-        ->and($record->latency_ms)->toBe(4000);
-});
-
-it('tracks a prediction through the http client without throwing on iso timestamps', function () {
     Http::fake(['api.replicate.com/*' => Http::response($this->loadMockResponse('replicate/prediction.json'), 201)]);
 
     $response = Http::withHeaders(['Prefer' => 'wait'])
@@ -41,9 +21,12 @@ it('tracks a prediction through the http client without throwing on iso timestam
             'input' => ['prompt' => 'A beautiful sunset over mountains'],
         ]);
 
+    $record = SpectraRequest::sole();
+
+    // completed_at − created_at (no started_at) = 4 s
     expect($response->status())->toBe(201)
-        ->and(SpectraRequest::sole()->response_id)->toBe('p7pxyz123abc')
-        ->and(SpectraRequest::sole()->latency_ms)->toBe(4000);
+        ->and($record->response_id)->toBe('p7pxyz123abc')
+        ->and($record->latency_ms)->toBe(4000);
 });
 
 it('records a polled prediction once, when it succeeds', function () {
@@ -71,7 +54,8 @@ it('records a polled prediction once, when it succeeds', function () {
     $record = SpectraRequest::sole();
 
     // A single URL output is an image, not a video: flux-1.1-pro is $0.04 per image.
-    expect($record->response_id)->toBe($id)
+    expect($record->provider)->toBe('replicate')
+        ->and($record->response_id)->toBe($id)
         ->and($record->model)->toBe('FLUX 1.1 Pro')
         ->and($record->model_type)->toBe('image')
         ->and($record->image_count)->toBe(1)
@@ -146,6 +130,5 @@ it('prices official language models by the token counts in the metrics', functio
         ->and($record->model_type)->toBe('text')
         ->and($record->prompt_tokens)->toBe(1200)
         ->and($record->completion_tokens)->toBe(350)
-        ->and($record->response)->toHaveKey('output')
         ->and($record->total_cost_in_cents)->toEqualWithDelta(0.59, 0.000001);
 });

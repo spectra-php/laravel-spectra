@@ -26,9 +26,7 @@ afterEach(function () {
     Date::useDefault();
 });
 
-it('builds a date range from the request helpers', function () {
-    expect(now())->toBeInstanceOf(CarbonImmutable::class);
-
+it('builds immutable date ranges for every period', function () {
     foreach (['today', 'week', 'month', 'year'] as $period) {
         $range = DateRange::fromRequest(new Request(['period' => $period]));
 
@@ -41,16 +39,16 @@ it('builds a date range from the request helpers', function () {
         'start_date' => '2026-01-01',
         'end_date' => '2026-01-31',
     ]));
+    $all = DateRange::fromRequest(new Request(['period' => 'all']));
 
-    expect($custom->start?->format('Y-m-d'))->toBe('2026-01-01')
-        ->and($custom->end?->format('Y-m-d'))->toBe('2026-01-31');
-
-    expect(DateRange::fromRequest(new Request(['period' => 'all'])))
-        ->start->toBeNull()
-        ->end->toBeNull();
+    expect(now())->toBeInstanceOf(CarbonImmutable::class)
+        ->and($custom->start?->format('Y-m-d'))->toBe('2026-01-01')
+        ->and($custom->end?->format('Y-m-d'))->toBe('2026-01-31')
+        ->and($all->start)->toBeNull()
+        ->and($all->end)->toBeNull();
 });
 
-it('serves the dashboard endpoints', function () {
+it('serves the dashboard endpoints without a type error', function () {
     SpectraRequest::factory()->create([
         'provider' => 'openai',
         'model' => 'gpt-4o',
@@ -76,9 +74,7 @@ it('exports span timestamps instead of silently zeroing them', function () {
     $model = SpectraRequest::factory()->create([
         'created_at' => now(),
         'completed_at' => now()->addMilliseconds(1500),
-    ]);
-
-    expect($model->fresh()->created_at)->toBeInstanceOf(CarbonImmutable::class);
+    ])->fresh();
 
     $span = (new DefaultSpanBuilder)->build([
         'id' => 'req-immutable',
@@ -88,15 +84,16 @@ it('exports span timestamps instead of silently zeroing them', function () {
         'model_type' => 'text',
         'endpoint' => '/v1/chat/completions',
         'status_code' => 200,
-        'started_at' => $model->fresh()->created_at,
-        'completed_at' => $model->fresh()->completed_at,
+        'started_at' => $model->created_at,
+        'completed_at' => $model->completed_at,
     ]);
 
-    expect($span['startTimeUnixNano'])->not->toBe('0')
+    expect($model->created_at)->toBeInstanceOf(CarbonImmutable::class)
+        ->and($span['startTimeUnixNano'])->not->toBe('0')
         ->and($span['endTimeUnixNano'])->not->toBe('0');
 });
 
-it('rebuilds daily stats', function () {
+it('rebuilds the daily stats of a date and of yesterday', function () {
     SpectraRequest::factory()->create(['created_at' => now()->subDay()]);
 
     expect(app(StatsAggregator::class)->rebuildForDate(now()->subDay()))->toBe(1)

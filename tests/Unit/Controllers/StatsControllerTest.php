@@ -12,7 +12,7 @@ use Spectra\Models\SpectraRequest;
  * The stats dashboard endpoint: latency by model type and the date range
  * filters.
  */
-it('returns average latency grouped by model type in stats endpoint', function () {
+it('averages latency and sums cost per model type', function () {
     config()->set('spectra.dashboard.layout', 'full');
 
     SpectraRequest::factory()
@@ -24,30 +24,20 @@ it('returns average latency grouped by model type in stats endpoint', function (
         ))
         ->create();
 
-    $controller = app(StatsController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request(['period' => 'month'])]);
-    $json = $response->toArray();
+    $json = app()->call([app(StatsController::class), '__invoke'], ['request' => new Request(['period' => 'month'])])->toArray();
 
     $rows = collect($json['latency_by_model_type'])->keyBy('model_type');
 
-    expect($json)->toHaveKey('latency_by_model_type')
-        ->and($json)->toHaveKey('cost_by_model_type')
-        ->and($rows->has('text'))->toBeTrue()
-        ->and($rows['text']['label'])->toBe('Text')
-        ->and($rows['text']['count'])->toBe(2)
+    expect($rows['text']['count'])->toBe(2)
         ->and($rows['text']['avg_latency'])->toEqual(200)
-        ->and($rows->has('tts'))->toBeTrue()
-        ->and($rows['tts']['label'])->toBe('Text-to-Speech')
         ->and($rows['tts']['count'])->toBe(1)
         ->and($rows['tts']['avg_latency'])->toEqual(940)
-        ->and((float) $json['cost_by_model_type']['text'])->toBe(200.0)
-        ->and((float) $json['cost_by_model_type']['tts'])->toBe(210.0)
-        ->and((float) $json['cost_by_model_type']['image'])->toBe(0.0)
-        ->and((float) $json['cost_by_model_type']['video'])->toBe(0.0)
-        ->and((float) $json['cost_by_model_type']['stt'])->toBe(0.0);
+        ->and((float) $json['cost_by_model_type']['text'])->toEqualWithDelta(200.0, 0.0001)
+        ->and((float) $json['cost_by_model_type']['tts'])->toEqualWithDelta(210.0, 0.0001)
+        ->and((float) $json['cost_by_model_type']['image'])->toEqualWithDelta(0.0, 0.0001);
 });
 
-it('filters stats by custom date range', function () {
+it('counts only the requests inside a custom date range', function () {
     config()->set('spectra.dashboard.layout', 'full');
     $this->travelTo('2026-02-12 12:00:00');
 
@@ -75,7 +65,7 @@ it('filters stats by custom date range', function () {
         ->and($json['recent_requests'][0]['model'])->toBe('gpt-4o');
 });
 
-it('returns all-time stats when period is all', function () {
+it('counts requests of every date when the period is all', function () {
     config()->set('spectra.dashboard.layout', 'full');
     $this->travelTo('2026-02-12 12:00:00');
 

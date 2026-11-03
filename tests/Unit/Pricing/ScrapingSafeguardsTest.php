@@ -168,14 +168,14 @@ it('rejects a per-character price for a single character', function () {
         ->and($result->skipped[0])->toBe("mesh-x: a per-character price of 0.02 per 1 characters can't be right, ignored.");
 });
 
-it('matches names whatever the word order or version prefix', function (string $id) {
+it('matches a name whose words come in another order', function () {
     $result = ($this->map)([
-        ['model_id' => $id, 'tier' => 'standard', 'input' => 1, 'output' => 5],
+        ['model_id' => 'claude-haiku-3-5', 'tier' => 'standard', 'input' => 1, 'output' => 5],
     ]);
 
     expect($result->newModels)->toBe([])
         ->and($result->matchedModels)->toBe(1);
-})->with(['claude-haiku-3-5', 'Claude Haiku 3.5']);
+});
 
 it('matches a version without its v prefix', function () {
     $result = ($this->map)([

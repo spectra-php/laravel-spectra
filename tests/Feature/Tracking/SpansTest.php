@@ -27,15 +27,6 @@ function servingHttp(bool $http): void
     (new ReflectionProperty(app(), 'isRunningInConsole'))->setValue(app(), ! $http);
 }
 
-function fakeOpenAi(): void
-{
-    // Each call its own response id: a repeated one is read as a poll of the same call.
-    Http::fake(['api.openai.com/*' => fn () => Http::response([
-        'id' => 'chatcmpl-'.bin2hex(random_bytes(6)), 'object' => 'chat.completion', 'model' => 'gpt-4o', 'choices' => [],
-        'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
-    ])]);
-}
-
 function callOpenAi(): void
 {
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
@@ -43,7 +34,9 @@ function callOpenAi(): void
 
 beforeEach(function () {
     config()->set('queue.default', 'sync');
-    fakeOpenAi();
+    $completion = $this->loadMockResponse('openai/completion.json');
+    // Each call its own response id: a repeated one is read as a poll of the same call.
+    Http::fake(['api.openai.com/*' => fn () => Http::response([...$completion, 'id' => 'chatcmpl-'.bin2hex(random_bytes(6))])]);
 });
 
 afterEach(function () {
@@ -204,7 +197,7 @@ it('keeps recording calls when the spans table does not exist yet', function () 
 it('exports a call with its stored span id and a span with its kind and parent', function () {
     config()->set('spectra.integrations.opentelemetry.enabled', true);
     Http::fake([
-        'api.openai.com/*' => Http::response(['id' => 'chatcmpl-1', 'object' => 'chat.completion', 'model' => 'gpt-4o', 'choices' => [], 'usage' => ['prompt_tokens' => 1, 'completion_tokens' => 1]]),
+        'api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json')),
         'localhost:4318/*' => Http::response([], 200),
     ]);
 

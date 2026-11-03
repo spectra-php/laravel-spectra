@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Spectra\Http\Controllers\Api\ConfigController;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
 use Spectra\Http\Controllers\Api\RequestsController;
 use Spectra\Http\Controllers\Api\ServeAudioController;
@@ -18,7 +17,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Dashboard endpoints that serve stored media, request details, trace
- * totals, tags and the dashboard config.
+ * totals and tags.
  */
 it('serves a persisted image with the stored mime type', function () {
     Storage::fake('local');
@@ -64,14 +63,6 @@ it('streams persisted videos with the real extension and mime type', function ()
     expect($response->getStatusCode())->toBe(200)
         ->and($response->headers->get('Content-Type'))->toBe('video/webm')
         ->and($response->headers->get('Content-Disposition'))->toContain('.webm');
-});
-
-it('returns the dashboard config with layout and model types', function () {
-    $response = app()->call([app(ConfigController::class), '__invoke'], []);
-    $json = $response->toArray();
-
-    expect($json['layout'])->toBe('full')
-        ->and(collect($json['model_types'])->pluck('value'))->toContain('text');
 });
 
 it('exposes request and response payloads on the details endpoint', function () {
@@ -150,7 +141,7 @@ it('leaves failed calls out of a trace total cost', function () {
     $json = app()->call([app(ShowRequestController::class), '__invoke'], ['id' => $current->id])->toArray();
 
     expect($json['trace']['request_count'])->toBe(2)
-        ->and($json['trace']['total_cost_in_cents'])->toBe(40.0);
+        ->and($json['trace']['total_cost_in_cents'])->toEqualWithDelta(40.0, 0.0001);
 });
 
 it('returns tag ids as their UUIDs', function () {

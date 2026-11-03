@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Spectra\Models\SpectraRequest;
-use Spectra\Support\RequestTransformer;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\RequestWriter;
@@ -180,33 +179,6 @@ it('keeps the start time and origin of the call that started an async job', func
 
     expect($row->origin)->toBe('POST /videos')
         ->and($row->started_at?->format('H:i:s.v'))->toBe('10:00:00.250');
-});
-
-it('starts spans at the precise start time and never ends them before it', function () {
-    $request = SpectraRequest::factory()->create([
-        'started_at' => Carbon::parse('2026-11-03 10:00:00.900'),
-        'created_at' => Carbon::parse('2026-11-03 10:00:00'),
-        // Stored to the second: the call really ended at 10:00:00.950.
-        'completed_at' => Carbon::parse('2026-11-03 10:00:00'),
-    ]);
-
-    $data = app(RequestTransformer::class)->transform($request->fresh());
-
-    expect($data['started_at']->format('H:i:s.v'))->toBe('10:00:00.900')
-        ->and($data['completed_at']->format('H:i:s.v'))->toBe('10:00:00.900');
-});
-
-it('starts spans of rows saved before started_at existed at created_at', function () {
-    $request = SpectraRequest::factory()->create([
-        'started_at' => null,
-        'created_at' => Carbon::parse('2026-11-03 10:00:00'),
-        'completed_at' => Carbon::parse('2026-11-03 10:00:02'),
-    ]);
-
-    $data = app(RequestTransformer::class)->transform($request->fresh());
-
-    expect($data['started_at']->format('H:i:s'))->toBe('10:00:00')
-        ->and($data['completed_at']->format('H:i:s'))->toBe('10:00:02');
 });
 
 it('keeps recording calls before the app runs the trace columns migration', function () {

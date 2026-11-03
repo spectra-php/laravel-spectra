@@ -5,49 +5,20 @@ declare(strict_types=1);
 use Spectra\Support\AudioDurationExtractor;
 
 /**
- * AudioDurationExtractor reads the length of audio bytes with getID3 when it
- * is installed, and returns null when it is not or the data is empty.
+ * AudioDurationExtractor reads the length of audio bytes with getID3 (a dev
+ * dependency, so always installed here) and returns null for data it can't
+ * measure.
  */
-it('returns null when getID3 is not installed', function () {
-    $extractor = new AudioDurationExtractor;
+it('extracts the duration of a one-second wav', function () {
+    $result = (new AudioDurationExtractor)->extract($this->generateSilentWav());
 
-    // Validates graceful fallback in environments where getID3 is missing.
-    if (AudioDurationExtractor::isAvailable()) {
-        $this->markTestSkipped('getID3 is installed, cannot test fallback');
-    }
-
-    $result = $extractor->extract('fake binary data');
-
-    expect($result)->toBeNull();
+    expect($result)->not->toBeNull()
+        ->and($result)->toBeGreaterThan(0.9)
+        ->and($result)->toBeLessThan(1.1);
 });
 
-it('reports availability correctly', function () {
-    $available = AudioDurationExtractor::isAvailable();
-
-    expect($available)->toBe(
-        class_exists(JamesHeinrich\GetID3\GetID3::class) || class_exists(getID3::class)
-    );
-});
-
-it('extracts duration from valid wav audio when getID3 is available', function () {
-    if (! AudioDurationExtractor::isAvailable()) {
-        $this->markTestSkipped('getID3 is not installed');
-    }
-
-    $extractor = new AudioDurationExtractor;
-    $result = $extractor->extract($this->generateSilentWav());
-
-    expect($result)->not->toBeNull();
-    expect($result)->toBeGreaterThan(0.9)->toBeLessThan(1.1);
-});
-
-it('returns null for empty data when getID3 is available', function () {
-    if (! AudioDurationExtractor::isAvailable()) {
-        $this->markTestSkipped('getID3 is not installed');
-    }
-
-    $extractor = new AudioDurationExtractor;
-    $result = $extractor->extract('');
+it('returns null for empty audio data', function () {
+    $result = (new AudioDurationExtractor)->extract('');
 
     expect($result)->toBeNull();
 });

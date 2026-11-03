@@ -11,53 +11,16 @@ use Spectra\Support\Tracking\RequestPersister;
  * Persisting a tracked request dispatches RequestTracked with the
  * transformed request data.
  */
-it('dispatches RequestTracked event when a request is persisted', function () {
+it('dispatches RequestTracked with the transformed request once it is persisted', function () {
     Event::fake([RequestTracked::class]);
-
-    config()->set('spectra.enabled', true);
-    config()->set('spectra.storage.store_requests', true);
-
-    $persister = app(RequestPersister::class);
-
-    $context = new RequestContext([
-        'provider' => 'openai',
-        'model' => 'gpt-4o',
-    ]);
-    $context->complete(['id' => 'resp-1'], ['prompt_tokens' => 10, 'completion_tokens' => 5]);
-
-    $persister->persist($context);
-
-    Event::assertDispatched(RequestTracked::class, function ($event) {
-        return $event->request['provider'] === 'openai'
-            && $event->request['model'] === 'GPT-4o'
-            && $event->request['prompt_tokens'] === 10
-            && $event->request['completion_tokens'] === 5;
-    });
-});
-
-it('RequestTracked event contains transformed data', function () {
-    Event::fake([RequestTracked::class]);
-
-    config()->set('spectra.enabled', true);
-    config()->set('spectra.storage.store_requests', true);
-
-    $persister = app(RequestPersister::class);
-
-    $context = new RequestContext([
-        'provider' => 'anthropic',
-        'model' => 'claude-sonnet-4-20250514',
-    ]);
+    $context = new RequestContext(['provider' => 'anthropic', 'model' => 'claude-sonnet-4-20250514']);
     $context->complete(['id' => 'resp-2'], ['prompt_tokens' => 50, 'completion_tokens' => 25]);
 
-    $persister->persist($context);
+    app(RequestPersister::class)->persist($context);
 
-    Event::assertDispatched(RequestTracked::class, function ($event) {
-        return is_array($event->request)
-            && isset($event->request['id'])
-            && isset($event->request['total_tokens'])
-            && $event->request['total_tokens'] === 75
-            && isset($event->request['started_at'])
-            && isset($event->request['completed_at'])
-            && $event->request['is_failed'] === false;
-    });
+    Event::assertDispatched(RequestTracked::class, fn (RequestTracked $event) => $event->request['provider'] === 'anthropic'
+        && $event->request['model'] === 'Claude Sonnet 4'
+        && $event->request['total_tokens'] === 75
+        && isset($event->request['id'], $event->request['started_at'], $event->request['completed_at'])
+        && $event->request['is_failed'] === false);
 });

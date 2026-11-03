@@ -9,7 +9,7 @@ use Spectra\Tests\Concerns\LoadsMockResponses;
 use Spectra\Tests\TestCase;
 
 uses(TestCase::class)->in('Feature', 'Unit');
-uses(LoadsMockResponses::class)->in('Feature');
+uses(LoadsMockResponses::class)->in('Feature', 'Unit');
 uses(CreatesProviders::class)->in('Feature', 'Unit');
 uses(GeneratesAudio::class)->in('Feature', 'Unit');
 uses(InteractsWithHttpWatcher::class)->in('Unit');
