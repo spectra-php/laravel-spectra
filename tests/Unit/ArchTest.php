@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+/**
+ * Structural rules for the package source: readonly DTOs, invokable actions,
+ * controllers on the base controller, interfaces for contracts and no debug
+ * calls.
+ */
 arch('data transfer objects are readonly')
     ->expect('Spectra\Data')
     ->toBeReadonly();

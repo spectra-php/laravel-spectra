@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Spectra\Data;
 
+/**
+ * What a budgetable model has used so far in each budget period: spend in
+ * whole cents, tokens and requests.
+ */
 readonly class BudgetUsage extends DataTransferObject
 {
     public function __construct(

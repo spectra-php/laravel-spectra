@@ -8,6 +8,10 @@ use Spectra\Data\Provider;
 use Spectra\Data\Responses\ProvidersResponse;
 use Spectra\Support\ProviderRegistry;
 
+/**
+ * Every provider the registry knows, built in or user-registered, with its
+ * display name.
+ */
 class GetProviders
 {
     public function __construct(

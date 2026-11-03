@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use Spectra\Enums\ModelType;
 
+/**
+ * ModelType: labels, string values, and the type derived from a pricing type
+ * or an audio model slug.
+ */
 it('returns correct labels for each model type', function () {
     expect(ModelType::Text->label())->toBe('Text')
         ->and(ModelType::Embedding->label())->toBe('Embedding')
@@ -71,7 +75,7 @@ it('has correct string values', function () {
         ->and(ModelType::Stt->value)->toBe('stt');
 });
 
-it('should be created from string value', function () {
+it('resolves each model type from its string value', function () {
     expect(ModelType::from('text'))->toBe(ModelType::Text)
         ->and(ModelType::from('embedding'))->toBe(ModelType::Embedding)
         ->and(ModelType::from('image'))->toBe(ModelType::Image)

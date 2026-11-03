@@ -8,6 +8,10 @@ use Illuminate\Support\Carbon;
 use Spectra\Http\Controllers\Api\CostsController;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * The costs dashboard endpoint: overview totals, usage by model type, date
+ * range filters and top spenders.
+ */
 it('returns model usage metrics by model type in costs endpoint', function () {
     SpectraRequest::factory()
         ->count(6)
@@ -42,13 +46,16 @@ it('returns model usage metrics by model type in costs endpoint', function () {
         ->and($rows['tts-1|tts']['input_characters'])->toEqual(1500)
         ->and($rows->has('whisper-1|stt'))->toBeTrue()
         ->and($rows['whisper-1|stt']['duration_seconds'])->toEqual(25)
-        ->and(collect($json['costs_by_model'])->contains(fn (array $row) => $row['model'] === 'excluded-failed-model'))->toBeFalse();
+        // Counts and usage include the failed request; its cost never does.
+        ->and($rows['excluded-failed-model|text']['requests'])->toBe(1)
+        ->and((float) $rows['excluded-failed-model|text']['cost'])->toBe(0.0);
 
     $typeRows = collect($json['costs_by_model_type'])->keyBy('model_type');
 
     expect($typeRows->has('text'))->toBeTrue()
         ->and($typeRows['text']['label'])->toBe('Text')
-        ->and($typeRows['text']['tokens'])->toEqual(200)
+        ->and($typeRows['text']['requests'])->toBe(2)
+        ->and($typeRows['text']['tokens'])->toEqual(2200)
         ->and((float) $typeRows['text']['cost'])->toBe(100.0)
         ->and($typeRows->has('image'))->toBeTrue()
         ->and($typeRows['image']['label'])->toBe('Image')
@@ -68,84 +75,82 @@ it('returns model usage metrics by model type in costs endpoint', function () {
 });
 
 it('returns cost overview totals for dashboard cards', function () {
-    Carbon::setTestNow(Carbon::parse('2026-02-12 12:00:00'));
+    $this->travelTo('2026-02-12 12:00:00');
 
-    try {
-        SpectraRequest::factory()
-            ->count(5)
-            ->state(new Sequence(
-                ['model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 100, 'created_at' => Carbon::parse('2026-02-12 09:00:00')],
-                ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'total_cost_in_cents' => 200, 'created_at' => Carbon::parse('2026-02-10 10:00:00')],
-                ['model' => 'gpt-4o-audio', 'model_type' => 'tts', 'total_cost_in_cents' => 300, 'created_at' => Carbon::parse('2026-02-04 15:00:00')],
-                ['model' => 'gpt-4.1', 'model_type' => 'text', 'total_cost_in_cents' => 400, 'created_at' => Carbon::parse('2026-01-15 13:00:00')],
-                ['model' => 'excluded-error', 'model_type' => 'text', 'total_cost_in_cents' => 9000, 'status_code' => 500, 'created_at' => Carbon::parse('2026-02-12 11:00:00')],
-            ))
-            ->create();
+    SpectraRequest::factory()
+        ->count(5)
+        ->state(new Sequence(
+            ['model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 100, 'created_at' => Carbon::parse('2026-02-12 09:00:00')],
+            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'total_cost_in_cents' => 200, 'created_at' => Carbon::parse('2026-02-10 10:00:00')],
+            ['model' => 'gpt-4o-audio', 'model_type' => 'tts', 'total_cost_in_cents' => 300, 'created_at' => Carbon::parse('2026-02-04 15:00:00')],
+            ['model' => 'gpt-4.1', 'model_type' => 'text', 'total_cost_in_cents' => 400, 'created_at' => Carbon::parse('2026-01-15 13:00:00')],
+            ['model' => 'excluded-error', 'model_type' => 'text', 'total_cost_in_cents' => 9000, 'status_code' => 500, 'created_at' => Carbon::parse('2026-02-12 11:00:00')],
+        ))
+        ->create();
 
-        $controller = app(CostsController::class);
-        $response = app()->call([$controller, '__invoke'], ['request' => new Request(['period' => 'month'])]);
-        $json = $response->toArray();
+    $controller = app(CostsController::class);
+    $response = app()->call([$controller, '__invoke'], ['request' => new Request(['period' => 'month'])]);
+    $json = $response->toArray();
 
-        expect($json)->toHaveKey('cost_overview')
-            ->and($json['cost_overview']['today'])->toEqual(100)
-            ->and($json['cost_overview']['this_week'])->toEqual(300)
-            ->and($json['cost_overview']['last_week'])->toEqual(300)
-            ->and($json['cost_overview']['this_month'])->toEqual(600)
-            ->and($json['cost_overview']['this_year'])->toEqual(1000);
-    } finally {
-        Carbon::setTestNow();
-    }
+    expect($json)->toHaveKey('cost_overview')
+        ->and($json['cost_overview']['today'])->toEqual(100)
+        ->and($json['cost_overview']['this_week'])->toEqual(300)
+        ->and($json['cost_overview']['last_week'])->toEqual(300)
+        ->and($json['cost_overview']['this_month'])->toEqual(600)
+        ->and($json['cost_overview']['this_year'])->toEqual(1000);
 });
 
 it('filters costs by custom date range', function () {
-    Carbon::setTestNow(Carbon::parse('2026-02-12 12:00:00'));
+    $this->travelTo('2026-02-12 12:00:00');
 
-    try {
-        SpectraRequest::factory()
-            ->count(2)
-            ->state(new Sequence(
-                ['model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 120, 'created_at' => Carbon::parse('2026-02-10 08:00:00')],
-                ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'total_cost_in_cents' => 80, 'created_at' => Carbon::parse('2026-02-12 08:00:00')],
-            ))
-            ->create();
+    SpectraRequest::factory()
+        ->count(2)
+        ->state(new Sequence(
+            ['model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 120, 'created_at' => Carbon::parse('2026-02-10 08:00:00')],
+            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'total_cost_in_cents' => 80, 'created_at' => Carbon::parse('2026-02-12 08:00:00')],
+        ))
+        ->create();
 
-        $controller = app(CostsController::class);
-        $response = app()->call([$controller, '__invoke'], ['request' => new Request([
-            'period' => 'custom',
-            'start_date' => '2026-02-10',
-            'end_date' => '2026-02-10',
-        ])]);
-        $json = $response->toArray();
+    $controller = app(CostsController::class);
+    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+        'period' => 'custom',
+        'start_date' => '2026-02-10',
+        'end_date' => '2026-02-10',
+    ])]);
+    $json = $response->toArray();
 
-        expect($json['total_cost_in_cents'])->toEqual(120)
-            ->and($json['costs_by_date'])->toHaveCount(1)
-            ->and($json['costs_by_date'][0]['date'])->toBe('2026-02-10');
-    } finally {
-        Carbon::setTestNow();
-    }
+    expect($json['total_cost_in_cents'])->toEqual(120)
+        ->and($json['costs_by_date'])->toHaveCount(1)
+        ->and($json['costs_by_date'][0]['date'])->toBe('2026-02-10');
 });
 
 it('returns all-time costs when period is all', function () {
-    Carbon::setTestNow(Carbon::parse('2026-02-12 12:00:00'));
+    $this->travelTo('2026-02-12 12:00:00');
 
-    try {
-        SpectraRequest::factory()
-            ->count(2)
-            ->state(new Sequence(
-                ['model' => 'old-model', 'model_type' => 'text', 'total_cost_in_cents' => 120, 'created_at' => Carbon::parse('2025-01-10 08:00:00')],
-                ['model' => 'new-model', 'model_type' => 'text', 'total_cost_in_cents' => 80, 'created_at' => Carbon::parse('2026-02-10 08:00:00')],
-            ))
-            ->create();
+    SpectraRequest::factory()
+        ->count(2)
+        ->state(new Sequence(
+            ['model' => 'old-model', 'model_type' => 'text', 'total_cost_in_cents' => 120, 'created_at' => Carbon::parse('2025-01-10 08:00:00')],
+            ['model' => 'new-model', 'model_type' => 'text', 'total_cost_in_cents' => 80, 'created_at' => Carbon::parse('2026-02-10 08:00:00')],
+        ))
+        ->create();
 
-        $controller = app(CostsController::class);
-        $response = app()->call([$controller, '__invoke'], ['request' => new Request([
-            'period' => 'all',
-        ])]);
-        $json = $response->toArray();
+    $controller = app(CostsController::class);
+    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+        'period' => 'all',
+    ])]);
+    $json = $response->toArray();
 
-        expect($json['total_cost_in_cents'])->toEqual(200)
-            ->and($json['costs_by_date'])->toHaveCount(2);
-    } finally {
-        Carbon::setTestNow();
-    }
+    expect($json['total_cost_in_cents'])->toEqual(200)
+        ->and($json['costs_by_date'])->toHaveCount(2);
+});
+
+it('keeps equal trackable ids of different types apart in the top spenders', function () {
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 10, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 20, 'trackable_type' => 'App\\Models\\Team', 'trackable_id' => '1']);
+
+    $rows = collect(app()->call([app(CostsController::class), '__invoke'], ['request' => new Request(['period' => 'all'])])->toArray()['costs_by_user']);
+
+    expect($rows->map(fn ($row) => "{$row['trackable_type']}#{$row['user_id']}")->all())
+        ->toBe(['App\\Models\\Team#1', 'App\\Models\\User#1']);
 });

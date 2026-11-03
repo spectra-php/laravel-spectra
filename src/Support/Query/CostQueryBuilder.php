@@ -12,7 +12,17 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Spectra\Data\CostBreakdown;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\DateRange;
 
+/**
+ * The fluent cost query behind `Spectra::costs()`: filter by provider,
+ * model, trackable and period, then read totals or breakdowns in cents and
+ * dollars.
+ *
+ * It starts from successful (2xx) requests only, because a failed call is
+ * not billed; every count it returns is therefore a count of successful
+ * requests. Its method names and result keys are public API.
+ */
 class CostQueryBuilder
 {
     /** @var Builder<SpectraRequest> */
@@ -48,9 +58,8 @@ class CostQueryBuilder
     public function between(CarbonInterface|string $start, CarbonInterface|string $end): self
     {
         $start = $start instanceof CarbonInterface ? $start : Carbon::parse($start);
-        $end = $end instanceof CarbonInterface ? $end : Carbon::parse($end);
 
-        $this->query->whereBetween('created_at', [$start, $end]);
+        $this->query->whereBetween('created_at', [$start, DateRange::inclusiveEnd($end)]);
 
         return $this;
     }
@@ -141,11 +150,10 @@ class CostQueryBuilder
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{provider: string, request_count: int, total_cost_in_cents: float, total_cost: float}>
      */
     public function byProvider(): Collection
     {
-        // @phpstan-ignore-next-line return.type
         return $this->query
             ->selectRaw('
                 provider,
@@ -157,18 +165,17 @@ class CostQueryBuilder
             ->get()
             ->map(fn (SpectraRequest $item) => [
                 'provider' => $item->provider,
-                'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
-                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => (float) $item->total_cost / 100, // @phpstan-ignore property.notFound
+                'request_count' => (int) $item->request_count,
+                'total_cost_in_cents' => (float) $item->total_cost,
+                'total_cost' => (float) $item->total_cost / 100,
             ]);
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{provider: string, model: string, request_count: int, total_cost_in_cents: float, total_cost: float}>
      */
     public function byModel(): Collection
     {
-        // @phpstan-ignore-next-line return.type
         return $this->query
             ->selectRaw('
                 provider,
@@ -182,18 +189,17 @@ class CostQueryBuilder
             ->map(fn (SpectraRequest $item) => [
                 'provider' => $item->provider,
                 'model' => $item->model,
-                'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
-                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => (float) $item->total_cost / 100, // @phpstan-ignore property.notFound
+                'request_count' => (int) $item->request_count,
+                'total_cost_in_cents' => (float) $item->total_cost,
+                'total_cost' => (float) $item->total_cost / 100,
             ]);
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{date: mixed, request_count: int, total_cost_in_cents: float, total_cost: float}>
      */
     public function daily(int $days = 30): Collection
     {
-        // @phpstan-ignore-next-line return.type
         return $this->lastDays($days)
             ->query
             ->selectRaw('
@@ -206,20 +212,19 @@ class CostQueryBuilder
             ->get()
             ->map(fn (SpectraRequest $item) => [
                 'date' => $item->date,
-                'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
-                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => (float) $item->total_cost / 100, // @phpstan-ignore property.notFound
+                'request_count' => (int) $item->request_count,
+                'total_cost_in_cents' => (float) $item->total_cost,
+                'total_cost' => (float) $item->total_cost / 100,
             ]);
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{year: int, month: int, period: string, request_count: int, total_cost_in_cents: float, total_cost: float}>
      */
     public function monthly(int $months = 12): Collection
     {
         $period = $this->monthlyPeriodExpression();
 
-        // @phpstan-ignore-next-line return.type
         return $this->between(now()->subMonths($months), now())
             ->query
             ->selectRaw("
@@ -231,15 +236,15 @@ class CostQueryBuilder
             ->orderBy('period')
             ->get()
             ->map(function (SpectraRequest $item) {
-                [$year, $month] = explode('-', (string) $item->period); // @phpstan-ignore property.notFound
+                [$year, $month] = explode('-', (string) $item->period);
 
                 return [
                     'year' => (int) $year,
                     'month' => (int) $month,
-                    'period' => (string) $item->period, // @phpstan-ignore property.notFound
-                    'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
-                    'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
-                    'total_cost' => (float) $item->total_cost / 100, // @phpstan-ignore property.notFound
+                    'period' => (string) $item->period,
+                    'request_count' => (int) $item->request_count,
+                    'total_cost_in_cents' => (float) $item->total_cost,
+                    'total_cost' => (float) $item->total_cost / 100,
                 ];
             });
     }
@@ -261,11 +266,10 @@ class CostQueryBuilder
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{trackable_type: string|null, trackable_id: string|null, request_count: int, total_cost_in_cents: float, total_cost: float}>
      */
     public function topSpenders(int $limit = 10): Collection
     {
-        // @phpstan-ignore-next-line return.type
         return $this->query
             ->selectRaw('
                 trackable_type,
@@ -281,9 +285,9 @@ class CostQueryBuilder
             ->map(fn (SpectraRequest $item) => [
                 'trackable_type' => $item->trackable_type,
                 'trackable_id' => $item->trackable_id,
-                'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
-                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => (float) $item->total_cost / 100, // @phpstan-ignore property.notFound
+                'request_count' => (int) $item->request_count,
+                'total_cost_in_cents' => (float) $item->total_cost,
+                'total_cost' => (float) $item->total_cost / 100,
             ]);
     }
 

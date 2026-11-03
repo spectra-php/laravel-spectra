@@ -18,6 +18,15 @@ use Spectra\Support\Tracking\StreamingTracker;
 use Spectra\Support\Tracking\TraceContext;
 use Throwable;
 
+/**
+ * The scoped tracking manager behind the `Spectra` facade.
+ *
+ * It starts and records request contexts for the watchers, the Guzzle
+ * middleware and manual `track()` / `stream()` calls, and holds the globals
+ * (tags, trackable, trace id, pricing tier, metadata) applied to every request
+ * of the current request, job or command. It is scoped, not a singleton, so
+ * those globals never leak between Octane requests or queued jobs.
+ */
 class Spectra
 {
     use Macroable;
@@ -135,14 +144,17 @@ class Spectra
 
         try {
             $result = $callback($context);
-
-            $this->recordSuccess($context, $this->toRawResponse($result));
-
-            return $result;
         } catch (Throwable $e) {
-            $this->recordFailure($context, $e);
+            rescue(fn () => $this->recordFailure($context, $e));
+
             throw $e;
         }
+
+        // Only the callback's own exception may reach the caller: a tracking
+        // failure must not cost them the result they already have.
+        rescue(fn () => $this->recordSuccess($context, $this->toRawResponse($result)));
+
+        return $result;
     }
 
     /**
@@ -355,7 +367,7 @@ class Spectra
         /** @var class-string<Model> $model */
         $model = config('auth.providers.users.model') ?? 'App\Models\User';
 
-        return $model::findOrFail($id);
+        return $model::query()->findOrFail($id);
     }
 
     public function getCurrentContext(): ?RequestContext

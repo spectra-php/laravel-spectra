@@ -62,7 +62,7 @@ final class GeminiUsage
      */
     public static function pricingTier(mixed $serviceTier): ?string
     {
-        if (! is_string($serviceTier) || $serviceTier === '') {
+        if (blank($serviceTier)) {
             return null;
         }
 

@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Spectra\Providers\Google\GeminiUsage;
 use Spectra\Providers\Google\Streaming\GenerateContentStreaming;
 
+/**
+ * How Gemini usage is read: thinking and tool-use tokens, modalities,
+ * service tiers, search grounding, streamed JSON arrays and Veo job ids.
+ */
 it('folds thinking and tool-use prompt tokens into the totals', function () {
     $tokens = GeminiUsage::tokens([
         'promptTokenCount' => 100,

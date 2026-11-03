@@ -5,17 +5,11 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
 
-/*
-|--------------------------------------------------------------------------
-| OpenAI streams through the HTTP client
-|--------------------------------------------------------------------------
-|
-| Server-sent-event bodies in OpenAI's wire format. The middleware records
-| a stream once the app has read the body. Costs are worked out by hand from
-| OpenAIPricing (cents per 1M tokens).
-|
-*/
-
+/**
+ * OpenAI streams through the HTTP client. Server-sent-event bodies in
+ * OpenAI's wire format are recorded once the app has read the body. Costs
+ * are worked out by hand from OpenAIPricing (cents per 1M tokens).
+ */
 function openAiStreamFixture(string $name): string
 {
     return (string) file_get_contents(__DIR__.'/../../responses/openai/'.$name);

@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Spectra\Facades\Spectra;
 use Spectra\Support\Tracking\StreamingTracker;
 
+/**
+ * StreamingTracker reads text, usage and timing from each provider's stream
+ * chunks and records the request when the stream finishes.
+ */
 beforeEach(function () {
     Spectra::fake();
 });
@@ -95,7 +99,7 @@ it('handles openai responses api format', function () {
         ->and($tracker->getUsage()['completion_tokens'])->toBe(2);
 });
 
-it('should manually set usage', function () {
+it('reports token usage set by hand through setUsage', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     $tracker->setUsage([
@@ -110,7 +114,7 @@ it('should manually set usage', function () {
         ->and($usage['cached_tokens'])->toBe(25);
 });
 
-it('should manually append content', function () {
+it('joins appended content and records the time to first token', function () {
     $tracker = Spectra::stream('openai', 'gpt-4o');
 
     $tracker->appendContent('Hello');

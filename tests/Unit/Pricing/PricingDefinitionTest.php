@@ -5,7 +5,12 @@ declare(strict_types=1);
 use Spectra\Pricing\ProviderPricing;
 use Spectra\Support\Pricing\ModelDefinition;
 
-it('should build a model definition with all fields', function () {
+/**
+ * ModelDefinition and ProviderPricing: the fluent model builder, its tiers
+ * and cost shorthand, and how a provider's define() and populate() models
+ * are exported.
+ */
+it('exports every field of a text model definition', function () {
     $model = new ModelDefinition('gpt-4o');
     $model->displayName('GPT-4o')
         ->type('text')
@@ -28,7 +33,7 @@ it('should build a model definition with all fields', function () {
     ]);
 });
 
-it('should build a model with multiple capabilities', function () {
+it('enables only the capabilities that were set', function () {
     $model = new ModelDefinition('multimodal');
     $model->canGenerateText()
         ->canGenerateImages()
@@ -42,7 +47,7 @@ it('should build a model with multiple capabilities', function () {
         ->and($array['can_generate_video'])->toBeFalse();
 });
 
-it('should build a model with pricing tiers', function () {
+it('exports each pricing tier with unset prices as null', function () {
     $model = new ModelDefinition('gpt-4o');
     $model->tier('standard', inputPrice: 250, outputPrice: 1000, cachedInputPrice: 125)
         ->tier('batch', inputPrice: 125, outputPrice: 500);
@@ -84,7 +89,7 @@ it('should build a model with pricing tiers', function () {
     ]);
 });
 
-it('should build a model with cache write pricing', function () {
+it('stores the 5-minute and 1-hour cache write prices', function () {
     $model = new ModelDefinition('claude-sonnet');
     $model->tier('standard',
         inputPrice: 300,
@@ -100,7 +105,7 @@ it('should build a model with cache write pricing', function () {
         ->and($tiers[0]['cache_write_1h_price'])->toBe(600.0);
 });
 
-it('should build a unit-based model with price per unit', function () {
+it('prices a unit-based model per unit with zero token prices', function () {
     $model = new ModelDefinition('dall-e-3');
     $model->displayName('DALL-E 3')
         ->type('image')
@@ -119,7 +124,7 @@ it('should build a unit-based model with price per unit', function () {
         ->and($tiers[0]['output_price'])->toBe(0.0);
 });
 
-it('should build a model with cost shorthand for standard tier', function () {
+it('adds a standard tier through the cost shorthand', function () {
     $model = new ModelDefinition('gpt-4o-mini');
     $model->displayName('GPT-4o Mini')
         ->canGenerateText()
@@ -146,7 +151,7 @@ it('should build a model with cost shorthand for standard tier', function () {
     ]);
 });
 
-it('should combine cost shorthand with additional tiers', function () {
+it('keeps the shorthand standard tier first when more tiers are added', function () {
     $model = new ModelDefinition('gpt-4o');
     $model->cost(inputPrice: 250, outputPrice: 1000)
         ->tier('batch', inputPrice: 125, outputPrice: 500);
@@ -158,7 +163,7 @@ it('should combine cost shorthand with additional tiers', function () {
         ->and($tiers[1]['tier'])->toBe('batch');
 });
 
-it('should use cost shorthand with price per unit', function () {
+it('sets a standard per-unit price through the cost shorthand', function () {
     $model = new ModelDefinition('dall-e-3');
     $model->type('image')
         ->pricingUnit('image')

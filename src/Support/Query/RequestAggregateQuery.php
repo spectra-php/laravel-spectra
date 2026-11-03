@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Query;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -150,6 +151,16 @@ class RequestAggregateQuery
             ->selectRaw("COALESCE(SUM(CASE WHEN model_type = 'stt' THEN duration_seconds ELSE 0 END), 0) as stt_duration_sum");
     }
 
+    /** Image, video and audio usage as the trackables screens show it. */
+    public function mediaSums(): self
+    {
+        return $this
+            ->selectRaw('COALESCE(SUM(image_count), 0) as images_sum')
+            ->selectRaw('COALESCE(SUM(video_count), 0) as videos_sum')
+            ->selectRaw("COALESCE(SUM(CASE WHEN model_type = 'tts' THEN input_characters ELSE 0 END), 0) as tts_characters_sum")
+            ->selectRaw("COALESCE(SUM(CASE WHEN model_type IN ('tts', 'stt') THEN duration_seconds ELSE 0 END), 0) as audio_duration_sum");
+    }
+
     /** Bucket rows by calendar date (adds select, group, and order). */
     public function byDate(): self
     {
@@ -186,6 +197,16 @@ class RequestAggregateQuery
         return $this;
     }
 
+    /**
+     * @param  'asc'|'desc'  $direction
+     */
+    public function orderBy(string $column, string $direction = 'asc'): self
+    {
+        $this->query->orderBy($column, $direction);
+
+        return $this;
+    }
+
     public function limit(int $limit): self
     {
         $this->query->limit($limit);
@@ -202,6 +223,23 @@ class RequestAggregateQuery
     public function first(): ?SpectraRequest
     {
         return $this->query->first();
+    }
+
+    /** @return LengthAwarePaginator<int, SpectraRequest> */
+    public function paginate(int $perPage): LengthAwarePaginator
+    {
+        return $this->query->paginate($perPage);
+    }
+
+    /**
+     * How many distinct combinations of the given columns the rows hold.
+     *
+     * Counted over a grouped subquery: COUNT(DISTINCT a, b) is MySQL-only and
+     * concatenating the columns needs a different operator per driver.
+     */
+    public function countDistinct(string ...$columns): int
+    {
+        return $this->query->select($columns)->groupBy($columns)->toBase()->getCountForPagination();
     }
 
     public function sumCost(): float

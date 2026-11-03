@@ -93,7 +93,12 @@ class StreamingTracker
 
     protected ?SpectraRequest $result = null;
 
-    /** @var array<string, string> */
+    /**
+     * SDK stream classes and the provider they belong to. Never written at
+     * runtime, so it is safe as static state under Octane.
+     *
+     * @var array<string, string>
+     */
     protected static array $streamClassMap = [
         'OpenAI\Responses\StreamResponse' => 'openai',
         'OpenAI\Responses\Streaming\StreamResponse' => 'openai',
@@ -182,7 +187,7 @@ class StreamingTracker
 
         $endpoint = $this->context->endpoint ?? '';
 
-        if ($endpoint !== '') {
+        if (filled($endpoint)) {
             $handler = $provider->resolveHandler($endpoint);
 
             if ($handler instanceof StreamsResponse) {
@@ -222,6 +227,8 @@ class StreamingTracker
             $stream = $this->parseRawStream($stream);
         }
 
+        // ingest() never throws, so anything caught here came from the
+        // caller's stream and is theirs to handle.
         try {
             foreach ($stream as $chunk) {
                 $text = $this->ingest($chunk);
@@ -252,19 +259,22 @@ class StreamingTracker
 
     /**
      * Process one stream chunk (an SDK chunk object or a decoded event) and
-     * return its text, if any.
+     * return its text, if any. A chunk it cannot read is reported and
+     * skipped, so it never breaks the caller's loop over the stream.
      */
     public function ingest(mixed $chunk): ?string
     {
-        // Delay context init to the first chunk so the model can be detected.
-        if (! $this->contextInitialized) {
-            $this->detectModelFromChunk($chunk);
-            $this->initializeContext();
-        }
+        return rescue(function () use ($chunk) {
+            // Delay context init to the first chunk so the model can be detected.
+            if (! $this->contextInitialized) {
+                $this->detectModelFromChunk($chunk);
+                $this->initializeContext();
+            }
 
-        $this->sawStreamData = true;
+            $this->sawStreamData = true;
 
-        return $this->processChunk($chunk);
+            return $this->processChunk($chunk);
+        });
     }
 
     /**
@@ -330,9 +340,10 @@ class StreamingTracker
         $data = $this->normalizeChunk($chunk);
         $this->lastChunkData = $data;
 
-        $this->captureStreamError($data);
+        // Each field is read on its own, so a malformed one only loses itself.
+        rescue(fn () => $this->captureStreamError($data));
 
-        $text = $this->extractText($data);
+        $text = rescue(fn () => $this->extractText($data));
 
         if ($text !== null && $text !== '' && $this->firstTokenTime === null) {
             $this->firstTokenTime = microtime(true);
@@ -344,10 +355,10 @@ class StreamingTracker
             $this->content .= $text;
         }
 
-        $this->extractUsage($data);
-        $this->extractFinishReason($data);
-        $this->extractModel($data);
-        $this->captureCompletedResponse($data);
+        rescue(fn () => $this->extractUsage($data));
+        rescue(fn () => $this->extractFinishReason($data));
+        rescue(fn () => $this->extractModel($data));
+        rescue(fn () => $this->captureCompletedResponse($data));
 
         return $text;
     }
@@ -398,7 +409,7 @@ class StreamingTracker
         // OpenAI Responses: the final event of a failed response; its usage still counts.
         if ($type === 'response.failed') {
             $message = $data['response']['error']['message'] ?? null;
-            $this->streamError = is_string($message) && $message !== '' ? $message : 'Response failed';
+            $this->streamError = filled($message) ? $message : 'Response failed';
 
             return;
         }
@@ -533,7 +544,7 @@ class StreamingTracker
         }
 
         // Generic fallback
-        if (isset($data['model']) && is_string($data['model']) && $this->model === null) {
+        if (filled($data['model'] ?? null) && $this->model === null) {
             $this->model = $data['model'];
         }
 
@@ -545,7 +556,8 @@ class StreamingTracker
 
     /**
      * Record the stream. Safe to call more than once; later calls return the
-     * first result.
+     * first result. A tracking failure is reported and returns an unsaved
+     * request, so it never reaches the caller.
      */
     public function finish(): SpectraRequest
     {
@@ -553,7 +565,7 @@ class StreamingTracker
             return $this->result;
         }
 
-        return $this->result = $this->record();
+        return $this->result = rescue(fn () => $this->record(), fn () => new SpectraRequest);
     }
 
     /**
@@ -606,7 +618,7 @@ class StreamingTracker
             $context->responseId = $this->responseId;
         }
 
-        $this->applyStreamExtras();
+        rescue(fn () => $this->applyStreamExtras());
 
         // The tier the request asked for, when the stream didn't report one.
         if ($context->pricingTier === null && $context->requestedPricingTier !== null) {
@@ -641,7 +653,8 @@ class StreamingTracker
         }
 
         $context->finishReason = $this->finishReason;
-        $context->reasoningTokens = $this->usage['reasoning_tokens'] ?? 0;
+        $reasoningTokens = $this->usage['reasoning_tokens'] ?? 0;
+        $context->reasoningTokens = is_numeric($reasoningTokens) ? (int) $reasoningTokens : 0;
 
         // Detect tool calls from finish_reason
         if ($this->finishReason !== null && in_array($this->finishReason, ['tool_calls', 'tool_use'], true)) {
@@ -651,18 +664,7 @@ class StreamingTracker
         // Resolve model_type if it wasn't set during handler resolution
         // (happens when no endpoint is available, e.g. standalone Spectra::stream())
         if ($context->modelType === null && $this->provider !== null) {
-            $providerInstance = app(ProviderRegistry::class)->provider($this->provider);
-            $endpoint = $context->endpoint ?? '';
-
-            if ($providerInstance !== null) {
-                $handler = $providerInstance->resolveHandler($endpoint, $this->lastChunkData);
-
-                if ($handler !== null) {
-                    $context->modelType = $handler->modelType()->value;
-                } elseif ($endpoint !== '') {
-                    $context->modelType = $providerInstance->resolveModelType($endpoint)?->value;
-                }
-            }
+            rescue(fn () => $this->resolveModelType($context));
         }
 
         $response = [
@@ -674,6 +676,28 @@ class StreamingTracker
         ];
 
         return $manager->recordSuccess($context, $response, $this->usage);
+    }
+
+    /**
+     * The model type from the handler that matches the last chunk, or from
+     * the endpoint alone when no handler matches.
+     */
+    protected function resolveModelType(RequestContext $context): void
+    {
+        $providerInstance = app(ProviderRegistry::class)->provider($this->provider ?? '');
+        $endpoint = $context->endpoint ?? '';
+
+        if ($providerInstance === null) {
+            return;
+        }
+
+        $handler = $providerInstance->resolveHandler($endpoint, $this->lastChunkData);
+
+        if ($handler !== null) {
+            $context->modelType = $handler->modelType()->value;
+        } elseif (filled($endpoint)) {
+            $context->modelType = $providerInstance->resolveModelType($endpoint)?->value;
+        }
     }
 
     /**
@@ -726,7 +750,7 @@ class StreamingTracker
             $this->context->costMultiplier = (float) $usage['cost_multiplier'];
         }
 
-        if (isset($usage['pricing_tier']) && is_string($usage['pricing_tier']) && $this->context->pricingTier === null) {
+        if (filled($usage['pricing_tier'] ?? null) && $this->context->pricingTier === null) {
             $this->context->withPricingTier($usage['pricing_tier']);
         }
 

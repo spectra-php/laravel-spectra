@@ -9,6 +9,10 @@ use Spectra\Data\CostByModelType;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * Requests, usage and cost per model type for the costs screen; counts and
+ * usage include failures, cost covers successful requests.
+ */
 class GetCostsByModelType
 {
     /**
@@ -18,12 +22,11 @@ class GetCostsByModelType
     {
         return CostByModelType::fromCollection(
             RequestAggregateQuery::make($dateRange)
-                ->successfulOnly()
                 ->groupByColumns('model_type')
                 ->countAs('requests')
                 ->tokenSum()
                 ->usageSums()
-                ->selectRaw('SUM(total_cost_in_cents) as cost')
+                ->successfulCost()
                 ->orderByDesc('cost')
                 ->get()
         );

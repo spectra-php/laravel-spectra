@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Http;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Spectra\SpectraServiceProvider;
 
@@ -13,6 +14,8 @@ class TestCase extends Orchestra
     protected function setUp(): void
     {
         parent::setUp();
+
+        Http::preventStrayRequests();
 
         Factory::guessFactoryNamesUsing(
             fn (string $modelName) => 'Spectra\\Database\\Factories\\'.class_basename($modelName).'Factory'

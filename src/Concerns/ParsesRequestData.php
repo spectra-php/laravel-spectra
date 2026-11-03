@@ -64,7 +64,7 @@ trait ParsesRequestData
         preg_match('/boundary=(.+?)(?:;|$)/', $contentType, $matches);
         $boundary = trim($matches[1] ?? '', '"');
 
-        if ($boundary === '') {
+        if (blank($boundary)) {
             return [];
         }
 
@@ -102,7 +102,7 @@ trait ParsesRequestData
         foreach (explode('--'.$boundary, $body) as $part) {
             $part = ltrim($part, "\r\n");
 
-            if ($part === '' || str_starts_with($part, '--') || str_contains($part, 'filename=')) {
+            if (blank($part) || str_starts_with($part, '--') || str_contains($part, 'filename=')) {
                 continue;
             }
 
@@ -167,7 +167,7 @@ trait ParsesRequestData
             preg_match('/boundary=(.+?)(?:;|$)/', $contentType, $matches);
             $boundary = trim($matches[1] ?? '', '"');
 
-            if ($boundary === '') {
+            if (blank($boundary)) {
                 return [];
             }
 
@@ -180,7 +180,7 @@ trait ParsesRequestData
             foreach ($parts as $part) {
                 $part = ltrim($part, "\r\n");
 
-                if ($part === '' || $part === '--' || str_starts_with($part, '--')) {
+                if (blank($part) || $part === '--' || str_starts_with($part, '--')) {
                     continue;
                 }
 

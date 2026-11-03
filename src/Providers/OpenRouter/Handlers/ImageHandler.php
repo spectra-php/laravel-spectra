@@ -45,8 +45,8 @@ class ImageHandler extends ChatHandler implements HasMedia
     {
         $parts = [];
 
-        $content = $response['choices'][0]['message']['content'] ?? null;
-        if (is_string($content) && $content !== '') {
+        $content = data_get($response, 'choices.0.message.content');
+        if (filled($content)) {
             $parts[] = $content;
         }
 
@@ -80,9 +80,13 @@ class ImageHandler extends ChatHandler implements HasMedia
         $stored = [];
         $index = 0;
 
-        foreach ($responseData['choices'] ?? [] as $choice) {
-            foreach ($choice['message']['images'] ?? [] as $image) {
-                $dataUrl = $image['image_url']['url'] ?? null;
+        $choices = $responseData['choices'] ?? null;
+
+        foreach (is_array($choices) ? $choices : [] as $choice) {
+            $images = data_get($choice, 'message.images');
+
+            foreach (is_array($images) ? $images : [] as $image) {
+                $dataUrl = data_get($image, 'image_url.url');
 
                 if (! is_string($dataUrl)) {
                     continue;
@@ -109,12 +113,10 @@ class ImageHandler extends ChatHandler implements HasMedia
     /** @param  array<string, mixed>  $data */
     private function countImages(array $data): int
     {
-        $count = 0;
+        $choices = $data['choices'] ?? null;
 
-        foreach ($data['choices'] ?? [] as $choice) {
-            $count += count($choice['message']['images'] ?? []);
-        }
-
-        return $count;
+        return collect(is_array($choices) ? $choices : [])
+            ->map(fn (mixed $choice) => data_get($choice, 'message.images'))
+            ->sum(fn (mixed $images) => is_array($images) ? count($images) : 0);
     }
 }

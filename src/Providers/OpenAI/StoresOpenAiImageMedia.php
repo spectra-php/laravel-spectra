@@ -13,6 +13,9 @@ use Spectra\Support\MediaPersister;
  */
 trait StoresOpenAiImageMedia
 {
+    /** Seconds to wait for a generated image to download. */
+    protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 30;
+
     /** @param  array<string, mixed>  $response */
     public function extractResponse(array $response): ?string
     {
@@ -22,9 +25,11 @@ trait StoresOpenAiImageMedia
 
         $urls = [];
         foreach ($response['data'] as $item) {
-            if (isset($item['url'])) {
-                $urls[] = $item['url'];
-            } elseif (isset($item['b64_json'])) {
+            $url = data_get($item, 'url');
+
+            if (filled($url)) {
+                $urls[] = $url;
+            } elseif (data_get($item, 'b64_json') !== null) {
                 $urls[] = '[base64 image data]';
             }
         }
@@ -41,31 +46,46 @@ trait StoresOpenAiImageMedia
         $persister = app(MediaPersister::class);
         $stored = [];
 
-        foreach ($responseData['data'] ?? [] as $i => $item) {
-            if (isset($item['b64_json'])) {
-                $content = base64_decode($item['b64_json'], true);
+        $items = $responseData['data'] ?? null;
 
-                if (! is_string($content) || $content === '') {
+        foreach (is_array($items) ? $items : [] as $i => $item) {
+            $b64 = data_get($item, 'b64_json');
+            $url = data_get($item, 'url');
+
+            if (filled($b64)) {
+                $content = base64_decode($b64, true);
+
+                if ($content === false || blank($content)) {
                     continue;
                 }
 
                 $stored[] = $persister->store($requestId, $i, $content, 'png');
-            } elseif (isset($item['url'])) {
-                if (! is_string($item['url'])) {
-                    continue;
-                }
 
-                $response = Http::withoutAITracking()->get($item['url']);
+                continue;
+            }
+
+            if (blank($url)) {
+                continue;
+            }
+
+            // One image that fails to download or store must not lose the others.
+            $path = rescue(function () use ($persister, $requestId, $i, $url) {
+                $response = Http::withoutAITracking()->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)->get($url);
+
                 if (! $response->successful()) {
-                    continue;
+                    return null;
                 }
 
-                $stored[] = $persister->store(
+                return $persister->store(
                     $requestId,
                     $i,
                     $response->body(),
-                    $this->resolveImageExtension($item['url'], $response->header('Content-Type')),
+                    $this->resolveImageExtension($url, $response->header('Content-Type')),
                 );
+            });
+
+            if ($path !== null) {
+                $stored[] = $path;
             }
         }
 
@@ -105,7 +125,7 @@ trait StoresOpenAiImageMedia
 
     private function normalizeContentType(?string $contentType): ?string
     {
-        if (! is_string($contentType) || $contentType === '') {
+        if (blank($contentType)) {
             return null;
         }
 

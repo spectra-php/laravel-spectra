@@ -7,6 +7,11 @@ namespace Spectra\Support\Budget;
 use Illuminate\Database\Eloquent\Model;
 use Spectra\Models\SpectraBudget;
 
+/**
+ * Fluent builder behind `$user->configureAiBudget()`: collects the limits,
+ * thresholds and allow-lists, then creates or updates the model's budget
+ * in one write.
+ */
 class BudgetBuilder
 {
     /** @var array<string, mixed> */

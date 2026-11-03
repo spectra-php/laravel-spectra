@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
 
@@ -14,8 +13,6 @@ function xaiSse(array ...$events): string
 {
     return implode('', array_map(fn (array $event) => 'data: '.json_encode($event)."\n\n", $events))."data: [DONE]\n\n";
 }
-
-afterEach(fn () => Carbon::setTestNow());
 
 it('bills reasoning tokens on top of completion tokens and uses the reported cost', function () {
     Http::fake(['api.x.ai/*' => Http::response($this->loadMockResponse('xai/chat-reasoning.json'))]);
@@ -88,10 +85,10 @@ it('prices retired models at their old rate before the redirect and at grok-4.3 
         'usage' => ['prompt_tokens' => 1_000_000, 'completion_tokens' => 1_000_000]];
     Http::fake(['api.x.ai/*' => Http::sequence()->push($body('chat-april'))->push($body('chat-june'))]);
 
-    Carbon::setTestNow('2026-04-01 12:00:00');
+    $this->travelTo('2026-04-01 12:00:00');
     Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4-0709', 'messages' => []]);
 
-    Carbon::setTestNow('2026-06-01 12:00:00');
+    $this->travelTo('2026-06-01 12:00:00');
     Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4-0709', 'messages' => []]);
 
     [$before, $after] = SpectraRequest::orderBy('id')->get()->all();

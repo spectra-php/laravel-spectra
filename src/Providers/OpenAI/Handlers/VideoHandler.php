@@ -36,6 +36,9 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
     use MatchesParametricEndpoints;
     use MeasuresJobLatency;
 
+    /** Seconds to wait for a generated video to download. */
+    protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 60;
+
     public function modelType(): ModelType
     {
         return ModelType::Video;
@@ -78,9 +81,9 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
     /** @param  array<string, mixed>  $responseData */
     public function extractExpiresAt(array $responseData): ?CarbonInterface
     {
-        return isset($responseData['expires_at'])
-            ? Carbon::createFromTimestamp($responseData['expires_at'])
-            : null;
+        $expiresAt = $responseData['expires_at'] ?? null;
+
+        return is_numeric($expiresAt) ? Carbon::createFromTimestamp((int) $expiresAt) : null;
     }
 
     /**
@@ -90,7 +93,7 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
     public function storeMedia(string $requestId, array $responseData, ?string $rawBody = null): array
     {
         $id = $responseData['id'] ?? null;
-        if (! $id) {
+        if (blank($id)) {
             return [];
         }
 
@@ -99,13 +102,17 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
             return [];
         }
 
-        $url = "https://api.openai.com/v1/videos/{$id}/content";
-        $response = Http::withoutAITracking()->withToken($apiKey)->get($url);
+        $path = rescue(function () use ($requestId, $id, $apiKey) {
+            $response = Http::withoutAITracking()
+                ->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)
+                ->withToken($apiKey)
+                ->get("https://api.openai.com/v1/videos/{$id}/content");
 
-        if (! $response->successful()) {
-            return [];
-        }
+            return $response->successful()
+                ? app(MediaPersister::class)->store($requestId, 0, $response->body(), 'mp4')
+                : null;
+        });
 
-        return [app(MediaPersister::class)->store($requestId, 0, $response->body(), 'mp4')];
+        return $path === null ? [] : [$path];
     }
 }

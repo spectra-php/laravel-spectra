@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Spectra\Data;
 
+/**
+ * The headline numbers for one trackable on its detail screen: counts and
+ * usage over every request, cost and latency over successful ones.
+ */
 readonly class TrackableStats extends DataTransferObject
 {
     public function __construct(

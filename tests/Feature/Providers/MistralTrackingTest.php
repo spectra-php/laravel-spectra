@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * A Mistral chat response recorded through Spectra::track() with its model,
+ * tokens and cost.
+ */
 it('records mistral chat response to database', function () {
     $response = $this->loadMockResponse('mistral/chat.json');
 

@@ -64,7 +64,7 @@ trait HandlesFalRequests
     {
         $model = trim((string) preg_replace('#/requests/.*$#', '', $endpoint), '/');
 
-        return $model !== '' ? $model : null;
+        return filled($model) ? $model : null;
     }
 
     /**

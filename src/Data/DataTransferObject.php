@@ -13,6 +13,11 @@ use ReflectionClass;
 use ReflectionProperty;
 
 /**
+ * Base class for every Spectra DTO: readonly public properties that turn
+ * into an array or JSON with their names as keys (nested DTOs and
+ * collections included), plus read-only array access so callers can treat a
+ * DTO like the array it replaced.
+ *
  * @implements ArrayAccess<string, mixed>
  * @implements Arrayable<string, mixed>
  */
@@ -44,7 +49,7 @@ abstract readonly class DataTransferObject implements Arrayable, ArrayAccess, Js
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public function jsonSerialize(): array
     {

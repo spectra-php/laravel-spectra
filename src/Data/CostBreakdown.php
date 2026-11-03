@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Spectra\Data;
 
+/**
+ * The cost totals `CostQueryBuilder::breakdown()` returns, in cents and
+ * dollars: prompt, completion, total and average per request.
+ */
 readonly class CostBreakdown extends DataTransferObject
 {
     public function __construct(

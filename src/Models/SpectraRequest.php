@@ -13,16 +13,25 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Str;
 use Spectra\Database\Factories\SpectraRequestFactory;
 use Spectra\Support\ProviderRegistry;
 
 /**
+ * One tracked AI call: the provider, model and endpoint, who made it, its
+ * usage, cost and latency, and (when storing is enabled) its payloads.
+ *
+ * A request is successful when its status code is 2xx and failed otherwise,
+ * including a missing status code, so the two always cover every row. The
+ * aggregate aliases below are the columns the dashboard and the usage
+ * queries select; they exist only on those query results.
+ *
  * @property string $id
  * @property string|null $batch_id
  * @property string|null $trace_id
  * @property string|null $parent_span_id
  * @property string|null $response_id
- * @property string|null $provider
+ * @property string $provider
  * @property string $model
  * @property string|null $snapshot
  * @property string|null $model_type
@@ -100,6 +109,13 @@ use Spectra\Support\ProviderRegistry;
  * @property-read mixed $tts_characters
  * @property-read mixed $tts_duration_seconds
  * @property-read mixed $stt_duration_seconds
+ * @property-read mixed $request_count
+ * @property-read mixed $total_cost
+ * @property-read mixed $period
+ * @property-read mixed $model_count
+ * @property-read mixed $tts_duration_sum
+ * @property-read mixed $stt_duration_sum
+ * @property-read mixed $avg_latency_ms
  * @property-read Collection<int, SpectraTag> $tags
  */
 class SpectraRequest extends Model
@@ -265,9 +281,27 @@ class SpectraRequest extends Model
     public function scopeFailed(Builder $query): Builder
     {
         return $query->where(function (Builder $q) {
-            $q->where('status_code', '>=', 400)
+            $q->whereNotBetween('status_code', [200, 299])
                 ->orWhereNull('status_code');
         });
+    }
+
+    /**
+     * Requests that belong to the given trace.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeForTrace(Builder $query, string $traceId): Builder
+    {
+        // trace_id is a native uuid column on PostgreSQL, which rejects any
+        // other string with an error instead of matching nothing. Other
+        // drivers store it as text, where custom trace ids can exist.
+        if (! Str::isUuid($traceId) && $this->getConnection()->getDriverName() === 'pgsql') {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('trace_id', $traceId);
     }
 
     /**
@@ -360,10 +394,13 @@ class SpectraRequest extends Model
      */
     protected function providerDisplayName(): Attribute
     {
-        return Attribute::get(fn () => $this->provider !== null
-            ? app(ProviderRegistry::class)->displayName($this->provider)
-            : null
-        );
+        // Read the raw attribute: aggregate rows and narrow selects may not
+        // load the provider column at all.
+        return Attribute::get(function () {
+            $provider = $this->attributes['provider'] ?? null;
+
+            return filled($provider) ? app(ProviderRegistry::class)->displayName($provider) : null;
+        });
     }
 
     /**
@@ -380,10 +417,10 @@ class SpectraRequest extends Model
     }
 
     /**
-     * Check if the request failed (4xx/5xx or null status code).
+     * Whether the request failed: any status outside 200-299, or none at all.
      */
     public function isFailed(): bool
     {
-        return $this->status_code === null || $this->status_code >= 400;
+        return ! $this->isSuccessful();
     }
 }

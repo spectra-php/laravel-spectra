@@ -6,6 +6,10 @@ use Spectra\Contracts\SpanBuilder;
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
 use Spectra\Integrations\OpenTelemetry\SpanExporter;
 
+/**
+ * The span exporter builds spans with the configured span builder and wraps
+ * them in an OTLP batch envelope.
+ */
 it('delegates span creation to the injected span builder', function () {
     $mockBuilder = Mockery::mock(SpanBuilder::class);
     $mockBuilder->shouldReceive('build')

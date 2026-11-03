@@ -166,6 +166,7 @@ it('skips a broken model and loads the others', function (array $broken, string 
     'bad unit' => [['pricing_unit' => 'liters', 'tiers' => [['tier' => 'standard', 'price_per_unit' => 1]]], 'liters'],
     'bad date' => [['tiers' => [['tier' => 'standard', 'input_price' => 1, 'since' => 'soon']]], 'Y-m-d'],
     'unknown capability' => [['capabilities' => ['telepathy'], 'tiers' => [['tier' => 'standard']]], 'telepathy'],
+    'no standard tier' => [['tiers' => [['tier' => 'batch', 'input_price' => 1, 'output_price' => 2]]], 'no standard tier'],
 ]);
 
 it('round-trips a model definition through its JSON form', function () {
@@ -219,7 +220,7 @@ it('fills the scraped prices keys into a config published before they existed', 
     expect(config('spectra.costs.use_scraped_prices'))->toBeTrue()
         ->and(config('spectra.costs.scraped_prices_path'))->toBe(resource_path('spectra/scraped-prices.json'))
         ->and(config('spectra.costs.firecrawl.url'))->toBe('https://api.firecrawl.dev/v2')
-        ->and(config('spectra.costs.pricing'))->toBe(['openai' => FakeOpenAIPricing::class]);
+        ->and(config('spectra.costs.pricing.openai'))->toBe(FakeOpenAIPricing::class);
 });
 
 it('keeps scraped prices keys the app config already has', function () {

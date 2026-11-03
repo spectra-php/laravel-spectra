@@ -7,6 +7,9 @@ namespace Spectra\Data;
 use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * One provider's cost on the costs screen, in cents over successful requests.
+ */
 readonly class CostByProvider extends DataTransferObject
 {
     public function __construct(

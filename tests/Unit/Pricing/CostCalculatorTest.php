@@ -5,7 +5,12 @@ declare(strict_types=1);
 use Spectra\Enums\PricingTier;
 use Spectra\Support\Pricing\CostCalculator;
 
-it('should calculate costs for a request', function () {
+/**
+ * CostCalculator prices tokens, units and tiers straight from the catalog:
+ * tier selection, per-unit costs and spot checks of each provider's catalog
+ * entries.
+ */
+it('splits a request cost into prompt and completion parts that add up to the total', function () {
     $calculator = new CostCalculator;
 
     $costs = $calculator->calculate(
@@ -81,7 +86,7 @@ it('calculates non-zero cost for small token counts', function () {
         ->and($costs['total_cost_in_cents'])->toBeGreaterThan(0);
 });
 
-it('should calculate costs with openai pricing tiers', function () {
+it('charges less on the openai batch tier than on standard', function () {
     $calculator = new CostCalculator;
 
     // Standard tier: gpt-4o input=250, output=1000 cents per 1M tokens
@@ -114,7 +119,7 @@ it('should calculate costs with openai pricing tiers', function () {
     expect($batchCosts['total_cost_in_cents'])->toBeLessThan($standardCosts['total_cost_in_cents']);
 });
 
-it('should calculate costs with pricing tier as string', function () {
+it('prices the batch tier when the tier is passed as a string', function () {
     $calculator = new CostCalculator;
 
     $costs = $calculator->calculate(
@@ -154,7 +159,7 @@ it('uses standard tier as default for openai', function () {
     expect($costsDefault['total_cost_in_cents'])->toEqual($costsStandard['total_cost_in_cents']);
 });
 
-it('should get cost per token with pricing tier', function () {
+it('returns a lower per-token input price on the batch tier', function () {
     $calculator = new CostCalculator;
 
     $standardCost = $calculator->getCostPerToken('openai', 'gpt-4o', PricingTier::Standard);
@@ -290,4 +295,78 @@ it('prices the updated mistral models', function () {
     // Voxtral Mini TTS: $0.016 per 1k chars → 1.6 cents for 1000 chars.
     $tts = $calculator->calculateByCharacters('mistral', 'voxtral-mini-tts-latest', 1000);
     expect($tts['total_cost_in_cents'])->toEqual(1.6);
+});
+
+it('prices tts models by the unit openai bills them in', function (string $model, string $unit) {
+    $calculator = app(CostCalculator::class);
+
+    expect($calculator->getPricingUnit('openai', $model))->toBe($unit);
+})->with([
+    'tts-1' => ['tts-1', 'characters'],
+    'tts-1-hd' => ['tts-1-hd', 'characters'],
+    'gpt-4o-mini-tts' => ['gpt-4o-mini-tts', 'minute'],
+]);
+
+it('calculates tts cost by characters', function () {
+    $calculator = app(CostCalculator::class);
+
+    // tts-1: $15 per 1M characters → 1,000 characters = 1.5¢.
+    $cost = $calculator->calculateByCharacters('openai', 'tts-1', 1_000);
+
+    expect($cost['total_cost_in_cents'])->toBe(1.5);
+});
+
+it('calculates tts-1-hd cost by characters', function () {
+    $calculator = app(CostCalculator::class);
+
+    // tts-1-hd: $30 per 1M characters → 1,000 characters = 3¢.
+    $cost = $calculator->calculateByCharacters('openai', 'tts-1-hd', 1_000);
+
+    expect($cost['total_cost_in_cents'])->toBe(3.0);
+});
+
+it('prices legacy aliases and renamed Aya ids', function () {
+    $calculator = new CostCalculator;
+
+    // command-r-plus is the 04-2024 snapshot ($3 / $15); Aya Expanse is $0.50 / $1.50.
+    expect($calculator->calculate('cohere', 'command-r-plus', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(1800.0)
+        ->and($calculator->calculate('cohere', 'command', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(300.0)
+        ->and($calculator->calculate('cohere', 'aya-expanse-32b', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(200.0)
+        ->and($calculator->calculate('cohere', 'c4ai-aya-expanse-8b', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(200.0)
+        ->and($calculator->calculate('cohere', 'embed-v5.0-fast', 1_000_000, 0)['total_cost_in_cents'])->toEqual(8.0);
+});
+
+it('prices the corrected catalog entries', function () {
+    $calculator = new CostCalculator;
+
+    // Moderation 2 is free; Devstral 2 is $0.40 / $2; GLM 5.3 caches at $0.14.
+    expect($calculator->calculate('mistral', 'mistral-moderation-2603', 1_000_000, 0)['total_cost_in_cents'])->toEqual(0.0)
+        ->and($calculator->calculate('mistral', 'devstral-latest', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(240.0)
+        ->and($calculator->calculate('mistral', 'zai-glm-latest', 1_000_000, 0, 1_000_000)['total_cost_in_cents'])->toEqual(14.0)
+        ->and($calculator->calculate('mistral', 'mistral-nemo', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(30.0)
+        ->and($calculator->calculate('mistral', 'mistral-large-latest', 1_000_000, 1_000_000, 0, 'batch')['total_cost_in_cents'])->toEqual(100.0)
+        ->and($calculator->calculateByPages('mistral', 'mistral-ocr-2512', 10)['total_cost_in_cents'])->toEqual(2.0)
+        ->and($calculator->calculateByDuration('mistral', 'voxtral-mini-realtime-latest', 120)['total_cost_in_cents'])->toEqual(1.2);
+});
+
+it('keeps the old unprefixed ids resolving to the same entry', function () {
+    $calculator = new CostCalculator;
+
+    // $0.075 in + $0.30 out per 1M tokens.
+    expect($calculator->calculate('groq', 'gpt-oss-20b', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(37.5)
+        ->and($calculator->calculate('groq', 'openai/gpt-oss-20b', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(37.5)
+        ->and($calculator->calculate('groq', 'openai/gpt-oss-120b', 1_000_000, 0, 1_000_000, 'batch')['total_cost_in_cents'])->toEqual(7.5)
+        ->and($calculator->calculate('groq', 'qwen/qwen3.8-27b', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(480.0)
+        ->and($calculator->calculate('groq', 'llama-4-scout-17b-16e-instruct', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(45.0);
+});
+
+it('prices 1080p Veo 3.1 Fast and Lite video at the hd rate', function () {
+    $calculator = app(CostCalculator::class);
+
+    // 8 seconds: Fast $0.10 (720p) / $0.12 (1080p); Lite $0.05 / $0.08 per second.
+    expect($calculator->calculateByDurationSeconds('google', 'veo-3.1-fast-generate-preview', 8, 'standard')['total_cost_in_cents'])->toEqual(80.0)
+        ->and($calculator->calculateByDurationSeconds('google', 'veo-3.1-fast-generate-preview', 8, 'hd')['total_cost_in_cents'])->toEqual(96.0)
+        ->and($calculator->calculateByDurationSeconds('google', 'veo-3.1-lite-generate-preview', 8, 'hd')['total_cost_in_cents'])->toEqual(64.0)
+        // Veo 3.1 costs the same at 720p and 1080p.
+        ->and($calculator->calculateByDurationSeconds('google', 'veo-3.1-generate-preview', 8, 'hd')['total_cost_in_cents'])->toEqual(320.0);
 });

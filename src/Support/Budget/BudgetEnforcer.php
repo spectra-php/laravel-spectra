@@ -42,11 +42,11 @@ class BudgetEnforcer
         }
 
         if (! $budget->isProviderAllowed($provider)) {
-            throw BudgetExceededException::providerNotAllowed($budgetable, $budget, $provider);
+            $this->block(BudgetExceededException::providerNotAllowed($budgetable, $budget, $provider));
         }
 
         if (! $budget->isModelAllowed($model)) {
-            throw BudgetExceededException::modelNotAllowed($budgetable, $budget, $model);
+            $this->block(BudgetExceededException::modelNotAllowed($budgetable, $budget, $model));
         }
 
         $this->checkCostLimits($budgetable, $budget);
@@ -215,8 +215,7 @@ class BudgetEnforcer
             $this->checkAndDispatchThreshold($budgetable, $budget, 'daily', $dailyCost, $dailyLimit);
 
             if ($dailyCost >= $dailyLimit && $budget->hard_limit) {
-                $this->dispatchExceeded($budgetable, $budget, 'daily', $dailyCost, $dailyLimit, true);
-                throw BudgetExceededException::dailyLimitExceeded($budgetable, $budget, $dailyLimit, $dailyCost);
+                $this->block(BudgetExceededException::dailyLimitExceeded($budgetable, $budget, $dailyLimit, $dailyCost));
             }
         }
 
@@ -226,8 +225,7 @@ class BudgetEnforcer
             $this->checkAndDispatchThreshold($budgetable, $budget, 'weekly', $weeklyCost, $weeklyLimit);
 
             if ($weeklyCost >= $weeklyLimit && $budget->hard_limit) {
-                $this->dispatchExceeded($budgetable, $budget, 'weekly', $weeklyCost, $weeklyLimit, true);
-                throw BudgetExceededException::weeklyLimitExceeded($budgetable, $budget, $weeklyLimit, $weeklyCost);
+                $this->block(BudgetExceededException::weeklyLimitExceeded($budgetable, $budget, $weeklyLimit, $weeklyCost));
             }
         }
 
@@ -237,8 +235,7 @@ class BudgetEnforcer
             $this->checkAndDispatchThreshold($budgetable, $budget, 'monthly', $monthlyCost, $monthlyLimit);
 
             if ($monthlyCost >= $monthlyLimit && $budget->hard_limit) {
-                $this->dispatchExceeded($budgetable, $budget, 'monthly', $monthlyCost, $monthlyLimit, true);
-                throw BudgetExceededException::monthlyLimitExceeded($budgetable, $budget, $monthlyLimit, $monthlyCost);
+                $this->block(BudgetExceededException::monthlyLimitExceeded($budgetable, $budget, $monthlyLimit, $monthlyCost));
             }
         }
 
@@ -248,8 +245,7 @@ class BudgetEnforcer
             $this->checkAndDispatchThreshold($budgetable, $budget, 'total', $totalCost, $totalLimit);
 
             if ($totalCost >= $totalLimit && $budget->hard_limit) {
-                $this->dispatchExceeded($budgetable, $budget, 'total', $totalCost, $totalLimit, true);
-                throw BudgetExceededException::totalLimitExceeded($budgetable, $budget, $totalLimit, $totalCost);
+                $this->block(BudgetExceededException::totalLimitExceeded($budgetable, $budget, $totalLimit, $totalCost));
             }
         }
     }
@@ -273,7 +269,7 @@ class BudgetEnforcer
                 : $this->getTotalTokens($budgetable);
 
             if ($tokens >= $config['limit'] && $budget->hard_limit) {
-                throw BudgetExceededException::tokenLimitExceeded($budgetable, $budget, $name, $config['limit'], $tokens);
+                $this->block(BudgetExceededException::tokenLimitExceeded($budgetable, $budget, $name, $config['limit'], $tokens));
             }
         }
     }
@@ -294,7 +290,7 @@ class BudgetEnforcer
             $requests = $this->getRequestsForPeriod($budgetable, $config['period']);
 
             if ($requests >= $config['limit'] && $budget->hard_limit) {
-                throw BudgetExceededException::requestLimitExceeded($budgetable, $budget, $name, $config['limit'], $requests);
+                $this->block(BudgetExceededException::requestLimitExceeded($budgetable, $budget, $name, $config['limit'], $requests));
             }
         }
     }
@@ -339,6 +335,27 @@ class BudgetEnforcer
                 ));
             }
         }
+    }
+
+    /**
+     * Announce a pre-flight block, then throw it. The event carries the same
+     * limit type, usage and limit as the exception, so listeners see every
+     * blocked request, whichever limit or allow-list stopped it.
+     *
+     * @throws BudgetExceededException
+     */
+    protected function block(BudgetExceededException $exception): never
+    {
+        $this->dispatchExceeded(
+            $exception->budgetable,
+            $exception->budget,
+            $exception->limitType,
+            $exception->current,
+            $exception->limit,
+            true
+        );
+
+        throw $exception;
     }
 
     protected function dispatchExceeded(

@@ -23,10 +23,12 @@ Route::prefix('api')->group(function () {
     Route::get('/config', ConfigController::class);
     Route::get('/stats', StatsController::class);
     Route::get('/requests', RequestsController::class);
-    Route::get('/requests/{id}', ShowRequestController::class);
-    Route::get('/requests/{id}/video', DownloadVideoController::class);
-    Route::get('/requests/{id}/audio/{action?}', ServeAudioController::class)->whereIn('action', ['download']);
-    Route::get('/requests/{id}/images/{index}', ServeImageController::class);
+    // Request ids are UUIDs; anything else is a 404 rather than a query
+    // PostgreSQL's uuid column rejects with an error.
+    Route::get('/requests/{id}', ShowRequestController::class)->whereUuid('id');
+    Route::get('/requests/{id}/video', DownloadVideoController::class)->whereUuid('id');
+    Route::get('/requests/{id}/audio/{action?}', ServeAudioController::class)->whereUuid('id')->whereIn('action', ['download']);
+    Route::get('/requests/{id}/images/{index}', ServeImageController::class)->whereUuid('id')->whereNumber('index');
     Route::get('/costs', CostsController::class);
     Route::get('/tags', TagsController::class);
     Route::get('/trackables', TrackablesController::class);
@@ -35,7 +37,8 @@ Route::prefix('api')->group(function () {
     Route::get('/providers', ProvidersController::class);
 });
 
-// SPA catch-all route
+// SPA catch-all route. It skips api/ so an unknown or malformed API URL is a
+// 404 instead of the dashboard's HTML.
 Route::get('/{view?}', DashboardController::class)
-    ->where('view', '(.*)')
+    ->where('view', '(?!api(?:/|$)).*')
     ->name('spectra.dashboard');

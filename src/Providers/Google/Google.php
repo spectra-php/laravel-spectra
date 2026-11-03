@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\Google;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsPricingTierFromRequest;
 use Spectra\Contracts\ExtractsPricingTierFromResponse;
 use Spectra\Contracts\Handler;
@@ -87,13 +88,19 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
     {
         $data = $this->toArray($response);
 
-        // A Veo job is identified by its operation name, so repeated polls of
-        // the same job update one row.
-        if (isset($data['name'], $data['done']) && is_string($data['name']) && str_contains($data['name'], '/operations/')) {
-            return $data['name'];
+        // A Veo job is identified by its operation name, from the submit
+        // response (running, no `done` yet) to the poll that finishes it, so
+        // the submit's request is remembered for that poll and repeated polls
+        // of the same job update one row.
+        $operation = $data['name'] ?? null;
+
+        if (filled($operation) && Str::contains($operation, '/operations/')) {
+            return $operation;
         }
 
-        return $data['responseId'] ?? parent::extractResponseId($response, $endpoint);
+        return filled($data['responseId'] ?? null)
+            ? $data['responseId']
+            : parent::extractResponseId($response, $endpoint);
     }
 
     /**

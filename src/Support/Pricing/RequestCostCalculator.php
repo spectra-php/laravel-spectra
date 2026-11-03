@@ -36,19 +36,20 @@ class RequestCostCalculator
         $model = $this->pricedModel($context);
         $at = $context->getStartedAt();
         $provider = $context->provider;
-        $pricingUnit = $this->costCalculator->getPricingUnit($provider, $model);
+        // A unit string the enum doesn't know (a custom CostCalculator) bills as tokens.
+        $pricingUnit = PricingUnit::tryFrom($this->costCalculator->getPricingUnit($provider, $model)) ?? PricingUnit::Tokens;
 
         $cost = match ($pricingUnit) {
-            PricingUnit::Minute->value => $this->costCalculator->calculateByDuration($provider, $model, $context->durationSeconds ?? 0, $tier, $at),
-            PricingUnit::Second->value => $this->costCalculator->calculateByDurationSeconds($provider, $model, $context->durationSeconds ?? 0, $tier, $at),
-            PricingUnit::Characters->value => $this->costCalculator->calculateByCharacters($provider, $model, $context->inputCharacters ?? 0, $tier, $at),
-            PricingUnit::Image->value => $this->costCalculator->calculateByImages($provider, $model, $context->imageCount ?? 0, $tier, $at),
-            PricingUnit::Megapixel->value => $this->costCalculator->calculateByMegapixels($provider, $model, $context->megapixels ?? 0, $tier, $at),
-            PricingUnit::Video->value => $this->costCalculator->calculateByVideos($provider, $model, $context->videoCount ?? 0, $tier, $at),
-            PricingUnit::Search->value => $this->costCalculator->calculateBySearches($provider, $model, $context->searchCount ?? 0, $tier, $at),
-            PricingUnit::Page->value => $this->costCalculator->calculateByPages($provider, $model, $context->pageCount ?? 0, $tier, $at),
-            PricingUnit::Request->value => $this->costCalculator->calculateByRequests($provider, $model, $this->succeeded($context) ? 1 : 0, $tier, $at),
-            default => $this->costCalculator->forTokens($provider, $model, $context->tokens(), $tier, $at),
+            PricingUnit::Tokens => $this->costCalculator->forTokens($provider, $model, $context->tokens(), $tier, $at),
+            PricingUnit::Minute => $this->costCalculator->calculateByDuration($provider, $model, $context->durationSeconds ?? 0, $tier, $at),
+            PricingUnit::Second => $this->costCalculator->calculateByDurationSeconds($provider, $model, $context->durationSeconds ?? 0, $tier, $at),
+            PricingUnit::Characters => $this->costCalculator->calculateByCharacters($provider, $model, $context->inputCharacters ?? 0, $tier, $at),
+            PricingUnit::Image => $this->costCalculator->calculateByImages($provider, $model, $context->imageCount ?? 0, $tier, $at),
+            PricingUnit::Megapixel => $this->costCalculator->calculateByMegapixels($provider, $model, $context->megapixels ?? 0, $tier, $at),
+            PricingUnit::Video => $this->costCalculator->calculateByVideos($provider, $model, $context->videoCount ?? 0, $tier, $at),
+            PricingUnit::Search => $this->costCalculator->calculateBySearches($provider, $model, $context->searchCount ?? 0, $tier, $at),
+            PricingUnit::Page => $this->costCalculator->calculateByPages($provider, $model, $context->pageCount ?? 0, $tier, $at),
+            PricingUnit::Request => $this->costCalculator->calculateByRequests($provider, $model, $this->succeeded($context) ? 1 : 0, $tier, $at),
         };
 
         // Regional surcharges (e.g. 1.1x for US-only inference) apply to the
@@ -79,7 +80,7 @@ class RequestCostCalculator
     {
         $lookup = app(PricingLookup::class);
 
-        if ($context->snapshot !== null && $context->snapshot !== '' && $lookup->knows($context->provider, $context->snapshot)) {
+        if (filled($context->snapshot) && $lookup->knows($context->provider, $context->snapshot)) {
             return $context->snapshot;
         }
 
@@ -133,6 +134,6 @@ class RequestCostCalculator
             }
         }
 
-        return $total * $this->costCalculator->currencyFactor($lookup->currency($context->provider));
+        return $total * $this->costCalculator->currencyFactor($lookup->toolCallCurrency($context->provider));
     }
 }

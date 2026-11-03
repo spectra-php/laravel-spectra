@@ -6,6 +6,11 @@ namespace Spectra\Contracts;
 
 use Spectra\Support\Tracking\StreamHandler;
 
+/**
+ * Implemented by handlers whose endpoint can stream. The stream handler reads
+ * each chunk's text, usage and finish reason, which arrive spread over the
+ * stream instead of in one body.
+ */
 interface StreamsResponse
 {
     public function streamingHandler(): StreamHandler;

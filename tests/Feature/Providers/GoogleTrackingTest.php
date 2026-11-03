@@ -6,12 +6,10 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Providers\Google\Google;
 
-/*
-|--------------------------------------------------------------------------
-| Google Response Recording Tests
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * Gemini responses recorded through Spectra::track() and the stream tracker,
+ * with the model, tokens and cost read from real fixtures.
+ */
 it('records google gemini response to database', function () {
     $response = $this->loadMockResponse('google/response.json');
 

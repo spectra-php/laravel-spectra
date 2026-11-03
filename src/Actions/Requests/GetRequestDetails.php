@@ -7,10 +7,18 @@ namespace Spectra\Actions\Requests;
 use Illuminate\Support\Carbon;
 use Spectra\Data\Responses\RequestDetailsResponse;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Concerns\AggregatesSuccessfulRequests;
 use Spectra\Support\Pricing\PricingLookup;
 
+/**
+ * Everything the request detail screen shows for one request: its payloads
+ * (the only endpoint that re-exposes them), tags, model capabilities, media
+ * URLs and the other calls in its trace.
+ */
 class GetRequestDetails
 {
+    use AggregatesSuccessfulRequests;
+
     /** Trace calls returned with a request; the requests list shows the rest. */
     private const TRACE_LIMIT = 100;
 
@@ -20,7 +28,7 @@ class GetRequestDetails
 
     public function __invoke(string $id): RequestDetailsResponse
     {
-        $request = SpectraRequest::with('tags')->findOrFail($id);
+        $request = SpectraRequest::query()->with('tags')->findOrFail($id);
 
         $request->append('formatted_expires_at');
 
@@ -56,7 +64,7 @@ class GetRequestDetails
      */
     private function resolveTrace(SpectraRequest $request): ?array
     {
-        if ($request->trace_id === null || $request->trace_id === '') {
+        if (blank($request->trace_id)) {
             return null;
         }
 
@@ -64,7 +72,7 @@ class GetRequestDetails
 
         $totals = $query()
             ->selectRaw('count(*) as request_count')
-            ->selectRaw('sum(total_cost_in_cents) as total_cost')
+            ->selectRaw($this->successfulCostSum('total_cost'))
             ->selectRaw('sum(prompt_tokens + completion_tokens) as total_tokens')
             ->selectRaw('min(created_at) as first_started_at')
             ->selectRaw('max(coalesce(completed_at, created_at)) as last_completed_at')

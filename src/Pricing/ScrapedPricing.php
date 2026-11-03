@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Spectra\Pricing;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Spectra\Enums\PricingTier;
+use Spectra\Enums\PricingUnit;
 use Spectra\Support\Pricing\ModelDefinition;
 use Throwable;
 
@@ -14,8 +16,9 @@ use Throwable;
  * A provider catalog read from the scraped prices file.
  *
  * Models use the same fields as ModelDefinition, in snake_case, keyed by
- * model id. A model that fails to parse is skipped with a warning, so one bad
- * entry never takes cost tracking down.
+ * model id. A model that fails to parse, or has no `standard` tier to fall
+ * back to, is skipped with a warning (the built-in entry keeps pricing it),
+ * so one bad entry never takes cost tracking down.
  */
 class ScrapedPricing extends ProviderPricing
 {
@@ -88,7 +91,7 @@ class ScrapedPricing extends ProviderPricing
         }
 
         $definition->type((string) ($model['type'] ?? 'text'));
-        $definition->pricingUnit((string) ($model['pricing_unit'] ?? 'tokens'));
+        $definition->pricingUnit((string) ($model['pricing_unit'] ?? PricingUnit::Tokens->value));
 
         foreach ((array) ($model['capabilities'] ?? []) as $capability) {
             $method = static::CAPABILITIES[$capability] ?? throw new InvalidArgumentException("unknown capability '{$capability}'");
@@ -114,7 +117,7 @@ class ScrapedPricing extends ProviderPricing
                 throw new InvalidArgumentException('each tier must be an object');
             }
 
-            $tier = PricingTier::tryFrom((string) ($row['tier'] ?? 'standard'))
+            $tier = PricingTier::tryFrom((string) ($row['tier'] ?? PricingTier::Standard->value))
                 ?? throw new InvalidArgumentException("unknown tier '{$row['tier']}'");
 
             $prices = [];
@@ -136,6 +139,12 @@ class ScrapedPricing extends ProviderPricing
                 aboveInputTokens: isset($row['above_input_tokens']) ? (int) $row['above_input_tokens'] : null,
                 since: isset($row['since']) ? (string) $row['since'] : null,
             );
+        }
+
+        // Prices fall back to the standard tier, so without one the model
+        // would replace the built-in entry and bill nothing.
+        if (! in_array(PricingTier::Standard->value, Arr::pluck($definition->toTiersArray(), 'tier'), true)) {
+            throw new InvalidArgumentException('the model has no standard tier');
         }
 
         return $definition;

@@ -6,6 +6,10 @@ namespace Spectra\Data\Responses;
 
 use Spectra\Data\DataTransferObject;
 
+/**
+ * The totals strip above the trackables list: matching trackables and their
+ * combined usage, with cost and latency over successful requests.
+ */
 readonly class TrackablesSummaryResponse extends DataTransferObject
 {
     public function __construct(

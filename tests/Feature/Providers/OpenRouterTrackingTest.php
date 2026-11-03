@@ -7,6 +7,11 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * OpenRouter requests through the HTTP client: the cost OpenRouter reports
+ * wins over the catalog, with fallbacks to catalog prices, and chat, image,
+ * video and embedding calls are each recorded once.
+ */
 it('records openrouter chat response to database', function () {
     $response = $this->loadMockResponse('openrouter/chat.json');
 

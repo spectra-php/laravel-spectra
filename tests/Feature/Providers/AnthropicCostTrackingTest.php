@@ -8,17 +8,12 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Providers\Anthropic\Anthropic;
 
-/*
-|--------------------------------------------------------------------------
-| Anthropic cost tracking, end to end
-|--------------------------------------------------------------------------
-|
-| Every request goes through Laravel's HTTP client, so the global watcher
-| records it the way it does in a real app. Expected costs are worked out by
-| hand from AnthropicPricing (US cents per 1M tokens).
-|
-*/
-
+/**
+ * Anthropic cost tracking, end to end. Requests go through Laravel's HTTP
+ * client, so the global watcher records them as in a real app. Expected
+ * costs are worked out by hand from AnthropicPricing (US cents per 1M
+ * tokens).
+ */
 function anthropicFixture(string $name): array
 {
     return json_decode((string) file_get_contents(__DIR__.'/../../responses/claude/'.$name), true);

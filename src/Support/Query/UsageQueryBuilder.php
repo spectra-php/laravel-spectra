@@ -13,9 +13,23 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Spectra\Data\UsageStats;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Concerns\AggregatesSuccessfulRequests;
+use Spectra\Support\DateRange;
 
+/**
+ * The fluent usage query behind `Spectra::usage()`: filter by provider,
+ * model, trackable, tag, outcome and period, then read counts, tokens, cost
+ * and latency.
+ *
+ * Request counts and tokens include failed requests; cost and latency cover
+ * successful (2xx) requests only, the same convention as the dashboard, so a
+ * failed call never adds spend or skews latency. Its method names and result
+ * keys are public API.
+ */
 class UsageQueryBuilder
 {
+    use AggregatesSuccessfulRequests;
+
     /** @var Builder<SpectraRequest> */
     protected Builder $query;
 
@@ -53,7 +67,7 @@ class UsageQueryBuilder
     public function between(CarbonInterface|string $start, CarbonInterface|string $end): self
     {
         $this->startDate = $start instanceof CarbonInterface ? $start : Carbon::parse($start);
-        $this->endDate = $end instanceof CarbonInterface ? $end : Carbon::parse($end);
+        $this->endDate = DateRange::inclusiveEnd($end);
 
         $this->query->whereBetween('created_at', [$this->startDate, $this->endDate]);
 
@@ -143,12 +157,16 @@ class UsageQueryBuilder
 
     public function averageLatency(): float
     {
-        return round((float) $this->query->avg('latency_ms'), 2);
+        $result = $this->query->clone()->selectRaw($this->successfulLatencyAvg('avg_latency_ms'))->toBase()->first();
+
+        return round((float) ($result->avg_latency_ms ?? 0), 2);
     }
 
     public function totalCostCents(): float
     {
-        return (float) $this->query->sum('total_cost_in_cents');
+        $result = $this->query->clone()->selectRaw($this->successfulCostSum('total_cost'))->toBase()->first();
+
+        return (float) ($result->total_cost ?? 0);
     }
 
     public function totalCostDollars(): float
@@ -166,10 +184,10 @@ class UsageQueryBuilder
                 SUM(prompt_tokens) as prompt_tokens,
                 SUM(completion_tokens) as completion_tokens,
                 SUM(prompt_tokens + completion_tokens) as total_tokens,
-                SUM(total_cost_in_cents) as total_cost,
-                AVG(latency_ms) as avg_latency_ms,
-                MIN(latency_ms) as min_latency_ms,
-                MAX(latency_ms) as max_latency_ms
+                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost,
+                AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms,
+                MIN(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as min_latency_ms,
+                MAX(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as max_latency_ms
             ')
             ->first();
 
@@ -210,82 +228,79 @@ class UsageQueryBuilder
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{provider: string, request_count: int, total_tokens: int, total_cost_in_cents: float, total_cost: float, avg_latency_ms: float}>
      */
     public function byProvider(): Collection
     {
-        // @phpstan-ignore-next-line return.type
         return $this->query
             ->selectRaw('
                 provider,
                 COUNT(*) as request_count,
                 SUM(prompt_tokens + completion_tokens) as total_tokens,
-                SUM(total_cost_in_cents) as total_cost,
-                AVG(latency_ms) as avg_latency_ms
+                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost,
+                AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms
             ')
             ->groupBy('provider')
             ->get()
             ->map(fn (SpectraRequest $item) => [
                 'provider' => $item->provider,
-                'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
+                'request_count' => (int) $item->request_count,
                 'total_tokens' => (int) $item->total_tokens,
-                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => round((float) $item->total_cost / 100, 4), // @phpstan-ignore property.notFound
-                'avg_latency_ms' => round((float) $item->avg_latency_ms, 2), // @phpstan-ignore property.notFound
+                'total_cost_in_cents' => (float) $item->total_cost,
+                'total_cost' => round((float) $item->total_cost / 100, 4),
+                'avg_latency_ms' => round((float) $item->avg_latency_ms, 2),
             ]);
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{provider: string, model: string, request_count: int, total_tokens: int, total_cost_in_cents: float, total_cost: float, avg_latency_ms: float}>
      */
     public function byModel(): Collection
     {
-        // @phpstan-ignore-next-line return.type
         return $this->query
             ->selectRaw('
                 provider,
                 model,
                 COUNT(*) as request_count,
                 SUM(prompt_tokens + completion_tokens) as total_tokens,
-                SUM(total_cost_in_cents) as total_cost,
-                AVG(latency_ms) as avg_latency_ms
+                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost,
+                AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms
             ')
             ->groupBy('provider', 'model')
             ->get()
             ->map(fn (SpectraRequest $item) => [
                 'provider' => $item->provider,
                 'model' => $item->model,
-                'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
+                'request_count' => (int) $item->request_count,
                 'total_tokens' => (int) $item->total_tokens,
-                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => round((float) $item->total_cost / 100, 4), // @phpstan-ignore property.notFound
-                'avg_latency_ms' => round((float) $item->avg_latency_ms, 2), // @phpstan-ignore property.notFound
+                'total_cost_in_cents' => (float) $item->total_cost,
+                'total_cost' => round((float) $item->total_cost / 100, 4),
+                'avg_latency_ms' => round((float) $item->avg_latency_ms, 2),
             ]);
     }
 
     /**
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{date: mixed, request_count: int, total_tokens: int, total_cost_in_cents: float, total_cost: float}>
      */
     public function dailyUsage(int $days = 30): Collection
     {
-        // @phpstan-ignore-next-line return.type
         return $this->lastDays($days)
             ->query
             ->selectRaw('
                 DATE(created_at) as date,
                 COUNT(*) as request_count,
                 SUM(prompt_tokens + completion_tokens) as total_tokens,
-                SUM(total_cost_in_cents) as total_cost
+                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost
             ')
             ->groupBy('date')
             ->orderBy('date')
             ->get()
             ->map(fn (SpectraRequest $item) => [
                 'date' => $item->date,
-                'request_count' => (int) $item->request_count, // @phpstan-ignore property.notFound
+                'request_count' => (int) $item->request_count,
                 'total_tokens' => (int) $item->total_tokens,
-                'total_cost_in_cents' => (float) $item->total_cost, // @phpstan-ignore property.notFound
-                'total_cost' => round((float) $item->total_cost / 100, 4), // @phpstan-ignore property.notFound
+                'total_cost_in_cents' => (float) $item->total_cost,
+                'total_cost' => round((float) $item->total_cost / 100, 4),
             ]);
     }
 

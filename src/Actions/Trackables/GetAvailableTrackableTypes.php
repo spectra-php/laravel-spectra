@@ -7,6 +7,10 @@ namespace Spectra\Actions\Trackables;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\DateRange;
 
+/**
+ * The trackable types (morph classes) that made requests in the period, for
+ * the trackables screen's type filter.
+ */
 class GetAvailableTrackableTypes
 {
     /**

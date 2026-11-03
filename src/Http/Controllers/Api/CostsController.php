@@ -15,6 +15,9 @@ use Spectra\Actions\Costs\GetTotalCost;
 use Spectra\Data\Responses\CostsResponse;
 use Spectra\Support\DateRange;
 
+/**
+ * GET /api/costs: the costs screen for the selected period.
+ */
 class CostsController extends BaseApiController
 {
     public function __invoke(

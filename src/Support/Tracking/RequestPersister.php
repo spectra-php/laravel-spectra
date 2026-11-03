@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Support\Tracking;
 
 use Spectra\Contracts\RequestExporter;
+use Spectra\Enums\ModelType;
 use Spectra\Events\RequestTracked;
 use Spectra\Jobs\ExportTrackedRequestJob;
 use Spectra\Jobs\PersistSpectraRequestJob;
@@ -59,10 +60,16 @@ class RequestPersister
         $tags = $context->tags;
 
         if (config('spectra.queue.enabled')) {
+            // A retried job must update the row an earlier attempt saved,
+            // not insert a second one and count the spend twice.
+            $attributes['id'] ??= (new SpectraRequest)->newUniqueId();
+
             return $this->persistViaQueue($attributes, $tags);
         }
 
         if (config('spectra.queue.after_response') && ! app()->runningInConsole()) {
+            $attributes['id'] ??= (new SpectraRequest)->newUniqueId();
+
             return $this->persistAfterResponse($attributes, $tags);
         }
 
@@ -77,7 +84,7 @@ class RequestPersister
         $data = $context->toArray();
 
         $pricingTier = $context->pricingTier
-            ?? config("spectra.costs.provider_settings.{$context->provider}.default_tier", 'standard');
+            ?? app(PricingLookup::class)->defaultTier($context->provider)->value;
 
         $cost = config('spectra.costs.enabled', true)
             ? $this->costCalculator->forContext($context, $pricingTier)
@@ -192,9 +199,20 @@ class RequestPersister
      */
     protected function persistAfterResponse(array $attributes, array $tags): SpectraRequest
     {
-        dispatch(new PersistSpectraRequestJob($attributes, $tags))->afterResponse();
+        $this->afterResponse(new PersistSpectraRequestJob($attributes, $tags));
 
         return new SpectraRequest($attributes);
+    }
+
+    /**
+     * Run the job once the response is sent. A failure is reported and goes
+     * no further, so the app's other terminating callbacks still run.
+     */
+    protected function afterResponse(object $job): void
+    {
+        app()->terminating(function () use ($job): void {
+            rescue(fn () => dispatch_sync($job));
+        });
     }
 
     /**
@@ -233,7 +251,7 @@ class RequestPersister
         }
 
         if (config('spectra.queue.after_response') && ! app()->runningInConsole()) {
-            dispatch(new ExportTrackedRequestJob($data))->afterResponse();
+            $this->afterResponse(new ExportTrackedRequestJob($data));
 
             return;
         }
@@ -277,7 +295,7 @@ class RequestPersister
         }
 
         // Strip embedding vectors (large float arrays) when store_embeddings is disabled
-        if ($context->modelType === 'embedding' && ! config('spectra.storage.store_embeddings', false)) {
+        if ($context->modelType === ModelType::Embedding->value && ! config('spectra.storage.store_embeddings', false)) {
             // OpenAI / Mistral: data[].embedding
             if (isset($response['data']) && is_array($response['data'])) {
                 foreach ($response['data'] as $i => $item) {

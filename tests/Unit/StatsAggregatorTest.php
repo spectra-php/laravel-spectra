@@ -8,7 +8,12 @@ use Spectra\Models\SpectraRequest;
 use Spectra\Support\StatsAggregator;
 use Workbench\App\Models\User;
 
-it('should record stats when a request is created', function () {
+/**
+ * StatsAggregator writes each request into the global and per-trackable
+ * daily stats, and SpectraDailyStat reads them back aggregated by period,
+ * day, provider and model type.
+ */
+it('records counts, tokens and cost on the global daily stat for a request', function () {
     $aggregator = app(StatsAggregator::class);
 
     $request = SpectraRequest::factory()->create([
@@ -36,7 +41,7 @@ it('should record stats when a request is created', function () {
         ->and($stat->total_cost_in_cents)->toBe(500.0);
 });
 
-it('should increment stats for multiple requests', function () {
+it('adds repeated requests for one model into a single daily row', function () {
     $aggregator = app(StatsAggregator::class);
 
     SpectraRequest::factory()
@@ -61,7 +66,7 @@ it('should increment stats for multiple requests', function () {
         ->and($stat->total_cost_in_cents)->toBe(600.0);
 });
 
-it('should track failed requests separately', function () {
+it('counts a 500 response as failed and halves the success rate', function () {
     $aggregator = app(StatsAggregator::class);
 
     SpectraRequest::factory()
@@ -84,7 +89,7 @@ it('should track failed requests separately', function () {
         ->and($stat->successRate)->toBe(50.0);
 });
 
-it('should track per-user stats separately', function () {
+it('writes both a global and a per-user daily stat for a tracked request', function () {
     $user = User::create([
         'name' => 'Test User',
         'email' => 'stats-test@example.com',
@@ -120,7 +125,7 @@ it('should track per-user stats separately', function () {
         ->and($userStat->request_count)->toBe(1);
 });
 
-it('should get aggregated stats for a period', function () {
+it('aggregates requests, tokens, cost and success rate over a period', function () {
     $aggregator = app(StatsAggregator::class);
 
     SpectraRequest::factory()
@@ -153,7 +158,7 @@ it('should get aggregated stats for a period', function () {
         ->and($stats['success_rate'])->toBe(100.0);
 });
 
-it('should get daily breakdown', function () {
+it('includes the request count for today in the daily breakdown', function () {
     $aggregator = app(StatsAggregator::class);
 
     $aggregator->recordRequest(SpectraRequest::factory()->create([
@@ -175,7 +180,7 @@ it('should get daily breakdown', function () {
         ->and($todayData['requests'])->toBeGreaterThanOrEqual(1);
 });
 
-it('should record model_type in daily stats', function () {
+it('keeps the model type and image count on the daily stat', function () {
     $aggregator = app(StatsAggregator::class);
 
     $request = SpectraRequest::factory()->create([
@@ -200,7 +205,7 @@ it('should record model_type in daily stats', function () {
         ->and($stat->total_cost_in_cents)->toBe(400.0);
 });
 
-it('should record billing metrics for different model types', function () {
+it('records input characters and audio duration for tts requests', function () {
     $aggregator = app(StatsAggregator::class);
 
     // TTS request
@@ -225,7 +230,7 @@ it('should record billing metrics for different model types', function () {
         ->and($stat->total_duration_seconds)->toBe(12.5);
 });
 
-it('should record video_count in daily stats', function () {
+it('records the video count on the daily stat', function () {
     $aggregator = app(StatsAggregator::class);
 
     $request = SpectraRequest::factory()->create([
@@ -250,7 +255,7 @@ it('should record video_count in daily stats', function () {
         ->and($stat->total_cost_in_cents)->toBe(600.0);
 });
 
-it('should separate stats by model_type', function () {
+it('filters aggregated stats by model type', function () {
     $aggregator = app(StatsAggregator::class);
 
     SpectraRequest::factory()
@@ -287,7 +292,7 @@ it('should separate stats by model_type', function () {
         ->and($imageStats['total_images'])->toBe(1);
 });
 
-it('should get stats by provider', function () {
+it('lists every provider with requests in the period', function () {
     $aggregator = app(StatsAggregator::class);
 
     SpectraRequest::factory()
@@ -311,7 +316,7 @@ it('should get stats by provider', function () {
         ->and($providers)->toContain('anthropic');
 });
 
-it('should record reasoning tokens in daily stats', function () {
+it('records reasoning tokens alongside prompt and completion tokens', function () {
     $aggregator = app(StatsAggregator::class);
 
     $request = SpectraRequest::factory()->create([
@@ -337,7 +342,7 @@ it('should record reasoning tokens in daily stats', function () {
         ->and($stat->completion_tokens)->toBe(20);
 });
 
-it('should accumulate reasoning tokens across multiple requests', function () {
+it('sums reasoning tokens across requests for the same model', function () {
     $aggregator = app(StatsAggregator::class);
 
     SpectraRequest::factory()
@@ -359,4 +364,17 @@ it('should accumulate reasoning tokens across multiple requests', function () {
 
     expect($stat->total_reasoning_tokens)->toBe(300)
         ->and($stat->request_count)->toBe(3);
+});
+
+it('replaces the end day on every rebuild instead of adding to it', function () {
+    $this->travelTo('2026-03-10 12:00:00');
+    SpectraRequest::factory()->create(['provider' => 'openai', 'model' => 'gpt-rebuild', 'created_at' => '2026-03-09 15:00:00']);
+    $aggregator = app(StatsAggregator::class);
+
+    $aggregator->rebuildYesterday();
+    $aggregator->rebuildYesterday();
+
+    $stat = SpectraDailyStat::query()->where('model', 'gpt-rebuild')->whereNull('trackable_type')->sole();
+
+    expect($stat->request_count)->toBe(1);
 });

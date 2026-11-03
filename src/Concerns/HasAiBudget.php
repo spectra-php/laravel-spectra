@@ -12,6 +12,10 @@ use Spectra\Support\Budget\BudgetBuilder;
 use Spectra\Support\Budget\BudgetEnforcer;
 
 /**
+ * Budget helpers for a trackable model: set or configure its AI budget and
+ * ask whether a call to a provider and model is still within it. Enforcement
+ * itself lives in BudgetEnforcer; this is the model-facing entry point.
+ *
  * @phpstan-require-extends Model
  *
  * @phpstan-ignore trait.unused

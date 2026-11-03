@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Spectra\Data;
 
+/**
+ * One row of the costs screen's per-model table: requests (failures
+ * included), usage, the cost of successful requests and what the model can
+ * do, from the pricing catalog.
+ */
 readonly class CostByModel extends DataTransferObject
 {
     public function __construct(

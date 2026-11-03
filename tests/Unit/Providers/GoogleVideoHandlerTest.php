@@ -6,6 +6,11 @@ use Spectra\Data\Metrics;
 use Spectra\Data\VideoMetrics;
 use Spectra\Enums\ModelType;
 
+/**
+ * The Google Veo video handler: the endpoints it matches, the in-progress
+ * operations it skips, and the metrics and media it reads from a finished
+ * operation.
+ */
 it('google video handler returns video model type', function () {
     expect($this->googleVideoHandler()->modelType())->toBe(ModelType::Video);
 });

@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * An xAI chat response recorded through Spectra::track() with its model,
+ * tokens and cost.
+ */
 it('records xai chat response to database', function () {
     $response = $this->loadMockResponse('xai/chat.json');
 

@@ -11,6 +11,10 @@ use Spectra\Providers\Groq\Handlers\SpeechHandler;
 use Spectra\Providers\Groq\Handlers\TranscriptionHandler;
 use Spectra\Support\ProviderRegistry;
 
+/**
+ * The Groq provider: its hosts, handler resolution and what the chat handler
+ * extracts from a response.
+ */
 it('returns groq as provider', function () {
     expect($this->groqProvider()->getProvider())->toBe('groq');
 });

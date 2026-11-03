@@ -94,7 +94,7 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
 
         foreach (is_array($response['output'] ?? null) ? $response['output'] : [] as $item) {
             foreach (is_array($item['content'] ?? null) ? $item['content'] : [] as $content) {
-                if (($content['type'] ?? null) === 'output_text' && is_string($content['text'] ?? null) && $content['text'] !== '') {
+                if (($content['type'] ?? null) === 'output_text' && filled($content['text'] ?? null)) {
                     $texts[] = $content['text'];
                 }
             }

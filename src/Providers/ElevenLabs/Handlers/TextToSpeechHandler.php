@@ -65,7 +65,7 @@ class TextToSpeechHandler implements ExtractsModelFromRequest, Handler, HasMedia
     {
         $model = $requestData['model_id'] ?? null;
 
-        return is_string($model) && $model !== '' ? $model : self::DEFAULT_MODEL;
+        return filled($model) ? $model : self::DEFAULT_MODEL;
     }
 
     /**
@@ -74,7 +74,7 @@ class TextToSpeechHandler implements ExtractsModelFromRequest, Handler, HasMedia
      */
     public function storeMedia(string $requestId, array $responseData, ?string $rawBody = null): array
     {
-        if ($rawBody === null || $rawBody === '') {
+        if (blank($rawBody)) {
             return [];
         }
 

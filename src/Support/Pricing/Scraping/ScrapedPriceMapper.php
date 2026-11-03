@@ -430,13 +430,13 @@ class ScrapedPriceMapper
 
         $tiers = array_map(ScrapedPricing::tierToArray(...), array_values($tiers));
 
-        [$type, $capabilities] = match ($unit) {
-            'image', 'megapixel' => ['image', ['images']],
-            'characters' => ['audio', ['audio']],
-            'minute' => ['audio', ['text']],
-            'second', 'video' => ['video', ['video']],
-            'search', 'page', 'request' => ['text', []],
-            default => ['text', ['text']],
+        [$type, $capabilities] = match (PricingUnit::tryFrom($unit) ?? PricingUnit::Tokens) {
+            PricingUnit::Tokens => ['text', ['text']],
+            PricingUnit::Image, PricingUnit::Megapixel => ['image', ['images']],
+            PricingUnit::Characters => ['audio', ['audio']],
+            PricingUnit::Minute => ['audio', ['text']],
+            PricingUnit::Second, PricingUnit::Video => ['video', ['video']],
+            PricingUnit::Search, PricingUnit::Page, PricingUnit::Request => ['text', []],
         };
 
         return array_filter([

@@ -11,6 +11,11 @@ use Spectra\Providers\FalAi\Handlers\QueueStatusHandler;
 use Spectra\Providers\FalAi\Handlers\VideoHandler;
 use Spectra\Support\ProviderRegistry;
 
+/**
+ * The fal.ai provider: its hosts, handler resolution by endpoint, and the
+ * metrics, model and media the image handler extracts from sync and queue
+ * responses.
+ */
 it('returns falai as provider', function () {
     expect($this->falAiProvider()->getProvider())->toBe('falai');
 });

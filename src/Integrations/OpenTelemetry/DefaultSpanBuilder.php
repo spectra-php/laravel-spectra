@@ -6,6 +6,7 @@ namespace Spectra\Integrations\OpenTelemetry;
 
 use Carbon\CarbonInterface;
 use Spectra\Contracts\SpanBuilder;
+use Spectra\Enums\ModelType;
 
 /**
  * Default OpenTelemetry span builder.
@@ -181,12 +182,12 @@ class DefaultSpanBuilder implements SpanBuilder
         $endpoint = (string) ($data['endpoint'] ?? '');
 
         return match (true) {
-            ($data['model_type'] ?? null) === 'embedding' => 'embeddings',
+            ($data['model_type'] ?? null) === ModelType::Embedding->value => 'embeddings',
             str_contains($endpoint, 'rerank') => 'rerank',
             str_contains($endpoint, 'generateContent') || str_contains($endpoint, 'GenerateContent') => 'generate_content',
             (bool) preg_match('#/v1/completions$#', $endpoint) => 'text_completion',
-            in_array($data['model_type'] ?? null, ['image', 'video', 'tts'], true) => 'generate_content',
-            ($data['model_type'] ?? null) === 'stt' => 'transcription',
+            in_array($data['model_type'] ?? null, [ModelType::Image->value, ModelType::Video->value, ModelType::Tts->value], true) => 'generate_content',
+            ($data['model_type'] ?? null) === ModelType::Stt->value => 'transcription',
             default => 'chat',
         };
     }

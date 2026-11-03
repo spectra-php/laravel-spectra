@@ -9,6 +9,10 @@ use Spectra\Data\TopModel;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * The overview's most used models by request count, with the cost of their
+ * successful requests.
+ */
 class GetTopModels
 {
     /**

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Spectra\Http\Controllers\Api\ConfigController;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
@@ -10,9 +11,15 @@ use Spectra\Http\Controllers\Api\RequestsController;
 use Spectra\Http\Controllers\Api\ServeAudioController;
 use Spectra\Http\Controllers\Api\ServeImageController;
 use Spectra\Http\Controllers\Api\ShowRequestController;
+use Spectra\Http\Controllers\Api\TagsController;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraTag;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+/**
+ * Dashboard endpoints that serve stored media, request details, trace
+ * totals, tags and the dashboard config.
+ */
 it('serves a persisted image with the stored mime type', function () {
     Storage::fake('local');
     Storage::disk('local')->put('spectra/req-1/0.webp', 'webp-bytes');
@@ -117,4 +124,39 @@ it('serves persisted tts audio with the stored mime type', function () {
     expect($response->getStatusCode())->toBe(200)
         ->and($response->headers->get('Content-Type'))->toBe('audio/wav')
         ->and($response->getContent())->toBe('wav-bytes');
+});
+
+it('streams Sora videos from the configured OpenAI base URL', function () {
+    config(['spectra.api_keys.openai' => 'sk-test', 'spectra.endpoint_urls.openai' => 'https://gateway.example.com/openai/v1/']);
+    Http::fake(['gateway.example.com/*' => Http::response('mp4-bytes')]);
+    $request = SpectraRequest::factory()->create(['provider' => 'openai', 'model_type' => 'video', 'response' => ['id' => 'video_123']]);
+
+    $response = app()->call([app(DownloadVideoController::class), '__invoke'], ['id' => $request->id]);
+
+    expect($response->getStatusCode())->toBe(200);
+    Http::assertSent(fn ($sent) => $sent->url() === 'https://gateway.example.com/openai/v1/videos/video_123/content');
+});
+
+it('answers 404 when a stored Sora response has no usable video id', function () {
+    $request = SpectraRequest::factory()->create(['provider' => 'openai', 'model_type' => 'video', 'response' => ['id' => '']]);
+
+    app()->call([app(DownloadVideoController::class), '__invoke'], ['id' => $request->id]);
+})->throws(NotFoundHttpException::class);
+
+it('leaves failed calls out of a trace total cost', function () {
+    $current = SpectraRequest::factory()->create(['trace_id' => '0b6f3a52-6d47-4a5e-9a51-2a7c1f0e9d11', 'status_code' => 200, 'total_cost_in_cents' => 40]);
+    SpectraRequest::factory()->create(['trace_id' => '0b6f3a52-6d47-4a5e-9a51-2a7c1f0e9d11', 'status_code' => 500, 'total_cost_in_cents' => 900]);
+
+    $json = app()->call([app(ShowRequestController::class), '__invoke'], ['id' => $current->id])->toArray();
+
+    expect($json['trace']['request_count'])->toBe(2)
+        ->and($json['trace']['total_cost_in_cents'])->toBe(40.0);
+});
+
+it('returns tag ids as their UUIDs', function () {
+    $tag = SpectraTag::findOrCreateByName('feature:search');
+
+    $json = app()->call([app(TagsController::class), '__invoke'], [])->toArray();
+
+    expect($json['tags'][0]['id'])->toBe($tag->id);
 });

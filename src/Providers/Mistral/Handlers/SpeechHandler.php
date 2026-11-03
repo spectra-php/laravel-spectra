@@ -14,6 +14,13 @@ use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
 use Spectra\Support\MediaPersister;
 
+/**
+ * Mistral text-to-speech (`/v1/audio/speech`).
+ *
+ * Unlike OpenAI's binary speech endpoint it answers with JSON carrying the
+ * audio as base64 `audio_data`, and it reports no usage, so it is billed per
+ * character of the request's `input`.
+ */
 class SpeechHandler implements ExtractsModelFromResponse, Handler, HasMedia
 {
     use ExtractsModelField;
@@ -59,7 +66,7 @@ class SpeechHandler implements ExtractsModelFromResponse, Handler, HasMedia
     {
         $encoded = $responseData['audio_data'] ?? null;
 
-        if (! is_string($encoded) || $encoded === '') {
+        if (blank($encoded)) {
             return [];
         }
 

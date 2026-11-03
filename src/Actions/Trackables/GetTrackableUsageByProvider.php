@@ -9,6 +9,10 @@ use Spectra\Data\UsageByProvider;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * One trackable's usage per provider, most expensive first; cost covers
+ * successful requests.
+ */
 class GetTrackableUsageByProvider
 {
     /**
@@ -22,10 +26,7 @@ class GetTrackableUsageByProvider
                 ->groupByColumns('provider')
                 ->countAs('requests')
                 ->tokenSum()
-                ->selectRaw('COALESCE(SUM(image_count), 0) as images_sum')
-                ->selectRaw('COALESCE(SUM(video_count), 0) as videos_sum')
-                ->selectRaw("COALESCE(SUM(CASE WHEN model_type = 'tts' THEN input_characters ELSE 0 END), 0) as tts_characters_sum")
-                ->selectRaw("COALESCE(SUM(CASE WHEN model_type IN ('tts', 'stt') THEN duration_seconds ELSE 0 END), 0) as audio_duration_sum")
+                ->mediaSums()
                 ->successfulCost()
                 ->orderByDesc('cost')
                 ->get()

@@ -142,7 +142,7 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
 
         // Flat string content (simplified format)
         if (is_string($response['content'])) {
-            return $response['content'] !== '' ? $response['content'] : null;
+            return filled($response['content']) ? $response['content'] : null;
         }
 
         // Standard API content blocks array
@@ -153,7 +153,7 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
         $texts = [];
 
         foreach ($response['content'] as $block) {
-            if (isset($block['text']) && $block['text'] !== '') {
+            if (filled($block['text'] ?? null)) {
                 $texts[] = $block['text'];
             }
         }

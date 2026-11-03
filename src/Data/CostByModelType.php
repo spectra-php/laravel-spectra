@@ -8,6 +8,10 @@ use Illuminate\Support\Collection;
 use Spectra\Enums\ModelType;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * One row of the costs screen's per-model-type table: requests (failures
+ * included), usage, and the cost of successful requests.
+ */
 readonly class CostByModelType extends DataTransferObject
 {
     public function __construct(

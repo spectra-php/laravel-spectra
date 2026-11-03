@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * Cohere embed and rerank responses recorded through Spectra::track():
+ * embeddings bill their billed tokens, rerank bills per search.
+ */
 it('records cohere embed response with billed tokens and cost', function () {
     $response = $this->loadMockResponse('cohere/embed.json');
 

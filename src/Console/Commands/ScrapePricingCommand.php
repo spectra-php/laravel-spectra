@@ -19,6 +19,13 @@ use Spectra\Support\Pricing\Scraping\ScrapedPriceMapper;
 use Spectra\Support\Pricing\Scraping\ScrapedPrices;
 use Symfony\Component\Console\Attribute\AsCommand;
 
+/**
+ * Reads the providers' pricing pages through Firecrawl and saves the prices
+ * that differ from the built-in catalog to the scraped prices file.
+ *
+ * Built-in prices are maintained by hand and can lag a provider's change;
+ * the file lets an app bill with fresh prices before a Spectra release.
+ */
 #[AsCommand(name: 'spectra:pricing-scrape')]
 class ScrapePricingCommand extends Command
 {
@@ -34,7 +41,7 @@ class ScrapePricingCommand extends Command
     public function handle(ScrapedPriceMapper $mapper): int
     {
         if (! config('spectra.costs.firecrawl.api_key')) {
-            $this->components->error('Set FIRECRAWL_API_KEY in your .env file. Get a key at https://firecrawl.dev.');
+            $this->components->error('Set SPECTRA_FIRECRAWL_API_KEY in your .env file. Get a key at https://firecrawl.dev.');
 
             return self::FAILURE;
         }

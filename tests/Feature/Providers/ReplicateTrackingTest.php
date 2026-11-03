@@ -7,6 +7,11 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * Replicate predictions through the HTTP client: a polled prediction is
+ * recorded once, when it succeeds, with video priced by length and
+ * resolution and language models by their token metrics.
+ */
 it('records replicate prediction response to database', function () {
     // The fixture keeps Replicate's ISO-8601 timestamps; they used to crash
     // the persister, which subtracted them as numbers.

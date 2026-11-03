@@ -5,13 +5,16 @@ declare(strict_types=1);
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Spectra\Data\TokenMetrics;
+use Spectra\Enums\PricingTier;
 use Spectra\Pricing\ProviderPricing;
 use Spectra\Support\Pricing\CostCalculator;
 use Spectra\Support\Pricing\PricingLookup;
+use Spectra\Support\Pricing\RequestCostCalculator;
+use Spectra\Support\Tracking\RequestContext;
 
 /**
  * The cost model: cache reads/writes, modality rates, long-context and dated
- * prices, aliases and currency conversion. Uses a test-only catalog so the
+ * prices, aliases, currency conversion, the default tier and unit dispatch. Uses a test-only catalog so the
  * numbers don't move when the built-in catalogs are updated.
  */
 function acmePricing(string $currency = 'USD'): ProviderPricing
@@ -167,6 +170,104 @@ it('counts a missing exchange rate as 1:1 and warns once', function () {
 
     expect($cost['prompt_cost'])->toEqualWithDelta(10.0, 1e-9);
     Log::shouldHaveReceived('warning')->once();
+});
+
+it('converts each model at the currency of the catalog that defines it', function () {
+    $extraModels = new class extends ProviderPricing
+    {
+        public function provider(): string
+        {
+            return 'acme';
+        }
+
+        protected function define(): void
+        {
+            $this->model('acme-extra', fn ($m) => $m->canGenerateText()->cost(inputPrice: 100, outputPrice: 400));
+        }
+    };
+    app()->instance(PricingLookup::class, new PricingLookup([acmePricing('EUR'), $extraModels]));
+    config(['spectra.costs.currency' => 'USD', 'spectra.costs.exchange_rates' => ['EUR' => 1.5]]);
+
+    $builtIn = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Carbon::parse('2026-10-15'));
+    $extra = app(CostCalculator::class)->forTokens('acme', 'acme-extra', new TokenMetrics(promptTokens: 100_000));
+
+    // 100K × 100 / 1M = 10 EUR cents × 1.5; the USD catalog's model stays at 10.
+    expect($builtIn['prompt_cost'])->toEqualWithDelta(15.0, 1e-9)
+        ->and($extra['prompt_cost'])->toEqualWithDelta(10.0, 1e-9);
+});
+
+it('converts tool calls at the currency of the catalog that prices them', function () {
+    $toolCatalog = new class extends ProviderPricing
+    {
+        public function provider(): string
+        {
+            return 'acme';
+        }
+
+        public function currency(): string
+        {
+            return 'EUR';
+        }
+
+        public function toolCallPricing(): array
+        {
+            return ['web_search_call' => 1.0];
+        }
+    };
+    app()->instance(PricingLookup::class, new PricingLookup([$toolCatalog, acmePricing('USD')]));
+    config(['spectra.costs.currency' => 'USD', 'spectra.costs.exchange_rates' => ['EUR' => 1.5]]);
+
+    $cost = app(RequestCostCalculator::class)->forContext(new RequestContext([
+        'provider' => 'acme',
+        'model' => 'acme-unknown',
+        'tool_call_counts' => ['web_search_call' => 2],
+    ]));
+
+    // 2 calls × 1 EUR cent × 1.5
+    expect($cost['total_cost_in_cents'])->toEqualWithDelta(3.0, 1e-9);
+});
+
+it('bills an unknown default tier at standard and warns once', function () {
+    config(['spectra.costs.provider_settings.acme.default_tier' => 'turbo']);
+    Log::spy();
+
+    $first = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Carbon::parse('2026-10-15'));
+    app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Carbon::parse('2026-10-15'));
+
+    // 100K × 100 (standard input) / 1M
+    expect($first['prompt_cost'])->toEqualWithDelta(10.0, 1e-9)
+        ->and(app(PricingLookup::class)->defaultTier('acme'))->toBe(PricingTier::Standard);
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => str_contains($message, "'turbo'"));
+});
+
+it('bills a valid default tier from config', function () {
+    config(['spectra.costs.provider_settings.acme.default_tier' => 'batch']);
+
+    $cost = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Carbon::parse('2026-10-15'));
+
+    // 100K × 50 (batch input) / 1M
+    expect($cost['prompt_cost'])->toEqualWithDelta(5.0, 1e-9)
+        ->and(app(PricingLookup::class)->defaultTier('acme'))->toBe(PricingTier::Batch);
+});
+
+it('bills a pricing unit the enum does not know as tokens', function () {
+    $calculator = new RequestCostCalculator(new class extends CostCalculator
+    {
+        public function getPricingUnit(string $provider, string $model): string
+        {
+            return 'liters';
+        }
+    });
+
+    $cost = $calculator->forContext(new RequestContext([
+        'provider' => 'acme',
+        'model' => 'acme-1',
+        'prompt_tokens' => 100_000,
+        'started_at' => Carbon::parse('2026-10-15'),
+    ]));
+
+    // 100K × 100 / 1M
+    expect($cost['total_cost_in_cents'])->toEqualWithDelta(10.0, 1e-9);
 });
 
 it('round-trips usage arrays', function () {

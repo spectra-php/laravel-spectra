@@ -13,6 +13,10 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 
+/**
+ * Ollama's native `/api/embed` endpoint, which reports its input tokens as
+ * `prompt_eval_count`.
+ */
 class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesResponseShape
 {
     use ExtractsModelField;

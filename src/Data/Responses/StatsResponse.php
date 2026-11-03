@@ -6,7 +6,13 @@ namespace Spectra\Data\Responses;
 
 use Illuminate\Support\Collection;
 use Spectra\Data\DataTransferObject;
+use Spectra\Data\ModelTypeCost;
+use Spectra\Data\ModelTypeLatency;
 
+/**
+ * The overview screen: headline totals, cost and latency by model type, top
+ * models, recent requests and the per-day and per-provider charts.
+ */
 readonly class StatsResponse extends DataTransferObject
 {
     /**
@@ -15,8 +21,8 @@ readonly class StatsResponse extends DataTransferObject
      * @param  Collection<int, mixed>  $recent_requests
      * @param  Collection<int, mixed>  $requests_by_date
      * @param  Collection<int, mixed>  $requests_by_provider
-     * @param  Collection<int, mixed>  $latency_by_model_type
-     * @param  Collection<int, mixed>|null  $stats_by_model_type
+     * @param  Collection<int, ModelTypeLatency>  $latency_by_model_type
+     * @param  Collection<int, ModelTypeCost>|null  $stats_by_model_type
      */
     public function __construct(
         public int $total_requests,

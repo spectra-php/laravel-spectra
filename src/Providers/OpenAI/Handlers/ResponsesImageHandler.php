@@ -71,22 +71,16 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
     {
         $parts = [];
 
-        foreach ($response['output'] ?? [] as $outputItem) {
+        foreach ($this->outputItems($response) as $outputItem) {
             if (($outputItem['type'] ?? null) === 'image_generation_call') {
-                $revisedPrompt = $outputItem['result'] ?? null;
-
-                if (is_string($revisedPrompt)) {
-                    $parts[] = '[base64 image data]';
-                } elseif (isset($outputItem['revised_prompt'])) {
-                    $parts[] = $outputItem['revised_prompt'];
-                } else {
-                    $parts[] = '[base64 image data]';
-                }
+                $parts[] = blank($outputItem['result'] ?? null) && filled($outputItem['revised_prompt'] ?? null)
+                    ? $outputItem['revised_prompt']
+                    : '[base64 image data]';
             }
 
-            if (($outputItem['type'] ?? null) === 'message' && isset($outputItem['content'])) {
+            if (($outputItem['type'] ?? null) === 'message' && is_array($outputItem['content'] ?? null)) {
                 foreach ($outputItem['content'] as $contentItem) {
-                    if (isset($contentItem['text']) && $contentItem['text'] !== '') {
+                    if (filled($contentItem['text'] ?? null)) {
                         $parts[] = $contentItem['text'];
                     }
                 }
@@ -112,17 +106,17 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
         $stored = [];
         $index = 0;
 
-        foreach ($responseData['output'] ?? [] as $outputItem) {
+        foreach ($this->outputItems($responseData) as $outputItem) {
             if (($outputItem['type'] ?? null) !== 'image_generation_call') {
                 continue;
             }
 
             $b64 = $outputItem['result'] ?? null;
 
-            if (is_string($b64)) {
+            if (filled($b64)) {
                 $content = base64_decode($b64, true);
 
-                if (! is_string($content) || $content === '') {
+                if ($content === false || blank($content)) {
                     continue;
                 }
 
@@ -137,26 +131,29 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
     /** @param  array<string, mixed>  $data */
     private function hasImageGenerationOutput(array $data): bool
     {
-        foreach ($data['output'] ?? [] as $item) {
-            if (($item['type'] ?? null) === 'image_generation_call') {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->countImageGenerationCalls($data) > 0;
     }
 
     /** @param  array<string, mixed>  $data */
     private function countImageGenerationCalls(array $data): int
     {
-        $count = 0;
+        return collect($this->outputItems($data))
+            ->filter(fn (array $item) => ($item['type'] ?? null) === 'image_generation_call')
+            ->count();
+    }
 
-        foreach ($data['output'] ?? [] as $item) {
-            if (($item['type'] ?? null) === 'image_generation_call') {
-                $count++;
-            }
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<int, array<mixed>>
+     */
+    private function outputItems(array $data): array
+    {
+        $output = $data['output'] ?? null;
+
+        if (! is_array($output)) {
+            return [];
         }
 
-        return $count;
+        return collect($output)->filter(fn (mixed $item) => is_array($item))->values()->all();
     }
 }

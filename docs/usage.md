@@ -49,7 +49,7 @@ $response = Prism::text()
 echo $response->text;
 ```
 
-Spectra records provider errors too. A 4xx or 5xx response is stored as a failed request, with the provider's error message in the `error_message` column. A connection failure is recorded and still thrown to your code. Saving a tracked request never throws into your application: if saving fails, the error goes to your exception handler.
+Spectra records provider errors too. Any response outside 200–299 (a 4xx, a 5xx, or an unfollowed 3xx), or one with no status code, is stored as a failed request, with the provider's error message in the `error_message` column. A connection failure is recorded and still thrown to your code. Saving a tracked request never throws into your application: if saving fails, the error goes to your exception handler.
 
 > [!TIP]
 > Automatic tracking is on whenever `spectra.watcher.enabled` is `true` (the default). It works for requests made through Laravel's `Http` facade, the OpenAI PHP SDK, and any library built on either of them. Direct `curl` calls and other HTTP libraries are not tracked. Use the [Guzzle middleware](#guzzle-middleware) or [manual tracking](#manual-tracking) for those.

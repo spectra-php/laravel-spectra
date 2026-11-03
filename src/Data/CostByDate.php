@@ -7,6 +7,9 @@ namespace Spectra\Data;
 use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * One day's cost on a cost-per-day chart, in cents over successful requests.
+ */
 readonly class CostByDate extends DataTransferObject
 {
     public function __construct(

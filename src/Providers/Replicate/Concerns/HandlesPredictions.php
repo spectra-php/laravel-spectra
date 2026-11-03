@@ -52,7 +52,7 @@ trait HandlesPredictions
     /** @param  array<string, mixed>  $response */
     public function extractModelFromResponse(array $response): ?string
     {
-        return is_string($response['model'] ?? null) && $response['model'] !== '' ? $response['model'] : null;
+        return filled($response['model'] ?? null) ? $response['model'] : null;
     }
 
     /**
@@ -92,7 +92,7 @@ trait HandlesPredictions
 
         $error = $responseData['error'] ?? null;
 
-        return is_string($error) && $error !== '' ? $error : "Prediction {$status}";
+        return filled($error) ? $error : "Prediction {$status}";
     }
 
     /** @param  array<string, mixed>  $response */
@@ -154,7 +154,8 @@ trait HandlesPredictions
         $output = $data['output'] ?? null;
         $first = is_array($output) ? ($output[0] ?? null) : $output;
 
-        if (! is_string($first) || $first === '') {
+        // Only a string output can be text or a file URL.
+        if (! is_string($first)) {
             return null;
         }
 
@@ -220,7 +221,7 @@ trait HandlesPredictions
 
     protected function timestamp(mixed $value): ?CarbonImmutable
     {
-        if (! is_string($value) || $value === '') {
+        if (blank($value)) {
             return null;
         }
 

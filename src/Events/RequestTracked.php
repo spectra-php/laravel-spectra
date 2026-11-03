@@ -8,7 +8,9 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Spectra\Support\RequestTransformer;
 
 /**
- * Dispatched after an AI request has been persisted and is ready for integrations.
+ * Dispatched once a tracked AI request is ready for integrations: after it
+ * is saved, or right after tracking when `spectra.storage.store_requests` is
+ * off and nothing is saved.
  *
  * Listen to this event to perform custom actions when AI requests are tracked,
  * such as sending data to custom observability backends, triggering alerts,

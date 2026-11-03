@@ -32,6 +32,9 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
     use ExtractsModelField;
     use MatchesParametricEndpoints;
 
+    /** Seconds to wait for a generated video to download. */
+    protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 60;
+
     public function modelType(): ModelType
     {
         return ModelType::Video;
@@ -82,7 +85,7 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
     {
         $url = $response['video']['url'] ?? null;
 
-        return is_string($url) && $url !== '' ? $url : null;
+        return filled($url) ? $url : null;
     }
 
     /**
@@ -93,16 +96,18 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
     {
         $url = $responseData['video']['url'] ?? null;
 
-        if (! is_string($url) || $url === '') {
+        if (blank($url)) {
             return [];
         }
 
-        $response = Http::withoutAITracking()->get($url);
+        $path = rescue(function () use ($requestId, $url) {
+            $response = Http::withoutAITracking()->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)->get($url);
 
-        if (! $response->successful()) {
-            return [];
-        }
+            return $response->successful()
+                ? app(MediaPersister::class)->store($requestId, 0, $response->body(), 'mp4')
+                : null;
+        });
 
-        return [app(MediaPersister::class)->store($requestId, 0, $response->body(), 'mp4')];
+        return $path === null ? [] : [$path];
     }
 }

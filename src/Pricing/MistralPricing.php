@@ -7,6 +7,10 @@ namespace Spectra\Pricing;
 /**
  * Mistral AI prices, from docs.mistral.ai (API pricing page and model cards).
  *
+ * Units: chat and embedding models are US cents per 1M tokens; OCR is cents
+ * per page, Voxtral TTS cents per 1M characters and Voxtral transcription
+ * cents per audio minute (`usage.prompt_audio_seconds`).
+ *
  * Cached input is 10% of the input price on every model the pricing page
  * lists (GLM 5.3 Flash: 20%, DeepSeek V4.1 Flash: 2.3%). The Batch API is 50% off for models that
  * support batching, and the batch discount applies to every token type.

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
-use Spectra\Support\Pricing\CostCalculator;
 
 /**
  * Groq requests as real apps send them: through Laravel's HTTP client, with
@@ -30,17 +29,6 @@ it('prices prefixed production ids with cached input at half price', function ()
         ->and($row->reasoning_tokens)->toBe(512)
         ->and($row->pricing_tier)->toBe('standard')
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.144075, 1e-9);
-});
-
-it('keeps the old unprefixed ids resolving to the same entry', function () {
-    $calculator = new CostCalculator;
-
-    // $0.075 in + $0.30 out per 1M tokens.
-    expect($calculator->calculate('groq', 'gpt-oss-20b', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(37.5)
-        ->and($calculator->calculate('groq', 'openai/gpt-oss-20b', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(37.5)
-        ->and($calculator->calculate('groq', 'openai/gpt-oss-120b', 1_000_000, 0, 1_000_000, 'batch')['total_cost_in_cents'])->toEqual(7.5)
-        ->and($calculator->calculate('groq', 'qwen/qwen3.8-27b', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(480.0)
-        ->and($calculator->calculate('groq', 'llama-4-scout-17b-16e-instruct', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(45.0);
 });
 
 it('reads streamed usage from x_groq.usage', function () {

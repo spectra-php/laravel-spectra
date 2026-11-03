@@ -11,6 +11,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
+ * A tag attached to tracked requests (e.g. "feature:search"), used to filter
+ * and group usage. Names are unique; the slug is derived from the name.
+ *
  * @property string $id
  * @property string $name
  * @property-read string $slug
@@ -49,7 +52,7 @@ class SpectraTag extends Model
 
     public static function findOrCreateByName(string $name): self
     {
-        return static::firstOrCreate(['name' => $name]);
+        return static::query()->firstOrCreate(['name' => $name]);
     }
 
     public function getSlugAttribute(): string

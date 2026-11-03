@@ -7,6 +7,9 @@ namespace Spectra\Http\Controllers\Api;
 use Spectra\Actions\Tags\GetTags;
 use Spectra\Data\Responses\TagsResponse;
 
+/**
+ * GET /api/tags: every tag with its request count.
+ */
 class TagsController extends BaseApiController
 {
     public function __invoke(GetTags $action): TagsResponse

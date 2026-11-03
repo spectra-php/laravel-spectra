@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 use Spectra\Actions\Trackables\GetTrackableDetails;
 use Spectra\Data\Responses\TrackableDetailsResponse;
 
+/**
+ * GET /api/trackables/view/{id}: the trackable detail screen.
+ */
 class ShowTrackableController extends BaseApiController
 {
     public function __invoke(

@@ -9,6 +9,10 @@ use Spectra\Data\CostByProvider;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * Cost per provider for the costs screen, over successful requests, most
+ * expensive first.
+ */
 class GetCostsByProvider
 {
     /**

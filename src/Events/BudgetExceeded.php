@@ -9,6 +9,20 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Spectra\Models\SpectraBudget;
 
+/**
+ * A budget limit was reached.
+ *
+ * `wasBlocked: true` fires before a hard limit stops a request (cost, token
+ * and request-count limits, and the allowed providers and models).
+ * `wasBlocked: false` fires once per cost limit and period when a recorded
+ * request takes spend over the limit, so listeners hear about it even when
+ * the limit is soft.
+ *
+ * `currentUsage` and `limit` are in the limit's unit: cents for cost limits
+ * (`daily`, `weekly`, `monthly`, `total`), tokens for `*_tokens`, requests
+ * for `*_requests`. For `provider` and `model` (not on the allowed list)
+ * both are 0.
+ */
 class BudgetExceeded
 {
     use Dispatchable, SerializesModels;

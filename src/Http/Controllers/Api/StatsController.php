@@ -12,10 +12,15 @@ use Spectra\Actions\Stats\GetRecentRequests;
 use Spectra\Actions\Stats\GetRequestsByDate;
 use Spectra\Actions\Stats\GetRequestsByProvider;
 use Spectra\Actions\Stats\GetTopModels;
-use Spectra\Data\ModelTypeStat;
+use Spectra\Data\ModelTypeCost;
+use Spectra\Data\ModelTypeLatency;
 use Spectra\Data\Responses\StatsResponse;
 use Spectra\Support\DateRange;
 
+/**
+ * GET /api/stats: the overview screen's totals, charts and breakdowns for the
+ * selected period, narrowed to the configured dashboard layout.
+ */
 class StatsController extends BaseApiController
 {
     public function __invoke(
@@ -51,21 +56,9 @@ class StatsController extends BaseApiController
             recent_requests: $getRecentRequests($dateRange, $layout),
             requests_by_date: $getRequestsByDate($dateRange, $layout),
             requests_by_provider: $getRequestsByProvider($dateRange, $layout),
-            latency_by_model_type: $modelTypeStats->map(fn (ModelTypeStat $row) => [
-                'model_type' => $row->model_type,
-                'label' => $row->label,
-                'count' => $row->count,
-                'avg_latency' => $row->avg_latency,
-            ]),
+            latency_by_model_type: ModelTypeLatency::fromCollection($modelTypeStats),
             layout: $layout,
-            stats_by_model_type: $layout === 'full'
-                ? $modelTypeStats->map(fn (ModelTypeStat $row) => [
-                    'model_type' => $row->model_type,
-                    'label' => $row->label,
-                    'count' => $row->count,
-                    'cost' => $row->cost,
-                ])
-                : null,
+            stats_by_model_type: $layout === 'full' ? ModelTypeCost::fromCollection($modelTypeStats) : null,
         );
     }
 }

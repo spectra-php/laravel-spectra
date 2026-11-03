@@ -8,6 +8,10 @@ use Spectra\Data\TrackableStats as TrackableStatsDto;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * The headline numbers on a trackable's detail screen: counts and usage over
+ * every request, cost and latency over successful ones.
+ */
 class GetTrackableStats
 {
     public function __invoke(string $type, string $id, DateRange $dateRange): TrackableStatsDto

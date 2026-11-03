@@ -7,6 +7,10 @@ namespace Spectra\Data\Responses;
 use Illuminate\Support\Collection;
 use Spectra\Data\DataTransferObject;
 
+/**
+ * The settings the SPA loads first: the configured layout and the model types
+ * it can filter by.
+ */
 readonly class DashboardConfigResponse extends DataTransferObject
 {
     /**

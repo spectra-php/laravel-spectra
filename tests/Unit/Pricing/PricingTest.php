@@ -5,7 +5,11 @@ declare(strict_types=1);
 use Spectra\Enums\PricingTier;
 use Spectra\Support\Pricing\PricingLookup;
 
-it('should get pricing for openai models', function () {
+/**
+ * PricingLookup answers price, tier, unit, display name, type and capability
+ * questions for catalog models.
+ */
+it('returns the standard input and output price for an openai model', function () {
     $pricing = app(PricingLookup::class)->get('openai', 'gpt-4o');
 
     expect($pricing)->not->toBeNull()
@@ -14,7 +18,7 @@ it('should get pricing for openai models', function () {
         ->and($pricing['output'])->toBe(1000);
 });
 
-it('should get pricing for anthropic models', function () {
+it('returns the standard input and output price for an anthropic model', function () {
     $pricing = app(PricingLookup::class)->get('anthropic', 'claude-sonnet-4-20250514');
 
     expect($pricing)->not->toBeNull()
@@ -28,14 +32,14 @@ it('returns null for unknown models', function () {
     expect($pricing)->toBeNull();
 });
 
-it('should check if pricing exists', function () {
+it('reports pricing for a known model and none for an unknown one', function () {
     $service = app(PricingLookup::class);
 
     expect($service->has('openai', 'gpt-4o'))->toBeTrue()
         ->and($service->has('unknown', 'model'))->toBeFalse();
 });
 
-it('should get openai pricing with different tiers', function () {
+it('returns cheaper batch and dearer priority prices for openai tiers', function () {
     $service = app(PricingLookup::class);
 
     // Standard tier (default)
@@ -57,7 +61,7 @@ it('should get openai pricing with different tiers', function () {
         ->and($priority['output'])->toBe(1700);
 });
 
-it('should get openai pricing with tier as string', function () {
+it('resolves an openai tier passed as a string', function () {
     $pricing = app(PricingLookup::class)->get('openai', 'gpt-4o', 'batch');
 
     expect($pricing)->not->toBeNull()
@@ -98,7 +102,7 @@ it('has pricing for o3 and o4-mini models', function () {
         ->and($o4mini['output'])->toBe(440);
 });
 
-it('should get anthropic pricing with different tiers', function () {
+it('halves anthropic prices, cached input included, on the batch tier', function () {
     $service = app(PricingLookup::class);
 
     // Standard tier
@@ -140,7 +144,7 @@ it('has pricing for claude opus 4.5', function () {
         ->and($batch['output'])->toBe(1250);
 });
 
-it('should get pricing unit for a model', function () {
+it('returns tokens as the pricing unit of a chat model', function () {
     $unit = app(PricingLookup::class)->getUnit('openai', 'gpt-4o');
 
     expect($unit)->toBe('tokens');
@@ -152,19 +156,19 @@ it('returns null unit for unknown model', function () {
     expect($unit)->toBeNull();
 });
 
-it('should get display name for a model', function () {
+it('returns the display name for a model id', function () {
     $name = app(PricingLookup::class)->getDisplayName('openai', 'gpt-4o');
 
     expect($name)->toBe('GPT-4o');
 });
 
-it('should get model type', function () {
+it('returns text as the model type of a chat model', function () {
     $type = app(PricingLookup::class)->getModelType('openai', 'gpt-4o');
 
     expect($type)->toBe('text');
 });
 
-it('should get model capabilities', function () {
+it('reports only text generation for a text model', function () {
     $capabilities = app(PricingLookup::class)->getCapabilities('openai', 'gpt-4o');
 
     expect($capabilities)->toBe([
@@ -186,7 +190,7 @@ it('returns false capabilities for unknown model', function () {
     ]);
 });
 
-it('should get text-generating models', function () {
+it('lists chat models as text-generating and leaves out image models', function () {
     $textModels = app(PricingLookup::class)->canGenerateText();
 
     expect($textModels)->toContain('gpt-4o')
@@ -194,14 +198,14 @@ it('should get text-generating models', function () {
         ->and($textModels)->not->toContain('dall-e-3');
 });
 
-it('should get image-generating models', function () {
+it('lists image models as image-generating and leaves out chat models', function () {
     $imageModels = app(PricingLookup::class)->canGenerateImages();
 
     expect($imageModels)->toContain('dall-e-3')
         ->and($imageModels)->not->toContain('gpt-4o');
 });
 
-it('should get full model data', function () {
+it('returns the full model data with its display name, type and tiers', function () {
     $data = app(PricingLookup::class)->getModelData('openai', 'gpt-4o');
 
     expect($data)->not->toBeNull()

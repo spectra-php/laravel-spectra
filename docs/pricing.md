@@ -569,7 +569,7 @@ When reviewing, check each provider's official pricing page and update the match
 | Mistral | https://docs.mistral.ai/inference/pricing |
 | Cohere | https://cohere.com/pricing |
 | Groq | https://console.groq.com/docs/models |
-| OpenRouter | https://openrouter.ai/models |
+| OpenRouter | https://openrouter.ai/api/v1/models and, for image models, `https://openrouter.ai/api/v1/images/models/{author}/{slug}/endpoints` |
 | Replicate | https://replicate.com/pricing |
 | fal.ai | https://fal.ai/pricing |
 | Scaleway | https://www.scaleway.com/en/pricing/model-as-a-service/ |

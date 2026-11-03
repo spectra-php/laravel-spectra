@@ -16,6 +16,7 @@ use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Google\ExtractsModelFromGoogleEndpoint;
 use Spectra\Providers\Google\GeminiUsage;
+use Spectra\Providers\Google\ReadsGeminiParts;
 use Spectra\Support\MediaPersister;
 
 /**
@@ -26,6 +27,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
 {
     use ExtractsModelFromGoogleEndpoint;
     use MatchesParametricEndpoints;
+    use ReadsGeminiParts;
 
     public function modelType(): ModelType
     {
@@ -47,21 +49,9 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
      */
     public function extractMetrics(array $requestData, array $responseData): Metrics
     {
-        $imageCount = 0;
-
-        // Gemini generateContent image response
-        foreach ($responseData['candidates'][0]['content']['parts'] ?? [] as $part) {
-            if (isset($part['inlineData']['mimeType']) && str_starts_with($part['inlineData']['mimeType'], 'image/')) {
-                $imageCount++;
-            }
-        }
-
-        // Imagen generateImages response
-        foreach ($responseData['generatedImages'] ?? [] as $image) {
-            if (isset($image['image'])) {
-                $imageCount++;
-            }
-        }
+        $imageCount = collect($this->firstCandidateParts($responseData))
+            ->filter(fn (array $part) => $this->isInlinePart($part, 'image/'))
+            ->count() + count($this->generatedImages($responseData));
 
         $usage = GeminiUsage::metadata($responseData);
         $tokens = GeminiUsage::tokens($usage);
@@ -92,7 +82,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     /** @param  array<string, mixed>  $response */
     public function extractModelFromResponse(array $response): ?string
     {
-        return $response['modelVersion'] ?? null;
+        return filled($response['modelVersion'] ?? null) ? $response['modelVersion'] : null;
     }
 
     /** @param  array<string, mixed>  $response */
@@ -101,19 +91,17 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         $parts = [];
 
         // Gemini generateContent with inline image data
-        foreach ($response['candidates'][0]['content']['parts'] ?? [] as $part) {
-            if (isset($part['inlineData']['mimeType']) && str_starts_with($part['inlineData']['mimeType'], 'image/')) {
+        foreach ($this->firstCandidateParts($response) as $part) {
+            if ($this->isInlinePart($part, 'image/')) {
                 $parts[] = '[generated image]';
-            } elseif (isset($part['text']) && $part['text'] !== '') {
+            } elseif (filled($part['text'] ?? null)) {
                 $parts[] = $part['text'];
             }
         }
 
         // Imagen generateImages response
-        foreach ($response['generatedImages'] ?? [] as $image) {
-            if (isset($image['image'])) {
-                $parts[] = '[generated image]';
-            }
+        foreach ($this->generatedImages($response) as $image) {
+            $parts[] = '[generated image]';
         }
 
         return ! empty($parts) ? implode("\n", $parts) : null;
@@ -123,8 +111,8 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     public function matchesResponse(array $data): bool
     {
         // Gemini image response: candidates with inline image data
-        foreach ($data['candidates'][0]['content']['parts'] ?? [] as $part) {
-            if (isset($part['inlineData']['mimeType']) && str_starts_with($part['inlineData']['mimeType'], 'image/')) {
+        foreach ($this->firstCandidateParts($data) as $part) {
+            if ($this->isInlinePart($part, 'image/')) {
                 return true;
             }
         }
@@ -148,30 +136,30 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         $index = 0;
 
         // Gemini inline image data
-        foreach ($responseData['candidates'][0]['content']['parts'] ?? [] as $part) {
-            if (isset($part['inlineData']['mimeType']) && str_starts_with($part['inlineData']['mimeType'], 'image/')) {
-                $mimeType = $part['inlineData']['mimeType'];
-                $extension = match ($mimeType) {
-                    'image/jpeg' => 'jpg',
-                    'image/webp' => 'webp',
-                    'image/gif' => 'gif',
-                    default => 'png',
-                };
-                $content = base64_decode($part['inlineData']['data'], true);
+        foreach ($this->firstCandidateParts($responseData) as $part) {
+            $content = $this->isInlinePart($part, 'image/') ? $this->inlineBytes($part) : null;
 
-                if ($content === false) {
-                    continue;
-                }
-
-                $stored[] = $persister->store($requestId, $index, $content, $extension);
-                $index++;
+            if ($content === null) {
+                continue;
             }
+
+            $extension = match ($this->inlineMimeType($part)) {
+                'image/jpeg' => 'jpg',
+                'image/webp' => 'webp',
+                'image/gif' => 'gif',
+                default => 'png',
+            };
+
+            $stored[] = $persister->store($requestId, $index, $content, $extension);
+            $index++;
         }
 
         // Imagen generateImages response
-        foreach ($responseData['generatedImages'] ?? [] as $image) {
-            if (isset($image['image']['imageBytes'])) {
-                $content = base64_decode($image['image']['imageBytes'], true);
+        foreach ($this->generatedImages($responseData) as $image) {
+            $imageBytes = data_get($image, 'image.imageBytes');
+
+            if (filled($imageBytes)) {
+                $content = base64_decode($imageBytes, true);
 
                 if ($content === false) {
                     continue;
@@ -183,5 +171,22 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         }
 
         return $stored;
+    }
+
+    /**
+     * Images of an Imagen `generateImages` response.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<int, array<mixed>>
+     */
+    protected function generatedImages(array $data): array
+    {
+        $images = $data['generatedImages'] ?? null;
+
+        if (! is_array($images)) {
+            return [];
+        }
+
+        return collect($images)->filter(fn (mixed $image) => is_array($image) && isset($image['image']))->values()->all();
     }
 }

@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Spectra\Http\Controllers\Api\ShowTrackableController;
 use Spectra\Http\Controllers\Api\StatsController;
 use Spectra\Models\SpectraRequest;
@@ -14,8 +13,6 @@ use Spectra\Models\SpectraRequest;
  */
 function seedDashboardDataset(): void
 {
-    Carbon::setTestNow(Carbon::parse('2026-07-04 12:00:00'));
-
     $rows = [
         // Two successful gpt-4o requests for User#1
         ['provider' => 'openai', 'model' => 'gpt-4o', 'model_type' => 'text', 'status_code' => 200, 'total_cost_in_cents' => 100, 'latency_ms' => 100, 'prompt_tokens' => 100, 'completion_tokens' => 50, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => '1'],
@@ -33,7 +30,9 @@ function seedDashboardDataset(): void
     }
 }
 
-afterEach(fn () => Carbon::setTestNow());
+beforeEach(function () {
+    $this->travelTo('2026-07-04 12:00:00');
+});
 
 it('reports the stats endpoint numbers', function () {
     seedDashboardDataset();

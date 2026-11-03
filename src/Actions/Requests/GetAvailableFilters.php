@@ -8,6 +8,10 @@ use Spectra\Data\Responses\AvailableFiltersResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraTag;
 
+/**
+ * The filter options the request and trackable screens offer: every tag, and
+ * the finish reasons and reasoning efforts actually stored.
+ */
 class GetAvailableFilters
 {
     public function __invoke(): AvailableFiltersResponse
@@ -21,7 +25,7 @@ class GetAvailableFilters
             ->get();
 
         return new AvailableFiltersResponse(
-            tags: SpectraTag::orderBy('name')->pluck('name')->toArray(),
+            tags: SpectraTag::query()->orderBy('name')->pluck('name')->toArray(),
             finish_reasons: $filters->pluck('finish_reason')
                 ->filter()
                 ->unique()

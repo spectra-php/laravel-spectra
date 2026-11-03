@@ -38,7 +38,7 @@ trait MeasuresJobLatency
             return (int) round((float) $value * 1000);
         }
 
-        if (! is_string($value) || $value === '') {
+        if (blank($value)) {
             return null;
         }
 

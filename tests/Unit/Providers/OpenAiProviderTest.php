@@ -22,6 +22,10 @@ use Spectra\Providers\OpenAI\OpenAI;
 use Spectra\Providers\OpenAI\OpenAiUsage;
 use Spectra\Providers\OpenAI\Streaming\TextStreaming;
 
+/**
+ * The OpenAI provider: handler resolution by endpoint and response shape,
+ * and the usage, content, model and other fields each handler extracts.
+ */
 it('extracts usage from completions api response', function () {
     $response = json_decode(file_get_contents(__DIR__.'/../../responses/openai/completion.json'), true);
 

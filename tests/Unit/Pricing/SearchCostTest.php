@@ -8,6 +8,10 @@ use Spectra\Support\Pricing\RequestCostCalculator;
 use Spectra\Support\StatsAggregator;
 use Spectra\Support\Tracking\RequestContext;
 
+/**
+ * Per-search billing only charges searches the request actually ran, and the
+ * stats rebuild that sums them into daily stats.
+ */
 it('bills per-search models using the tracked search count', function () {
     $calculator = app(RequestCostCalculator::class);
 

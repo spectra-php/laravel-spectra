@@ -7,6 +7,10 @@ namespace Spectra\Actions\Requests;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * Shapes a page of requests into the rows the requests screen shows, with tag
+ * names instead of tag models.
+ */
 class FormatRequestsList
 {
     /**

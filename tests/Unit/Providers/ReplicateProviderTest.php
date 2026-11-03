@@ -10,6 +10,10 @@ use Spectra\Providers\Replicate\Handlers\TextHandler;
 use Spectra\Providers\Replicate\Handlers\VideoHandler;
 use Spectra\Support\ProviderRegistry;
 
+/**
+ * The Replicate provider: its hosts, handler resolution and what each
+ * handler extracts from a prediction.
+ */
 it('returns replicate as provider', function () {
     expect($this->replicateProvider()->getProvider())->toBe('replicate');
 });

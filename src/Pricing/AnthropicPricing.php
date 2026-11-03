@@ -110,14 +110,12 @@ class AnthropicPricing extends ProviderPricing
         // undated id is the API's alias for the latest snapshot.
         $this->model('claude-opus-4-5', fn ($m) => $m
             ->displayName('Claude Opus 4.5')
-            ->aliases('claude-opus-4-5-20251101')
             ->canGenerateText()
             ->tier('standard', inputPrice: 500, outputPrice: 2500, cachedInputPrice: 50, cacheWrite5mPrice: 625, cacheWrite1hPrice: 1000)
             ->tier('batch', inputPrice: 250, outputPrice: 1250, cachedInputPrice: 25, cacheWrite5mPrice: 312.5, cacheWrite1hPrice: 500));
 
         $this->model('claude-opus-4-1', fn ($m) => $m
             ->displayName('Claude Opus 4.1')
-            ->aliases('claude-opus-4-1-20250805')
             ->retiredOn('2026-08-05')
             ->canGenerateText()
             ->tier('standard', inputPrice: 1500, outputPrice: 7500, cachedInputPrice: 150, cacheWrite5mPrice: 1875, cacheWrite1hPrice: 3000)
@@ -125,7 +123,7 @@ class AnthropicPricing extends ProviderPricing
 
         $this->model('claude-opus-4', fn ($m) => $m
             ->displayName('Claude Opus 4')
-            ->aliases('claude-opus-4-20250514', 'claude-opus-4-0')
+            ->aliases('claude-opus-4-0')
             ->retiredOn('2026-06-15')
             ->canGenerateText()
             ->tier('standard', inputPrice: 1500, outputPrice: 7500, cachedInputPrice: 150, cacheWrite5mPrice: 1875, cacheWrite1hPrice: 3000)
@@ -153,14 +151,13 @@ class AnthropicPricing extends ProviderPricing
         // Deprecated; shuts down on 2026-11-30.
         $this->model('claude-sonnet-4-5', fn ($m) => $m
             ->displayName('Claude Sonnet 4.5')
-            ->aliases('claude-sonnet-4-5-20250929')
             ->canGenerateText()
             ->tier('standard', inputPrice: 300, outputPrice: 1500, cachedInputPrice: 30, cacheWrite5mPrice: 375, cacheWrite1hPrice: 600)
             ->tier('batch', inputPrice: 150, outputPrice: 750, cachedInputPrice: 15, cacheWrite5mPrice: 187.5, cacheWrite1hPrice: 300));
 
         $this->model('claude-sonnet-4', fn ($m) => $m
             ->displayName('Claude Sonnet 4')
-            ->aliases('claude-sonnet-4-20250514', 'claude-sonnet-4-0')
+            ->aliases('claude-sonnet-4-0')
             ->retiredOn('2026-06-15')
             ->canGenerateText()
             ->tier('standard', inputPrice: 300, outputPrice: 1500, cachedInputPrice: 30, cacheWrite5mPrice: 375, cacheWrite1hPrice: 600)
@@ -168,7 +165,7 @@ class AnthropicPricing extends ProviderPricing
 
         $this->model('claude-3-7-sonnet', fn ($m) => $m
             ->displayName('Claude 3.7 Sonnet')
-            ->aliases('claude-3-7-sonnet-20250219', 'claude-3-7-sonnet-latest')
+            ->aliases('claude-3-7-sonnet-latest')
             ->retiredOn('2026-02-19')
             ->canGenerateText()
             ->tier('standard', inputPrice: 300, outputPrice: 1500, cachedInputPrice: 30, cacheWrite5mPrice: 375, cacheWrite1hPrice: 600)
@@ -186,14 +183,13 @@ class AnthropicPricing extends ProviderPricing
 
         $this->model('claude-haiku-4-5', fn ($m) => $m
             ->displayName('Claude Haiku 4.5')
-            ->aliases('claude-haiku-4-5-20251001')
             ->canGenerateText()
             ->tier('standard', inputPrice: 100, outputPrice: 500, cachedInputPrice: 10, cacheWrite5mPrice: 125, cacheWrite1hPrice: 200)
             ->tier('batch', inputPrice: 50, outputPrice: 250, cachedInputPrice: 5, cacheWrite5mPrice: 62.5, cacheWrite1hPrice: 100));
 
         $this->model('claude-3-5-haiku', fn ($m) => $m
             ->displayName('Claude 3.5 Haiku')
-            ->aliases('claude-3-5-haiku-20241022', 'claude-3-5-haiku-latest')
+            ->aliases('claude-3-5-haiku-latest')
             ->retiredOn('2026-02-19')
             ->canGenerateText()
             ->tier('standard', inputPrice: 80, outputPrice: 400, cachedInputPrice: 8, cacheWrite5mPrice: 100, cacheWrite1hPrice: 160)
@@ -201,7 +197,6 @@ class AnthropicPricing extends ProviderPricing
 
         $this->model('claude-3-haiku', fn ($m) => $m
             ->displayName('Claude 3 Haiku')
-            ->aliases('claude-3-haiku-20240307')
             ->retiredOn('2026-04-20')
             ->canGenerateText()
             ->tier('standard', inputPrice: 25, outputPrice: 125, cachedInputPrice: 3, cacheWrite5mPrice: 30, cacheWrite1hPrice: 50)

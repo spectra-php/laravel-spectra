@@ -81,7 +81,7 @@ class ImageGenerationHandler implements Handler, HasMedia, StreamsResponse
         foreach ($this->images($responseData) as $index => $image) {
             $content = is_string($image['b64_json'] ?? null) ? base64_decode($image['b64_json'], true) : false;
 
-            if ($content === false || $content === '') {
+            if ($content === false || blank($content)) {
                 continue;
             }
 

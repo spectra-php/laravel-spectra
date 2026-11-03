@@ -7,14 +7,12 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Providers\OpenAI\Handlers\TextHandler;
 use Spectra\Providers\OpenAI\OpenAI;
-use Spectra\Support\Pricing\CostCalculator;
 
-/*
-|--------------------------------------------------------------------------
-| OpenAI Response Recording Tests
-|--------------------------------------------------------------------------
-*/
-
+/**
+ * OpenAI responses recorded through Spectra::track() and the stream tracker:
+ * each fixture's model, tokens and cost, batch workflows, streams, pricing
+ * tiers, reasoning effort, tool calls, tags and metadata.
+ */
 it('records openai response to database', function (string $fixture, string $model, array $expectations) {
     $response = $this->loadMockResponse($fixture);
 
@@ -482,40 +480,6 @@ it('stores null tool_call_counts when no tool calls present', function () {
     expect($record)->not->toBeNull()
         ->and($record->has_tool_calls)->toBeFalse()
         ->and($record->tool_call_counts)->toBeNull();
-});
-
-/*
-|--------------------------------------------------------------------------
-| TTS Pricing Tests
-|--------------------------------------------------------------------------
-*/
-
-it('prices tts models by the unit openai bills them in', function (string $model, string $unit) {
-    $calculator = app(CostCalculator::class);
-
-    expect($calculator->getPricingUnit('openai', $model))->toBe($unit);
-})->with([
-    'tts-1' => ['tts-1', 'characters'],
-    'tts-1-hd' => ['tts-1-hd', 'characters'],
-    'gpt-4o-mini-tts' => ['gpt-4o-mini-tts', 'minute'],
-]);
-
-it('calculates tts cost by characters', function () {
-    $calculator = app(CostCalculator::class);
-
-    // tts-1: $15 per 1M characters → 1,000 characters = 1.5¢.
-    $cost = $calculator->calculateByCharacters('openai', 'tts-1', 1_000);
-
-    expect($cost['total_cost_in_cents'])->toBe(1.5);
-});
-
-it('calculates tts-1-hd cost by characters', function () {
-    $calculator = app(CostCalculator::class);
-
-    // tts-1-hd: $30 per 1M characters → 1,000 characters = 3¢.
-    $cost = $calculator->calculateByCharacters('openai', 'tts-1-hd', 1_000);
-
-    expect($cost['total_cost_in_cents'])->toBe(3.0);
 });
 
 /*

@@ -9,6 +9,9 @@ use Spectra\Data\RequestByDate;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * Requests per day for the overview chart, failures included.
+ */
 class GetRequestsByDate
 {
     /**

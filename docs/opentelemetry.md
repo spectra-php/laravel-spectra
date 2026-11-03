@@ -36,7 +36,7 @@ Enable the integration in `config/spectra.php` and provide the OTLP endpoint for
         'headers' => [],
         'service_version' => env('SPECTRA_OTEL_SERVICE_VERSION', '1.0.0'),
         'resource_attributes' => [],
-        'timeout' => env('SPECTRA_OTEL_TIMEOUT', 10),
+        'timeout' => (int) env('SPECTRA_OTEL_TIMEOUT', 10),
     ],
 ],
 ```

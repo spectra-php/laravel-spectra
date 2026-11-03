@@ -10,6 +10,10 @@ use Spectra\Providers\OpenRouter\Handlers\RerankHandler;
 use Spectra\Providers\OpenRouter\Handlers\VideoHandler;
 use Spectra\Providers\OpenRouter\OpenRouter;
 
+/**
+ * The OpenRouter provider: handler resolution, the reported cost, image and
+ * cache tokens, and skipped video jobs.
+ */
 it('resolves a handler for each openrouter endpoint', function (string $endpoint, array $body, string $handler) {
     expect((new OpenRouter)->resolveHandler($endpoint, $body))->toBeInstanceOf($handler);
 })->with([

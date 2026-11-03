@@ -8,8 +8,9 @@ namespace Spectra\Pricing;
  * Cohere prices, from cohere.com/pricing (including its legacy-model FAQ) and
  * docs.cohere.com/docs/models.
  *
- * Rerank bills per search unit and Parse per page; everything else bills per
- * billed token. Command A, Embed 4, Embed v3 and Rerank 3.5 are no longer on
+ * Units: Chat and Embed models are US cents per 1M billed tokens
+ * (`billed_units`); Rerank is cents per search unit and Parse cents per
+ * page. Command A, Embed 4, Embed v3 and Rerank 3.5 are no longer on
  * the pricing page, so their last known prices are kept. Command A+ is left
  * out: the pricing page shows it as free while other pages list a token
  * price, so its price cannot be confirmed.

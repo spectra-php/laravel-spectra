@@ -640,6 +640,10 @@ return [
         |
         | Then replace the openai entry with your class.
         |
+        | Built-in entries you leave out stay active, so new providers reach
+        | you without republishing this file. Set an entry to false to turn a
+        | built-in pricing class off, e.g. 'groq' => false.
+        |
         */
 
         'pricing' => [
@@ -684,7 +688,9 @@ return [
         |
         | `spectra:pricing-scrape` uses Firecrawl's JSON extraction to read
         | the providers' pricing pages. Only the command needs a key; tracking
-        | never calls Firecrawl. Timeout is in seconds, per page.
+        | never calls Firecrawl. Timeout is in seconds, per page. The
+        | unprefixed FIRECRAWL_API_KEY, FIRECRAWL_API_URL and FIRECRAWL_TIMEOUT
+        | variables are still read when the SPECTRA_ ones are not set.
         |
         | `providers` are the ones the command scrapes when you don't name
         | any, e.g. SPECTRA_SCRAPE_PROVIDERS=openai,anthropic. Left empty, it
@@ -694,9 +700,9 @@ return [
         */
 
         'firecrawl' => [
-            'api_key' => env('FIRECRAWL_API_KEY'),
-            'url' => env('FIRECRAWL_API_URL', 'https://api.firecrawl.dev/v2'),
-            'timeout' => (int) env('FIRECRAWL_TIMEOUT', 180),
+            'api_key' => env('SPECTRA_FIRECRAWL_API_KEY', env('FIRECRAWL_API_KEY')),
+            'url' => env('SPECTRA_FIRECRAWL_API_URL', env('FIRECRAWL_API_URL', 'https://api.firecrawl.dev/v2')),
+            'timeout' => (int) env('SPECTRA_FIRECRAWL_TIMEOUT', env('FIRECRAWL_TIMEOUT', 180)),
             'providers' => array_values(array_filter(array_map('trim', explode(',', (string) env('SPECTRA_SCRAPE_PROVIDERS', ''))))),
         ],
 
@@ -732,9 +738,9 @@ return [
         | Default Provider
         |--------------------------------------------------------------------------
         |
-        | The default AI provider to use when checking budgets if not specified
-        | in the request. Used by the budget middleware when provider cannot
-        | be determined from the request context.
+        | The provider the budget middleware checks when the route gives none
+        | (`spectra.budget` without arguments). It matters only for budgets
+        | with an allowed-providers list.
         |
         */
 
@@ -745,9 +751,9 @@ return [
         | Default Model
         |--------------------------------------------------------------------------
         |
-        | The default model to use when checking budgets if not specified in
-        | the request. Used by the budget middleware for cost estimation when
-        | the exact model cannot be determined.
+        | The model the budget middleware checks when the route gives none
+        | (`spectra.budget:openai` or no arguments). It matters only for
+        | budgets with an allowed-models list.
         |
         */
 
@@ -821,6 +827,10 @@ return [
     | To create a custom provider, extend Spectra\Providers\Provider
     | and implement the handlers() method returning Handler instances that
     | know how to extract data from your provider's response format.
+    |
+    | Built-in providers you leave out stay active, so new providers reach
+    | you without republishing this file. Set an entry to false to stop
+    | tracking a built-in provider, e.g. 'ollama' => false.
     |
     */
 
@@ -932,9 +942,9 @@ return [
             'resource_attributes' => [],
 
             /*
-            | Timeout in seconds for OTLP HTTP requests.
+            | Timeout in seconds for OTLP HTTP requests. Default: 10.
             */
-            'timeout' => env('SPECTRA_OTEL_TIMEOUT', 10),
+            'timeout' => (int) env('SPECTRA_OTEL_TIMEOUT', 10),
 
             /*
             | Custom span builder class. Implement Spectra\Contracts\SpanBuilder

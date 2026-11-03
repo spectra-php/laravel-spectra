@@ -3,29 +3,17 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
-use Spectra\Support\Pricing\CostCalculator;
 
-/*
-|--------------------------------------------------------------------------
-| Gemini API cost tracking, end to end
-|--------------------------------------------------------------------------
-|
-| Requests go through Laravel's HTTP client so the global watcher records
-| them as in a real app. Expected costs are worked out by hand from
-| GooglePricing (US cents per 1M tokens). Several models change price on a
-| known date, so the clock is fixed.
-|
-*/
-
+/**
+ * Gemini API cost tracking, end to end. Requests go through Laravel's HTTP
+ * client so the global watcher records them as in a real app. Expected costs
+ * are worked out by hand from GooglePricing (US cents per 1M tokens).
+ * Several models change price on a known date, so the clock is fixed.
+ */
 beforeEach(function () {
-    Carbon::setTestNow('2026-10-15 12:00:00');
-});
-
-afterEach(function () {
-    Carbon::setTestNow();
+    $this->travelTo('2026-10-15 12:00:00');
 });
 
 function geminiFixture(string $name): array
@@ -67,7 +55,7 @@ it('bills thinking tokens at the output rate', function () {
 });
 
 it('prices Gemini 3.8 Flash at the doubled rates from 2027', function () {
-    Carbon::setTestNow('2027-01-02 09:00:00');
+    $this->travelTo('2027-01-02 09:00:00');
     Http::fake(['generativelanguage.googleapis.com/*' => Http::response(geminiFixture('generate-content-thinking.json'))]);
 
     postGemini('gemini-3.8-flash');
@@ -229,7 +217,7 @@ it('prices text-to-speech output tokens and the 2027 price change', function () 
     expect(SpectraRequest::sole()->model_type)->toBe('tts')
         ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.2275, 0.000001);
 
-    Carbon::setTestNow('2027-01-02 09:00:00');
+    $this->travelTo('2027-01-02 09:00:00');
     postGemini('gemini-3.8-flash-tts');
 
     // From 2027-01-01: $1 in, $18 out: (50×100 + 250×1800) / 1M = 0.455¢
@@ -246,7 +234,7 @@ it('prices Gemini 4 Argon at the doubled rates from 2026-12-01', function () {
     // Until 2026-11-30: $2 in, $10 out: (1200×200 + 1200×1000) / 1M = 1.44¢
     expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(1.44, 0.000001);
 
-    Carbon::setTestNow('2026-12-01 00:00:01');
+    $this->travelTo('2026-12-01 00:00:01');
     postGemini('gemini-4-argon');
 
     // From 2026-12-01: $4 in, $20 out: 2.88¢
@@ -328,21 +316,12 @@ it('records a Veo job from the operation poll that finishes it', function () {
 
     $row = SpectraRequest::sole();
 
-    // The poll carries no request body, so the video's length (and so its
-    // cost) is unknown here; see VideoHandler.
+    // The submit's 8 seconds at 1080p reach the poll through the remembered job:
+    // 12 cents/second (hd) × 8 seconds.
     expect($row->model)->toBe('Veo 3.1 Fast')
         ->and($row->model_type)->toBe('video')
         ->and($row->video_count)->toBe(1)
-        ->and($row->response_id)->toBe($operation);
-});
-
-it('prices 1080p Veo 3.1 Fast and Lite video at the hd rate', function () {
-    $calculator = app(CostCalculator::class);
-
-    // 8 seconds: Fast $0.10 (720p) / $0.12 (1080p); Lite $0.05 / $0.08 per second.
-    expect($calculator->calculateByDurationSeconds('google', 'veo-3.1-fast-generate-preview', 8, 'standard')['total_cost_in_cents'])->toEqual(80.0)
-        ->and($calculator->calculateByDurationSeconds('google', 'veo-3.1-fast-generate-preview', 8, 'hd')['total_cost_in_cents'])->toEqual(96.0)
-        ->and($calculator->calculateByDurationSeconds('google', 'veo-3.1-lite-generate-preview', 8, 'hd')['total_cost_in_cents'])->toEqual(64.0)
-        // Veo 3.1 costs the same at 720p and 1080p.
-        ->and($calculator->calculateByDurationSeconds('google', 'veo-3.1-generate-preview', 8, 'hd')['total_cost_in_cents'])->toEqual(320.0);
+        ->and($row->response_id)->toBe($operation)
+        ->and($row->pricing_tier)->toBe('hd')
+        ->and($row->total_cost_in_cents)->toEqualWithDelta(96.0, 0.000001);
 });

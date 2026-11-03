@@ -9,6 +9,10 @@ use Spectra\Providers\Mistral\Handlers\ChatHandler;
 use Spectra\Providers\Mistral\Handlers\OcrHandler;
 use Spectra\Support\ProviderRegistry;
 
+/**
+ * The Mistral provider: its hosts, handler resolution, cache hits and what
+ * the chat handler extracts from a response.
+ */
 it('returns mistral as provider', function () {
     expect($this->mistralProvider()->getProvider())->toBe('mistral');
 });

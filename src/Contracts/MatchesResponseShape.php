@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Spectra\Contracts;
 
+/**
+ * Implemented by handlers that recognise their response by its shape, for
+ * endpoints shared by several handlers (an image answer on a chat endpoint)
+ * and for tracking without an endpoint (`Spectra::track()`).
+ */
 interface MatchesResponseShape
 {
     /**

@@ -7,10 +7,14 @@ namespace Spectra\Data;
 use Illuminate\Support\Collection;
 use Spectra\Models\SpectraTag;
 
+/**
+ * One tag on the tags endpoint, with how many requests carry it. The id is
+ * the tag's UUID.
+ */
 readonly class Tag extends DataTransferObject
 {
     public function __construct(
-        public int $id,
+        public string $id,
         public string $name,
         public string $slug,
         public int $count,
@@ -23,7 +27,7 @@ readonly class Tag extends DataTransferObject
     public static function fromCollection(Collection $tags): Collection
     {
         return $tags->map(fn (SpectraTag $tag) => new self(
-            id: (int) $tag->id,
+            id: (string) $tag->id,
             name: $tag->name,
             slug: $tag->slug,
             count: (int) ($tag->requests_count ?? 0),

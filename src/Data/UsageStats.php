@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace Spectra\Data;
 
+/**
+ * The usage totals the public usage API returns
+ * (`UsageQueryBuilder::stats()`, `HasAiUsageStats::getAiUsageForPeriod()`):
+ * request counts include failures; cost and latency cover successful (2xx)
+ * requests. Cost stays a float in cents so sub-cent spend is not truncated.
+ */
 readonly class UsageStats extends DataTransferObject
 {
     public function __construct(

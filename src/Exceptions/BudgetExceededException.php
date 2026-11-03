@@ -8,6 +8,15 @@ use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Spectra\Models\SpectraBudget;
 
+/**
+ * Thrown before an AI call when a hard budget limit is reached or the
+ * provider or model is not allowed by the budget.
+ *
+ * It is the one error Spectra lets reach the app on purpose: the budget
+ * middleware turns it into a 429, and code calling `enforce()` catches it.
+ * `limit` and `current` are in the limit's unit (cents, tokens or requests),
+ * and 0 for an allow-list block.
+ */
 class BudgetExceededException extends Exception
 {
     public function __construct(

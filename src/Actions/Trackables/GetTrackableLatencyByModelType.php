@@ -9,6 +9,10 @@ use Spectra\Data\ModelTypeStat;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * One trackable's request count and latency per model type; latency covers
+ * successful requests.
+ */
 class GetTrackableLatencyByModelType
 {
     /**

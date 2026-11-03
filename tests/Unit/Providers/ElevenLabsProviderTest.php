@@ -9,6 +9,10 @@ use Spectra\Providers\ElevenLabs\Handlers\SpeechToTextHandler;
 use Spectra\Providers\ElevenLabs\Handlers\TextToSpeechHandler;
 use Spectra\Providers\ElevenLabs\Handlers\TextToSpeechWithTimestampsHandler;
 
+/**
+ * The ElevenLabs provider resolves a handler for each endpoint and falls
+ * back to that endpoint's default model.
+ */
 it('resolves a handler for each elevenlabs endpoint', function (string $endpoint, string $handler) {
     expect((new ElevenLabs)->resolveHandler($endpoint))->toBeInstanceOf($handler);
 })->with([

@@ -8,6 +8,9 @@ use Illuminate\Support\Collection;
 use Spectra\Data\DataTransferObject;
 use Spectra\Data\Tag;
 
+/**
+ * Every tag with the number of requests that carry it, most used first.
+ */
 readonly class TagsResponse extends DataTransferObject
 {
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\FalAi\Handlers;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsModelFromRequest;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
@@ -32,6 +33,9 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
 
     /** Frames in one billed second of a model that takes `num_frames`. */
     protected const BILLED_FPS = 16;
+
+    /** Seconds to wait for a generated video to download. */
+    protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 60;
 
     public function modelType(): ModelType
     {
@@ -85,15 +89,28 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
                 continue;
             }
 
-            $response = Http::withoutAITracking()->get($url);
+            // One video that fails to download or store must not lose the others.
+            $path = rescue(function () use ($persister, $requestId, $i, $url, $video) {
+                $response = Http::withoutAITracking()->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)->get($url);
 
-            if (! $response->successful()) {
-                continue;
+                if (! $response->successful()) {
+                    return null;
+                }
+
+                $type = Str::lower($video['content_type'] ?? $response->header('Content-Type'));
+
+                $extension = match (true) {
+                    Str::contains($type, 'webm') => 'webm',
+                    Str::contains($type, 'quicktime') => 'mov',
+                    default => 'mp4',
+                };
+
+                return $persister->store($requestId, $i, $response->body(), $extension);
+            });
+
+            if ($path !== null) {
+                $stored[] = $path;
             }
-
-            $type = strtolower((string) ($video['content_type'] ?? $response->header('Content-Type')));
-            $extension = str_contains($type, 'webm') ? 'webm' : (str_contains($type, 'quicktime') ? 'mov' : 'mp4');
-            $stored[] = $persister->store($requestId, $i, $response->body(), $extension);
         }
 
         return $stored;

@@ -4,10 +4,20 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Trackables;
 
-use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * Names and emails for the trackables on one page of results, loaded with
+ * one query per trackable type instead of one per row.
+ *
+ * The stored type is the morph class, an alias when the app uses a morph
+ * map, so it is resolved to its model class first; anything that isn't an
+ * Eloquent model is skipped. Results are keyed by the stored
+ * "{trackable_type}:{trackable_id}" so callers can match their rows.
+ */
 class ResolveTrackableMetadata
 {
     /**
@@ -16,36 +26,24 @@ class ResolveTrackableMetadata
      */
     public function __invoke(Collection $pageItems): array
     {
-        if ($pageItems->isEmpty()) {
-            return [];
-        }
-
-        $idsByType = [];
-        foreach ($pageItems as $item) {
-            $type = $item->trackable_type;
-            $id = (string) $item->trackable_id;
-
-            if ($type === null || ! class_exists($type)) {
-                continue;
-            }
-
-            if (! is_subclass_of($type, EloquentModel::class)) {
-                continue;
-            }
-
-            $idsByType[$type][] = $id;
-        }
+        $idsByType = $pageItems
+            ->filter(fn (SpectraRequest $item) => filled($item->trackable_type) && filled($item->trackable_id))
+            ->groupBy('trackable_type')
+            ->map(fn (Collection $items) => $items->pluck('trackable_id')->map(fn ($id) => (string) $id)->unique()->values());
 
         $metadata = [];
+
         foreach ($idsByType as $type => $ids) {
-            /** @var class-string<EloquentModel> $type */
-            $records = $type::query()
-                ->whereIn((new $type)->getKeyName(), array_unique($ids))
-                ->get();
+            $class = Relation::getMorphedModel($type) ?? $type;
+
+            if (! class_exists($class) || ! is_subclass_of($class, Model::class)) {
+                continue;
+            }
+
+            $records = $class::query()->whereKey($ids->all())->get();
 
             foreach ($records as $record) {
-                $key = $type.':'.$record->getKey();
-                $metadata[$key] = [
+                $metadata["{$type}:{$record->getKey()}"] = [
                     'name' => $record->name ?? null,
                     'email' => $record->email ?? null,
                 ];

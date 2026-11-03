@@ -6,6 +6,10 @@ namespace Spectra\Data\Responses;
 
 use Spectra\Data\DataTransferObject;
 
+/**
+ * The overview's headline totals for the period and layout: counts and usage
+ * over every request, cost and latency over successful ones.
+ */
 readonly class OverviewStatsResponse extends DataTransferObject
 {
     public function __construct(

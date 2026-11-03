@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Psr7\PumpStream;
-use GuzzleHttp\Psr7\Response as PsrResponse;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
@@ -44,10 +42,17 @@ function oneShotBody(string $contents, int $chunk = 32): PumpStream
     });
 }
 
+/** Fakes every request with a one-shot body, so tracking must not consume it. */
+function fakeOneShotResponse(string $body, string $contentType): void
+{
+    Http::fake(['*' => Http::response(oneShotBody($body), 200, ['Content-Type' => $contentType])]);
+}
+
 function streamedRequest(string $body, string $contentType = 'text/event-stream'): Response
 {
-    return Http::setHandler(new MockHandler([new PsrResponse(200, ['Content-Type' => $contentType], oneShotBody($body))]))
-        ->withOptions(['stream' => true])
+    fakeOneShotResponse($body, $contentType);
+
+    return Http::withOptions(['stream' => true])
         ->post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o', 'stream' => true, 'stream_options' => ['include_usage' => true]]);
 }
 
@@ -97,8 +102,9 @@ it('tracks newline-delimited JSON streams (Ollama)', function () {
     $ndjson = json_encode(['model' => 'llama3', 'message' => ['role' => 'assistant', 'content' => 'Hi'], 'done' => false])."\n"
         .json_encode(['model' => 'llama3', 'message' => ['role' => 'assistant', 'content' => ''], 'done' => true, 'done_reason' => 'stop', 'prompt_eval_count' => 7, 'eval_count' => 3])."\n";
 
-    $response = Http::setHandler(new MockHandler([new PsrResponse(200, ['Content-Type' => 'application/x-ndjson'], oneShotBody($ndjson))]))
-        ->post('http://localhost:11434/api/chat', ['model' => 'llama3', 'messages' => []]);
+    fakeOneShotResponse($ndjson, 'application/x-ndjson');
+
+    $response = Http::post('http://localhost:11434/api/chat', ['model' => 'llama3', 'messages' => []]);
 
     expect($response->body())->toBe($ndjson);
 
@@ -122,8 +128,9 @@ it('records a stream error event as a failure', function () {
 it('reads one-pass JSON bodies only as the app reads them', function () {
     $json = json_encode(['id' => 'chatcmpl-np', 'object' => 'chat.completion', 'model' => 'gpt-4o', 'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => 'ok'], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 1]]);
 
-    $response = Http::setHandler(new MockHandler([new PsrResponse(200, ['Content-Type' => 'application/json'], oneShotBody($json))]))
-        ->post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
+    fakeOneShotResponse($json, 'application/json');
+
+    $response = Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
     expect($response->json('choices.0.message.content'))->toBe('ok');
 
@@ -180,6 +187,7 @@ it('keeps raw request data out of storage when request storage is off', function
 });
 
 it('counts a polled job once and keeps its original start time', function () {
+    $this->travelTo('2026-03-10 12:00:00');
     $writer = app(RequestWriter::class);
     $base = ['provider' => 'openai', 'model' => 'gpt-4o', 'response_id' => 'job-1', 'status_code' => 200, 'model_type' => 'text'];
 
@@ -250,8 +258,9 @@ it('tracks Gemini streamed JSON arrays as streams', function () {
         ['candidates' => [['content' => ['parts' => [['text' => 'lo']], 'role' => 'model'], 'finishReason' => 'STOP']], 'usageMetadata' => ['promptTokenCount' => 9, 'candidatesTokenCount' => 2, 'thoughtsTokenCount' => 5, 'totalTokenCount' => 16], 'modelVersion' => 'gemini-2.5-flash', 'responseId' => 'g-1'],
     ]);
 
-    $response = Http::setHandler(new MockHandler([new PsrResponse(200, ['Content-Type' => 'application/json'], oneShotBody($body))]))
-        ->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent', ['contents' => []]);
+    fakeOneShotResponse($body, 'application/json');
+
+    $response = Http::post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent', ['contents' => []]);
 
     expect($response->body())->toBe($body);
 
@@ -326,8 +335,9 @@ it('keeps Spectra::stream() options when it takes over a tracked stream', functi
 });
 
 it('prices a stream at the tier the request asked for', function () {
-    $response = Http::setHandler(new MockHandler([new PsrResponse(200, ['Content-Type' => 'text/event-stream'], oneShotBody(openAiStreamBody()))]))
-        ->withOptions(['stream' => true])
+    fakeOneShotResponse(openAiStreamBody(), 'text/event-stream');
+
+    $response = Http::withOptions(['stream' => true])
         ->post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o', 'stream' => true, 'service_tier' => 'flex']);
 
     $response->body();

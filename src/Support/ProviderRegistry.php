@@ -70,7 +70,9 @@ class ProviderRegistry
     {
         $normalized = [];
 
-        foreach ($config as $slug => $providerConfig) {
+        // filter() drops providers turned off with false (and empty entries)
+        // before class_exists() sees them.
+        foreach (collect($config)->filter() as $slug => $providerConfig) {
             // Support both flat (class string) and structured (array) formats
             if (is_array($providerConfig)) {
                 $providerClass = $providerConfig['class'] ?? null;
@@ -80,7 +82,7 @@ class ProviderRegistry
                 $configName = null;
             }
 
-            if (! is_string($providerClass) || ! class_exists($providerClass)) {
+            if (blank($providerClass) || ! class_exists($providerClass)) {
                 continue;
             }
 

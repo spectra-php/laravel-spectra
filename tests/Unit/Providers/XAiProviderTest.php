@@ -11,6 +11,10 @@ use Spectra\Providers\XAi\Handlers\ResponsesHandler;
 use Spectra\Providers\XAi\Handlers\VideoHandler;
 use Spectra\Support\ProviderRegistry;
 
+/**
+ * The xAI provider: its hosts, handler resolution, served tier, reasoning
+ * tokens and tool usage.
+ */
 it('returns xai as provider', function () {
     expect($this->xAiProvider()->getProvider())->toBe('xai');
 });

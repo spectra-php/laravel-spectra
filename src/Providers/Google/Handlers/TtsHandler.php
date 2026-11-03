@@ -15,6 +15,7 @@ use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Google\ExtractsModelFromGoogleEndpoint;
 use Spectra\Providers\Google\GeminiUsage;
+use Spectra\Providers\Google\ReadsGeminiParts;
 use Spectra\Support\MediaPersister;
 
 /**
@@ -24,6 +25,7 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
 {
     use ExtractsModelFromGoogleEndpoint;
     use MatchesParametricEndpoints;
+    use ReadsGeminiParts;
 
     public function modelType(): ModelType
     {
@@ -66,26 +68,20 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
     /** @param  array<string, mixed>  $response */
     public function extractModelFromResponse(array $response): ?string
     {
-        return $response['modelVersion'] ?? null;
+        return filled($response['modelVersion'] ?? null) ? $response['modelVersion'] : null;
     }
 
     /** @param  array<string, mixed>  $response */
     public function extractResponse(array $response): ?string
     {
-        foreach ($response['candidates'][0]['content']['parts'] ?? [] as $part) {
-            if (isset($part['inlineData']['mimeType']) && str_starts_with($part['inlineData']['mimeType'], 'audio/')) {
-                return '[audio]';
-            }
-        }
-
-        return null;
+        return $this->matchesResponse($response) ? '[audio]' : null;
     }
 
     /** @param  array<string, mixed>  $data */
     public function matchesResponse(array $data): bool
     {
-        foreach ($data['candidates'][0]['content']['parts'] ?? [] as $part) {
-            if (isset($part['inlineData']['mimeType']) && str_starts_with($part['inlineData']['mimeType'], 'audio/')) {
+        foreach ($this->firstCandidateParts($data) as $part) {
+            if ($this->isInlinePart($part, 'audio/')) {
                 return true;
             }
         }
@@ -99,25 +95,14 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
      */
     public function storeMedia(string $requestId, array $responseData, ?string $rawBody = null): array
     {
-        foreach ($responseData['candidates'][0]['content']['parts'] ?? [] as $part) {
-            if (! isset($part['inlineData']['mimeType']) || ! str_starts_with($part['inlineData']['mimeType'], 'audio/')) {
+        foreach ($this->firstCandidateParts($responseData) as $part) {
+            $pcm = $this->isInlinePart($part, 'audio/') ? $this->inlineBytes($part) : null;
+
+            if ($pcm === null) {
                 continue;
             }
 
-            $b64 = $part['inlineData']['data'] ?? null;
-
-            if (! is_string($b64) || $b64 === '') {
-                continue;
-            }
-
-            $pcm = base64_decode($b64, true);
-
-            if (! is_string($pcm) || $pcm === '') {
-                continue;
-            }
-
-            $mimeType = $part['inlineData']['mimeType'];
-            $sampleRate = $this->parseSampleRate($mimeType);
+            $sampleRate = $this->parseSampleRate($this->inlineMimeType($part) ?? '');
 
             // Wrap raw PCM in a WAV header so browsers can play it
             $wav = $this->pcmToWav($pcm, $sampleRate);

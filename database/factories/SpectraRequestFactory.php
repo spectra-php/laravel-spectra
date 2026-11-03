@@ -9,6 +9,10 @@ use Illuminate\Database\Eloquent\Model;
 use Spectra\Models\SpectraRequest;
 
 /**
+ * Builds SpectraRequest rows for tests: a successful (200) request to the
+ * configured default provider and model, with states to attach a trackable
+ * and set cost or tokens.
+ *
  * @extends Factory<SpectraRequest>
  */
 class SpectraRequestFactory extends Factory

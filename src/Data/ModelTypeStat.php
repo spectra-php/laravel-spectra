@@ -8,6 +8,11 @@ use Illuminate\Support\Collection;
 use Spectra\Enums\ModelType;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * The per-model-type aggregate the overview and trackable breakdowns start
+ * from: request count, cost over successful requests and their average
+ * latency, with the type's display label.
+ */
 readonly class ModelTypeStat extends DataTransferObject
 {
     public function __construct(

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
 
+/**
+ * DefaultSpanBuilder turns a tracked request into an OTLP span with the
+ * gen_ai attributes, and can be extended.
+ */
 it('builds a valid OTLP span from request data', function () {
     $data = [
         'id' => 'req-123',
@@ -215,7 +219,7 @@ it('includes conditional attributes when present', function () {
         ->and($attrs->firstWhere('key', 'spectra.duration_seconds')['value']['doubleValue'])->toBe(5.0);
 });
 
-it('should be extended with custom span name', function () {
+it('uses the span name from a subclass that overrides spanName', function () {
     $custom = new class extends DefaultSpanBuilder
     {
         protected function spanName(array $data): string

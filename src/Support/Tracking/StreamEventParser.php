@@ -118,7 +118,7 @@ class StreamEventParser
     {
         $trimmed = ltrim($buffer);
 
-        if ($trimmed === '') {
+        if (blank($trimmed)) {
             return null;
         }
 
@@ -162,7 +162,7 @@ class StreamEventParser
         }
 
         // Server-sent events: a blank line ends the event.
-        if (trim($line) === '') {
+        if (blank($line)) {
             return $this->dispatchSseEvent();
         }
 
@@ -193,7 +193,7 @@ class StreamEventParser
         $this->dataLines = [];
         $this->eventName = null;
 
-        if ($data === '' || trim($data) === '[DONE]') {
+        if (blank($data) || trim($data) === '[DONE]') {
             return [];
         }
 
@@ -204,7 +204,7 @@ class StreamEventParser
         }
 
         // Some providers name the event only on the `event:` line.
-        if ($eventName !== null && $eventName !== '' && ! isset($decoded['type'])) {
+        if (filled($eventName) && ! isset($decoded['type'])) {
             $decoded['type'] = $eventName;
         }
 
@@ -274,7 +274,7 @@ class StreamEventParser
      */
     protected function decode(string $json): ?array
     {
-        if ($json === '') {
+        if (blank($json)) {
             return null;
         }
 

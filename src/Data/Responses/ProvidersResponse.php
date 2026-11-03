@@ -8,6 +8,9 @@ use Illuminate\Support\Collection;
 use Spectra\Data\DataTransferObject;
 use Spectra\Data\Provider;
 
+/**
+ * Every provider the dashboard can show, for its provider filters and labels.
+ */
 readonly class ProvidersResponse extends DataTransferObject
 {
     /**

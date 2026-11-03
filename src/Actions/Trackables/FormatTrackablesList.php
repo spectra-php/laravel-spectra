@@ -7,6 +7,10 @@ namespace Spectra\Actions\Trackables;
 use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * Shapes one page of aggregated trackable rows into the JSON rows the
+ * trackables list shows, joined with each row's top model and name.
+ */
 class FormatTrackablesList
 {
     /**
@@ -18,11 +22,12 @@ class FormatTrackablesList
     public function __invoke(Collection $pageItems, array $topModels, array $metadata): array
     {
         return $pageItems->map(function (SpectraRequest $item) use ($topModels, $metadata) {
-            $key = $item->trackable_type.':'.$item->trackable_id;
+            $key = "{$item->trackable_type}:{$item->trackable_id}";
 
             return [
                 'trackable_type' => $item->trackable_type,
-                'trackable_id' => (int) $item->trackable_id,
+                // Kept as a string: apps key trackables by UUID or ULID too.
+                'trackable_id' => (string) $item->trackable_id,
                 'requests' => (int) $item->requests,
                 'tokens' => (int) $item->tokens_sum,
                 'images' => (int) $item->images_sum,

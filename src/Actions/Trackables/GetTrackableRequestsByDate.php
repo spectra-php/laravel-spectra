@@ -9,6 +9,9 @@ use Spectra\Data\RequestByDate;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * One trackable's requests per day, failures included.
+ */
 class GetTrackableRequestsByDate
 {
     /**

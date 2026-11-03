@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Storage;
 use Spectra\Models\SpectraRequest;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * The generated video of a request as a download stream: from the media disk
+ * when it was persisted, or straight from OpenAI for Sora videos, which
+ * OpenAI keeps until they expire.
+ */
 class ResolveVideo
 {
     public function __construct(
@@ -16,7 +21,7 @@ class ResolveVideo
 
     public function __invoke(string $id): StreamedResponse
     {
-        $request = SpectraRequest::findOrFail($id);
+        $request = SpectraRequest::query()->findOrFail($id);
 
         abort_unless($request->model_type === 'video', 404);
         abort_if($request->expires_at && $request->expires_at->isPast(), 410, 'Video has expired.');
@@ -34,7 +39,7 @@ class ResolveVideo
         // OpenAI Sora: stream from API
         if ($request->provider === 'openai') {
             $videoId = $request->response['id'] ?? null;
-            abort_unless((bool) $videoId, 404);
+            abort_unless(filled($videoId), 404);
 
             return ($this->streamOpenAiVideo)($videoId);
         }

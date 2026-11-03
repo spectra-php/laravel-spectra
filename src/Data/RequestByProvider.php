@@ -7,6 +7,10 @@ namespace Spectra\Data;
 use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * One provider's request count on the overview's provider chart, failures
+ * included.
+ */
 readonly class RequestByProvider extends DataTransferObject
 {
     public function __construct(

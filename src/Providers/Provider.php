@@ -12,6 +12,15 @@ use Spectra\Contracts\MatchesResponseShape;
 use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
 
+/**
+ * Base class for an AI provider Spectra can track: built-in ones and custom
+ * providers users register.
+ *
+ * A provider names its slug, its hosts and its handlers, plus the quirks that
+ * apply across its endpoints (where the response id lives, the pricing tier,
+ * an alternate path layout). Everything about one endpoint belongs to a
+ * handler, so this class mostly resolves the right handler and delegates.
+ */
 abstract class Provider
 {
     /** @var Handler[]|null */
@@ -116,7 +125,7 @@ abstract class Provider
      */
     protected function resolveHandlerFor(string $endpoint, mixed $response): ?Handler
     {
-        if ($endpoint !== '') {
+        if (filled($endpoint)) {
             return $this->resolveHandler($endpoint, $this->toArray($response));
         }
 
@@ -191,7 +200,9 @@ abstract class Provider
 
     public function extractResponseId(mixed $response, string $endpoint = ''): ?string
     {
-        return $this->toArray($response)['id'] ?? null;
+        $id = $this->toArray($response)['id'] ?? null;
+
+        return filled($id) ? $id : null;
     }
 
     /**
@@ -210,7 +221,7 @@ abstract class Provider
             return $handler->extractModelFromRequest($requestData, $endpoint);
         }
 
-        return $requestData['model'] ?? null;
+        return filled($requestData['model'] ?? null) ? $requestData['model'] : null;
     }
 
     /**

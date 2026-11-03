@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace Spectra\Data\Responses;
 
+use Illuminate\Support\Collection;
+use Spectra\Data\ModelTypeLatency;
+
+/**
+ * The trackables screen: one page of trackables plus the summary, latency
+ * breakdown and filter options shown around it.
+ */
 readonly class TrackablesResponse extends PaginatedResponse
 {
     /**
@@ -11,7 +18,7 @@ readonly class TrackablesResponse extends PaginatedResponse
      * @param  array<int, string>  $types
      * @param  array<int, string>  $available_tags
      * @param  array<int, string>  $available_finish_reasons
-     * @param  array<int, array<string, mixed>>  $latency_by_model_type
+     * @param  Collection<int, ModelTypeLatency>  $latency_by_model_type
      */
     public function __construct(
         array $data,
@@ -22,7 +29,7 @@ readonly class TrackablesResponse extends PaginatedResponse
         public array $available_tags,
         public array $available_finish_reasons,
         public TrackablesSummaryResponse $summary,
-        public array $latency_by_model_type = [],
+        public Collection $latency_by_model_type,
     ) {
         parent::__construct($data, $current_page, $last_page, $total);
     }

@@ -62,7 +62,7 @@ class SpeechHandler implements Handler, HasMedia, ReturnsBinaryResponse
      */
     public function storeMedia(string $requestId, array $responseData, ?string $rawBody = null): array
     {
-        if ($rawBody === null || $rawBody === '') {
+        if (blank($rawBody)) {
             return [];
         }
 

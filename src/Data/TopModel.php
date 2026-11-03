@@ -7,6 +7,10 @@ namespace Spectra\Data;
 use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * One of the overview's most used models: its request count and the cost of
+ * successful requests.
+ */
 readonly class TopModel extends DataTransferObject
 {
     public function __construct(

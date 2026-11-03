@@ -6,6 +6,10 @@ namespace Spectra\Data\Responses;
 
 use Spectra\Data\DataTransferObject;
 
+/**
+ * The costs screen's summary cards: spend today, this week, last week, this
+ * month and this year, in cents over successful requests.
+ */
 readonly class CostOverviewResponse extends DataTransferObject
 {
     public function __construct(

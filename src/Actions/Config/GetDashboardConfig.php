@@ -7,6 +7,10 @@ namespace Spectra\Actions\Config;
 use Spectra\Data\Responses\DashboardConfigResponse;
 use Spectra\Enums\ModelType;
 
+/**
+ * The settings the SPA needs before it renders: the configured layout and the
+ * model types it can filter by.
+ */
 class GetDashboardConfig
 {
     public function __invoke(): DashboardConfigResponse

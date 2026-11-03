@@ -19,16 +19,17 @@ class PricingCatalog
     /**
      * Every catalog in `spectra.costs.pricing`, in config order. Two entries
      * may share a provider slug (a second class for extra models); both are
-     * kept, as they always were.
+     * kept, as they always were. An entry set to `false` turns that built-in
+     * catalog off.
      *
      * @return list<ProviderPricing>
      */
     public static function configured(): array
     {
-        return array_values(array_map(
-            fn (string $class): ProviderPricing => app()->make($class),
-            (array) config('spectra.costs.pricing', []),
-        ));
+        return array_values(collect((array) config('spectra.costs.pricing', []))
+            ->filter()
+            ->map(fn (string $class): ProviderPricing => app()->make($class))
+            ->all());
     }
 
     /**

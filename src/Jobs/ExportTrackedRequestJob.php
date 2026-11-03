@@ -11,6 +11,11 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Spectra\Contracts\RequestExporter;
 
+/**
+ * Sends one tracked request to the bound RequestExporter (OpenTelemetry by
+ * default) off the request cycle, on the queue or after the response, so a
+ * slow collector never delays the user's request.
+ */
 class ExportTrackedRequestJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;

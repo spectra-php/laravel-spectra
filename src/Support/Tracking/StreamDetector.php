@@ -26,7 +26,7 @@ class StreamDetector
         array $requestData = []
     ): bool {
         // Binary endpoints (TTS audio, images) are chunked but not streams.
-        if ($endpoint !== null && $endpoint !== '') {
+        if (filled($endpoint)) {
             $handler = app(ProviderRegistry::class)->provider($provider)?->resolveHandler($endpoint);
             if ($handler instanceof ReturnsBinaryResponse) {
                 return false;

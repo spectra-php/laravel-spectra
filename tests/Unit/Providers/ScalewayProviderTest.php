@@ -12,6 +12,10 @@ use Spectra\Providers\Scaleway\Handlers\TranscriptionHandler;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\ProviderRegistry;
 
+/**
+ * The Scaleway provider: its hosts, the handler for each endpoint and what
+ * each handler extracts from a response.
+ */
 it('returns scaleway as provider', function () {
     expect($this->scalewayProvider()->getProvider())->toBe('scaleway');
 });

@@ -6,16 +6,11 @@ use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 
-/*
-|--------------------------------------------------------------------------
-| OpenAI background responses, video, images and audio
-|--------------------------------------------------------------------------
-|
-| Real wire-format responses sent through the HTTP client and the global
-| tracking middleware. Costs are worked out by hand from OpenAIPricing.
-|
-*/
-
+/**
+ * OpenAI background responses, video, images and audio. Real wire-format
+ * responses go through the HTTP client and the global tracking middleware.
+ * Costs are worked out by hand from OpenAIPricing.
+ */
 it('records a background response once, when a poll returns it finished', function () {
     $queued = $this->loadMockResponse('openai/response_background_queued.json');
     $inProgress = $this->loadMockResponse('openai/response_background_in_progress.json');

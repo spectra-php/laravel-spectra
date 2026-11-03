@@ -9,6 +9,10 @@ use Spectra\Data\Responses\CostOverviewResponse;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * The costs screen's summary cards. They use fixed calendar periods (today,
+ * this week, ...) whatever period the screen has selected.
+ */
 class GetCostOverview
 {
     public function __invoke(): CostOverviewResponse

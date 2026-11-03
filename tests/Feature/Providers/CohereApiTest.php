@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
-use Spectra\Support\Pricing\CostCalculator;
 
 /**
  * Cohere requests as real apps send them: through Laravel's HTTP client, with
@@ -106,15 +105,4 @@ it('bills parse per page', function () {
     expect($row->model)->toBe('Parse 5')
         ->and($row->page_count)->toBe(2)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.3, 1e-12);
-});
-
-it('prices legacy aliases and renamed Aya ids', function () {
-    $calculator = new CostCalculator;
-
-    // command-r-plus is the 04-2024 snapshot ($3 / $15); Aya Expanse is $0.50 / $1.50.
-    expect($calculator->calculate('cohere', 'command-r-plus', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(1800.0)
-        ->and($calculator->calculate('cohere', 'command', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(300.0)
-        ->and($calculator->calculate('cohere', 'aya-expanse-32b', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(200.0)
-        ->and($calculator->calculate('cohere', 'c4ai-aya-expanse-8b', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(200.0)
-        ->and($calculator->calculate('cohere', 'embed-v5.0-fast', 1_000_000, 0)['total_cost_in_cents'])->toEqual(8.0);
 });

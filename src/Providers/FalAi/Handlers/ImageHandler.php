@@ -32,6 +32,9 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
     /** Pixels in one billed megapixel. */
     protected const MEGAPIXEL = 1024 * 1024;
 
+    /** Seconds to wait for a generated image to download. */
+    protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 30;
+
     public function modelType(): ModelType
     {
         return ModelType::Image;
@@ -86,14 +89,22 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
                 continue;
             }
 
-            $response = Http::withoutAITracking()->get($url);
+            // One image that fails to download or store must not lose the others.
+            $path = rescue(function () use ($persister, $requestId, $i, $url, $image) {
+                $response = Http::withoutAITracking()->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)->get($url);
 
-            if (! $response->successful()) {
-                continue;
+                if (! $response->successful()) {
+                    return null;
+                }
+
+                $extension = $this->resolveExtension($image['content_type'] ?? $response->header('Content-Type'));
+
+                return $persister->store($requestId, $i, $response->body(), $extension);
+            });
+
+            if ($path !== null) {
+                $stored[] = $path;
             }
-
-            $extension = $this->resolveExtension($image['content_type'] ?? $response->header('Content-Type'));
-            $stored[] = $persister->store($requestId, $i, $response->body(), $extension);
         }
 
         return $stored;
@@ -143,7 +154,7 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
 
     private function resolveExtension(?string $contentType): string
     {
-        if (is_string($contentType) && $contentType !== '') {
+        if (filled($contentType)) {
             $mime = strtolower(trim(explode(';', $contentType, 2)[0]));
 
             return match ($mime) {

@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Log;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
+use Spectra\Enums\PricingUnit;
 
 /**
  * Turns usage into cost, in cents of the reporting currency
@@ -131,7 +132,7 @@ class CostCalculator
             return null;
         }
 
-        $factor = $this->currencyFactor($lookup->currency($provider));
+        $factor = $this->currencyFactor($lookup->modelCurrency($provider, $model));
 
         if ($factor === 1.0) {
             return $pricing;
@@ -319,7 +320,7 @@ class CostCalculator
 
     public function getPricingUnit(string $provider, string $model): string
     {
-        return app(PricingLookup::class)->getUnit($provider, $model) ?? 'tokens';
+        return app(PricingLookup::class)->getUnit($provider, $model) ?? PricingUnit::Tokens->value;
     }
 
     /**
@@ -377,8 +378,6 @@ class CostCalculator
 
     protected function getDefaultTier(string $provider): PricingTier|string
     {
-        $tierValue = config("spectra.costs.provider_settings.{$provider}.default_tier", PricingTier::Standard->value);
-
-        return PricingTier::tryFrom((string) $tierValue) ?? (string) $tierValue;
+        return app(PricingLookup::class)->defaultTier($provider);
     }
 }

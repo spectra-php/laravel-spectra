@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Spectra;
 
 use Composer\InstalledVersions;
-use Exception;
 use Illuminate\Contracts\Auth\Access\Gate;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
@@ -14,8 +13,10 @@ use Illuminate\Log\Context\Repository as ContextRepository;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Contracts\SpanBuilder;
+use Spectra\Contracts\Watcher;
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
 use Spectra\Integrations\OpenTelemetry\OtlpExporter;
 use Spectra\Integrations\OpenTelemetry\SpanExporter;
@@ -33,8 +34,19 @@ use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\RequestWriter;
 use Spectra\Support\Tracking\TraceContext;
 
+/**
+ * Wires Spectra into the host application: config, container bindings,
+ * watchers on outgoing AI calls, the dashboard routes, commands and
+ * publishing.
+ *
+ * Spectra runs inside other people's apps, so a bad config entry is
+ * reported and skipped instead of failing the app's boot.
+ */
 class SpectraServiceProvider extends ServiceProvider
 {
+    /** @var array<string, mixed>|null */
+    protected ?array $packageConfig = null;
+
     public function register(): void
     {
         $this->mergeConfigFrom(
@@ -42,6 +54,7 @@ class SpectraServiceProvider extends ServiceProvider
         );
 
         $this->mergeNestedConfigDefaults();
+        $this->mergeBuiltInMaps();
 
         // Scoped, so global tags, trackables, pricing tier and metadata are
         // reset between queued jobs and Octane requests instead of leaking.
@@ -167,15 +180,14 @@ class SpectraServiceProvider extends ServiceProvider
             return;
         }
 
-        $watchers = config('spectra.watcher.watchers');
+        $watchers = config('spectra.watcher.watchers', []);
 
-        foreach ($watchers as $watcherClass) {
-            if (! is_string($watcherClass)) {
-                throw new Exception('Watcher configuration must be a class string.');
-            }
+        foreach (is_array($watchers) ? $watchers : [] as $watcherClass) {
+            // is_subclass_of() throws on a non-string entry under strict types.
+            if (! is_string($watcherClass) || ! is_subclass_of($watcherClass, Watcher::class)) {
+                $this->reportInvalidWatcher($watcherClass);
 
-            if (! class_exists($watcherClass)) {
-                throw new Exception('Watcher class "'.$watcherClass.'" does not exist.');
+                continue;
             }
 
             if (! $watcherClass::isAvailable()) {
@@ -186,6 +198,15 @@ class SpectraServiceProvider extends ServiceProvider
             $watcher->register();
             $this->app->instance($watcherClass, $watcher);
         }
+    }
+
+    protected function reportInvalidWatcher(mixed $watcherClass): void
+    {
+        $name = is_string($watcherClass) ? $watcherClass : get_debug_type($watcherClass);
+
+        report(new InvalidArgumentException(
+            "Spectra skipped the watcher [{$name}] in spectra.watcher.watchers: it is not a class implementing Spectra\\Contracts\\Watcher."
+        ));
     }
 
     /**
@@ -224,12 +245,13 @@ class SpectraServiceProvider extends ServiceProvider
         });
 
         $this->app->booted(function () {
-            $providers = config('spectra.providers');
+            // An entry set to false turns that built-in provider off.
+            $providers = collect((array) config('spectra.providers', []))->filter();
 
             foreach ($providers as $provider => $providerConfig) {
                 $providerClass = is_array($providerConfig) ? ($providerConfig['class'] ?? null) : $providerConfig;
 
-                if (is_string($providerClass) && class_exists($providerClass)) {
+                if (filled($providerClass) && class_exists($providerClass)) {
                     $this->app->singleton("spectra.provider.{$provider}", function () use ($providerClass) {
                         return new $providerClass;
                     });
@@ -292,9 +314,20 @@ class SpectraServiceProvider extends ServiceProvider
         'costs.firecrawl',
     ];
 
+    /**
+     * Maps whose built-in entries stay active under the user's published
+     * config: a published config lists the providers and pricing classes of
+     * its day, and would otherwise hide every one added later. The user's
+     * entries win; `false` turns a built-in off.
+     */
+    protected const BUILT_IN_MAPS = [
+        'providers',
+        'costs.pricing',
+    ];
+
     protected function mergeNestedConfigDefaults(): void
     {
-        if ($this->app instanceof CachesConfiguration && $this->app->configurationIsCached()) {
+        if ($this->configurationIsCached()) {
             return;
         }
 
@@ -305,11 +338,48 @@ class SpectraServiceProvider extends ServiceProvider
             return;
         }
 
-        $defaults = require __DIR__.'/../config/spectra.php';
+        $defaults = $this->packageConfig();
 
         foreach ($missing as $key) {
             $config->set("spectra.{$key}", data_get($defaults, $key));
         }
+    }
+
+    protected function mergeBuiltInMaps(): void
+    {
+        if ($this->configurationIsCached()) {
+            return;
+        }
+
+        $config = $this->app->make('config');
+        $defaults = $this->packageConfig();
+
+        foreach (self::BUILT_IN_MAPS as $key) {
+            $configured = $config->get("spectra.{$key}");
+
+            $config->set("spectra.{$key}", array_replace(
+                (array) data_get($defaults, $key, []),
+                is_array($configured) ? $configured : [],
+            ));
+        }
+    }
+
+    /**
+     * The package's own config file, read once per boot.
+     *
+     * @return array<string, mixed>
+     */
+    protected function packageConfig(): array
+    {
+        return $this->packageConfig ??= require __DIR__.'/../config/spectra.php';
+    }
+
+    /**
+     * A cached config was merged when it was cached, so it is used as is.
+     */
+    protected function configurationIsCached(): bool
+    {
+        return $this->app instanceof CachesConfiguration && $this->app->configurationIsCached();
     }
 
     protected function registerCommands(): void

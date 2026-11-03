@@ -73,7 +73,7 @@ class SpeechToTextHandler implements ExtractsModelFromRequest, Handler, SkipsRes
     {
         $model = $requestData['model_id'] ?? null;
 
-        return is_string($model) && $model !== '' ? $model : null;
+        return filled($model) ? $model : null;
     }
 
     /** @param  array<string, mixed>  $response */

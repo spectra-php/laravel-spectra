@@ -9,6 +9,14 @@ use Illuminate\Contracts\Support\Arrayable;
 use Spectra\Support\Pricing\ModelDefinition;
 
 /**
+ * Base class for a provider's price catalog.
+ *
+ * Each provider has one subclass that lists its models in define() with the
+ * ModelDefinition builder; PricingLookup indexes every catalog configured in
+ * `spectra.costs.pricing`. Prices live in PHP, not a database, so they ship
+ * and are reviewed with the package. Apps extend a catalog (or write one for
+ * a custom provider) and add models in populate().
+ *
  * @implements Arrayable<string, mixed>
  */
 abstract class ProviderPricing implements Arrayable

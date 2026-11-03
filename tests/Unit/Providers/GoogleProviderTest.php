@@ -7,6 +7,10 @@ use Spectra\Providers\Google\Handlers\ImageHandler;
 use Spectra\Providers\Google\Handlers\TtsHandler;
 use Spectra\Providers\Google\Handlers\VideoHandler;
 
+/**
+ * The Google provider picks the text, image, audio or video handler by
+ * endpoint and, on shared endpoints, by response shape.
+ */
 it('resolves generate content handler for text responses on shared endpoint', function () {
     $response = [
         'candidates' => [[
@@ -55,7 +59,7 @@ it('resolves tts handler for inline audio responses on shared endpoint', functio
     expect($handler)->toBeInstanceOf(TtsHandler::class);
 });
 
-it('should resolve google handler by response shape when endpoint is unavailable', function () {
+it('resolves the image handler from the response shape when the endpoint is empty', function () {
     $response = [
         'candidates' => [[
             'content' => ['parts' => [[

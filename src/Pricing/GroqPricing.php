@@ -14,6 +14,11 @@ namespace Spectra\Pricing;
  * Flex costs the same as on-demand. Retirement dates come from
  * console.groq.com/docs/deprecations; the Llama 3.x shutdown on 2026-08-16
  * applies to on-demand use (enterprise contracts are not affected).
+ *
+ * Whisper is priced per hour of audio; the catalog stores it per minute (the
+ * hourly price divided by 60). Groq bills at least 10 seconds per
+ * transcription, which the Groq TranscriptionHandler applies to the recorded
+ * duration. Orpheus text to speech is cents per 1M characters.
  */
 class GroqPricing extends ProviderPricing
 {

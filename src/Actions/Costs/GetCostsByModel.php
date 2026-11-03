@@ -11,6 +11,11 @@ use Spectra\Support\DateRange;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * Requests, usage and cost per model for the costs screen, with each model's
+ * catalog capabilities; counts and usage include failures, cost covers
+ * successful requests.
+ */
 class GetCostsByModel
 {
     public function __construct(
@@ -23,12 +28,11 @@ class GetCostsByModel
     public function __invoke(DateRange $dateRange, int $limit = 10): Collection
     {
         return RequestAggregateQuery::make($dateRange)
-            ->successfulOnly()
             ->groupByColumns('model', 'provider', 'model_type')
             ->countAs('requests')
             ->tokenSum()
             ->usageSums()
-            ->selectRaw('SUM(total_cost_in_cents) as cost')
+            ->successfulCost()
             ->orderByDesc('cost')
             ->limit($limit)
             ->get()

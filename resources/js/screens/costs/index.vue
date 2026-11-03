@@ -380,7 +380,7 @@ onUnmounted(() => {
                                 <Skeleton variant="table-row" :lines="5" />
                             </template>
                             <template v-else>
-                                <tr v-for="user in stats.costs_by_user" :key="user.user_id">
+                                <tr v-for="user in stats.costs_by_user" :key="`${user.trackable_type}-${user.user_id}`">
                                     <td class="whitespace-nowrap">
                                         <div class="flex min-w-0 items-center gap-2.5">
                                             <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold text-gray-600 ring-1 ring-inset ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700">

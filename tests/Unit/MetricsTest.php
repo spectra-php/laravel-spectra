@@ -8,6 +8,10 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Data\VideoMetrics;
 
+/**
+ * The metrics DTOs (token, image, audio and video) and the Metrics container
+ * that holds them: their defaults and array output.
+ */
 it('creates token metrics with defaults', function () {
     $tokens = new TokenMetrics;
 

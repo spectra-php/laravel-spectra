@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Spectra\Data;
 
+/**
+ * Videos a request generated, plus their duration for models billed per
+ * second of video.
+ */
 readonly class VideoMetrics extends DataTransferObject
 {
     public function __construct(

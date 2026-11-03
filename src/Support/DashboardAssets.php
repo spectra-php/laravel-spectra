@@ -5,12 +5,25 @@ declare(strict_types=1);
 namespace Spectra\Support;
 
 use Composer\InstalledVersions;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Js;
 
+/**
+ * Inlines the dashboard's built CSS, JavaScript and favicons into its Blade
+ * layout, so the package works without publishing assets or a Vite build in
+ * the host app, and passes the runtime config the SPA reads as
+ * `window.Spectra`.
+ */
 class DashboardAssets
 {
+    /**
+     * Process-wide on purpose: like Telescope's night(), it is set once while
+     * the app boots (a service provider calls useDarkTheme()) and never per
+     * request, so it is the same for every request a long-lived worker
+     * serves. Kept public for apps that already call it.
+     */
     public static bool $useDarkTheme = false;
 
     public static function favicons(): HtmlString
@@ -28,15 +41,11 @@ class DashboardAssets
         foreach ($icons as $icon) {
             $filePath = $distPath.'/'.$icon['file'];
 
-            if (! file_exists($filePath)) {
+            if (! File::exists($filePath)) {
                 continue;
             }
 
-            $content = file_get_contents($filePath);
-
-            if ($content === false) {
-                continue;
-            }
+            $content = File::get($filePath);
 
             $href = 'data:'.$icon['type'].';base64,'.base64_encode($content);
             $sizes = $icon['sizes'] ? ' sizes="'.$icon['sizes'].'"' : '';
@@ -50,8 +59,8 @@ class DashboardAssets
     {
         $cssPath = __DIR__.'/../../dist/app.css';
 
-        if (file_exists($cssPath)) {
-            $css = file_get_contents($cssPath);
+        if (File::exists($cssPath)) {
+            $css = File::get($cssPath);
 
             return new HtmlString(<<<HTML
                 <style>{$css}</style>
@@ -67,8 +76,8 @@ class DashboardAssets
     {
         $jsPath = __DIR__.'/../../dist/app.js';
 
-        if (file_exists($jsPath)) {
-            $js = file_get_contents($jsPath);
+        if (File::exists($jsPath)) {
+            $js = File::get($jsPath);
             $config = Js::from(static::scriptVariables());
 
             return new HtmlString(<<<HTML

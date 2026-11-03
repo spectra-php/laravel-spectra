@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * Narrows a dashboard query to the model types of the configured layout
+ * (`spectra.dashboard.layout`), so an audio-only or image-only app sees only
+ * those requests. An unknown layout logs a warning and filters nothing rather
+ * than hiding every row.
+ */
 trait FiltersByLayout
 {
     /**

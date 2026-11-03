@@ -71,9 +71,9 @@ class ChatHandler extends OpenAiCompatibleChatHandler
             $contents = [];
 
             foreach ($response['choices'] as $choice) {
-                $content = $choice['message']['content'] ?? $choice['text'] ?? null;
+                $content = data_get($choice, 'message.content') ?? data_get($choice, 'text');
 
-                if ($content !== null && $content !== '') {
+                if (filled($content)) {
                     $contents[] = $content;
                 }
             }
@@ -87,11 +87,11 @@ class ChatHandler extends OpenAiCompatibleChatHandler
             $texts = [];
 
             foreach ($response['output'] as $outputItem) {
-                if (isset($outputItem['content']) && is_array($outputItem['content'])) {
-                    foreach ($outputItem['content'] as $contentItem) {
-                        if (isset($contentItem['text']) && $contentItem['text'] !== '') {
-                            $texts[] = $contentItem['text'];
-                        }
+                $contentItems = data_get($outputItem, 'content');
+
+                foreach (is_array($contentItems) ? $contentItems : [] as $contentItem) {
+                    if (filled($contentItem['text'] ?? null)) {
+                        $texts[] = $contentItem['text'];
                     }
                 }
             }
@@ -107,7 +107,7 @@ class ChatHandler extends OpenAiCompatibleChatHandler
     /** @param  array<string, mixed>  $response */
     public function extractFinishReason(array $response): ?string
     {
-        return $response['choices'][0]['finish_reason'] ?? $response['status'] ?? null;
+        return data_get($response, 'choices.0.finish_reason') ?? $response['status'] ?? null;
     }
 
     /** @param  array<string, mixed>  $data */

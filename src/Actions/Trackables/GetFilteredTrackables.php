@@ -7,47 +7,43 @@ namespace Spectra\Actions\Trackables;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Spectra\Models\SpectraRequest;
-use Spectra\Support\Concerns\FiltersTrackables;
 use Spectra\Support\DateRange;
+use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * The page of trackables (users, teams, ...) the trackables screen lists:
+ * one row per (trackable_type, trackable_id) with its usage, cost and
+ * latency, filtered and sorted as the screen asks.
+ */
 class GetFilteredTrackables
 {
-    use FiltersTrackables;
-
     /**
      * @return LengthAwarePaginator<int, SpectraRequest>
      */
     public function __invoke(Request $request, DateRange $dateRange): LengthAwarePaginator
     {
-        $query = SpectraRequest::query()
-            ->whereNotNull('trackable_type')
-            ->whereNotNull('trackable_id');
-
-        $dateRange->apply($query);
-        $this->applyTrackableFilters($query, $request);
-
-        $sortBy = $request->input('sort_by', 'cost');
-        $sortDir = $request->input('sort_dir', 'desc');
-
-        $sortColumn = match ($sortBy) {
+        // The sort keys the screen sends, mapped to the aggregate they order by.
+        $sortColumn = match ($request->input('sort_by')) {
             'requests' => 'requests',
-            'tokens' => 'tokens',
-            'cost' => 'cost',
+            'tokens' => 'tokens_sum',
             default => 'cost',
         };
+        $sortDirection = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
+        $perPage = min(max($request->integer('per_page', 25), 1), 100);
 
-        return $query
-            ->select('trackable_type', 'trackable_id')
-            ->selectRaw('COUNT(*) as requests')
-            ->selectRaw('SUM(prompt_tokens + completion_tokens) as tokens_sum')
-            ->selectRaw('COALESCE(SUM(image_count), 0) as images_sum')
-            ->selectRaw('COALESCE(SUM(video_count), 0) as videos_sum')
-            ->selectRaw('COALESCE(SUM(CASE WHEN model_type = \'tts\' THEN input_characters ELSE 0 END), 0) as tts_characters_sum')
-            ->selectRaw('COALESCE(SUM(CASE WHEN model_type IN (\'tts\', \'stt\') THEN duration_seconds ELSE 0 END), 0) as audio_duration_sum')
-            ->selectRaw('SUM(total_cost_in_cents) as cost')
-            ->selectRaw('AVG(latency_ms) as latency_avg')
-            ->groupBy('trackable_type', 'trackable_id')
-            ->orderBy($sortColumn, $sortDir)
-            ->paginate($request->input('per_page', 25));
+        return RequestAggregateQuery::make($dateRange)
+            ->withTrackable()
+            ->filteredBy($request)
+            ->groupByColumns('trackable_type', 'trackable_id')
+            ->countAs('requests')
+            ->tokenSum()
+            ->mediaSums()
+            ->successfulCost()
+            ->successfulLatency('latency_avg')
+            ->orderBy($sortColumn, $sortDirection)
+            // A stable tiebreaker so equal rows don't move between pages.
+            ->orderBy('trackable_type')
+            ->orderBy('trackable_id')
+            ->paginate($perPage);
     }
 }

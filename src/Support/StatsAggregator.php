@@ -111,30 +111,28 @@ class StatsAggregator
      */
     public function rebuild(?CarbonInterface $startDate = null, ?CarbonInterface $endDate = null): int
     {
-        $query = SpectraDailyStat::query();
+        // whereDate on both bounds: SQLite stores the date cast as
+        // "Y-m-d 00:00:00", so a plain comparison with "Y-m-d" would skip the
+        // end day's rows and the rebuild would count that day twice.
+        SpectraDailyStat::query()
+            ->when($startDate, fn ($query, CarbonInterface $start) => $query->whereDate('date', '>=', $start->format('Y-m-d')))
+            ->when($endDate, fn ($query, CarbonInterface $end) => $query->whereDate('date', '<=', $end->format('Y-m-d')))
+            ->delete();
 
-        if ($startDate) {
-            $query->where('date', '>=', $startDate->format('Y-m-d'));
-        }
-
-        if ($endDate) {
-            $query->where('date', '<=', $endDate->format('Y-m-d'));
-        }
-
-        $query->delete();
-
-        $requestQuery = SpectraRequest::query();
-
-        if ($startDate) {
-            $requestQuery->where('created_at', '>=', $startDate->copy()->startOfDay());
-        }
-
-        if ($endDate) {
-            $requestQuery->where('created_at', '<=', $endDate->copy()->endOfDay());
-        }
+        $requestQuery = SpectraRequest::query()
+            // Only what recordRequest() reads: the request/response payloads
+            // are long text and would make every chunk heavy.
+            ->select([
+                'id', 'created_at', 'provider', 'model', 'model_type', 'trackable_type', 'trackable_id',
+                'status_code', 'prompt_tokens', 'completion_tokens', 'cached_tokens', 'cache_write_tokens',
+                'reasoning_tokens', 'image_count', 'video_count', 'page_count', 'duration_seconds',
+                'input_characters', 'total_cost_in_cents', 'latency_ms',
+            ])
+            ->when($startDate, fn ($query, CarbonInterface $start) => $query->where('created_at', '>=', $start->copy()->startOfDay()))
+            ->when($endDate, fn ($query, CarbonInterface $end) => $query->where('created_at', '<=', $end->copy()->endOfDay()));
 
         $count = 0;
-        $requestQuery->orderBy('id')->chunk(1000, function ($requests) use (&$count) {
+        $requestQuery->chunkById(1000, function ($requests) use (&$count) {
             foreach ($requests as $request) {
                 $this->recordRequest($request);
                 $count++;

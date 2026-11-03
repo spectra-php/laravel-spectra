@@ -9,6 +9,10 @@ use Spectra\Data\UsageByModel;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * One trackable's usage per model, most used first; cost covers successful
+ * requests.
+ */
 class GetTrackableUsageByModel
 {
     /**

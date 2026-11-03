@@ -6,6 +6,10 @@ namespace Spectra\Data\Responses;
 
 use Spectra\Data\DataTransferObject;
 
+/**
+ * The filter options the request and trackable screens offer, taken from the
+ * values actually stored.
+ */
 readonly class AvailableFiltersResponse extends DataTransferObject
 {
     /**

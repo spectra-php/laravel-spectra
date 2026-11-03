@@ -8,6 +8,11 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * fal.ai requests through the HTTP client: direct and queued calls are
+ * recorded once, from the result, with the model from the path and images
+ * and videos priced by count, size, resolution and length.
+ */
 it('records fal.ai image generation response to database', function (string $fixture, string $endpoint, int $expectedImages) {
     $response = $this->loadMockResponse($fixture);
 

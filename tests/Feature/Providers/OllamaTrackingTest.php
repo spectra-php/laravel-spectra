@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * An Ollama chat response recorded through Spectra::track() with its tokens
+ * and no cost, since local models are free.
+ */
 it('records ollama chat response to database at zero cost', function () {
     $response = $this->loadMockResponse('ollama/chat.json');
 

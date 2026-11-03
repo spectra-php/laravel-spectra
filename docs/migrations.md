@@ -72,3 +72,5 @@ Then run migrations on that connection:
 ```shell
 php artisan migrate --database=spectra
 ```
+
+`php artisan migrate:fresh` drops only the tables of your default connection, so the Spectra database keeps its tables while its migrations show as pending again. Spectra's migrations check for each table and column first and skip what is already there, so running them again is safe.

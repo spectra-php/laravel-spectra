@@ -24,14 +24,17 @@ use Spectra\Support\MediaPersister;
  * operation. Only the finished operation is recorded.
  *
  * The cost is per second of video, read from `parameters.durationSeconds` of
- * the request. A poll is a separate GET without that body, so a job recorded
- * from a poll has no duration (and no cost) unless it is tracked manually
- * with the original request data.
+ * the request. A poll is a separate GET without that body, so the submit's
+ * body is remembered under the operation name and merged back into the poll
+ * that finishes the job.
  */
 class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse, Handler, HasFinishReason, HasMedia, MatchesResponseShape, SkipsResponse
 {
     use ExtractsModelFromGoogleEndpoint;
     use MatchesParametricEndpoints;
+
+    /** Seconds to wait for a generated video to download. */
+    protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 60;
 
     public function modelType(): ModelType
     {
@@ -83,7 +86,7 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     /** @param  array<string, mixed>  $response */
     public function extractModelFromResponse(array $response): ?string
     {
-        return $response['modelVersion'] ?? null;
+        return filled($response['modelVersion'] ?? null) ? $response['modelVersion'] : null;
     }
 
     /** @param  array<string, mixed>  $response */
@@ -164,19 +167,24 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         $paths = [];
 
         foreach ($samples as $index => $sample) {
-            $uri = $sample['uri'] ?? null;
+            $uri = $sample['uri'];
 
             if ($uri === null) {
                 continue;
             }
 
-            $response = Http::withoutAITracking()->get($uri);
+            // One video that fails to download or store must not lose the others.
+            $path = rescue(function () use ($requestId, $index, $uri) {
+                $response = Http::withoutAITracking()->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)->get($uri);
 
-            if (! $response->successful()) {
-                continue;
+                return $response->successful()
+                    ? app(MediaPersister::class)->store($requestId, $index, $response->body(), 'mp4')
+                    : null;
+            });
+
+            if ($path !== null) {
+                $paths[] = $path;
             }
-
-            $paths[] = app(MediaPersister::class)->store($requestId, $index, $response->body(), 'mp4');
         }
 
         return $paths;
@@ -195,25 +203,39 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     protected function extractSamples(array $responseData): array
     {
         // Format 1: generateVideoResponse.generatedSamples
-        $samples = $responseData['response']['generateVideoResponse']['generatedSamples'] ?? [];
+        $samples = data_get($responseData, 'response.generateVideoResponse.generatedSamples');
 
-        if (! empty($samples)) {
-            return array_map(fn (array $sample) => [
-                'uri' => $sample['video']['uri'] ?? $sample['video']['gcsUri'] ?? null,
-                'mimeType' => $sample['video']['mimeType'] ?? 'video/mp4',
-            ], $samples);
+        if (is_array($samples) && $samples !== []) {
+            return $this->videoSamples($samples, 'video.uri', 'video.gcsUri', 'video.mimeType');
         }
 
         // Format 2: videos[]
-        $videos = $responseData['response']['videos'] ?? [];
+        $videos = data_get($responseData, 'response.videos');
 
-        if (! empty($videos)) {
-            return array_map(fn (array $video) => [
-                'uri' => $video['gcsUri'] ?? $video['uri'] ?? null,
-                'mimeType' => $video['mimeType'] ?? 'video/mp4',
-            ], $videos);
+        if (is_array($videos) && $videos !== []) {
+            return $this->videoSamples($videos, 'gcsUri', 'uri', 'mimeType');
         }
 
         return [];
+    }
+
+    /**
+     * @param  array<mixed>  $items
+     * @return array<int, array{uri: string|null, mimeType: string}>
+     */
+    protected function videoSamples(array $items, string $uriKey, string $fallbackUriKey, string $mimeTypeKey): array
+    {
+        return collect($items)
+            ->filter(fn (mixed $item) => is_array($item))
+            ->values()
+            ->map(function (array $item) use ($uriKey, $fallbackUriKey, $mimeTypeKey) {
+                $uri = data_get($item, $uriKey) ?? data_get($item, $fallbackUriKey);
+
+                return [
+                    'uri' => filled($uri) ? $uri : null,
+                    'mimeType' => data_get($item, $mimeTypeKey) ?? 'video/mp4',
+                ];
+            })
+            ->all();
     }
 }

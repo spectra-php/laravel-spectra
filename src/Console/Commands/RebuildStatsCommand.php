@@ -9,6 +9,12 @@ use Illuminate\Support\Carbon;
 use Spectra\Support\StatsAggregator;
 use Symfony\Component\Console\Attribute\AsCommand;
 
+/**
+ * Recomputes the daily stats table from the stored requests.
+ *
+ * The dashboard reads the daily stats, which are updated as requests are
+ * saved; rebuild them after importing, deleting or repricing requests.
+ */
 #[AsCommand(name: 'spectra:rebuild-stats')]
 class RebuildStatsCommand extends Command
 {

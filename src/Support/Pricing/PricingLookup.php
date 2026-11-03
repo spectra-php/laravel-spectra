@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Support\Pricing;
 
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Log;
 use Spectra\Enums\PricingTier;
 use Spectra\Pricing\ProviderPricing;
 
@@ -55,8 +56,22 @@ class PricingLookup
     /** @var array<string, string> "provider|alias" => "provider|model" */
     protected array $aliases = [];
 
-    /** @var array<string, string> Provider slug => catalog currency */
+    /** @var array<string, string> Provider slug => currency of its last catalog */
     protected array $currencies = [];
+
+    /**
+     * Two catalogs may share a slug (a USD catalog of extra Scaleway models
+     * next to the built-in EUR one), so each model keeps its own currency.
+     *
+     * @var array<string, string> "provider|model" => currency of the catalog that defined it
+     */
+    protected array $modelCurrencies = [];
+
+    /** @var array<string, string> Provider slug => currency of the catalog that set its tool call prices */
+    protected array $toolCallCurrencies = [];
+
+    /** @var array<string, true> "provider|tier" values already warned about (once per process). */
+    protected array $warnedTiers = [];
 
     /** @var array<string, array<string, float>> Provider slug => tool call type => cost in cents */
     protected array $toolCallPricing = [];
@@ -205,13 +220,73 @@ class PricingLookup
     }
 
     /**
-     * The currency a provider's catalog is written in (ISO 4217).
+     * The currency a provider's catalog is written in (ISO 4217). When two
+     * catalogs share the slug, this is the later one's; price a model with
+     * modelCurrency() instead.
      */
     public function currency(string $provider): string
     {
         $this->resolve();
 
         return $this->currencies[$provider] ?? 'USD';
+    }
+
+    /**
+     * The currency of the catalog that defines a model (ISO 4217), falling
+     * back to the provider's currency for a model no catalog knows.
+     */
+    public function modelCurrency(string $provider, string $model): string
+    {
+        $key = $this->resolveKey($provider, $model);
+
+        return $key !== null ? $this->modelCurrencies[$key] : $this->currency($provider);
+    }
+
+    /**
+     * The currency of the provider's tool call prices (ISO 4217).
+     */
+    public function toolCallCurrency(string $provider): string
+    {
+        $this->resolve();
+
+        return $this->toolCallCurrencies[$provider] ?? $this->currency($provider);
+    }
+
+    /**
+     * The tier a provider's requests bill at when neither the request nor the
+     * response names one (`spectra.costs.provider_settings.{provider}.default_tier`).
+     *
+     * A value that isn't a PricingTier (a typo in SPECTRA_OPENAI_PRICING_TIER)
+     * bills at standard, so cost and the stored tier agree; it is logged once.
+     */
+    public function defaultTier(string $provider): PricingTier
+    {
+        $configured = config("spectra.costs.provider_settings.{$provider}.default_tier");
+
+        if ($configured instanceof PricingTier) {
+            return $configured;
+        }
+
+        if (blank($configured)) {
+            return PricingTier::default();
+        }
+
+        $tier = is_string($configured) ? PricingTier::tryFrom($configured) : null;
+
+        if ($tier !== null) {
+            return $tier;
+        }
+
+        $value = is_scalar($configured) ? (string) $configured : get_debug_type($configured);
+        $warningKey = "{$provider}|{$value}";
+
+        if (! isset($this->warnedTiers[$warningKey])) {
+            $this->warnedTiers[$warningKey] = true;
+
+            Log::warning("Spectra: unknown pricing tier '{$value}' in spectra.costs.provider_settings.{$provider}.default_tier; billing {$provider} at the standard tier.");
+        }
+
+        return PricingTier::default();
     }
 
     /**
@@ -317,11 +392,13 @@ class PricingLookup
 
         foreach ($this->pricingClasses as $pricing) {
             $provider = $pricing->provider();
-            $this->currencies[$provider] = strtoupper($pricing->currency());
+            $currency = strtoupper($pricing->currency());
+            $this->currencies[$provider] = $currency;
 
             $toolPricing = $pricing->toolCallPricing();
             if (! empty($toolPricing)) {
                 $this->toolCallPricing[$provider] = $toolPricing;
+                $this->toolCallCurrencies[$provider] = $currency;
             }
 
             foreach ($pricing->models() as $definition) {
@@ -346,6 +423,7 @@ class PricingLookup
                     ];
                 }
 
+                $this->modelCurrencies[$key] = $currency;
                 $this->models[$key] = [
                     'display_name' => $modelArray['display_name'],
                     'type' => $modelArray['type'],

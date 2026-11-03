@@ -14,6 +14,10 @@ use Spectra\Models\SpectraRequest;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\UsageQueryBuilder;
 
+/**
+ * Dashboard aggregates count failed requests but leave them out of cost and
+ * latency, and keep fractional-cent costs.
+ */
 function seedMixedOutcomeRequests(): void
 {
     // Two successful requests: 100 + 200 cents, 100ms + 300ms latency

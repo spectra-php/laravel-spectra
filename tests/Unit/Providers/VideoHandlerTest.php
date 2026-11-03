@@ -11,6 +11,10 @@ use Spectra\Data\VideoMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\OpenAI\Handlers\VideoHandler;
 
+/**
+ * The OpenAI video handler: the endpoints it matches, the unfinished jobs it
+ * skips, and the metrics and media it reads from a completed video.
+ */
 it('video handler returns video model type', function () {
     $handler = new VideoHandler;
 

@@ -2,15 +2,19 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Arr;
 use PHPUnit\Framework\Assert;
+use Spectra\Enums\PricingTier;
 use Spectra\Enums\PricingUnit;
+use Spectra\Pricing\FalAiPricing;
 use Spectra\Pricing\ProviderPricing;
 
 /**
  * Guardrails over the entire built-in pricing catalog. These prevent the class
  * of bug where a model silently bills $0 — e.g. an unsupported pricing unit, or
  * a per-unit model that lacks the `standard` tier the cost calculator falls back
- * to. Every configured provider/model is checked.
+ * to, a tier name that silently bills at standard, or fal.ai video prices
+ * that drift from the catalog. Every configured provider/model is checked.
  */
 
 /** @return array<int, array{0: string, 1: string, 2: array<string, mixed>, 3: array<int, array<string, mixed>>}> */
@@ -96,5 +100,67 @@ it('gives token-based models numeric input/output prices on the standard tier', 
 
         Assert::assertIsNumeric($standard['input_price'], "{$provider}/{$name} standard tier input_price");
         Assert::assertIsNumeric($standard['output_price'], "{$provider}/{$name} standard tier output_price");
+    }
+});
+
+it('names every tier with a PricingTier value', function () {
+    $valid = array_map(fn (PricingTier $tier) => $tier->value, PricingTier::cases());
+
+    foreach (spectraCatalogRows() as [$provider, $name, $model, $tiers]) {
+        foreach (array_unique(array_column($tiers, 'tier')) as $tier) {
+            Assert::assertContains($tier, $valid, "{$provider}/{$name} uses unknown tier '{$tier}' (it would bill at standard)");
+        }
+    }
+});
+
+it('uses only catalog types the model type resolution knows', function () {
+    $valid = ['text', 'embedding', 'image', 'audio', 'video'];
+
+    foreach (spectraCatalogRows() as [$provider, $name, $model, $tiers]) {
+        Assert::assertContains($model['type'], $valid, "{$provider}/{$name} uses unknown type '{$model['type']}'");
+    }
+});
+
+it('never lists the same model id or alias twice within a provider', function () {
+    $seen = [];
+
+    foreach (spectraCatalogRows() as [$provider, $name, $model, $tiers]) {
+        foreach ([$name, ...$model['aliases']] as $id) {
+            Assert::assertArrayNotHasKey("{$provider}|{$id}", $seen, "{$provider}/{$id} is listed by both {$name} and ".($seen["{$provider}|{$id}"] ?? ''));
+
+            $seen["{$provider}|{$id}"] = $name;
+        }
+    }
+});
+
+it('prices every fal.ai video model in the catalog at its default VIDEO_PRICES entry', function () {
+    $catalog = collect((new FalAiPricing)->models())->keyBy(fn ($definition) => $definition->getInternalName());
+
+    foreach (FalAiPricing::VIDEO_PRICES as $model => $resolutions) {
+        $definition = $catalog->get($model);
+
+        Assert::assertNotNull($definition, "{$model} is in VIDEO_PRICES but not in the catalog");
+
+        $standard = collect($definition->toTiersArray())->firstWhere('tier', PricingTier::Standard->value);
+
+        expect($definition->toModelArray()['pricing_unit'])->toBe(PricingUnit::Second->value, $model)
+            ->and($standard['price_per_unit'])->toEqual(Arr::first($resolutions)[0], $model);
+
+        foreach ($resolutions as $resolution => $prices) {
+            expect($prices[0])->toBeGreaterThan(0, "{$model} {$resolution} with audio")
+                ->and($prices[1])->toBeGreaterThan(0, "{$model} {$resolution} without audio");
+        }
+    }
+});
+
+it('lists every per-second fal.ai video model in VIDEO_PRICES', function () {
+    foreach ((new FalAiPricing)->models() as $definition) {
+        $model = $definition->toModelArray();
+
+        if ($model['type'] !== 'video' || $model['pricing_unit'] !== PricingUnit::Second->value) {
+            continue;
+        }
+
+        Assert::assertArrayHasKey($definition->getInternalName(), FalAiPricing::VIDEO_PRICES, "{$definition->getInternalName()} has no resolution / audio prices");
     }
 });

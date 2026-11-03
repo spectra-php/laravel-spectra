@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Spectra\Spectra;
 use Workbench\App\Models\User;
 
+/**
+ * Spectra::forUser() attributes the next request to a user given as a model
+ * or an id, and throws for an id that does not exist.
+ */
 beforeEach(function () {
     config(['auth.providers.users.model' => User::class]);
 

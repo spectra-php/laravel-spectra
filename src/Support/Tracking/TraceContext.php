@@ -56,7 +56,7 @@ class TraceContext
         try {
             $existing = Context::getHidden(self::TRACE_ID);
 
-            if (is_string($existing) && $existing !== '') {
+            if (filled($existing)) {
                 return $existing;
             }
 
@@ -83,7 +83,7 @@ class TraceContext
         try {
             $parent = Context::getHidden(self::PARENT_SPAN_ID);
 
-            return is_string($parent) && $parent !== '' ? $parent : null;
+            return filled($parent) ? $parent : null;
         } catch (Throwable) {
             return null;
         }
@@ -153,7 +153,7 @@ class TraceContext
     {
         $members = [];
 
-        if ($traceId !== null && $traceId !== '') {
+        if (filled($traceId)) {
             $members[] = self::BAGGAGE_TRACE_ID.'='.rawurlencode($traceId);
         }
 
@@ -203,7 +203,7 @@ class TraceContext
     protected static function sanitizeTags(array $tags): array
     {
         $tags = array_map(fn (mixed $tag): string => is_string($tag) ? trim($tag) : '', $tags);
-        $tags = array_filter($tags, fn (string $tag): bool => $tag !== '' && mb_strlen($tag) <= self::MAX_TAG_LENGTH);
+        $tags = array_filter($tags, fn (string $tag): bool => filled($tag) && mb_strlen($tag) <= self::MAX_TAG_LENGTH);
 
         return array_slice(array_values(array_unique($tags)), 0, self::MAX_TAGS);
     }
@@ -239,8 +239,8 @@ class TraceContext
 
         if (! is_string($header)
             || ! preg_match('/^[0-9a-f]{2}-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$/', strtolower(trim($header)), $matches)
-            || trim($matches[1], '0') === ''
-            || trim($matches[2], '0') === '') {
+            || Str::isMatch('/^0+$/', $matches[1])
+            || Str::isMatch('/^0+$/', $matches[2])) {
             return null;
         }
 

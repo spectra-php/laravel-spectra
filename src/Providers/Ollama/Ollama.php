@@ -8,6 +8,10 @@ use Spectra\Providers\Ollama\Handlers\ChatHandler;
 use Spectra\Providers\Ollama\Handlers\EmbeddingHandler;
 use Spectra\Providers\Provider;
 
+/**
+ * Ollama, a local model server. Requests are tracked for tokens and latency,
+ * but are priced at zero since the models run on the user's own hardware.
+ */
 class Ollama extends Provider
 {
     public function getProvider(): string

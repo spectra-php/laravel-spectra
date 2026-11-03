@@ -7,10 +7,15 @@ namespace Spectra\Actions\Requests;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\DateRange;
 use Spectra\Support\Pricing\PricingLookup;
 
+/**
+ * The page of requests the requests screen shows: its filters, search and
+ * sort applied to a light column list (never the request/response payloads).
+ */
 class GetFilteredRequests
 {
     public function __construct(
@@ -23,7 +28,7 @@ class GetFilteredRequests
     public function __invoke(Request $request, DateRange $dateRange): LengthAwarePaginator
     {
         $sortable = ['created_at', 'total_tokens', 'total_cost_in_cents', 'latency_ms'];
-        $sortBy = in_array($request->input('sort_by'), $sortable) ? $request->input('sort_by') : 'created_at';
+        $sortBy = in_array($request->input('sort_by'), $sortable, true) ? $request->input('sort_by') : 'created_at';
         $sortDir = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
 
         $query = SpectraRequest::query()
@@ -41,7 +46,12 @@ class GetFilteredRequests
                 'created_at', 'completed_at', 'expires_at',
             ])
             ->with('tags')
-            ->orderBy($sortBy, $sortDir);
+            // total_tokens is an appended attribute, not a column.
+            ->when(
+                $sortBy === 'total_tokens',
+                fn (Builder $query) => $query->orderByRaw("(prompt_tokens + completion_tokens) {$sortDir}"),
+                fn (Builder $query) => $query->orderBy($sortBy, $sortDir),
+            );
         $dateRange->apply($query);
 
         $this->applyFilters($query, $request);
@@ -62,11 +72,14 @@ class GetFilteredRequests
             // Search model names and exact ids — deliberately NOT the
             // request/response longtext columns, which cannot use an index
             // and turn every keystroke into a full-table scan at volume.
+            // id and trace_id are native uuid columns on PostgreSQL, which
+            // errors on any other string, so only compare them with a UUID.
             $query->where(function (Builder $q) use ($search) {
                 $q->where('model', 'like', "%{$search}%")
-                    ->orWhere('id', $search)
                     ->orWhere('response_id', $search)
-                    ->orWhere('trace_id', $search);
+                    ->when(Str::isUuid($search), fn (Builder $uuid) => $uuid
+                        ->orWhere('id', $search)
+                        ->orWhere('trace_id', $search));
             });
         }
 
@@ -75,7 +88,7 @@ class GetFilteredRequests
         }
 
         if ($request->filled('model')) {
-            $query->where('model', 'like', '%'.$request->input('model').'%');
+            $query->where('model', 'like', "%{$request->input('model')}%");
         }
 
         if ($request->filled('status')) {
@@ -83,10 +96,7 @@ class GetFilteredRequests
             if ($status === 'success') {
                 $query->whereBetween('status_code', [200, 299]);
             } elseif ($status === 'error') {
-                $query->where(function ($q) {
-                    $q->whereNotBetween('status_code', [200, 299])
-                        ->orWhereNull('status_code');
-                });
+                $query->failed();
             }
         }
 
@@ -122,7 +132,7 @@ class GetFilteredRequests
         }
 
         if ($request->filled('trace_id')) {
-            $query->where('trace_id', $request->input('trace_id'));
+            $query->forTrace((string) $request->input('trace_id'));
         }
 
         if ($request->filled('trackable_type')) {

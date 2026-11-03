@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Spectra\Data\Responses;
 
+/**
+ * The requests screen: one page of requests plus the tag, finish-reason and
+ * reasoning-effort filter options.
+ */
 readonly class RequestsResponse extends PaginatedResponse
 {
     /**

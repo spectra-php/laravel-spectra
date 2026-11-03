@@ -8,6 +8,10 @@ use Illuminate\Support\Carbon;
 use Spectra\Http\Controllers\Api\StatsController;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * The stats dashboard endpoint: latency by model type and the date range
+ * filters.
+ */
 it('returns average latency grouped by model type in stats endpoint', function () {
     config()->set('spectra.dashboard.layout', 'full');
 
@@ -45,59 +49,51 @@ it('returns average latency grouped by model type in stats endpoint', function (
 
 it('filters stats by custom date range', function () {
     config()->set('spectra.dashboard.layout', 'full');
-    Carbon::setTestNow(Carbon::parse('2026-02-12 12:00:00'));
+    $this->travelTo('2026-02-12 12:00:00');
 
-    try {
-        SpectraRequest::factory()
-            ->count(2)
-            ->state(new Sequence(
-                ['model' => 'gpt-4o', 'model_type' => 'text', 'latency_ms' => 100, 'created_at' => Carbon::parse('2026-02-10 10:00:00')],
-                ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'latency_ms' => 200, 'created_at' => Carbon::parse('2026-02-12 10:00:00')],
-            ))
-            ->create();
+    SpectraRequest::factory()
+        ->count(2)
+        ->state(new Sequence(
+            ['model' => 'gpt-4o', 'model_type' => 'text', 'latency_ms' => 100, 'created_at' => Carbon::parse('2026-02-10 10:00:00')],
+            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'latency_ms' => 200, 'created_at' => Carbon::parse('2026-02-12 10:00:00')],
+        ))
+        ->create();
 
-        $controller = app(StatsController::class);
-        $response = app()->call([$controller, '__invoke'], ['request' => new Request([
-            'period' => 'custom',
-            'start_date' => '2026-02-10',
-            'end_date' => '2026-02-10',
-        ])]);
-        $json = $response->toArray();
+    $controller = app(StatsController::class);
+    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+        'period' => 'custom',
+        'start_date' => '2026-02-10',
+        'end_date' => '2026-02-10',
+    ])]);
+    $json = $response->toArray();
 
-        expect($json['total_requests'])->toBe(1)
-            ->and($json['avg_latency'])->toEqual(100)
-            ->and($json['requests_by_date'])->toHaveCount(1)
-            ->and($json['requests_by_date'][0]['date'])->toBe('2026-02-10')
-            ->and($json['recent_requests'])->toHaveCount(1)
-            ->and($json['recent_requests'][0]['model'])->toBe('gpt-4o');
-    } finally {
-        Carbon::setTestNow();
-    }
+    expect($json['total_requests'])->toBe(1)
+        ->and($json['avg_latency'])->toEqual(100)
+        ->and($json['requests_by_date'])->toHaveCount(1)
+        ->and($json['requests_by_date'][0]['date'])->toBe('2026-02-10')
+        ->and($json['recent_requests'])->toHaveCount(1)
+        ->and($json['recent_requests'][0]['model'])->toBe('gpt-4o');
 });
 
 it('returns all-time stats when period is all', function () {
     config()->set('spectra.dashboard.layout', 'full');
-    Carbon::setTestNow(Carbon::parse('2026-02-12 12:00:00'));
+    $this->travelTo('2026-02-12 12:00:00');
 
-    try {
-        SpectraRequest::factory()
-            ->count(2)
-            ->state(new Sequence(
-                ['model' => 'old-model', 'model_type' => 'text', 'latency_ms' => 150, 'created_at' => Carbon::parse('2025-01-10 10:00:00')],
-                ['model' => 'new-model', 'model_type' => 'text', 'latency_ms' => 250, 'created_at' => Carbon::parse('2026-02-10 10:00:00')],
-            ))
-            ->create();
+    SpectraRequest::factory()
+        ->count(2)
+        ->state(new Sequence(
+            ['model' => 'old-model', 'model_type' => 'text', 'latency_ms' => 150, 'created_at' => Carbon::parse('2025-01-10 10:00:00')],
+            ['model' => 'new-model', 'model_type' => 'text', 'latency_ms' => 250, 'created_at' => Carbon::parse('2026-02-10 10:00:00')],
+        ))
+        ->create();
 
-        $controller = app(StatsController::class);
-        $response = app()->call([$controller, '__invoke'], ['request' => new Request([
-            'period' => 'all',
-        ])]);
-        $json = $response->toArray();
+    $controller = app(StatsController::class);
+    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+        'period' => 'all',
+    ])]);
+    $json = $response->toArray();
 
-        expect($json['total_requests'])->toBe(2)
-            ->and($json['recent_requests'])->toHaveCount(2)
-            ->and(collect($json['recent_requests'])->pluck('model')->all())->toContain('old-model');
-    } finally {
-        Carbon::setTestNow();
-    }
+    expect($json['total_requests'])->toBe(2)
+        ->and($json['recent_requests'])->toHaveCount(2)
+        ->and(collect($json['recent_requests'])->pluck('model')->all())->toContain('old-model');
 });

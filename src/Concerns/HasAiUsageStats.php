@@ -8,8 +8,17 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Spectra\Data\UsageStats;
+use Spectra\Support\DateRange;
 
 /**
+ * Usage numbers for one trackable model (a user, a team): requests, tokens,
+ * cost and latency over a period, and the same broken down by provider or
+ * model.
+ *
+ * Request counts include failed requests; cost and latency cover successful
+ * (2xx) requests only, like the dashboard. A date-only end ("2026-01-31")
+ * includes that whole day.
+ *
  * @phpstan-require-extends Model
  *
  * @phpstan-ignore trait.unused
@@ -34,14 +43,14 @@ trait HasAiUsageStats
     public function getAiUsageForPeriod(CarbonInterface|string $start, CarbonInterface|string $end): UsageStats
     {
         $stats = $this->aiRequests()
-            ->whereBetween('created_at', [$start, $end])
+            ->whereBetween('created_at', [$start, DateRange::inclusiveEnd($end)])
             ->selectRaw('
                 COUNT(*) as request_count,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as successful_count,
                 SUM(CASE WHEN status_code IS NULL OR status_code NOT BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as failed_count,
                 SUM(prompt_tokens + completion_tokens) as total_tokens,
-                SUM(total_cost_in_cents) as total_cost_in_cents,
-                AVG(latency_ms) as avg_latency_ms
+                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents,
+                AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms
             ')
             ->first();
 
@@ -65,12 +74,12 @@ trait HasAiUsageStats
         $end = $end ?? now();
 
         return $this->aiRequests()
-            ->whereBetween('created_at', [$start, $end])
+            ->whereBetween('created_at', [$start, DateRange::inclusiveEnd($end)])
             ->selectRaw('
                 provider,
                 COUNT(*) as request_count,
                 SUM(prompt_tokens + completion_tokens) as total_tokens,
-                SUM(total_cost_in_cents) as total_cost_in_cents
+                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents
             ')
             ->groupBy('provider')
             ->get()
@@ -91,13 +100,13 @@ trait HasAiUsageStats
         $end = $end ?? now();
 
         return $this->aiRequests()
-            ->whereBetween('created_at', [$start, $end])
+            ->whereBetween('created_at', [$start, DateRange::inclusiveEnd($end)])
             ->selectRaw('
                 provider,
                 model,
                 COUNT(*) as request_count,
                 SUM(prompt_tokens + completion_tokens) as total_tokens,
-                SUM(total_cost_in_cents) as total_cost_in_cents
+                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents
             ')
             ->groupBy('provider', 'model')
             ->get()

@@ -48,7 +48,7 @@ class Groq extends Provider implements ExtractsPricingTierFromRequest, ExtractsP
         $data = $this->toArray($response);
         $id = $data['id'] ?? $data['x_groq']['id'] ?? null;
 
-        return is_string($id) && $id !== '' ? $id : null;
+        return filled($id) ? $id : null;
     }
 
     /** @param  array<string, mixed>  $requestData */

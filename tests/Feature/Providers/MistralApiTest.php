@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
-use Spectra\Support\Pricing\CostCalculator;
 
 /**
  * Mistral requests as real apps send them: through Laravel's HTTP client, with
@@ -115,17 +114,4 @@ it('tracks OCR per page', function () {
         ->and($row->page_count)->toBe(3)
         ->and($row->response['usage_info']['pages_processed'])->toBe(3)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(1.2, 1e-9);
-});
-
-it('prices the corrected catalog entries', function () {
-    $calculator = new CostCalculator;
-
-    // Moderation 2 is free; Devstral 2 is $0.40 / $2; GLM 5.3 caches at $0.14.
-    expect($calculator->calculate('mistral', 'mistral-moderation-2603', 1_000_000, 0)['total_cost_in_cents'])->toEqual(0.0)
-        ->and($calculator->calculate('mistral', 'devstral-latest', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(240.0)
-        ->and($calculator->calculate('mistral', 'zai-glm-latest', 1_000_000, 0, 1_000_000)['total_cost_in_cents'])->toEqual(14.0)
-        ->and($calculator->calculate('mistral', 'mistral-nemo', 1_000_000, 1_000_000)['total_cost_in_cents'])->toEqual(30.0)
-        ->and($calculator->calculate('mistral', 'mistral-large-latest', 1_000_000, 1_000_000, 0, 'batch')['total_cost_in_cents'])->toEqual(100.0)
-        ->and($calculator->calculateByPages('mistral', 'mistral-ocr-2512', 10)['total_cost_in_cents'])->toEqual(2.0)
-        ->and($calculator->calculateByDuration('mistral', 'voxtral-mini-realtime-latest', 120)['total_cost_in_cents'])->toEqual(1.2);
 });

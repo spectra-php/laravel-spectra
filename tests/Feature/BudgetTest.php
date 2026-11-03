@@ -11,6 +11,11 @@ use Spectra\Support\Budget\BudgetBuilder;
 use Spectra\Support\Budget\BudgetEnforcer;
 use Workbench\App\Models\User;
 
+/**
+ * Budgets configured on a model with HasAiBudget: the fluent builder that
+ * saves them, and the enforcer that allows, warns or blocks a request by
+ * spend, tokens, request count and the allowed providers and models.
+ */
 beforeEach(function () {
     $this->defaultProvider = config('spectra.budget.default_provider');
     $this->defaultModel = config('spectra.budget.default_model');
@@ -23,7 +28,7 @@ beforeEach(function () {
     ]);
 });
 
-it('should create a budget for a user', function () {
+it('stores the configured limits and thresholds on a new budget for the user', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->monthlyCostLimitInCents(10000)
@@ -31,17 +36,17 @@ it('should create a budget for a user', function () {
         ->criticalThresholdPercentage(95)
         ->save();
 
-    $this->assertDatabaseHas('spectra_budgets', [
+    expect(SpectraBudget::query()->where([
         'budgetable_type' => User::class,
         'budgetable_id' => $this->user->id,
         'daily_limit' => 1000,
         'monthly_limit' => 10000,
         'warning_threshold' => 80,
         'critical_threshold' => 95,
-    ]);
+    ])->exists())->toBeTrue();
 });
 
-it('should check if budget allows request', function () {
+it('allows a request at 0% usage when nothing has been spent', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->save();
@@ -54,7 +59,7 @@ it('should check if budget allows request', function () {
         ->and($result->percentage)->toBe(0.0);
 });
 
-it('should throw exception when budget exceeded', function () {
+it('throws BudgetExceededException when spend passes a hard daily cost limit', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(100)
         ->hardLimit()
@@ -68,7 +73,7 @@ it('should throw exception when budget exceeded', function () {
         ->toThrow(BudgetExceededException::class);
 });
 
-it('should allow request when soft limit is set', function () {
+it('lets requests through over a soft limit while reporting usage above 100%', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(100)
         ->softLimit()
@@ -87,7 +92,7 @@ it('should allow request when soft limit is set', function () {
         ->and($result->percentage)->toBeGreaterThan(100);
 });
 
-it('should fire threshold reached events', function () {
+it('dispatches a warning threshold event once spend passes the warning percentage', function () {
     Event::fake([BudgetThresholdReached::class]);
 
     $this->user->configureAiBudget()
@@ -107,7 +112,7 @@ it('should fire threshold reached events', function () {
     });
 });
 
-it('should restrict provider when not allowed', function () {
+it('rejects a provider missing from the allowed providers', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->allowProviders([$this->defaultProvider])
@@ -119,7 +124,7 @@ it('should restrict provider when not allowed', function () {
         ->toThrow(BudgetExceededException::class, 'Provider "anthropic" is not allowed');
 });
 
-it('should restrict model when not allowed', function () {
+it('rejects a model missing from the allowed models', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->allowModels(['gpt-3.5-turbo'])
@@ -131,7 +136,7 @@ it('should restrict model when not allowed', function () {
         ->toThrow(BudgetExceededException::class, "Model \"{$this->defaultModel}\" is not allowed");
 });
 
-it('should get remaining budget', function () {
+it('returns the daily and monthly budget left after recorded spend', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->monthlyCostLimitInCents(5000)
@@ -145,7 +150,7 @@ it('should get remaining budget', function () {
         ->and($remaining['monthly'])->toBe(4700);
 });
 
-it('should disable and enable budget', function () {
+it('deactivates the budget on disable and reactivates it on enable', function () {
     $budget = $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->save();
@@ -161,7 +166,7 @@ it('should disable and enable budget', function () {
     expect($budget->is_active)->toBeTrue();
 });
 
-it('should check budget status', function () {
+it('reports 50% usage after spending half the daily limit', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->save();
@@ -175,7 +180,7 @@ it('should check budget status', function () {
         ->and($status->usage->dailyCost)->toBe(500);
 });
 
-it('should enforce token limits', function () {
+it('throws when recorded tokens pass a hard daily token limit', function () {
     $this->user->configureAiBudget()
         ->dailyTokenLimit(1000)
         ->hardLimit()
@@ -189,7 +194,7 @@ it('should enforce token limits', function () {
         ->toThrow(BudgetExceededException::class, 'token budget exceeded');
 });
 
-it('should enforce request limits', function () {
+it('throws when the request count passes a hard daily request limit', function () {
     $this->user->configureAiBudget()
         ->dailyRequestLimit(2)
         ->hardLimit()
@@ -203,7 +208,7 @@ it('should enforce request limits', function () {
         ->toThrow(BudgetExceededException::class, 'request limit exceeded');
 });
 
-it('should round fractional request costs up to whole cents for budget enforcement', function () {
+it('rounds fractional request costs up to whole cents when enforcing a budget', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1)
         ->hardLimit()
@@ -219,13 +224,13 @@ it('should round fractional request costs up to whole cents for budget enforceme
         ->toThrow(BudgetExceededException::class);
 });
 
-it('should return a BudgetBuilder from configureAiBudget', function () {
+it('returns a BudgetBuilder from configureAiBudget', function () {
     $builder = $this->user->configureAiBudget();
 
     expect($builder)->toBeInstanceOf(BudgetBuilder::class);
 });
 
-it('should persist budget to database', function () {
+it('saves the builder limits, hard limit and thresholds to the budget row', function () {
     $budget = $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->monthlyTokenLimit(5000000)
@@ -245,7 +250,7 @@ it('should persist budget to database', function () {
         ->and($budget->critical_threshold)->toBe(90);
 });
 
-it('should create a budget using fluent builder', function () {
+it('saves every limit, allow list and name set on the fluent builder', function () {
     $budget = $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->weeklyCostLimitInCents(5000)
@@ -286,7 +291,7 @@ it('should create a budget using fluent builder', function () {
         ->and($budget->name)->toBe('Production Budget');
 });
 
-it('should create a budget with soft limit using fluent builder', function () {
+it('saves a soft-limit budget with hard_limit off', function () {
     $budget = $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->softLimit()
@@ -296,7 +301,7 @@ it('should create a budget with soft limit using fluent builder', function () {
         ->and($budget->hard_limit)->toBeFalse();
 });
 
-it('should update an existing budget using fluent builder', function () {
+it('updates the existing budget instead of creating a second one', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->save();
@@ -311,7 +316,7 @@ it('should update an existing budget using fluent builder', function () {
         ->and(SpectraBudget::where('budgetable_id', $this->user->id)->count())->toBe(1);
 });
 
-it('should return the builder for chaining from all methods', function () {
+it('returns the builder from every setter so calls chain', function () {
     $builder = $this->user->configureAiBudget();
 
     expect($builder->dailyCostLimitInCents(1000))->toBeInstanceOf(BudgetBuilder::class)
@@ -334,7 +339,7 @@ it('should return the builder for chaining from all methods', function () {
         ->and($builder->name('Test'))->toBeInstanceOf(BudgetBuilder::class);
 });
 
-it('should reflect all set methods in builder toArray', function () {
+it('includes every value set on the builder in toArray', function () {
     $builder = $this->user->configureAiBudget()
         ->dailyCostLimitInCents(1000)
         ->weeklyCostLimitInCents(5000)
@@ -375,7 +380,7 @@ it('should reflect all set methods in builder toArray', function () {
     ]);
 });
 
-it('should enforce fluent builder budget', function () {
+it('enforces a hard limit saved through the fluent builder', function () {
     $this->user->configureAiBudget()
         ->dailyCostLimitInCents(100)
         ->hardLimit()

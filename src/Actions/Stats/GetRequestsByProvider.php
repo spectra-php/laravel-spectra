@@ -9,6 +9,9 @@ use Spectra\Data\RequestByProvider;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * Requests per provider for the overview chart, failures included.
+ */
 class GetRequestsByProvider
 {
     /**

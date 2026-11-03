@@ -8,11 +8,15 @@ use Illuminate\Support\Facades\Storage;
 use Spectra\Data\MediaContent;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * The stored text-to-speech audio for one request, with its mime type and a
+ * download name taken from the stored file's extension, never the client.
+ */
 class ResolveAudio
 {
     public function __invoke(string $id): MediaContent
     {
-        $request = SpectraRequest::findOrFail($id);
+        $request = SpectraRequest::query()->findOrFail($id);
 
         abort_unless($request->model_type === 'tts', 404);
 

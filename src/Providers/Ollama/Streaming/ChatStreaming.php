@@ -6,6 +6,13 @@ namespace Spectra\Providers\Ollama\Streaming;
 
 use Spectra\Support\Tracking\StreamHandler;
 
+/**
+ * Reads Ollama's native streams, which are newline-delimited JSON rather
+ * than server-sent events.
+ *
+ * Usage (`prompt_eval_count` / `eval_count`) only arrives in the last chunk,
+ * the one with `done: true`.
+ */
 class ChatStreaming extends StreamHandler
 {
     /** @param  array<string, mixed>  $data */

@@ -6,7 +6,12 @@ use Spectra\Facades\Spectra as SpectraFacade;
 use Spectra\Models\SpectraRequest;
 use Spectra\Spectra;
 
-it('should track an ai request', function () {
+/**
+ * The Spectra manager and facade: starting a request, recording its success
+ * or failure with the fields set on the context, trace ids, response ids and
+ * the testing fake.
+ */
+it('starts a request context with the given provider and model', function () {
     $manager = app(Spectra::class);
 
     $context = $manager->startRequest('openai', 'gpt-4o', [
@@ -17,7 +22,7 @@ it('should track an ai request', function () {
         ->and($context->model)->toBe('gpt-4o');
 });
 
-it('should record a successful request', function () {
+it('records the status and token counts of a successful request', function () {
     $manager = app(Spectra::class);
 
     $context = $manager->startRequest('openai', 'gpt-4o');
@@ -96,7 +101,7 @@ it('saves video model_type with billing metrics', function () {
         ->and($request->video_count)->toBe(1);
 });
 
-it('should record a failed request', function () {
+it('records the status code of a failed request', function () {
     $manager = app(Spectra::class);
 
     $context = $manager->startRequest('openai', 'gpt-4o');
@@ -110,7 +115,7 @@ it('should record a failed request', function () {
     expect($request->status_code)->toBe(500);
 });
 
-it('should track using the track helper', function () {
+it('records a track() call with its provider and the model display name', function () {
     $result = SpectraFacade::track('anthropic', 'claude-sonnet-4-20250514', function ($context) {
         return [
             'content' => 'Response',
@@ -148,7 +153,7 @@ it('uses extracted binary tts duration for minute-based persisted cost', functio
         ->and($request->total_cost_in_cents)->toBeGreaterThan(0.0);
 });
 
-it('should use the fake for testing', function () {
+it('records tracked requests on the fake for its assertions', function () {
     SpectraFacade::fake();
 
     SpectraFacade::track('openai', 'gpt-4o', function () {

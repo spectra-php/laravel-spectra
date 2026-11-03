@@ -7,6 +7,11 @@ use Spectra\Models\SpectraRequest;
 use Spectra\Providers\Anthropic\Anthropic;
 use Spectra\Providers\Anthropic\Handlers\MessageHandler;
 
+/**
+ * Anthropic responses recorded through Spectra::track() and the stream
+ * tracker: the fields the handler extracts from each model's response,
+ * extended thinking, batch results and streams.
+ */
 it('records anthropic message response to database', function () {
     $response = $this->loadMockResponse('claude/message.json');
 

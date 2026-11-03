@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * The filters the trackables screen sends (provider, model, status, tags,
+ * trace, search, ...), applied to a SpectraRequest query. Shared by the
+ * trackables list, its summary and its latency breakdown so all three
+ * describe the same rows.
+ */
 trait FiltersTrackables
 {
     /**
@@ -32,10 +38,7 @@ trait FiltersTrackables
             if ($status === 'success') {
                 $query->whereBetween('status_code', [200, 299]);
             } elseif ($status === 'error') {
-                $query->where(function ($q) {
-                    $q->where('status_code', '>=', 400)
-                        ->orWhereNull('status_code');
-                });
+                $query->failed();
             }
         }
 
@@ -52,7 +55,7 @@ trait FiltersTrackables
         }
 
         if ($request->filled('trace_id')) {
-            $query->where('trace_id', $request->input('trace_id'));
+            $query->forTrace((string) $request->input('trace_id'));
         }
 
         if ($request->filled('tag')) {

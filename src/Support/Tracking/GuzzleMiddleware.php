@@ -272,10 +272,12 @@ class GuzzleMiddleware
             $body = is_array($decoded) ? $decoded : [];
         }
 
-        $handler = $providerInstance?->resolveHandler($context->endpoint ?? '', $body);
-        $jobId = $providerInstance?->extractResponseId($body, $context->endpoint ?? '');
+        // A body of an unexpected shape must still be recorded, so these reads
+        // are guarded on their own; ResponseProcessor guards the rest.
+        $handler = rescue(fn () => $providerInstance?->resolveHandler($context->endpoint ?? '', $body));
+        $jobId = rescue(fn () => $providerInstance?->extractResponseId($body, $context->endpoint ?? ''));
 
-        if ($handler instanceof SkipsResponse && $handler->shouldSkipResponse($body)) {
+        if ($handler instanceof SkipsResponse && rescue(fn () => $handler->shouldSkipResponse($body), false)) {
             // An async job was submitted or is still running; the poll that
             // sees it finish is recorded, and may not name the model or carry
             // the request body again.
@@ -297,7 +299,7 @@ class GuzzleMiddleware
      */
     protected function rememberJob(RequestContext $context, ?string $jobId): void
     {
-        if ($jobId === null || $jobId === '') {
+        if (blank($jobId)) {
             return;
         }
 
@@ -305,7 +307,7 @@ class GuzzleMiddleware
             $job = $this->rememberedJob($context->provider, $jobId);
             $model = $context->model;
 
-            if ($model !== '' && $model !== 'unknown' && ! str_starts_with($job['model'] ?? '', rtrim($model, '/').'/')) {
+            if (filled($model) && $model !== 'unknown' && ! str_starts_with($job['model'] ?? '', rtrim($model, '/').'/')) {
                 $job['model'] = $model;
             }
 
@@ -331,7 +333,7 @@ class GuzzleMiddleware
      */
     protected function restoreJob(RequestContext $context, ?Provider $providerInstance, ?string $jobId): void
     {
-        if ($jobId === null || $jobId === '') {
+        if (blank($jobId)) {
             return;
         }
 
@@ -344,7 +346,7 @@ class GuzzleMiddleware
         $remembered = $job['model'] ?? null;
 
         if ($remembered !== null && $remembered !== $context->model
-            && ($context->model === 'unknown' || $context->model === '' || str_starts_with($remembered, rtrim($context->model, '/').'/'))) {
+            && ($context->model === 'unknown' || blank($context->model) || str_starts_with($remembered, rtrim($context->model, '/').'/'))) {
             $context->model = $remembered;
         }
 
@@ -408,22 +410,35 @@ class GuzzleMiddleware
      */
     public static function errorMessage(string $body, int $status): string
     {
-        $decoded = json_decode($body, true);
+        $message = rescue(fn () => self::providerErrorMessage($body));
 
-        if (is_array($decoded)) {
-            $error = $decoded['error'] ?? $decoded;
-            $message = is_array($error)
-                ? ($error['message'] ?? $error['detail'] ?? $decoded['message'] ?? $decoded['detail'] ?? null)
-                : $error;
-
-            if (is_string($message) && $message !== '') {
-                return $message;
-            }
+        if (filled($message)) {
+            return $message;
         }
 
         $body = trim($body);
 
-        return $body !== '' ? mb_substr($body, 0, 2000) : "HTTP {$status}";
+        return filled($body) ? mb_substr($body, 0, 2000) : "HTTP {$status}";
+    }
+
+    /**
+     * The message field of a JSON error body. A message of another type fails
+     * the return type, and errorMessage() falls back to the raw body.
+     */
+    protected static function providerErrorMessage(string $body): ?string
+    {
+        $decoded = json_decode($body, true);
+
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        $error = $decoded['error'] ?? $decoded;
+        $message = is_array($error)
+            ? ($error['message'] ?? $error['detail'] ?? $decoded['message'] ?? $decoded['detail'] ?? null)
+            : $error;
+
+        return filled($message) ? $message : null;
     }
 
     protected function resolveProvider(RequestInterface $request, ProviderRegistry $registry): ?string
@@ -435,7 +450,7 @@ class GuzzleMiddleware
         $host = $request->getUri()->getHost();
         $port = $request->getUri()->getPort();
 
-        if ($host === '') {
+        if (blank($host)) {
             return null;
         }
 

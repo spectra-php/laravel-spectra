@@ -9,6 +9,10 @@ use Spectra\Data\ModelTypeStat;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * Requests, cost and latency per model type, the base of the overview's cost
+ * and latency breakdowns.
+ */
 class GetModelTypeBreakdown
 {
     /**

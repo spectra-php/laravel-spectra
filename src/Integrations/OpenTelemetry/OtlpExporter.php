@@ -8,6 +8,12 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Spectra\Contracts\RequestExporter;
 
+/**
+ * Sends tracked requests to an OpenTelemetry collector as OTLP/HTTP JSON spans.
+ *
+ * Uses Laravel's Http client instead of the OpenTelemetry SDK, so exporting
+ * adds no dependency. A failed export is logged and never reaches the app.
+ */
 class OtlpExporter implements RequestExporter
 {
     protected string $endpoint;
@@ -66,10 +72,8 @@ class OtlpExporter implements RequestExporter
     protected function send(array $payload): bool
     {
         try {
-            $timeout = config('spectra.integrations.opentelemetry.timeout', 10);
-
             $response = Http::withHeaders($this->headers)
-                ->timeout($timeout)
+                ->timeout($this->timeout())
                 ->post($this->endpoint, $payload);
 
             if ($response->failed()) {
@@ -87,6 +91,21 @@ class OtlpExporter implements RequestExporter
 
             return false;
         }
+    }
+
+    /**
+     * Published configs read SPECTRA_OTEL_TIMEOUT without a cast, so the
+     * value can arrive as a string, which Http::timeout() rejects.
+     */
+    protected function timeout(): float
+    {
+        $timeout = config('spectra.integrations.opentelemetry.timeout', 10);
+
+        if (! is_numeric($timeout) || $timeout <= 0) {
+            return 10.0;
+        }
+
+        return (float) $timeout;
     }
 
     public function getEndpoint(): string

@@ -78,7 +78,7 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
         $texts = [];
 
         foreach ($response['message']['content'] as $block) {
-            if (($block['type'] ?? null) === 'text' && isset($block['text']) && $block['text'] !== '') {
+            if (($block['type'] ?? null) === 'text' && filled($block['text'] ?? null)) {
                 $texts[] = $block['text'];
             }
         }

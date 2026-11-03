@@ -73,7 +73,7 @@ class GenerateContentHandler implements ExtractsModelFromRequest, ExtractsModelF
 
         foreach ($response['candidates'][0]['content']['parts'] as $part) {
             // Thought summaries are not part of the answer.
-            if (isset($part['text']) && $part['text'] !== '' && ! ($part['thought'] ?? false)) {
+            if (filled($part['text'] ?? null) && ! ($part['thought'] ?? false)) {
                 $texts[] = $part['text'];
             }
         }

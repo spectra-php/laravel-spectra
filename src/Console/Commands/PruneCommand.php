@@ -54,7 +54,7 @@ class PruneCommand extends Command
         $statsCount = 0;
         $statsDays = $this->option('stats-days');
 
-        if ($statsDays !== null && $statsDays !== '') {
+        if (filled($statsDays)) {
             $statsCount = SpectraDailyStat::query()
                 ->where('date', '<', now()->subDays(max(0, (int) $statsDays))->toDateString())
                 ->delete();
@@ -73,7 +73,7 @@ class PruneCommand extends Command
         $files = collect($paths)
             ->filter(fn ($value) => is_array($value))
             ->flatten()
-            ->filter(fn ($path) => is_string($path) && $path !== '')
+            ->filter(fn ($path) => filled($path))
             ->values()
             ->all();
 

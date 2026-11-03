@@ -122,7 +122,7 @@ Schedule::command('spectra:rebuild-stats --yesterday')->dailyAt('01:00');
 <a name="spectra-pricing-scrape"></a>
 ## `spectra:pricing-scrape`
 
-Reads the providers' pricing pages with [Firecrawl](https://firecrawl.dev) and saves the prices that differ from the built-in catalog to the [scraped prices file](/pricing#scraped-prices). Needs `FIRECRAWL_API_KEY` in your `.env` file. Set `SPECTRA_USE_SCRAPED_PRICES=true` to bill with the saved prices.
+Reads the providers' pricing pages with [Firecrawl](https://firecrawl.dev) and saves the prices that differ from the built-in catalog to the [scraped prices file](/pricing#scraped-prices). Needs `SPECTRA_FIRECRAWL_API_KEY` (or `FIRECRAWL_API_KEY`) in your `.env` file. Set `SPECTRA_USE_SCRAPED_PRICES=true` to bill with the saved prices.
 
 ```shell
 php artisan spectra:pricing-scrape [provider*] [--all] [--url=*] [--path=] [--dry-run]

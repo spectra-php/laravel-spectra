@@ -9,6 +9,9 @@ use Spectra\Models\SpectraRequest;
 use Spectra\Support\Concerns\FiltersByLayout;
 use Spectra\Support\DateRange;
 
+/**
+ * The overview's latest requests, with only the columns its list shows.
+ */
 class GetRecentRequests
 {
     use FiltersByLayout;

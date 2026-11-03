@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use Spectra\Support\ApiKeyResolver;
 
+/**
+ * ApiKeyResolver finds each provider's API key, base URL and hosts in
+ * spectra config first and in laravel-ai's ai.php config after.
+ */
 it('resolves api key from spectra config', function () {
     config(['spectra.api_keys.openai' => 'sk-spectra-key']);
 

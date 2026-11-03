@@ -17,6 +17,13 @@ use Spectra\Enums\ModelType;
 use Spectra\Providers\Ollama\Streaming\ChatStreaming;
 use Spectra\Support\Tracking\StreamHandler;
 
+/**
+ * Ollama's native `/api/chat` and `/api/generate` endpoints.
+ *
+ * Ollama reports usage as `prompt_eval_count` / `eval_count` instead of an
+ * OpenAI-style usage object; its OpenAI-compatible `/v1` endpoints are not
+ * handled here.
+ */
 class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason, MatchesResponseShape, StreamsResponse
 {
     use ExtractsModelField;

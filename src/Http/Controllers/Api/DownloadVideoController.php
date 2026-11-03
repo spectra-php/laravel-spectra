@@ -7,6 +7,9 @@ namespace Spectra\Http\Controllers\Api;
 use Spectra\Actions\Media\ResolveVideo;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * GET /api/requests/{id}/video: downloads a request's generated video.
+ */
 class DownloadVideoController extends BaseApiController
 {
     public function __invoke(string $id, ResolveVideo $action): StreamedResponse

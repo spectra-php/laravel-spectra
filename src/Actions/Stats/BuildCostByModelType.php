@@ -7,6 +7,11 @@ namespace Spectra\Actions\Stats;
 use Illuminate\Support\Collection;
 use Spectra\Data\ModelTypeStat;
 
+/**
+ * Turns the model-type breakdown into the overview's cost-per-type map, with
+ * every known type present (zero when unused) so the chart keeps a stable
+ * shape.
+ */
 class BuildCostByModelType
 {
     /**

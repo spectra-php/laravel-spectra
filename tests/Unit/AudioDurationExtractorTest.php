@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use Spectra\Support\AudioDurationExtractor;
 
+/**
+ * AudioDurationExtractor reads the length of audio bytes with getID3 when it
+ * is installed, and returns null when it is not or the data is empty.
+ */
 it('returns null when getID3 is not installed', function () {
     $extractor = new AudioDurationExtractor;
 

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Spectra\Data;
 
+/**
+ * The limits of a budget as set: spend in whole cents, tokens and requests
+ * per period. Null means no limit for that period.
+ */
 readonly class BudgetLimits extends DataTransferObject
 {
     public function __construct(

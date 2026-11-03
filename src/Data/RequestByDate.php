@@ -7,6 +7,9 @@ namespace Spectra\Data;
 use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * One day's request count on a requests-per-day chart, failures included.
+ */
 readonly class RequestByDate extends DataTransferObject
 {
     public function __construct(

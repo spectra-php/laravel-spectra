@@ -3,26 +3,13 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
-use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 
-it('records elevenlabs tts request to database', function () {
-    $context = Spectra::startRequest('elevenlabs', 'eleven_multilingual_v2');
-    $context->requestData = [
-        'text' => 'Hello, this is a test of text to speech.',
-        'model_id' => 'eleven_multilingual_v2',
-    ];
-
-    $record = Spectra::recordSuccess($context, ['audio' => '[binary]'], [
-        'prompt_tokens' => 0,
-        'completion_tokens' => 0,
-    ]);
-
-    expect($record)->toBeInstanceOf(SpectraRequest::class)
-        ->and($record->provider)->toBe('elevenlabs')
-        ->and($record->status_code)->toBe(200);
-});
-
+/**
+ * ElevenLabs requests through Laravel's HTTP client: text to speech per
+ * character, speech to text per minute of audio, and sound effects and music
+ * per minute of requested audio.
+ */
 it('bills text to speech per character of the request text', function () {
     Http::fake(['api.elevenlabs.io/*' => Http::response("\xFF\xFB\x90\x00fake-mp3-bytes", 200, ['Content-Type' => 'audio/mpeg'])]);
 

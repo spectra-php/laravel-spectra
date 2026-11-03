@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Spectra\Models\SpectraRequest;
 use Spectra\Spectra;
 
+/**
+ * Mistral Voxtral audio recorded by hand: transcription is billed per
+ * minute, speech per character.
+ */
 it('records mistral voxtral transcription with per-minute cost', function () {
     $manager = app(Spectra::class);
 

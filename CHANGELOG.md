@@ -2,6 +2,52 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## Unreleased
+
+#### Added
+
+- `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL` and `SPECTRA_FIRECRAWL_TIMEOUT`. The unprefixed `FIRECRAWL_*` names still work
+- `SpectraRequest::forTrace()` scope
+- The costs dashboard's top spenders include `trackable_type`, so a user and a team with the same id no longer collide
+
+#### Changed
+
+- Config: built-in providers and pricing classes stay active under a published config, so an older `config/spectra.php` no longer misses providers added since (fal.ai, Scaleway) or prices (ElevenLabs billed $0). Set an entry to `false` to turn a built-in off
+- Budgets: the `spectra.budget` middleware takes the provider and model from its arguments, then `budget.default_provider` / `budget.default_model`, and no longer reads them from the request input, which let a client name an allowed model and get past `allowed_models` / `allowed_providers`
+- Budgets: `BudgetExceeded` (`wasBlocked: true`) now fires before every hard block, not only cost limits. `limitType` is `{period}_tokens` for token limits, `{period}_requests` for request limits, and `provider` or `model` for allow-list blocks (usage and limit both 0)
+- A failed request is any status outside 200-299, or none, everywhere: `SpectraRequest::failed()` / `isFailed()` now include 3xx, like the dashboard and `UsageQueryBuilder::failed()` already did, and so does the exported `is_failed`
+- Cost and latency count successful (2xx) requests only, and request counts include failures, everywhere: `UsageQueryBuilder` (`stats()`, `byProvider()`, `byModel()`, `dailyUsage()`, `totalCostCents()`, `averageLatency()`), `HasAiUsageStats` and the dashboard's per-model, per-type, top-spender and trackables lists. A model whose requests all failed now shows with $0
+- A date-only end (`'2026-11-02'`) now includes that whole day in `between()`, the `getAiUsage*` methods and the `SpectraDailyStat` stats queries
+- `trackable_id` and tag ids are strings in the dashboard API, so ULID and UUID ids link to the right trackable
+- Pricing: dated ids that only add a date to a model id (`claude-sonnet-4-20250514`) are no longer listed as aliases. They resolve to the same price through date stripping, but `getAliases()` no longer returns them
+- Tracking: media downloads time out (30 seconds for images, 60 for videos), and a file that fails is skipped
+- Dev-only files (`bin/`, `whisky.json`, `pint.json`, the PHPStan configs) are no longer in the package download
+
+#### Fixed
+
+- Tracking errors no longer reach your code. `Spectra::track()` returns your result when recording fails, a malformed stream chunk is skipped instead of ending your `foreach`, and a provider field of the wrong type drops only that field: the request is still recorded with its cost
+- A retried persist job no longer saves a duplicate row and counts the spend twice, and a failing stats update, budget report, export or `RequestTracked` listener no longer loses the row. A failed save after the response is reported and no longer stops the app's other terminating callbacks
+- Budgets: a database or cache error during the middleware's check is reported and the request goes through, instead of a 500
+- OpenTelemetry: exports no longer all fail when `SPECTRA_OTEL_TIMEOUT` is set
+- Google: Veo videos tracked over HTTP are billed from the submitted duration and resolution (they were recorded at $0)
+- Pricing: a model from a second catalog that shares a provider slug is converted at its own catalog's currency, so a custom USD `scaleway` catalog no longer makes the built-in EUR prices count as USD. Tool-call prices too
+- Pricing: an unknown `default_tier` (a typo in `SPECTRA_OPENAI_PRICING_TIER`) logs a warning and is stored as `standard`, the tier it is billed at
+- Pricing: a scraped prices entry without a `standard` tier is skipped with a warning instead of replacing the built-in model and billing $0
+- `spectra:rebuild-stats` and the scheduled rebuild no longer count the last day twice on SQLite
+- Dashboard: "Sort by Usage" works on the requests and trackables screens (it was an SQL error on MySQL and PostgreSQL), and a bad sort direction or page size no longer gives a 500
+- Dashboard: searching requests by model works on PostgreSQL (a non-UUID search was an SQL error), and a malformed request id or image index is a 404
+- Dashboard: the trackables count is right on MariaDB, and trackable names resolve for apps that use a morph map
+- Dashboard: Sora video downloads use the configured OpenAI base URL (Azure and custom base URLs got an error)
+- A misspelled watcher class in config is reported and skipped instead of breaking the app at boot
+- Both 2.x migrations are safe to run again on a Spectra database that kept its tables after `migrate:fresh`
+
+#### Upgrading
+
+- If you removed a built-in provider or pricing class from your published config to turn it off, set it to `false` instead: built-ins now stay active underneath your config
+- Routes that relied on the `spectra.budget` middleware reading `provider` / `model` from the request input must pass them as arguments: `spectra.budget:openai,gpt-4o`
+- `BudgetExceeded` listeners that treat `currentUsage` and `limit` as cents should check `limitType` first: token, request and allow-list blocks now fire it too
+- `SpectraRequest::failed()` now includes 3xx responses, and `UsageQueryBuilder` / `HasAiUsageStats` costs and latencies leave out failed requests, so `->failed()->totalCostCents()` is 0. Recheck reports built on the old numbers
+
 ## v2.6.0 - 2026-11-01
 
 #### Added

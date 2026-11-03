@@ -7,6 +7,10 @@ namespace Spectra\Http\Controllers\Api;
 use Illuminate\Http\Response;
 use Spectra\Actions\Media\ResolveImage;
 
+/**
+ * GET /api/requests/{id}/images/{index}: one generated image of a request,
+ * cached privately by the browser.
+ */
 class ServeImageController extends BaseApiController
 {
     public function __invoke(string $id, int $index, ResolveImage $action): Response

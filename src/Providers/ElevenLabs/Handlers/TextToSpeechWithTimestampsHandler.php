@@ -58,7 +58,7 @@ class TextToSpeechWithTimestampsHandler extends TextToSpeechHandler
             }
         }
 
-        if ($audio === '') {
+        if (blank($audio)) {
             return [];
         }
 

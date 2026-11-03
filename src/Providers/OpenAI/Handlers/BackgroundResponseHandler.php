@@ -64,7 +64,7 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
      */
     public function extractMetrics(array $requestData, array $responseData): Metrics
     {
-        $images = new ResponsesImageHandler;
+        $images = app(ResponsesImageHandler::class);
 
         if ($images->matchesResponse($responseData)) {
             return $images->extractMetrics($requestData, $responseData);

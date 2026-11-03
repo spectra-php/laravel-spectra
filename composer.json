@@ -84,7 +84,8 @@
         }
     },
     "suggest": {
-        "james-heinrich/getid3": "Required for extracting audio duration from TTS binary responses (minute-based cost calculation)"
+        "james-heinrich/getid3": "Required for extracting audio duration from TTS binary responses (minute-based cost calculation)",
+        "openai-php/laravel": "Lets Spectra track calls made through the OpenAI facade and client (OpenAiWatcher)"
     },
     "extra": {
         "laravel": {

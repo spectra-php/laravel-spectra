@@ -3,11 +3,20 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Factories\Sequence;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Spectra\Actions\Trackables\GetFilteredTrackables;
+use Spectra\Http\Controllers\Api\ShowTrackableController;
 use Spectra\Http\Controllers\Api\TrackablesController;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\DateRange;
+use Workbench\App\Models\User;
 
+/**
+ * The trackables list endpoint: filters, sorting, input limits, success-only
+ * cost and latency, and how trackable ids, types and names are resolved.
+ */
 it('applies request-style filters in trackables endpoint', function () {
     [$included] = SpectraRequest::factory()
         ->count(3)
@@ -37,7 +46,7 @@ it('applies request-style filters in trackables endpoint', function () {
     expect($json['total'])->toBe(1)
         ->and($json['data'])->toHaveCount(1)
         ->and($json['data'][0]['trackable_type'])->toBe('App\\Models\\User')
-        ->and($json['data'][0]['trackable_id'])->toBe(1)
+        ->and($json['data'][0]['trackable_id'])->toBe('1')
         ->and($json['data'][0]['requests'])->toBe(1)
         ->and($json)->toHaveKey('available_tags')
         ->and($json)->toHaveKey('available_finish_reasons')
@@ -45,31 +54,104 @@ it('applies request-style filters in trackables endpoint', function () {
 });
 
 it('filters trackables by custom date range', function () {
-    Carbon::setTestNow(Carbon::parse('2026-02-12 12:00:00'));
+    $this->travelTo('2026-02-12 12:00:00');
 
-    try {
-        SpectraRequest::factory()
-            ->count(2)
-            ->state(new Sequence(
-                ['model' => 'gpt-4o', 'model_type' => 'text', 'prompt_tokens' => 100, 'completion_tokens' => 20, 'total_cost_in_cents' => 70, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 7, 'created_at' => Carbon::parse('2026-02-10 08:00:00')],
-                ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'prompt_tokens' => 50, 'completion_tokens' => 10, 'total_cost_in_cents' => 40, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 8, 'created_at' => Carbon::parse('2026-02-12 08:00:00')],
-            ))
-            ->create();
+    SpectraRequest::factory()
+        ->count(2)
+        ->state(new Sequence(
+            ['model' => 'gpt-4o', 'model_type' => 'text', 'prompt_tokens' => 100, 'completion_tokens' => 20, 'total_cost_in_cents' => 70, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 7, 'created_at' => Carbon::parse('2026-02-10 08:00:00')],
+            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'prompt_tokens' => 50, 'completion_tokens' => 10, 'total_cost_in_cents' => 40, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 8, 'created_at' => Carbon::parse('2026-02-12 08:00:00')],
+        ))
+        ->create();
 
-        $controller = app(TrackablesController::class);
-        $response = app()->call([$controller, '__invoke'], ['request' => new Request([
-            'period' => 'custom',
-            'start_date' => '2026-02-10',
-            'end_date' => '2026-02-10',
-        ])]);
+    $controller = app(TrackablesController::class);
+    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+        'period' => 'custom',
+        'start_date' => '2026-02-10',
+        'end_date' => '2026-02-10',
+    ])]);
 
-        $json = $response->toArray();
+    $json = $response->toArray();
 
-        expect($json['total'])->toBe(1)
-            ->and($json['data'])->toHaveCount(1)
-            ->and($json['data'][0]['trackable_id'])->toBe(7)
-            ->and($json['summary']['total_requests'])->toBe(1);
-    } finally {
-        Carbon::setTestNow();
-    }
+    expect($json['total'])->toBe(1)
+        ->and($json['data'])->toHaveCount(1)
+        ->and($json['data'][0]['trackable_id'])->toBe('7')
+        ->and($json['summary']['total_requests'])->toBe(1);
+});
+
+function callTrackables(array $query): array
+{
+    return app()->call([app(TrackablesController::class), '__invoke'], ['request' => new Request(['period' => 'all', ...$query])])->toArray();
+}
+
+it('sorts trackables by token usage', function () {
+    SpectraRequest::factory()->create(['prompt_tokens' => 10, 'completion_tokens' => 0, 'total_cost_in_cents' => 500, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 'few-tokens']);
+    SpectraRequest::factory()->create(['prompt_tokens' => 900, 'completion_tokens' => 0, 'total_cost_in_cents' => 1, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 'many-tokens']);
+
+    $json = callTrackables(['sort_by' => 'tokens', 'sort_dir' => 'desc']);
+
+    expect(collect($json['data'])->pluck('trackable_id')->all())->toBe(['many-tokens', 'few-tokens']);
+});
+
+it('falls back to a descending sort and a capped page size for bad input', function () {
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 1, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 'cheap']);
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 9, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 'pricey']);
+
+    $json = callTrackables(['sort_by' => 'created_at; drop table', 'sort_dir' => 'sideways', 'per_page' => 100000]);
+    $paginated = app(GetFilteredTrackables::class)(new Request(['per_page' => 100000]), new DateRange(null, null));
+
+    expect(collect($json['data'])->pluck('trackable_id')->all())->toBe(['pricey', 'cheap'])
+        ->and($paginated->perPage())->toBe(100);
+});
+
+it('counts failed requests but leaves their cost and latency out of each trackable row', function () {
+    SpectraRequest::factory()->create(['status_code' => 200, 'total_cost_in_cents' => 100, 'latency_ms' => 100, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['status_code' => 500, 'total_cost_in_cents' => 900, 'latency_ms' => 9000, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+
+    $row = callTrackables([])['data'][0];
+
+    expect($row['requests'])->toBe(2)
+        ->and($row['cost'])->toBe(100.0)
+        ->and($row['avg_latency'])->toBe(100.0);
+});
+
+it('keeps ULID trackable ids intact', function () {
+    SpectraRequest::factory()->create(['trackable_type' => 'App\\Models\\Team', 'trackable_id' => '01JBXQ7Z9V8K3M4N5P6Q7R8S9T']);
+
+    expect(callTrackables([])['data'][0]['trackable_id'])->toBe('01JBXQ7Z9V8K3M4N5P6Q7R8S9T');
+});
+
+it('counts trackables by type and id together', function () {
+    SpectraRequest::factory()->create(['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['trackable_type' => 'App\\Models\\Team', 'trackable_id' => '1']);
+
+    expect(callTrackables([])['summary']['total_trackables'])->toBe(2);
+});
+
+it('resolves trackable names through the morph map', function () {
+    Relation::morphMap(['member' => User::class]);
+    $user = User::query()->create(['name' => 'Ada', 'email' => 'ada@example.com', 'password' => 'secret']);
+    SpectraRequest::factory()->create(['trackable_type' => 'member', 'trackable_id' => (string) $user->getKey()]);
+
+    $json = callTrackables([]);
+    $details = app()->call([app(ShowTrackableController::class), '__invoke'], [
+        'request' => new Request(['period' => 'all', 'type' => 'member']),
+        'id' => (string) $user->getKey(),
+    ])->toArray();
+
+    expect($json['data'][0]['trackable_name'])->toBe('Ada')
+        ->and($details['trackable']['name'])->toBe('Ada');
+})->after(fn () => Relation::morphMap([], false));
+
+it('never instantiates a trackable type that is not an Eloquent model', function () {
+    SpectraRequest::factory()->create(['trackable_type' => Request::class, 'trackable_id' => '1']);
+
+    $details = app()->call([app(ShowTrackableController::class), '__invoke'], [
+        'request' => new Request(['period' => 'all', 'type' => Request::class]),
+        'id' => '1',
+    ])->toArray();
+
+    expect(callTrackables([])['data'][0]['trackable_name'])->toBeNull()
+        ->and($details['trackable'])->not->toHaveKey('name');
 });

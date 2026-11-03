@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * A Cohere chat response recorded through Spectra::track() with its model,
+ * tokens and cost.
+ */
 it('records cohere chat response to database', function () {
     $response = $this->loadMockResponse('cohere/chat.json');
 

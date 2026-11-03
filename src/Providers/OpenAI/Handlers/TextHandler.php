@@ -84,9 +84,9 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
             $contents = [];
 
             foreach ($response['choices'] as $choice) {
-                $content = $choice['message']['content'] ?? $choice['text'] ?? null;
+                $content = data_get($choice, 'message.content') ?? data_get($choice, 'text');
 
-                if ($content !== null && $content !== '') {
+                if (filled($content)) {
                     $contents[] = $content;
                 }
             }
@@ -101,11 +101,11 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
             $texts = [];
 
             foreach ($response['output'] as $outputItem) {
-                if (isset($outputItem['content']) && is_array($outputItem['content'])) {
-                    foreach ($outputItem['content'] as $contentItem) {
-                        if (isset($contentItem['text']) && $contentItem['text'] !== '') {
-                            $texts[] = $contentItem['text'];
-                        }
+                $contentItems = data_get($outputItem, 'content');
+
+                foreach (is_array($contentItems) ? $contentItems : [] as $contentItem) {
+                    if (filled($contentItem['text'] ?? null)) {
+                        $texts[] = $contentItem['text'];
                     }
                 }
             }
@@ -127,11 +127,7 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
      */
     public function extractFinishReason(array $response): ?string
     {
-        if (isset($response['choices'][0]['finish_reason'])) {
-            return $response['choices'][0]['finish_reason'];
-        }
-
-        return self::responseFinishReason($response);
+        return data_get($response, 'choices.0.finish_reason') ?? self::responseFinishReason($response);
     }
 
     /**
@@ -142,7 +138,7 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
         $status = $response['status'] ?? null;
         $reason = $response['incomplete_details']['reason'] ?? null;
 
-        if ($status === 'incomplete' && is_string($reason) && $reason !== '') {
+        if ($status === 'incomplete' && filled($reason)) {
             return $reason;
         }
 

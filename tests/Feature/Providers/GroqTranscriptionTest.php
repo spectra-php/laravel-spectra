@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Spectra\Models\SpectraRequest;
 use Spectra\Spectra;
 
+/**
+ * A Groq Whisper transcription recorded by hand is billed per minute of
+ * audio.
+ */
 it('records groq whisper transcription with per-minute cost', function () {
     $manager = app(Spectra::class);
 

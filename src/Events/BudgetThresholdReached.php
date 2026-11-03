@@ -9,6 +9,12 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Spectra\Models\SpectraBudget;
 
+/**
+ * Spend reached a budget's warning or critical percentage of a cost limit.
+ *
+ * Fires once per budget, limit, threshold and period, so a listener can
+ * send an alert without repeating it on every request.
+ */
 class BudgetThresholdReached
 {
     use Dispatchable, SerializesModels;

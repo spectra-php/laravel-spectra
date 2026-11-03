@@ -11,6 +11,9 @@ use Spectra\Models\SpectraBudget;
 use Spectra\Models\SpectraRequest;
 
 /**
+ * The Eloquent relations from a trackable model to its Spectra rows: the
+ * requests it made and its (active) budget, keyed by the model's morph class.
+ *
  * @phpstan-require-extends Model
  *
  * @phpstan-ignore trait.unused

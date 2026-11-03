@@ -218,9 +218,9 @@ Configure cost calculation and pricing tiers.
     'scraped_prices_path' => env('SPECTRA_SCRAPED_PRICES_PATH', resource_path('spectra/scraped-prices.json')),
 
     'firecrawl' => [
-        'api_key'   => env('FIRECRAWL_API_KEY'),
-        'url'       => env('FIRECRAWL_API_URL', 'https://api.firecrawl.dev/v2'),
-        'timeout'   => (int) env('FIRECRAWL_TIMEOUT', 180),
+        'api_key'   => env('SPECTRA_FIRECRAWL_API_KEY', env('FIRECRAWL_API_KEY')),
+        'url'       => env('SPECTRA_FIRECRAWL_API_URL', env('FIRECRAWL_API_URL', 'https://api.firecrawl.dev/v2')),
+        'timeout'   => (int) env('SPECTRA_FIRECRAWL_TIMEOUT', env('FIRECRAWL_TIMEOUT', 180)),
         'providers' => array_values(array_filter(array_map('trim', explode(',', (string) env('SPECTRA_SCRAPE_PROVIDERS', ''))))),
     ],
 ],
@@ -233,10 +233,10 @@ Configure cost calculation and pricing tiers.
 | `exchange_rates` | `array` | `[]` | How many units of `currency` one unit of another currency is worth. For example, `['EUR' => 1.17]` when you report in USD, or `['USD' => 0.86]` when you report in EUR. A missing rate counts as 1:1, and Spectra logs a warning once per process. Spectra does not fetch rates, so update them from time to time. |
 | `currency_symbol` | `string` | `$` | Symbol shown before cost values in the dashboard. Display only. |
 | `provider_settings.*.default_tier` | `string` | `standard` | The tier used when you did not set one (with `Spectra::withPricingTier()` or the `pricing_tier` option), and neither the request nor the response says which tier was used. Tiers: `standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, `hd`. Any provider slug may be listed. See [Which Tier Is Used](/costs#tier-order). |
-| `pricing` | `array` | See above | Map provider slugs to their `ProviderPricing` class. See [Pricing](/pricing) for customization. |
+| `pricing` | `array` | See above | Map provider slugs to their `ProviderPricing` class. Built-in classes you leave out of your published config stay active; set an entry to `false` to turn one off (`'groq' => false`). See [Pricing](/pricing) for customization. |
 | `use_scraped_prices` | `bool` | `false` | Bill with the models in `scraped_prices_path`: each replaces the built-in model with the same id. When it's off, the file is ignored. A config published before these keys existed doesn't need them: Spectra adds them with their defaults. See [Scraped Prices](/pricing#scraped-prices). |
 | `scraped_prices_path` | `string` | `resources/spectra/scraped-prices.json` | The scraped prices file (JSON), written by `spectra:pricing-scrape`. |
-| `firecrawl.*` | `array` | See above | API key, base URL, per-page timeout (seconds) and the default providers for [`spectra:pricing-scrape`](/pricing#scraping-prices). Without `providers`, it scrapes the providers your app has tracked requests for. Tracking never calls Firecrawl. |
+| `firecrawl.*` | `array` | See above | API key, base URL, per-page timeout (seconds) and the default providers for [`spectra:pricing-scrape`](/pricing#scraping-prices). Without `providers`, it scrapes the providers your app has tracked requests for. Tracking never calls Firecrawl. The unprefixed `FIRECRAWL_API_KEY`, `FIRECRAWL_API_URL` and `FIRECRAWL_TIMEOUT` still work when the `SPECTRA_` names are not set. |
 
 <a name="budget"></a>
 ## Budget
@@ -254,8 +254,8 @@ Configure budget enforcement defaults.
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `enabled` | `bool` | `true` | Enable budget checking and enforcement. |
-| `default_provider` | `string` | `openai` | Fallback provider when the budget middleware cannot determine the provider from route parameters. |
-| `default_model` | `string` | `gpt-5.2` | Fallback model for cost estimation in budget checks. |
+| `default_provider` | `string` | `openai` | The provider the `spectra.budget` middleware checks when the route names none (`spectra.budget:anthropic`). Request input is never used. It matters only for budgets with allowed providers. |
+| `default_model` | `string` | `gpt-5.2` | The model the `spectra.budget` middleware checks when the route names none (`spectra.budget:openai,gpt-4o`). Request input is never used. It matters only for budgets with allowed models. |
 
 <a name="watcher"></a>
 ## Watcher
@@ -276,7 +276,7 @@ Configure automatic HTTP request interception.
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `enabled` | `bool` | `true` | Enable automatic request interception by watchers. |
-| `watchers` | `array` | See above | List of watcher classes to register. Remove a class to disable that specific watcher. |
+| `watchers` | `array` | See above | List of watcher classes to register. Remove a class to disable that specific watcher. A class that doesn't exist is reported to your exception handler and skipped. |
 
 | Watcher | Intercepts | Mechanism |
 | --- | --- | --- |
@@ -293,13 +293,18 @@ For the full list of built-in providers, see [Models](/models#supported-provider
 
 ```php
 'providers' => [
-    // Built-in providers are registered by default.
+    // Built-in providers stay active even when they are not listed here.
     // Add or override entries as needed.
     'acme' => ['class' => App\Spectra\AcmeProvider::class, 'name' => 'Acme AI'],
+
+    // Stop tracking a built-in provider.
+    'ollama' => false,
 ],
 ```
 
 Add custom providers by extending `Provider` and adding an entry here. See [Custom Providers](/custom-providers) for a complete guide.
+
+Your published `providers` list and `costs.pricing` list are merged over the built-in ones: your entries win, and built-in entries you don't list stay active, so providers added in a later Spectra release work without republishing the config. Set an entry to `false` to turn a built-in off.
 
 <a name="endpoint-urls"></a>
 ## Endpoint URLs
@@ -354,16 +359,30 @@ Configure external integrations. Spectra currently supports exporting traces to 
 
 ```php
 'integrations' => [
+    'request_transformer' => \Spectra\Support\RequestTransformer::class,
+
     'opentelemetry' => [
         'enabled'             => env('SPECTRA_OTEL_ENABLED', false),
         'endpoint'            => env('SPECTRA_OTEL_ENDPOINT', 'http://localhost:4318/v1/traces'),
         'headers'             => [],
         'service_version'     => env('SPECTRA_OTEL_SERVICE_VERSION', '1.0.0'),
         'resource_attributes' => [],
-        'timeout'             => env('SPECTRA_OTEL_TIMEOUT', 10),
+        'timeout'             => (int) env('SPECTRA_OTEL_TIMEOUT', 10),
+        'span_builder'        => null,
     ],
 ],
 ```
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `request_transformer` | `string` | `RequestTransformer::class` | The class that turns a tracked request into the array the `RequestTracked` event and the exporters receive. Extend `Spectra\Support\RequestTransformer` to add or remove fields. |
+| `opentelemetry.enabled` | `bool` | `false` | Export every tracked request as an OpenTelemetry span. |
+| `opentelemetry.endpoint` | `string` | `http://localhost:4318/v1/traces` | The OTLP/HTTP traces endpoint of your collector or vendor. |
+| `opentelemetry.headers` | `array` | `[]` | Extra HTTP headers sent with each export, such as an API key. |
+| `opentelemetry.service_version` | `string` | `1.0.0` | The `service.version` resource attribute. `service.name` is your `app.name`. |
+| `opentelemetry.resource_attributes` | `array` | `[]` | Extra resource attributes added to every trace, such as `deployment.environment`. |
+| `opentelemetry.timeout` | `int` | `10` | Seconds to wait for the collector. A failed export is logged and never affects your app. |
+| `opentelemetry.span_builder` | `string\|null` | `null` | A class implementing `Spectra\Contracts\SpanBuilder` that builds the spans. `null` uses the built-in builder, which follows the OpenTelemetry GenAI conventions. See [OpenTelemetry](/opentelemetry). |
 
 <a name="environment-variables"></a>
 ## Environment Variables
@@ -411,9 +430,9 @@ SPECTRA_OPENAI_PRICING_TIER=standard
 SPECTRA_ANTHROPIC_PRICING_TIER=standard
 SPECTRA_USE_SCRAPED_PRICES=false
 SPECTRA_SCRAPED_PRICES_PATH=
-FIRECRAWL_API_KEY=
-FIRECRAWL_API_URL=https://api.firecrawl.dev/v2
-FIRECRAWL_TIMEOUT=180
+SPECTRA_FIRECRAWL_API_KEY=
+SPECTRA_FIRECRAWL_API_URL=https://api.firecrawl.dev/v2
+SPECTRA_FIRECRAWL_TIMEOUT=180
 SPECTRA_SCRAPE_PROVIDERS=
 
 # Budget

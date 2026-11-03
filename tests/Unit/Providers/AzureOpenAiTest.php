@@ -6,6 +6,10 @@ use Spectra\Providers\OpenAI\OpenAI;
 use Spectra\Support\ApiKeyResolver;
 use Spectra\Support\ProviderRegistry;
 
+/**
+ * Azure OpenAI hosts are detected as OpenAI and their paths normalized to
+ * the OpenAI /v1 endpoints, without changing the OpenAI base URL.
+ */
 it('normalizes azure paths to the openai v1 endpoints', function (string $path, string $expected) {
     expect((new OpenAI)->normalizeEndpoint($path))->toBe($expected);
 })->with([

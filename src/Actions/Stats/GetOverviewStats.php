@@ -8,6 +8,10 @@ use Spectra\Data\Responses\OverviewStatsResponse;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * The overview's headline totals: counts and usage over every request, cost
+ * and latency over successful ones.
+ */
 class GetOverviewStats
 {
     public function __invoke(DateRange $dateRange, string $layout): OverviewStatsResponse

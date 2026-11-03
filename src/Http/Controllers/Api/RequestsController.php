@@ -11,6 +11,10 @@ use Spectra\Actions\Requests\GetFilteredRequests;
 use Spectra\Data\Responses\RequestsResponse;
 use Spectra\Support\DateRange;
 
+/**
+ * GET /api/requests: the requests screen, one filtered and sorted page of
+ * requests with the filter options.
+ */
 class RequestsController extends BaseApiController
 {
     public function __invoke(

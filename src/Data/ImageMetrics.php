@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Spectra\Data;
 
+/**
+ * Images a request generated, plus the output megapixels for models billed
+ * per megapixel.
+ */
 readonly class ImageMetrics extends DataTransferObject
 {
     public function __construct(

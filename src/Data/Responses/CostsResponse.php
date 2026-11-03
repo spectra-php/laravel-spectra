@@ -7,6 +7,10 @@ namespace Spectra\Data\Responses;
 use Illuminate\Support\Collection;
 use Spectra\Data\DataTransferObject;
 
+/**
+ * The costs screen: the period total, the summary cards, and cost by
+ * provider, model, model type, day and trackable.
+ */
 readonly class CostsResponse extends DataTransferObject
 {
     /**

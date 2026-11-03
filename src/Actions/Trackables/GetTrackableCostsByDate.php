@@ -9,6 +9,9 @@ use Spectra\Data\CostByDate;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * One trackable's cost per day, over successful requests.
+ */
 class GetTrackableCostsByDate
 {
     /**

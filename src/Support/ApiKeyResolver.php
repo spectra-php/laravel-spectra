@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace Spectra\Support;
 
+/**
+ * Finds a provider's API key and base URL in the config keys apps already use
+ * (Spectra's own, openai-php, `services.*`, Prism, laravel-ai), so Spectra
+ * needs no extra configuration for calls it makes itself and recognises
+ * custom hosts such as proxies or Azure OpenAI.
+ */
 class ApiKeyResolver
 {
     /** @var array<string, array<int, string>> */
@@ -116,7 +122,7 @@ class ApiKeyResolver
 
     protected function hostFromUrl(mixed $url): ?string
     {
-        if (! is_string($url) || $url === '') {
+        if (blank($url)) {
             return null;
         }
 

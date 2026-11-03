@@ -13,6 +13,10 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 
+/**
+ * Mistral (Voxtral) transcription, billed per minute of audio from
+ * `usage.prompt_audio_seconds`, or the response's `duration` without it.
+ */
 class TranscriptionHandler implements ExtractsModelFromResponse, Handler
 {
     use ExtractsModelField;

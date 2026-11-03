@@ -8,8 +8,17 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * The period a dashboard screen asks for, read from the request's `period`,
+ * `start_date` and `end_date`, and applied to a query's `created_at`.
+ *
+ * Also normalises the date bounds users pass to the public usage APIs, so a
+ * date-only end ("2026-01-31") covers that whole day instead of stopping at
+ * its first second.
+ */
 readonly class DateRange
 {
     public function __construct(
@@ -87,5 +96,21 @@ readonly class DateRange
         }
 
         $query->where($column, '>=', $this->start);
+    }
+
+    /**
+     * The end bound as a moment in time: a date-only string ("2026-01-31")
+     * means the end of that day, since a plain parse would stop at midnight
+     * and drop the whole last day.
+     */
+    public static function inclusiveEnd(CarbonInterface|string $end): CarbonInterface
+    {
+        if ($end instanceof CarbonInterface) {
+            return $end;
+        }
+
+        $parsed = Carbon::parse($end);
+
+        return Str::isMatch('/^\d{4}-\d{2}-\d{2}$/', Str::trim($end)) ? $parsed->endOfDay() : $parsed;
     }
 }

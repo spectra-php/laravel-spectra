@@ -194,7 +194,7 @@ class XAiPricing extends ProviderPricing
         // xAI retires grok-imagine-image-quality on 2026-11-02.
         $this->model('grok-imagine-image-quality', fn ($m) => $m
             ->displayName('Grok Imagine Image Quality')
-            ->aliases('grok-imagine-image-quality-latest', 'grok-imagine-image-quality-20260403')
+            ->aliases('grok-imagine-image-quality-latest')
             ->type('image')
             ->pricingUnit('image')
             ->canGenerateImages()
@@ -214,7 +214,6 @@ class XAiPricing extends ProviderPricing
 
         $this->model('grok-imagine-image', fn ($m) => $m
             ->displayName('Grok Imagine Image')
-            ->aliases('grok-imagine-image-2026-03-02')
             ->type('image')
             ->pricingUnit('image')
             ->canGenerateImages()
@@ -233,7 +232,7 @@ class XAiPricing extends ProviderPricing
         // input images / videos are covered by the reported response cost.
         $this->model('grok-imagine-video-1.5', fn ($m) => $m
             ->displayName('Grok Imagine Video 1.5')
-            ->aliases('grok-imagine-video-1.5-preview', 'grok-imagine-video-1.5-2026-05-30')
+            ->aliases('grok-imagine-video-1.5-preview')
             ->type('video')
             ->pricingUnit('second')
             ->canGenerateVideo()

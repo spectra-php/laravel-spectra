@@ -69,7 +69,7 @@ class PricingDriftCommand extends Command
     {
         $value = $this->option($name);
 
-        return is_string($value) && $value !== '' ? $value : null;
+        return filled($value) ? $value : null;
     }
 
     /**

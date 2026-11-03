@@ -65,7 +65,7 @@ abstract class GeneratedAudioHandler implements ExtractsModelFromRequest, Handle
     {
         $model = $requestData['model_id'] ?? null;
 
-        return is_string($model) && $model !== '' ? $model : $this->defaultModel();
+        return filled($model) ? $model : $this->defaultModel();
     }
 
     /**
@@ -74,7 +74,7 @@ abstract class GeneratedAudioHandler implements ExtractsModelFromRequest, Handle
      */
     public function storeMedia(string $requestId, array $responseData, ?string $rawBody = null): array
     {
-        if ($rawBody === null || $rawBody === '') {
+        if (blank($rawBody)) {
             return [];
         }
 

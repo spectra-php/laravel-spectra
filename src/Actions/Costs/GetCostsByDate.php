@@ -9,6 +9,9 @@ use Spectra\Data\CostByDate;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * Cost per day for the costs screen's chart, over successful requests.
+ */
 class GetCostsByDate
 {
     /**

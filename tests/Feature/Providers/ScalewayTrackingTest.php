@@ -7,6 +7,11 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Spectra as SpectraManager;
 
+/**
+ * Scaleway requests through the HTTP client: chat, rerank and streamed calls
+ * are recorded, and euro prices are converted with the configured exchange
+ * rate.
+ */
 it('records scaleway chat response to database', function () {
     $response = $this->loadMockResponse('scaleway/chat.json');
 

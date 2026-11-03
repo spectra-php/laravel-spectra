@@ -4,6 +4,16 @@ declare(strict_types=1);
 
 namespace Spectra\Enums;
 
+use Illuminate\Support\Str;
+
+/**
+ * What kind of output a tracked model produces, stored in `model_type`.
+ *
+ * Handlers set it from the endpoint they matched; otherwise it comes from the
+ * model's catalog `type` (fromPricingType()). The catalog has a single
+ * `audio` type for both directions, so audio models are split into TTS and
+ * STT by their capabilities and, failing that, by their id (fromAudioSlug()).
+ */
 enum ModelType: string
 {
     case Text = 'text';
@@ -25,31 +35,34 @@ enum ModelType: string
         };
     }
 
+    /**
+     * The model type for a catalog `type`. Null for `audio`, which the caller
+     * splits into TTS or STT, and for any other value: `ModelDefinition::type()`
+     * takes free text, so a custom catalog may use a type Spectra doesn't know.
+     */
     public static function fromPricingType(?string $type): ?self
     {
         return match ($type) {
             'text' => self::Text,
             'embedding' => self::Embedding,
             'image' => self::Image,
-            'audio' => null, // Audio needs model name inspection to distinguish TTS vs STT
             'video' => self::Video,
+            'audio' => null,
             default => null,
         };
     }
 
+    /**
+     * Guess TTS or STT from an audio model id, for models whose catalog
+     * capabilities don't tell. An id that names neither counts as STT, so
+     * every audio model still gets a type.
+     */
     public static function fromAudioSlug(string $slug): self
     {
-        $lower = strtolower($slug);
-
-        if (str_contains($lower, 'tts') || str_contains($lower, 'speech')) {
+        if (Str::contains($slug, ['tts', 'speech'], ignoreCase: true)) {
             return self::Tts;
         }
 
-        if (str_contains($lower, 'whisper') || str_contains($lower, 'transcri')) {
-            return self::Stt;
-        }
-
-        // Default audio to STT
         return self::Stt;
     }
 }

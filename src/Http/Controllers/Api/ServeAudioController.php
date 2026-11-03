@@ -7,6 +7,10 @@ namespace Spectra\Http\Controllers\Api;
 use Spectra\Actions\Media\ResolveAudio;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * GET /api/requests/{id}/audio/{download?}: a request's text-to-speech audio,
+ * played inline or downloaded.
+ */
 class ServeAudioController extends BaseApiController
 {
     public function __invoke(string $id, ?string $action, ResolveAudio $resolveAudio): Response

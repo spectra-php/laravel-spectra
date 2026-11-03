@@ -130,7 +130,7 @@ final class PageText
         for ($i = $index + 1; $i < count($this->lines) && $this->isTableRow($this->lines[$i]); $i++) {
             $firstCell = trim(explode('|', trim($this->lines[$i], '| '))[0]);
 
-            if ($firstCell === '' || preg_match('/^[a-z ]+$/', $firstCell) !== 1) {
+            if (blank($firstCell) || preg_match('/^[a-z ]+$/', $firstCell) !== 1) {
                 return null;
             }
 

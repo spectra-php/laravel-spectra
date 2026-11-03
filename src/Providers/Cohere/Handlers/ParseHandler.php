@@ -57,7 +57,7 @@ class ParseHandler implements Handler, MatchesResponseShape
         foreach ($response['pages'] as $page) {
             $content = is_array($page) ? ($page['markdown']['content'] ?? null) : null;
 
-            if (is_string($content) && $content !== '') {
+            if (filled($content)) {
                 $parts[] = $content;
             }
         }

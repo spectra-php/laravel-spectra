@@ -10,8 +10,14 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Carbon;
 
 /**
+ * One day's pre-aggregated usage for a provider, model and model type,
+ * globally (no trackable) or for one trackable. StatsAggregator keeps these
+ * rows in step with spectra_requests so long-range reports don't scan the
+ * raw requests table.
+ *
  * @property string $id
  * @property CarbonInterface $date
  * @property string $provider
@@ -132,7 +138,11 @@ class SpectraDailyStat extends Model
      */
     public function scopeDateRange(Builder $query, CarbonInterface|string $start, CarbonInterface|string $end): Builder
     {
-        return $query->whereBetween('date', [$start, $end]);
+        // Compare calendar dates: SQLite stores the date cast as
+        // "Y-m-d 00:00:00", so a "Y-m-d" end bound would drop the end day.
+        return $query
+            ->whereDate('date', '>=', Carbon::parse($start)->format('Y-m-d'))
+            ->whereDate('date', '<=', Carbon::parse($end)->format('Y-m-d'));
     }
 
     /**
@@ -281,7 +291,7 @@ class SpectraDailyStat extends Model
 
         if ($stat === null) {
             try {
-                $stat = static::create([
+                $stat = static::query()->create([
                     'date' => $date,
                     'provider' => $provider,
                     'model' => $model,

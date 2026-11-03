@@ -20,6 +20,16 @@ use Spectra\Support\AudioDurationExtractor;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\ProviderRegistry;
 
+/**
+ * Turns a provider's response body into the fields of a tracked request.
+ *
+ * Every tracking path (watchers, Guzzle middleware, `Spectra::track()`,
+ * streams with a final response) hands the decoded body here, so handler
+ * resolution, metrics, model, tier, media and tool-call detection happen in
+ * one place. Provider JSON changes without notice, so each step is guarded
+ * on its own: a field it cannot read is reported and dropped, and the
+ * request is still recorded with its cost.
+ */
 class ResponseProcessor
 {
     /**
@@ -53,63 +63,74 @@ class ResponseProcessor
         $providerInstance = app(ProviderRegistry::class)->provider($context->provider);
         $endpoint = $context->endpoint ?? '';
 
-        $handler = $providerInstance?->resolveHandler($endpoint, $body);
+        // Every step below reads provider JSON that can change shape without
+        // notice. Each one runs under its own rescue(), so a field of the wrong
+        // type (a TypeError when it reaches a typed property or return) is
+        // reported and left empty while the request is still recorded.
+        $handler = rescue(fn () => $providerInstance?->resolveHandler($endpoint, $body));
 
-        if ($handler instanceof SkipsResponse && $handler->shouldSkipResponse($body)) {
+        if ($handler instanceof SkipsResponse && rescue(fn () => $handler->shouldSkipResponse($body), false)) {
             return null;
         }
 
-        $responseModel = $providerInstance?->extractModel($body, $endpoint) ?? data_get($body, 'model');
-        if ($responseModel && $responseModel !== $context->model) {
-            if ($context->model === 'unknown') {
-                $context->model = $responseModel;
-            } else {
-                $context->snapshot = $responseModel;
+        rescue(function () use ($context, $providerInstance, $body, $endpoint) {
+            $responseModel = $providerInstance?->extractModel($body, $endpoint) ?? data_get($body, 'model');
+
+            if (filled($responseModel) && $responseModel !== $context->model) {
+                if ($context->model === 'unknown') {
+                    $context->model = $responseModel;
+                } else {
+                    $context->snapshot = $responseModel;
+                }
             }
-        }
+        });
 
         // Fallback: extract model from request data when response didn't contain it
         // (e.g. binary responses like TTS, or Whisper where model is only in the request)
         if ($context->model === 'unknown' && ! empty($context->requestData)) {
-            $requestModel = $providerInstance?->extractModelFromRequest($context->requestData, $endpoint)
-                ?? $context->requestData['model']
-                ?? null;
+            rescue(function () use ($context, $providerInstance, $endpoint) {
+                $requestModel = $providerInstance?->extractModelFromRequest($context->requestData ?? [], $endpoint)
+                    ?? $context->requestData['model']
+                    ?? null;
 
-            if ($requestModel !== null) {
-                $context->model = $requestModel;
-            }
+                if (filled($requestModel)) {
+                    $context->model = $requestModel;
+                }
+            });
         }
 
         // The tier the provider says it served wins over what the request
         // asked for (a priority request can be downgraded, a project can
         // default to flex); an explicitly set tier wins over both.
         if ($context->pricingTier === null) {
-            $responseTier = $providerInstance instanceof ExtractsPricingTierFromResponse
-                ? $providerInstance->extractPricingTierFromResponse($body)
-                : null;
+            rescue(function () use ($context, $providerInstance, $body) {
+                $responseTier = $providerInstance instanceof ExtractsPricingTierFromResponse
+                    ? $providerInstance->extractPricingTierFromResponse($body)
+                    : null;
 
-            $tier = $responseTier ?? $context->requestedPricingTier;
+                $tier = $responseTier ?? $context->requestedPricingTier;
 
-            if ($tier !== null) {
-                $context->withPricingTier($tier);
-            }
+                if ($tier !== null) {
+                    $context->withPricingTier($tier);
+                }
+            });
         }
 
         if ($providerInstance instanceof ExtractsCostMultiplier) {
-            $context->costMultiplier = $providerInstance->extractCostMultiplier($body, $context->requestData ?? []) ?? $context->costMultiplier;
+            $context->costMultiplier = rescue(fn () => $providerInstance->extractCostMultiplier($body, $context->requestData ?? [])) ?? $context->costMultiplier;
         }
 
         if ($providerInstance instanceof ExtractsCostMultiplierForModel) {
-            $context->costMultiplier = $providerInstance->extractCostMultiplierForModel($context->model, $body, $context->requestData ?? []) ?? $context->costMultiplier;
+            $context->costMultiplier = rescue(fn () => $providerInstance->extractCostMultiplierForModel($context->model, $body, $context->requestData ?? [])) ?? $context->costMultiplier;
         }
 
-        $metrics = $providerInstance?->extractMetrics($body, $endpoint, $context->requestData ?? []);
+        $metrics = rescue(fn () => $providerInstance?->extractMetrics($body, $endpoint, $context->requestData ?? []));
         $usage = $metrics->tokens ?? $this->extractUsageFallback($body);
-        $finishReason = $providerInstance?->extractFinishReason($body, $endpoint);
+        $finishReason = rescue(fn () => $providerInstance?->extractFinishReason($body, $endpoint));
 
         $context->finishReason = $finishReason ?? $context->finishReason;
 
-        $toolCallCounts = $this->countToolCalls($body);
+        $toolCallCounts = rescue(fn () => $this->countToolCalls($body), []);
         foreach ($metrics->toolCalls ?? [] as $type => $count) {
             if ($count > 0) {
                 $toolCallCounts[$type] = max($toolCallCounts[$type] ?? 0, $count);
@@ -153,18 +174,19 @@ class ResponseProcessor
             && $context->rawResponseBody !== null
             && $handler->modelType() === ModelType::Tts
         ) {
-            $context->durationSeconds = app(AudioDurationExtractor::class)->extract($context->rawResponseBody);
+            $rawResponseBody = $context->rawResponseBody;
+            $context->durationSeconds = rescue(fn () => app(AudioDurationExtractor::class)->extract($rawResponseBody));
         }
 
         if ($handler instanceof HasExpiration) {
-            $context->expiresAt = $handler->extractExpiresAt($body);
+            $context->expiresAt = rescue(fn () => $handler->extractExpiresAt($body));
         }
 
         if ($handler instanceof HasProviderLatency) {
-            $context->providerLatencyMs = $handler->extractProviderLatency($body);
+            $context->providerLatencyMs = rescue(fn () => $handler->extractProviderLatency($body));
         }
 
-        if ($handler instanceof ReportsJobFailure && ($failure = $handler->extractFailure($body)) !== null) {
+        if ($handler instanceof ReportsJobFailure && ($failure = rescue(fn () => $handler->extractFailure($body))) !== null) {
             $context->errorType = ProviderErrorException::class;
             $context->errorMessage = $failure;
         }
@@ -175,7 +197,8 @@ class ResponseProcessor
                 $mediaBody = array_merge($mediaBody, ['_request_data' => $context->requestData]);
             }
 
-            $media = $handler->storeMedia($context->id, $mediaBody, $context->rawResponseBody);
+            $rawResponseBody = $context->rawResponseBody;
+            $media = rescue(fn () => $handler->storeMedia($context->id, $mediaBody, $rawResponseBody), []);
             if (! empty($media)) {
                 $context->mediaStoragePath = $media;
             }
@@ -185,26 +208,28 @@ class ResponseProcessor
 
         if ($context->modelType === null) {
             $context->modelType = $handler?->modelType()->value
-                ?? $this->resolveModelType($providerInstance, $context)?->value;
+                ?? rescue(fn () => $this->resolveModelType($providerInstance, $context)?->value);
         }
 
         if ($context->responseId === null) {
-            $context->responseId = $providerInstance?->extractResponseId($body, $endpoint);
+            rescue(function () use ($context, $providerInstance, $body, $endpoint) {
+                $context->responseId = $providerInstance?->extractResponseId($body, $endpoint);
+            });
         }
 
         if ($context->reasoningEffort === null) {
-            $context->reasoningEffort = $this->extractReasoningEffort($context->requestData ?? [], $body);
+            $context->reasoningEffort = rescue(fn () => $this->extractReasoningEffort($context->requestData ?? [], $body));
         }
 
         // Detect reasoning mode: effort setting, or reasoning output blocks (even when reasoning_tokens is 0)
         if (! $context->isReasoning) {
             $context->isReasoning = $context->reasoningEffort !== null
-                || $this->hasReasoningOutput($body);
+                || rescue(fn () => $this->hasReasoningOutput($body), false);
         }
 
         $context->processed = true;
 
-        $body = $this->stripBinaryData($body);
+        $body = rescue(fn () => $this->stripBinaryData($body), $body);
 
         return [
             array_merge($body, ['finish_reason' => $finishReason]),

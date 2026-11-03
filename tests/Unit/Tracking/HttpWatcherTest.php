@@ -8,6 +8,10 @@ use Spectra\Providers\OpenAI\OpenAI;
 use Spectra\Support\ProviderRegistry;
 use Spectra\Watchers\HttpWatcher;
 
+/**
+ * HttpWatcher detects the provider of an HTTP client request by host, tracks
+ * only provider calls, and reads the OpenAI pricing tier.
+ */
 it('detects openai requests', function () {
     $registry = app(ProviderRegistry::class);
 

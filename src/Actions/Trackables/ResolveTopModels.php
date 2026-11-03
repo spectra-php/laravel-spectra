@@ -7,6 +7,10 @@ namespace Spectra\Actions\Trackables;
 use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * The most used model of each trackable on one page of results, in one query
+ * for the whole page.
+ */
 class ResolveTopModels
 {
     /**

@@ -179,6 +179,10 @@ Route::middleware(['auth', 'spectra.budget'])
     ->post('/ai/generate', GenerateController::class);
 ```
 
+The middleware checks the provider and model named in its arguments. Without arguments, it uses `budget.default_provider` and `budget.default_model` from `config/spectra.php`. It never reads them from the request input, so a user can't choose which provider or model their budget is checked against.
+
+If the check itself fails (for example, the database or cache is down), Spectra reports the error to your exception handler and lets the request through. Only a budget decision returns a 429.
+
 With `softLimit()`, the middleware lets the request through but still fires budget events. You can use them for soft warnings, such as sending a notification or showing the user a banner.
 
 ::: info Enforcement is pre-flight
@@ -197,7 +201,7 @@ The warning, critical, and exceeded alerts fire **once** per budget, limit, and 
 
 Spectra keeps the "already sent" mark in your application's default cache store, so it holds across PHP-FPM requests and queue workers. Use a shared cache store (such as Redis or the database) when you run more than one server. The `array` cache store is not shared between processes, so alerts can fire more than once with it.
 
-One exception: when the middleware blocks a request with a hard limit, it dispatches `BudgetExceeded` (with `wasBlocked = true`) for every blocked request.
+One exception: a blocked request always dispatches `BudgetExceeded` (with `wasBlocked = true`), every time. See [`BudgetExceeded`](#budget-exceeded-event).
 
 ### `BudgetThresholdReached`
 
@@ -221,9 +225,24 @@ Event::listen(BudgetThresholdReached::class, function ($event) {
 });
 ```
 
+<a name="budget-exceeded-event"></a>
 ### `BudgetExceeded`
 
-Fired when a limit is fully exceeded:
+Fired in two cases:
+
+- **A request is blocked** (`wasBlocked = true`). The middleware or `enforce()` dispatches it right before it stops the request, for every blocked request. This covers cost, token and request-count limits with `hardLimit()`, and a provider or model that is not in the budget's allowed list.
+- **Recorded spend crosses a cost limit** (`wasBlocked = false`). Dispatched once per limit and period, after the request that crossed it is saved, with hard or soft limits.
+
+`limitType` names the limit, and `currentUsage` and `limit` are in its unit:
+
+| `limitType` | `currentUsage` and `limit` |
+| --- | --- |
+| `daily`, `weekly`, `monthly`, `total` | Cost in cents |
+| `daily_tokens`, `weekly_tokens`, `monthly_tokens`, `total_tokens` | Tokens |
+| `daily_requests`, `weekly_requests`, `monthly_requests` | Requests |
+| `provider`, `model` | Both `0`: the provider or model is not allowed |
+
+`getOverageAmountInDollars()` is meaningful for cost limits only.
 
 ```php
 use Spectra\Events\BudgetExceeded;
@@ -231,13 +250,15 @@ use Spectra\Events\BudgetExceeded;
 Event::listen(BudgetExceeded::class, function ($event) {
     $event->budgetable;       // The model (User, Team, etc.)
     $event->budget;           // The SpectraBudget model
-    $event->limitType;        // 'daily', 'weekly', 'monthly', etc.
-    $event->currentUsage;     // Raw usage value
+    $event->limitType;        // 'daily', 'daily_tokens', 'provider', etc.
+    $event->currentUsage;     // Usage in the limit's unit
     $event->limit;            // The configured limit value
-    $event->wasBlocked;       // true if hard_limit prevented the request
+    $event->wasBlocked;       // true if the request was blocked
 
-    $overage = $event->getOverageAmountInDollars(); // e.g. 4.25
-    Log::warning("Budget exceeded by \${$overage}");
+    if (! $event->wasBlocked) {
+        $overage = $event->getOverageAmountInDollars(); // e.g. 4.25
+        Log::warning("Budget exceeded by \${$overage}");
+    }
 });
 ```
 
@@ -270,3 +291,5 @@ Set global budget defaults in `config/spectra.php`. They apply when a budget doe
     'default_model' => 'gpt-5.2',
 ],
 ```
+
+`default_provider` and `default_model` are what the `spectra.budget` middleware checks when the route doesn't name a provider or model. They only matter for budgets with allowed providers or models.

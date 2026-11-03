@@ -7,6 +7,10 @@ use Spectra\Events\RequestTracked;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\RequestPersister;
 
+/**
+ * Persisting a tracked request dispatches RequestTracked with the
+ * transformed request data.
+ */
 it('dispatches RequestTracked event when a request is persisted', function () {
     Event::fake([RequestTracked::class]);
 

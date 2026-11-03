@@ -7,18 +7,12 @@ use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Pricing\PricingLookup;
 
-/*
-|--------------------------------------------------------------------------
-| OpenAI text tracking through the HTTP client
-|--------------------------------------------------------------------------
-|
-| Real wire-format responses, faked with Http::fake() and sent with the
-| HTTP client, so they go through the global tracking middleware like a
-| real app. Costs are worked out by hand from OpenAIPricing (cents per 1M
-| tokens) and asserted exactly.
-|
-*/
-
+/**
+ * OpenAI text tracking through the HTTP client. Real wire-format responses,
+ * faked with Http::fake(), go through the global tracking middleware like a
+ * real app. Costs are worked out by hand from OpenAIPricing (cents per 1M
+ * tokens) and asserted exactly.
+ */
 it('bills chat completion cache reads and writes, and lets the served tier win over the requested one', function () {
     Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/chat_completion_cache_writes.json'))]);
 

@@ -7,6 +7,10 @@ namespace Spectra\Data;
 use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * One provider's usage for a trackable: requests, tokens, media and audio
+ * usage, and the cost of successful requests.
+ */
 readonly class UsageByProvider extends DataTransferObject
 {
     public function __construct(

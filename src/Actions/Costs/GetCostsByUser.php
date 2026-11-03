@@ -10,6 +10,11 @@ use Spectra\Data\CostByUser;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\RequestAggregateQuery;
 
+/**
+ * The costs screen's top spenders: cost per trackable over successful
+ * requests, with request counts that include failures, enriched with each
+ * trackable's name.
+ */
 class GetCostsByUser
 {
     public function __construct(
@@ -24,11 +29,10 @@ class GetCostsByUser
         // Group by type + id: ids alone collide across polymorphic types
         // (User 1 and Team 1 must not be merged into one row).
         $items = RequestAggregateQuery::make($dateRange)
-            ->successfulOnly()
             ->withTrackable()
             ->groupByColumns('trackable_type', 'trackable_id')
             ->countAs('requests')
-            ->selectRaw('SUM(total_cost_in_cents) as cost')
+            ->successfulCost()
             ->orderByDesc('cost')
             ->limit($limit)
             ->get();

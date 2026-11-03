@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Spectra\Models\SpectraRequest;
 use Spectra\Spectra;
 
+/**
+ * ElevenLabs text to speech recorded by hand is billed per character of the
+ * request text.
+ */
 it('records elevenlabs tts with per-character cost', function () {
     $manager = app(Spectra::class);
 

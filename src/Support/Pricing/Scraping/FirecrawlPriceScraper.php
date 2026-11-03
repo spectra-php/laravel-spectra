@@ -152,7 +152,7 @@ class FirecrawlPriceScraper
                 continue;
             }
 
-            $known[] = $model['pricing_unit'] === 'tokens'
+            $known[] = $model['pricing_unit'] === PricingUnit::Tokens->value
                 ? $definition->getInternalName()
                 : "{$definition->getInternalName()} (per {$model['pricing_unit']})";
         }

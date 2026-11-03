@@ -8,11 +8,15 @@ use Illuminate\Support\Facades\Storage;
 use Spectra\Data\MediaContent;
 use Spectra\Models\SpectraRequest;
 
+/**
+ * One generated image of a request: from the media disk when it was
+ * persisted, otherwise decoded from the base64 still in the stored response.
+ */
 class ResolveImage
 {
     public function __invoke(string $id, int $index): MediaContent
     {
-        $request = SpectraRequest::findOrFail($id);
+        $request = SpectraRequest::query()->findOrFail($id);
 
         abort_unless($request->model_type === 'image', 404);
 

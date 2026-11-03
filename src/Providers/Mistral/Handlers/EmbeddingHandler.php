@@ -13,6 +13,10 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 
+/**
+ * Mistral embeddings (`/v1/embeddings`). The usage has no completion count,
+ * so it is taken as `total_tokens` minus `prompt_tokens`.
+ */
 class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesResponseShape
 {
     use ExtractsModelField;
@@ -47,11 +51,13 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     /** @param  array<string, mixed>  $response */
     public function extractResponse(array $response): ?string
     {
-        if (! isset($response['data'][0]['embedding'])) {
+        $embedding = data_get($response, 'data.0.embedding');
+
+        if (! is_array($embedding)) {
             return null;
         }
 
-        $dimensions = count($response['data'][0]['embedding']);
+        $dimensions = count($embedding);
 
         return "[embedding: {$dimensions} dimensions]";
     }

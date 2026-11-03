@@ -6,18 +6,13 @@ use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\ProviderRegistry;
 
-/*
-|--------------------------------------------------------------------------
-| Azure OpenAI tracking through the HTTP client
-|--------------------------------------------------------------------------
-|
-| Azure serves the OpenAI API from its own resource hosts under
-| /openai/deployments/{deployment}/... or /openai/v1/... paths. Requests are
-| recorded as OpenAI with the path normalized to the OpenAI /v1 endpoint.
-| Costs are worked out by hand from OpenAIPricing (cents per 1M tokens).
-|
-*/
-
+/**
+ * Azure OpenAI tracking through the HTTP client. Azure serves the OpenAI API
+ * from its own resource hosts under /openai/deployments/{deployment}/... or
+ * /openai/v1/... paths; requests are recorded as OpenAI with the path
+ * normalized to the OpenAI /v1 endpoint. Costs are worked out by hand from
+ * OpenAIPricing (cents per 1M tokens).
+ */
 it('tracks azure openai chat completions', function (string $url) {
     Http::fake(['*' => Http::response($this->loadMockResponse('openai/azure_chat_completion.json'))]);
 

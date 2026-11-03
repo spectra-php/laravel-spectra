@@ -13,6 +13,6 @@ trait ExtractsModelField
     /** @param  array<string, mixed>  $response */
     public function extractModelFromResponse(array $response): ?string
     {
-        return $response['model'] ?? null;
+        return filled($response['model'] ?? null) ? $response['model'] : null;
     }
 }

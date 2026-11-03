@@ -51,7 +51,7 @@ class FalAi extends Provider implements ExtractsCostMultiplierForModel
 
         $id = $this->toArray($response)['request_id'] ?? null;
 
-        return is_string($id) && $id !== '' ? $id : null;
+        return filled($id) ? $id : null;
     }
 
     /**

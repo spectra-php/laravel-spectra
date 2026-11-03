@@ -76,7 +76,7 @@ class XAi extends Provider implements ExtractsPricingTierFromRequest, ExtractsPr
         $data = $this->toArray($response);
 
         foreach (['id', 'request_id'] as $key) {
-            if (is_string($data[$key] ?? null) && $data[$key] !== '') {
+            if (filled($data[$key] ?? null)) {
                 return $data[$key];
             }
         }

@@ -449,7 +449,6 @@ class OpenAIPricing extends ProviderPricing
 
         $this->model('gpt-4-turbo', fn ($m) => $m
             ->displayName('GPT-4 Turbo')
-            ->aliases('gpt-4-turbo-2024-04-09')
             ->canGenerateText()
             ->tier('standard', inputPrice: 1000, outputPrice: 3000)
             ->tier('batch', inputPrice: 500, outputPrice: 1500));

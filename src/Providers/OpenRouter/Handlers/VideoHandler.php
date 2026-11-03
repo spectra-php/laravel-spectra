@@ -96,7 +96,7 @@ class VideoHandler implements Handler, HasFinishReason, ReportsJobFailure, Skips
         $error = $responseData['error'] ?? null;
         $message = is_array($error) ? ($error['message'] ?? null) : $error;
 
-        return is_string($message) && $message !== '' ? $message : "Video job {$status}";
+        return filled($message) ? $message : "Video job {$status}";
     }
 
     /** @param  array<string, mixed>  $response */

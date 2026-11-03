@@ -252,6 +252,12 @@ $expensive = SpectraRequest::orderByDesc('total_cost_in_cents')
     ->get();
 ```
 
+A request is **successful** when its status code is 2xx and **failed** otherwise, including a 3xx or a missing status code, so the two always add up to every request. `SpectraRequest::successful()` / `failed()`, `isSuccessful()` / `isFailed()` and the `is_failed` field sent to integrations all use this rule.
+
+Spectra's own reports follow one convention: request counts (and token totals) include failed requests, while cost and latency cover successful requests only, so a failed call never adds spend or skews latency. This applies to the dashboard, to `Spectra::usage()` (`stats()`, `byProvider()`, `byModel()`, `dailyUsage()`, `totalCostCents()`, `averageLatency()`) and to the `HasAiUsage` methods (`getAiUsageForPeriod()`, `getAiUsageByProvider()`, `getAiUsageByModel()`). `Spectra::costs()` starts from successful requests only, so the request counts it returns are counts of successful requests. The raw-model queries above sum every row; add `->successful()` to match the reports.
+
+A date-only end bound (`'2026-01-31'`) passed to `between()` or `getAiUsageForPeriod()` includes that whole day.
+
 For per-user or per-team cost tracking with enforced limits, see [Budgets](/budgets).
 
 <a name="cost-estimation"></a>

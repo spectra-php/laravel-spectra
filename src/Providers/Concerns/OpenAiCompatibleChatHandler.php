@@ -118,16 +118,35 @@ abstract class OpenAiCompatibleChatHandler implements ExtractsModelFromResponse,
         return null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * The first choice's text. Some providers (Mistral with reasoning, for
+     * one) send `content` as a list of typed parts instead of a string.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
-        return $response['choices'][0]['message']['content'] ?? $response['choices'][0]['text'] ?? null;
+        $content = data_get($response, 'choices.0.message.content') ?? data_get($response, 'choices.0.text');
+
+        if (is_string($content)) {
+            return $content;
+        }
+
+        if (! is_array($content)) {
+            return null;
+        }
+
+        $texts = collect($content)
+            ->map(fn (mixed $part) => is_array($part) ? ($part['text'] ?? null) : $part)
+            ->filter(fn (mixed $text) => filled($text));
+
+        return $texts->isNotEmpty() ? $texts->implode("\n") : null;
     }
 
     /** @param  array<string, mixed>  $response */
     public function extractFinishReason(array $response): ?string
     {
-        return $response['choices'][0]['finish_reason'] ?? null;
+        return data_get($response, 'choices.0.finish_reason');
     }
 
     /** @param  array<string, mixed>  $data */

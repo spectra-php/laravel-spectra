@@ -4,12 +4,19 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Trackables;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
-use Spectra\Data\ModelTypeStat;
+use Spectra\Data\ModelTypeLatency;
 use Spectra\Data\Responses\TrackableDetailsResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\DateRange;
 
+/**
+ * Everything the trackable detail screen shows for one trackable: its stats,
+ * cost per day, usage by model and provider, latency by model type, its
+ * name and email when the model has them, and its latest requests.
+ */
 class GetTrackableDetails
 {
     public function __construct(
@@ -37,21 +44,14 @@ class GetTrackableDetails
             'costs_by_date' => ($this->getCostsByDate)($type, $id, $dateRange),
             'usage_by_model' => ($this->getUsageByModel)($type, $id, $dateRange),
             'usage_by_provider' => ($this->getUsageByProvider)($type, $id, $dateRange),
-            'latency_by_model_type' => ($this->getLatencyByModelType)($type, $id, $dateRange)
-                ->map(fn (ModelTypeStat $row) => [
-                    'model_type' => $row->model_type,
-                    'label' => $row->label,
-                    'count' => $row->count,
-                    'avg_latency' => $row->avg_latency,
-                ]),
+            'latency_by_model_type' => ModelTypeLatency::fromCollection(($this->getLatencyByModelType)($type, $id, $dateRange)),
         ];
 
-        if (class_exists($type)) {
-            $trackable = $type::find($id);
-            if ($trackable) {
-                $trackableData['name'] = $trackable->name ?? null;
-                $trackableData['email'] = $trackable->email ?? null;
-            }
+        $trackable = $this->findTrackable($type, $id);
+
+        if ($trackable !== null) {
+            $trackableData['name'] = $trackable->name ?? null;
+            $trackableData['email'] = $trackable->email ?? null;
         }
 
         $requests = SpectraRequest::query()
@@ -72,5 +72,21 @@ class GetTrackableDetails
             trackable: $trackableData,
             requests: $requests,
         );
+    }
+
+    /**
+     * The trackable model itself. The stored type is the morph class, which
+     * is an alias when the app uses a morph map; anything that doesn't
+     * resolve to an Eloquent model is never instantiated.
+     */
+    private function findTrackable(string $type, string $id): ?Model
+    {
+        $class = Relation::getMorphedModel($type) ?? $type;
+
+        if (! class_exists($class) || ! is_subclass_of($class, Model::class)) {
+            return null;
+        }
+
+        return $class::query()->find($id);
     }
 }

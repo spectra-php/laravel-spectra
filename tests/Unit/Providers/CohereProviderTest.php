@@ -9,6 +9,10 @@ use Spectra\Providers\Cohere\Handlers\ChatHandler;
 use Spectra\Providers\Cohere\Handlers\ParseHandler;
 use Spectra\Support\ProviderRegistry;
 
+/**
+ * The Cohere provider: its hosts, handler resolution and what the chat
+ * handler extracts from a response.
+ */
 it('returns cohere as provider', function () {
     expect($this->cohereProvider()->getProvider())->toBe('cohere');
 });

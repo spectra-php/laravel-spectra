@@ -7,6 +7,10 @@ namespace Spectra\Data\Responses;
 use Illuminate\Support\Collection;
 use Spectra\Data\DataTransferObject;
 
+/**
+ * The trackable detail screen: the trackable's stats and breakdowns, and its
+ * latest requests.
+ */
 readonly class TrackableDetailsResponse extends DataTransferObject
 {
     /**

@@ -11,6 +11,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
+ * The AI spending, token and request limits set for one budgetable model (a
+ * user, a team), with the thresholds that raise warnings and whether a
+ * breach blocks the call. Limits are stored in whole cents.
+ *
  * @property string $id
  * @property string $budgetable_type
  * @property string $budgetable_id
@@ -159,7 +163,7 @@ class SpectraBudget extends Model
 
     protected function normalizeCents(mixed $value): ?int
     {
-        if ($value === null || $value === '') {
+        if (blank($value)) {
             return null;
         }
 

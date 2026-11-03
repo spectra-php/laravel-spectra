@@ -11,6 +11,13 @@ use Spectra\Spectra;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\ResponseProcessor;
 
+/**
+ * Stand-in for Spectra swapped in by `Spectra::fake()`.
+ *
+ * Records tracked requests in memory instead of the database, so tests of
+ * the user's own code can assert what was tracked without migrations or
+ * real provider calls.
+ */
 class SpectraFake extends Spectra
 {
     /** @var array<int, array<string, mixed>> */
