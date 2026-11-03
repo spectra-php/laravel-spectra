@@ -1,15 +1,15 @@
 # Tags
 
-Tags provide flexible, user-defined categorization for tracked AI requests. They are simple string labels that you attach to requests for filtering, grouping, and analysis in the dashboard. Tags are useful for organizing requests by feature area, environment, priority level, experiment name, customer tier, or any other dimension that matters to your application.
+Tags are simple string labels you attach to tracked AI requests. You use them to filter, group, and analyze requests in the dashboard, for example by feature, environment, priority, experiment, customer tier, or anything else that matters to your app.
 
-Unlike provider and model data, which Spectra extracts automatically, tags are entirely under your control. You decide what to tag, when to tag it, and how to use the tags for filtering and reporting.
+Spectra reads the provider and model from each request automatically. Tags are up to you: you decide what to tag, when, and how to use the tags for filtering and reporting.
 
 If you need structured key-value context instead of simple labels, use [Metadata](/metadata).
 
 <a name="attaching-tags"></a>
 ## Attaching Tags
 
-Tags are attached via the `RequestContext` when using manual tracking with `Spectra::track()`:
+With manual tracking, add tags through the `RequestContext` passed to `Spectra::track()`:
 
 ```php
 use Spectra\Facades\Spectra;
@@ -54,7 +54,7 @@ This lets one request or job tag each of its AI calls on its own. For example, a
 <a name="global-tags"></a>
 ## Global Tags
 
-Global tags are applied to **every** tracked request in the current request or queued job. They are reset between queued jobs and Octane requests. This is useful for attaching environment-level context without explicitly tagging each individual request:
+Global tags apply to every tracked request in the current request or queued job. They are reset between queued jobs and Octane requests. Use them to add context like the environment without tagging each request yourself:
 
 ```php
 // In a middleware or a queued job
@@ -88,14 +88,14 @@ Spectra::withTags(['chat-reply'], fn () => GenerateVideoJob::dispatch($prompt));
 <a name="filtering-by-tag"></a>
 ## Filtering by Tag
 
-Tags are filterable in the Spectra dashboard's request explorer. You can filter by specific tags to narrow down requests to a particular feature, experiment, or environment. Tags are also available through the API at the `/api/tags` endpoint, which returns all known tag names for use in filter UI components.
+You can filter by tag in the dashboard's request explorer, to narrow the list down to one feature, experiment, or environment. The `/api/tags` endpoint returns all known tag names, for use in filter UI components.
 
 <a name="storage-structure"></a>
 ## Storage Structure
 
-Tags are stored in a normalized, many-to-many structure for efficient querying:
+Tags are stored in a normalized many-to-many structure, so they are fast to query:
 
-- **`spectra_tags`** — A lookup table of unique tag names (for example, `chat`, `production`). Each unique tag string is stored once.
-- **`spectra_requests_tags`** — A pivot table linking requests to tags. Deleting a request cascades to its pivot entries.
+- **`spectra_tags`**: a lookup table of unique tag names (for example, `chat`, `production`). Each tag name is stored once.
+- **`spectra_requests_tags`**: a pivot table that links requests to tags. Deleting a request also deletes its pivot rows.
 
-This normalized design avoids storing duplicate tag strings across millions of request records and enables efficient tag-based queries and aggregations.
+This way the same tag name isn't stored again on millions of request rows, and queries and totals by tag stay fast.

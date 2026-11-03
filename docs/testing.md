@@ -1,13 +1,13 @@
 # Testing
 
-Spectra provides a test double called `SpectraFake` that captures tracked requests in memory without touching the database. This allows you to write assertions against your application's AI tracking behavior in unit and feature tests without requiring database migrations, seeding, or cleanup.
+Spectra ships a test double called `SpectraFake`. It captures tracked requests in memory without touching the database, so you can assert on your app's AI tracking in unit and feature tests without migrations, seeding, or cleanup.
 
-The fake intercepts the same tracking calls that would normally persist records to `spectra_requests`, but holds them in an in-memory collection instead. You can then assert on the number of requests, which providers and models were used, whether requests succeeded or failed, and any tags or token counts that were recorded.
+The fake catches the same tracking calls that would normally save records to `spectra_requests`, but keeps them in memory instead. You can then assert on the number of requests, the providers and models used, whether requests succeeded or failed, and the tags or token counts that were recorded.
 
 <a name="setting-up-the-fake"></a>
 ## Setting Up the Fake
 
-Call `Spectra::fake()` at the beginning of your test to replace the real Spectra manager with the in-memory fake. The method returns the fake instance, which exposes all assertion and inspection methods:
+Call `Spectra::fake()` at the start of your test to swap the real Spectra manager for the in-memory fake. It returns the fake, which has all the assertion and inspection methods:
 
 ```php
 use Spectra\Facades\Spectra;
@@ -28,7 +28,7 @@ it('tracks the AI request', function () {
 
 ### Request Count
 
-Assert that a specific number of requests were tracked, or that no requests were tracked at all:
+Assert that a given number of requests were tracked, or that none were:
 
 ```php
 $fake->assertRequestCount(3);     // Exactly 3 requests tracked
@@ -37,7 +37,7 @@ $fake->assertNothingTracked();    // No requests tracked
 
 ### Provider and Model
 
-Assert that specific providers or models were used during the test:
+Assert that a provider or model was used during the test:
 
 ```php
 $fake->assertProviderUsed('openai');
@@ -73,7 +73,7 @@ $fake->assertTotalTokens(1500);
 
 ### Custom Assertions
 
-For more complex validation, pass a callback that receives the recorded request data and returns a boolean:
+For more complex checks, pass a callback that receives the recorded request data and returns a boolean:
 
 ```php
 $fake->assertTracked(function ($recorded) {
@@ -86,7 +86,7 @@ $fake->assertTracked(function ($recorded) {
 <a name="inspecting-recorded-requests"></a>
 ## Inspecting Recorded Requests
 
-Beyond assertions, you can access the raw recorded request data for manual inspection. Each recorded request is an array containing the provider, model, usage metrics, cost, and other tracking metadata:
+You can also read the raw recorded data yourself. Each recorded request is an array with the provider, model, usage metrics, cost, and other tracking data:
 
 ```php
 $fake = Spectra::fake();
@@ -105,7 +105,7 @@ foreach ($all as $request) {
 <a name="resetting-state"></a>
 ## Resetting State
 
-The fake provides methods to reset its internal state during a test, which is useful when you want to verify behavior across multiple phases of a single test:
+The fake can reset its state during a test. This helps when one test checks several phases:
 
 ```php
 $fake->reset();     // Clear all recorded requests
@@ -116,7 +116,7 @@ $fake->enable();    // Re-enable tracking
 <a name="disabling-tracking-in-tests"></a>
 ## Disabling Tracking in Tests
 
-If you want to prevent Spectra from tracking in your entire test suite — for example, to avoid database writes in tests that don't need tracking assertions — you can disable it globally in your base test case:
+To turn off tracking for your whole test suite (for example, to avoid database writes in tests that don't assert on tracking), disable Spectra in your base test case:
 
 ```php
 protected function setUp(): void
@@ -126,4 +126,4 @@ protected function setUp(): void
 }
 ```
 
-Alternatively, calling `Spectra::fake()` achieves a similar effect by capturing requests in memory instead of writing to the database. This is generally the preferred approach, since it allows you to optionally add tracking assertions without any additional setup.
+Calling `Spectra::fake()` has a similar effect: it captures requests in memory instead of writing them to the database. This is usually the better choice, because you can add tracking assertions later without any extra setup.

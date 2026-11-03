@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Laravel Spectra',
-  description: 'Comprehensive observability for AI and LLM operations in Laravel applications.',
+  description: 'Observability for AI and LLM operations in Laravel applications.',
   themeConfig: {
     logo: {
       src: '/images/logo.svg',

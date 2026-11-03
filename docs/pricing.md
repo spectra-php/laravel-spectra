@@ -1,11 +1,11 @@
 # Pricing
 
-Spectra includes a built-in pricing catalog defined through PHP classes. Each supported provider has a pricing class that registers its models, pricing tiers, and capabilities. Pricing lookups are resolved in memory at runtime with zero database queries.
+Spectra includes a built-in pricing catalog defined through PHP classes. Each supported provider has a pricing class that registers its models, pricing tiers, and capabilities. Spectra looks up prices in memory at runtime, with no database queries.
 
 <a name="how-it-works"></a>
 ## How It Works
 
-Pricing is defined by classes that extend `ProviderPricing`. Each class registers models using a fluent `ModelDefinition` builder inside a `define()` method. Spectra ships with pricing classes for all built-in providers — these are mapped in your `config/spectra.php` under `costs.pricing`:
+Pricing is defined by classes that extend `ProviderPricing`. Each class registers models using a fluent `ModelDefinition` builder inside a `define()` method. Spectra ships with a pricing class for every built-in provider. They are mapped in your `config/spectra.php` under `costs.pricing`:
 
 ```php
 'costs' => [
@@ -283,7 +283,7 @@ Spectra stores costs in cents of the currency set in `spectra.costs.currency` (d
 A rate says how many units of your reporting currency one unit of the other currency is worth:
 
 ```php
-// config/spectra.php — report in USD
+// config/spectra.php: report in USD
 'costs' => [
     'currency' => 'USD',
     'exchange_rates' => [
@@ -331,12 +331,12 @@ Then update your config to use your class instead:
 ],
 ```
 
-Built-in models from `define()` are always included automatically. The `populate()` method adds your custom models on top.
+Built-in models from `define()` are always included. The `populate()` method adds your custom models on top.
 
 <a name="tool-call-pricing"></a>
 ## Tool Call Pricing
 
-Some providers charge separately for built-in tool calls (web search, file search, code interpreter). These fees are defined by overriding the `toolCallPricing()` method in a pricing class. The values are cents per call:
+Some providers charge separately for built-in tool calls (web search, file search, code interpreter). You define these fees by overriding the `toolCallPricing()` method in a pricing class. The values are cents per call:
 
 ```php
 public function toolCallPricing(): array
@@ -354,7 +354,7 @@ The keys match the tool call types Spectra counts in the response (for example, 
 <a name="adding-a-new-provider"></a>
 ## Adding a New Provider
 
-To add pricing for a provider not included in Spectra, create a class that extends `ProviderPricing`:
+To add pricing for a provider that Spectra doesn't include, create a class that extends `ProviderPricing`:
 
 ```php
 <?php
@@ -554,7 +554,7 @@ class MyProviderPricing extends ProviderPricing
 <a name="keeping-prices-current"></a>
 ## Keeping Prices Current
 
-The built-in catalog is **hand-maintained**. Spectra does not fetch prices from provider APIs. Provider prices change, and new models ship often, so the catalog needs a review from time to time. Between releases, you can pick up new prices yourself with [`spectra:pricing-scrape`](#scraping-prices).
+The built-in catalog is maintained by hand. Spectra does not fetch prices from provider APIs. Provider prices change, and new models ship often, so the catalog needs a review from time to time. Between releases, you can pick up new prices yourself with [`spectra:pricing-scrape`](#scraping-prices).
 
 **Prices last reviewed: 2026-10-29.**
 
@@ -590,7 +590,7 @@ models.dev is not a price source: check every finding against the provider's pri
 When a provider renames a model, keep the old id in `aliases()`. When a provider shuts a model down, keep the entry and add `retiredOn()`, so older requests keep their prices. The `PricingCatalogInvariantsTest` checks the shape of the catalog.
 
 ::: info Providers without token pricing
-**Ollama** runs models locally, so its requests are deliberately tracked at **$0** — there is no `OllamaPricing` class.
+**Ollama** runs models locally, so its requests are deliberately tracked at **$0**. There is no `OllamaPricing` class.
 
-**ElevenLabs** bills subscription plans in credits rather than per request. The bundled `ElevenLabsPricing` uses the published pay-as-you-go per-character API rates as an approximation; if your plan's effective rate differs, extend the class and override the prices.
+**ElevenLabs** bills subscription plans in credits, not per request. The bundled `ElevenLabsPricing` uses the published pay-as-you-go per-character API rates as an approximation. If your plan's effective rate differs, extend the class and override the prices.
 :::

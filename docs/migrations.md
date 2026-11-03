@@ -1,13 +1,11 @@
 # Migrations
 
-Spectra uses standard Laravel migrations to create the database tables it needs for storing requests, budgets, daily statistics, and tags. Pricing is handled entirely through [PHP classes](/pricing) and does not require any database tables.
+Spectra uses standard Laravel migrations to create its tables for requests, budgets, daily statistics, and tags. Pricing lives in [PHP classes](/pricing) and needs no database tables.
 
 <a name="schema-migrations"></a>
 ## Schema Migrations
 
-Schema migrations create the tables Spectra needs to store requests, budgets, daily statistics, and tags. Publish these migrations to your application before running `php artisan migrate`.
-
-The schema migrations create the following tables:
+Publish the schema migrations to your application before you run `php artisan migrate`. They create these tables:
 
 | Table | Purpose |
 | --- | --- |
@@ -61,7 +59,7 @@ Run this migration before you deploy 2.0. Without the new columns, Spectra can't
 
 ### Custom Database Connection
 
-All Spectra migrations respect the `spectra.storage.connection` config value. To store Spectra data in a separate database, set the connection in `config/spectra.php`:
+All Spectra migrations use the `spectra.storage.connection` config value. To store Spectra data in a separate database, set the connection in `config/spectra.php`:
 
 ```php
 'storage' => [

@@ -1,4 +1,4 @@
-<a href="https://mayahi.net/services" target="_blank" rel="noopener"><img src="/images/hire-me.svg" alt="Hire me — I'm available for consulting and development work" style="width: 100%; margin-bottom: 24px;" /></a>
+<a href="https://mayahi.net/services" target="_blank" rel="noopener"><img src="/images/hire-me.svg" alt="Hire me: I'm available for consulting and development work" style="width: 100%; margin-bottom: 24px;" /></a>
 
 # Installation
 
@@ -10,14 +10,14 @@
 
 ## Install the Package
 
-You may install Spectra into your project using the Composer package manager:
+Install Spectra with Composer:
 
 ```shell
 composer require spectra-php/laravel-spectra
 ```
 
 ::: tip TTS requirement
-If you use **Text-to-Speech (TTS)** models, install `james-heinrich/getid3` as well. Spectra uses it to extract audio duration from binary TTS responses for duration-based metrics and cost calculation.
+If you use Text-to-Speech (TTS) models, install `james-heinrich/getid3` as well. Spectra uses it to read the audio duration from binary TTS responses, for duration-based metrics and costs.
 
 ```shell
 composer require james-heinrich/getid3
@@ -28,15 +28,15 @@ composer require james-heinrich/getid3
 Read the [Upgrade Guide](/upgrade). Most apps only need to run one new migration.
 :::
 
-After installing Spectra, publish its assets and run the database migrations using the `spectra:install` Artisan command:
+Then publish Spectra's assets and run the database migrations with the `spectra:install` Artisan command:
 
 ```shell
 php artisan spectra:install
 ```
 
-The installer publishes the configuration file to `config/spectra.php` and the schema migrations to `database/migrations/`, then prompts you to run the migrations.
+The installer publishes the configuration file to `config/spectra.php` and the schema migrations to `database/migrations/`, then asks whether to run the migrations.
 
-If you prefer to run each step manually instead of using the interactive installer:
+To run each step yourself instead of using the interactive installer:
 
 ```shell
 php artisan vendor:publish --tag=spectra-config
@@ -46,19 +46,19 @@ php artisan migrate
 
 ## Configuration
 
-After publishing Spectra's assets, its primary configuration file will be located at `config/spectra.php`. This configuration file allows you to control every aspect of Spectra's behavior — storage settings, persistence mode, dashboard options, cost calculation, budget enforcement, and integration settings. Each option includes a description of its purpose, so be sure to explore the file thoroughly. For a complete reference, see [Configuration](/configuration).
+Spectra's configuration file is `config/spectra.php`. It controls storage, persistence mode, dashboard options, cost calculation, budget enforcement, and integrations. Each option has a comment that explains it. For the full reference, see [Configuration](/configuration).
 
-The most important setting to be aware of is the master switch:
+The most important setting is the master switch:
 
 ```php
 'enabled' => env('SPECTRA_ENABLED', true),
 ```
 
-When set to `false`, Spectra does nothing — no interception, no tracking, no database writes. This allows you to disable observability entirely in specific environments without removing the package.
+When it is `false`, Spectra does nothing: no interception, no tracking, no database writes. Use it to turn Spectra off in some environments without removing the package.
 
 ## Dashboard Authorization
 
-The Spectra dashboard may be accessed via the `/spectra` route. By default, you will only be able to access this dashboard in the `local` environment. The dashboard is protected by a Laravel gate called `viewSpectra`, which controls access in **non-local** environments. You are free to modify this gate as needed to restrict access to your Spectra installation:
+The Spectra dashboard lives at the `/spectra` route. By default, you can only open it in the `local` environment. In other environments, access is controlled by a Laravel gate called `viewSpectra`. Define the gate to decide who can see your Spectra installation:
 
 ```php
 use Illuminate\Support\Facades\Gate;
@@ -71,7 +71,7 @@ Gate::define('viewSpectra', function ($user) {
 });
 ```
 
-You may also add middleware to the dashboard routes via the configuration file. This is useful for enforcing authentication or other access controls at the route level:
+You can also add middleware to the dashboard routes in the configuration file, for example to require authentication:
 
 ```php
 'dashboard' => [
@@ -79,7 +79,7 @@ You may also add middleware to the dashboard routes via the configuration file. 
 ],
 ```
 
-The dashboard path is configurable via the `SPECTRA_PATH` environment variable or the `dashboard.path` configuration option:
+Change the dashboard path with the `SPECTRA_PATH` environment variable or the `dashboard.path` option:
 
 ```php
 'dashboard' => [
@@ -89,7 +89,7 @@ The dashboard path is configurable via the `SPECTRA_PATH` environment variable o
 
 ## Layout Modes
 
-The `dashboard.layout` configuration option controls which model types are displayed in the dashboard. This is useful if your application only uses a subset of model types and you want a focused view:
+The `dashboard.layout` option controls which model types the dashboard shows. Use it if your application only uses some model types and you want a focused view:
 
 | Layout | Shows |
 | --- | --- |
@@ -102,7 +102,7 @@ The `dashboard.layout` configuration option controls which model types are displ
 
 ## Separate Database
 
-For high-volume applications, you may want Spectra to use its own database connection. This isolates observability writes from your application database and prevents Spectra from competing with your application queries for connection pool resources. To configure a separate connection, set the `storage.connection` option:
+For high-volume applications, you may want Spectra to use its own database connection. This keeps Spectra's writes out of your application database, so they don't compete with your application queries for connections. To use a separate connection, set the `storage.connection` option:
 
 ```php
 // config/spectra.php

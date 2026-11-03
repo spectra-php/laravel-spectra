@@ -5,19 +5,19 @@ Spectra provides four Artisan commands for installation, data retention, statist
 <a name="spectra-install"></a>
 ## `spectra:install`
 
-Interactive installer that publishes the configuration file and database migrations, and optionally runs migrations. This is the recommended way to set up Spectra after installing the Composer package, and to add new migrations after upgrading.
+An interactive installer that publishes the config file and database migrations, and can run the migrations for you. Use it to set up Spectra after installing the Composer package, and to add new migrations after upgrading.
 
 ```shell
 php artisan spectra:install
 ```
 
-The installer performs the following steps in order:
+The installer runs these steps in order:
 
-1. **Publishes configuration** — Copies `config/spectra.php` to your application's config directory (an existing file is kept).
-2. **Publishes missing migrations** — Copies only the Spectra migrations your `database/migrations/` folder doesn't have yet, so it is safe to run again after an upgrade.
-3. **Runs migrations** (optional) — When it published something, it asks to run the migrations.
+1. **Publishes configuration.** Copies `config/spectra.php` to your application's config directory (an existing file is kept).
+2. **Publishes missing migrations.** Copies only the Spectra migrations your `database/migrations/` folder doesn't have yet, so it's safe to run again after an upgrade.
+3. **Runs migrations** (optional). If it published something, it asks whether to run the migrations.
 
-If you prefer manual control on a fresh install, you can publish resources yourself. Don't use `vendor:publish` for migrations when upgrading — it copies the older migrations again under a new date.
+On a fresh install you can also publish the files yourself. Don't use `vendor:publish` for migrations when upgrading, though: it copies the older migrations again under a new date.
 
 ```shell
 php artisan vendor:publish --tag=spectra-config
@@ -28,7 +28,7 @@ php artisan migrate
 <a name="spectra-prune"></a>
 ## `spectra:prune`
 
-Deletes old request records, and the media files stored for them, to manage storage growth. Pruning is irreversible — make sure your retention period meets your audit and compliance requirements before scheduling this command.
+Deletes old request records and the media files stored for them, so storage doesn't keep growing. Pruning can't be undone. Make sure your retention period meets your audit and compliance requirements before you schedule this command.
 
 ```shell
 php artisan spectra:prune [--hours=24] [--stats-days=] [--chunk=1000]
@@ -42,7 +42,7 @@ php artisan spectra:prune [--hours=24] [--stats-days=] [--chunk=1000]
 | `--stats-days=` | (not set) | Also delete daily stats older than N days. Without this option, daily stats are kept. |
 | `--chunk=` | `1000` | How many rows to delete per query |
 
-The command deletes rows from `spectra_requests` where `created_at` is older than the cutoff. It works in chunks, so a large table is not locked by one huge query. Their tags in `spectra_requests_tags` are removed by cascade delete. Media files stored for these requests (see [Media Persistence](/configuration#media-persistence)) are deleted from the media disk too.
+The command deletes rows from `spectra_requests` whose `created_at` is older than the cutoff. It works in chunks, so a large table is not locked by one huge query. Their tags in `spectra_requests_tags` are removed by cascade delete. Media files stored for these requests (see [Media Persistence](/configuration#media-persistence)) are deleted from the media disk too.
 
 Daily stats (`spectra_daily_stats`) are the long-term history behind the dashboard charts, so they are **kept** by default. Pass `--stats-days` to prune them too.
 
@@ -61,7 +61,7 @@ php artisan spectra:prune --hours=720 --stats-days=365
 
 ### Scheduling
 
-Add pruning to your application's scheduler for automatic retention management:
+Add pruning to your application's scheduler to apply your retention period automatically:
 
 ```php
 use Illuminate\Support\Facades\Schedule;
@@ -72,7 +72,7 @@ Schedule::command('spectra:prune --hours=168 --stats-days=365')->daily();
 <a name="spectra-rebuild-stats"></a>
 ## `spectra:rebuild-stats`
 
-Rebuilds the `spectra_daily_stats` table by re-aggregating data from the raw `spectra_requests` records. Use this command after upgrading to Spectra 2.0, after data migrations, manual database edits, bulk imports, or whenever dashboard statistics appear out of sync with the underlying request data.
+Rebuilds the `spectra_daily_stats` table from the raw `spectra_requests` records. Run it after upgrading to Spectra 2.0, after data migrations, manual database edits, or bulk imports, or whenever the dashboard stats look out of sync with the requests.
 
 Run it once after upgrading from 1.x. Spectra 1.x counted each poll of an async job (for example, video generation) in the daily stats, so some totals are too high:
 
@@ -80,7 +80,7 @@ Run it once after upgrading from 1.x. Spectra 1.x counted each poll of an async 
 php artisan spectra:rebuild-stats
 ```
 
-The command deletes existing daily stats for the target date range and then re-aggregates from scratch, grouping by date, provider, model, model type, and trackable entity.
+The command deletes the existing daily stats for the date range, then rebuilds them from scratch, grouped by date, provider, model, model type, and trackable entity.
 
 ::: warning Pruned requests
 The stats are rebuilt only from the requests that still exist. If you pruned requests but kept their daily stats, rebuilding that date range deletes those stats. Use `--from` to rebuild only the days whose requests you still have.
@@ -113,7 +113,7 @@ php artisan spectra:rebuild-stats --yesterday
 
 ### Scheduling
 
-If you want to ensure statistics stay fresh, schedule a nightly rebuild:
+To keep the stats fresh, schedule a nightly rebuild:
 
 ```php
 Schedule::command('spectra:rebuild-stats --yesterday')->dailyAt('01:00');

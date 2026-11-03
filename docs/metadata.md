@@ -1,8 +1,8 @@
 # Metadata
 
-Metadata is structured key-value context you attach to tracked AI requests. Unlike tags (which are simple labels), metadata supports richer JSON-style values like strings, numbers, booleans, arrays, and nested objects.
+Metadata is structured key-value context you attach to tracked AI requests. Tags are simple labels. Metadata can hold JSON-style values: strings, numbers, booleans, arrays, and nested objects.
 
-Use metadata to capture request context such as:
+Use metadata for request context such as:
 
 - Tenant or organization IDs
 - Feature flags and experiment variants
@@ -25,7 +25,7 @@ Use both together when needed: tags for quick filtering and metadata for detaile
 <a name="per-request-metadata"></a>
 ## Per-Request Metadata
 
-Attach metadata directly inside `Spectra::track()` via the `RequestContext`:
+Add metadata inside `Spectra::track()` through the `RequestContext`:
 
 ```php
 use Spectra\Facades\Spectra;
@@ -63,7 +63,7 @@ This is useful when metadata is known before the callback runs.
 <a name="global-metadata"></a>
 ## Global Metadata
 
-Apply metadata to every tracked request in the current request or queued job (global settings are reset between queued jobs and Octane requests):
+Add metadata to every tracked request in the current request or queued job. Global settings are reset between queued jobs and Octane requests:
 
 ```php
 use Spectra\Facades\Spectra;
@@ -132,9 +132,9 @@ Streamed requests are marked with `is_streaming = true`.
 <a name="where-metadata-is-stored"></a>
 ## Where Metadata Is Stored
 
-Metadata is stored as JSON in the `spectra_requests.metadata` column and included in request detail API responses (`GET /api/requests/{id}`).
+Metadata is stored as JSON in the `spectra_requests.metadata` column, and it is included in the request detail API response (`GET /api/requests/{id}`).
 
-If you build custom dashboards or exports, metadata is available as structured JSON for downstream analysis.
+If you build your own dashboards or exports, you can read the metadata there as structured JSON.
 
 <a name="best-practices"></a>
 ## Best Practices

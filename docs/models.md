@@ -1,6 +1,6 @@
 # Models
 
-Every tracked request is classified into a **model type** that determines which metrics are extracted, which pricing formula is applied, and how the request is rendered in the dashboard. The provider's handler automatically detects the model type from the endpoint and response shape, so no additional configuration is needed.
+Every tracked request gets a **model type**. The model type decides which metrics are extracted, which pricing formula applies, and how the request is shown in the dashboard. Spectra detects it from the endpoint and the shape of the response, so you don't need to configure anything.
 
 ## Supported Providers
 
@@ -25,7 +25,7 @@ To support a provider not listed here, see [Custom Providers](/custom-providers)
 <a name="text-completions"></a>
 ### Text Completions
 
-Text generation is the most widely supported model type, covering chat completions, message generation, and content generation across all major providers.
+Text generation is the most widely supported model type. It covers chat completions, message generation, and content generation across all major providers.
 
 | Metric | Column | Description |
 | --- | --- | --- |
@@ -34,7 +34,7 @@ Text generation is the most widely supported model type, covering chat completio
 | Cached tokens | `cached_tokens` | Prompt tokens read from the provider's prompt cache (part of `prompt_tokens`) |
 | Cache write tokens | `cache_write_tokens` | Prompt tokens written to the prompt cache (part of `prompt_tokens`) |
 | Reasoning tokens | `reasoning_tokens` | Output tokens used for internal reasoning (part of `completion_tokens`) |
-| Finish reason | `finish_reason` | Why generation stopped — `stop`, `length`, `tool_calls`, `end_turn`, etc. |
+| Finish reason | `finish_reason` | Why generation stopped: `stop`, `length`, `tool_calls`, `end_turn`, etc. |
 
 Spectra uses the same rule for every provider, even when the provider reports usage in another way. For example, Anthropic leaves cache tokens out of `input_tokens`, and Gemini leaves thinking tokens out of its output count. Spectra adds them back, so `prompt_tokens` and `completion_tokens` always hold the full totals.
 
@@ -56,14 +56,14 @@ This is a short version. The full formula, with 1-hour writes, audio and image t
 <a name="embeddings"></a>
 ### Embeddings
 
-Embeddings convert text into dense vector representations used for semantic search, clustering, and similarity comparisons. Unlike text completions, embedding models produce no output tokens — the cost is based entirely on input token count.
+Embeddings turn text into dense vectors for semantic search, clustering, and similarity comparisons. Unlike text completions, embedding models produce no output tokens, so the cost is based only on the input token count.
 
 | Metric | Column | Description |
 | --- | --- | --- |
 | Prompt tokens | `prompt_tokens` | Number of input tokens in the text being embedded |
 | Completion tokens | `completion_tokens` | Always `0` for embeddings |
 
-When embedding multiple texts in a single request (batch embeddings), Spectra tracks the total token count across all inputs.
+When you embed several texts in one request (batch embeddings), Spectra tracks the total token count across all inputs.
 
 <a name="image-generation"></a>
 ### Image Generation
@@ -79,19 +79,19 @@ Image models are priced **per image**, **per megapixel**, or **per token** (with
 <a name="video-generation"></a>
 ### Video Generation
 
-Video generation is usually asynchronous: you submit a creation request and then poll for the result. Spectra's video handlers implement the `SkipsResponse` interface, so polls that return an unfinished job are not recorded. When the same job is fetched more than once under the same provider response id, Spectra updates one row instead of adding new ones. The job counts as one request with one cost in the daily stats and budgets.
+Video generation is usually asynchronous: you submit a creation request and then poll for the result. Polls that return an unfinished job are not recorded (Spectra's video handlers implement the `SkipsResponse` interface). When the same job is fetched more than once under the same provider response id, Spectra updates one row instead of adding new ones. The job counts as one request with one cost in the daily stats and budgets.
 
 | Metric | Column | Description |
 | --- | --- | --- |
 | Video count | `video_count` | Number of videos generated |
 | Duration | `duration_seconds` | Total duration of the generated video in seconds |
 
-Video models are priced **per second** of video or **per video**, depending on the model. The poll that fetches a result usually has no request body, so Spectra remembers the submit request's body (without inline `data:` files) in your cache for a day, and measures and prices the result with it: its length (`duration`, or fal.ai's `num_frames`), resolution and audio. When the provider reports how long the job took to generate, that time is stored as the latency, not the time of the last poll. Media persistence works the same way as for images.
+Video models are priced **per second** of video or **per video**, depending on the model. The poll that fetches a result usually has no request body. So Spectra keeps the submit request's body (without inline `data:` files) in your cache for a day, and uses it to measure and price the result: its length (`duration`, or fal.ai's `num_frames`), resolution and audio. When the provider reports how long the job took to generate, that time is stored as the latency, not the time of the last poll. Media persistence works the same way as for images.
 
 <a name="text-to-speech"></a>
 ### Text-to-Speech
 
-TTS endpoints return binary audio data (MP3, Opus, etc.) rather than JSON. The response payload is not stored in the database — only the request parameters and extracted metrics are recorded.
+TTS endpoints return binary audio (MP3, Opus, etc.) instead of JSON. The audio itself is not stored in the database. Spectra records only the request parameters and the extracted metrics.
 
 | Metric | Column | Description |
 | --- | --- | --- |
@@ -102,7 +102,7 @@ TTS models are priced **per million characters**, **per minute** of audio, or **
 <a name="speech-to-text"></a>
 ### Speech-to-Text
 
-STT requests use multipart form data rather than JSON — the audio file is sent as a file attachment. Spectra handles this automatically.
+STT requests send the audio file as multipart form data instead of JSON. Spectra handles this for you.
 
 | Metric | Column | Description |
 | --- | --- | --- |
@@ -127,4 +127,4 @@ Document models are priced **per page**.
 
 | Category | Example Models | Reason |
 | --- | --- | --- |
-| Realtime (WebSocket) | gpt-4o-realtime-preview, gpt-4o-mini-realtime-preview | Realtime models use persistent WebSocket connections rather than HTTP request/response cycles |
+| Realtime (WebSocket) | gpt-4o-realtime-preview, gpt-4o-mini-realtime-preview | Realtime models use persistent WebSocket connections, not HTTP requests and responses |

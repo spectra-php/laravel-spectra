@@ -153,7 +153,7 @@ The default span builder follows the current [OpenTelemetry GenAI conventions](h
 | `gen_ai.usage.reasoning_tokens` | `gen_ai.usage.reasoning.output_tokens` |
 | `gen_ai.response.finish_reason` | `gen_ai.response.finish_reasons` (array) |
 | `spectra.is_streaming` | `gen_ai.request.stream` |
-| — | `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_write.input_tokens`, `gen_ai.conversation.id`, `error.type`, `spectra.currency`, `spectra.model` |
+| None (new in 2.0) | `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_write.input_tokens`, `gen_ai.conversation.id`, `error.type`, `spectra.currency`, `spectra.model` |
 
 If you rely on the old names, extend `DefaultSpanBuilder` and override `attributes()` or `spanName()`. See [Customizing Spans](/opentelemetry#customizing-spans).
 

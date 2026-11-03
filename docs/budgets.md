@@ -1,11 +1,11 @@
 # Budgets
 
-Budgets allow you to set spending and usage limits per user, team, or any Eloquent model in your application. When a limit is reached, Spectra can either block the request outright (hard limit) or fire a warning event while allowing the request to proceed (soft limit). This gives you fine-grained control over AI costs at the entity level, whether you need strict enforcement for billing compliance or gentle notifications for internal monitoring.
+Budgets let you set spending and usage limits per user, team, or any other Eloquent model in your application. When a limit is reached, Spectra either blocks the request (hard limit) or fires a warning event and lets the request go through (soft limit). Use a hard limit when you need strict enforcement, for example for billing compliance, and a soft limit when you only want to be notified, for example for internal monitoring.
 
 <a name="setup"></a>
 ## Setup
 
-To enable budget tracking on a model, add the `HasAiUsage` trait. This is most commonly applied to your `User` model, but it can be added to any Eloquent model — teams, organizations, projects, or any other entity you want to budget:
+To track budgets on a model, add the `HasAiUsage` trait. You will usually add it to your `User` model, but it works on any Eloquent model: teams, organizations, projects, or anything else you want to budget.
 
 ```php
 use Spectra\Concerns\HasAiUsage;
@@ -16,12 +16,12 @@ class User extends Authenticatable
 }
 ```
 
-The trait provides methods for creating budgets, checking budget status, and querying remaining allowances. It uses a polymorphic relationship, so a single budget table supports any number of different model types.
+The trait adds methods to create budgets, check their status, and query what is left. It uses a polymorphic relationship, so one budget table holds budgets for any number of model types.
 
 <a name="defining-budgets"></a>
 ## Defining Budgets
 
-Use the fluent builder returned by `configureAiBudget()` to define a budget. Chain the limits you need and call `save()` to persist:
+Call `configureAiBudget()` to get a fluent builder. Chain the limits you need, then call `save()`:
 
 ```php
 $user->configureAiBudget()
@@ -34,12 +34,12 @@ $user->configureAiBudget()
     ->save();
 ```
 
-All limits are optional — only set the ones you need. You can combine cost limits, token limits, and request-count limits in any combination.
+Every limit is optional, so set only the ones you need. You can mix cost, token, and request-count limits however you like.
 
 <a name="budget-builder"></a>
 ### Budget Builder
 
-The builder supports the following chainable methods:
+The builder has these chainable methods.
 
 **Cost limits** (in cents):
 
@@ -76,20 +76,20 @@ $user->configureAiBudget()
 **Enforcement mode:**
 
 ```php
-// Hard limit — blocks requests when exceeded (default)
+// Hard limit: blocks requests when exceeded (default)
 $user->configureAiBudget()
     ->monthlyCostLimitInCents(20000)
     ->hardLimit()
     ->save();
 
-// Soft limit — allows requests but fires warning events
+// Soft limit: allows requests but fires warning events
 $user->configureAiBudget()
     ->monthlyCostLimitInCents(20000)
     ->softLimit()
     ->save();
 ```
 
-**Alert thresholds** (percentage 0–100):
+**Alert thresholds** (a percentage from 0 to 100):
 
 ```php
 $user->configureAiBudget()
@@ -111,7 +111,7 @@ $user->configureAiBudget()
     ->save();
 ```
 
-When `allowProviders` or `allowModels` is set, any request to a provider or model not in the list is blocked regardless of budget status. Omitting these methods allows all providers and models.
+When you set `allowProviders` or `allowModels`, any request to a provider or model that isn't in the list is blocked, whatever the budget status. Leave them out to allow every provider and model.
 
 **Named budgets:**
 
@@ -125,7 +125,7 @@ $user->configureAiBudget()
 <a name="checking-budget-status"></a>
 ## Checking Budget Status
 
-You can programmatically check whether a user or entity has exceeded their budget, retrieve detailed status information, or query remaining allowances:
+You can check in code whether a user or other model has exceeded its budget, get the detailed status, or see how much is left:
 
 ```php
 // Has the user exceeded their budget?
@@ -135,16 +135,16 @@ if ($user->hasExceededBudget('openai', 'gpt-4o')) {
 
 // Get detailed budget status
 $status = $user->getBudgetStatus('openai', 'gpt-4o');
-$status->allowed;          // bool — whether the next request would be allowed
-$status->percentage;       // float — max usage percentage across all limits
-$status->providerAllowed;  // bool — whether the provider is in the allowlist
-$status->modelAllowed;     // bool — whether the model is in the allowlist
+$status->allowed;          // bool: whether the next request would be allowed
+$status->percentage;       // float: max usage percentage across all limits
+$status->providerAllowed;  // bool: whether the provider is in the allowlist
+$status->modelAllowed;     // bool: whether the model is in the allowlist
 $status->usage;            // BudgetUsage DTO with current usage values
 $status->limits;           // BudgetLimits DTO with configured limits
 
 // Get remaining budget (in cents)
 $remaining = $user->getRemainingBudget();
-$remaining->daily;    // ?int — null if no daily limit set
+$remaining->daily;    // ?int: null if no daily limit set
 $remaining->weekly;   // ?int
 $remaining->monthly;  // ?int
 $remaining->total;    // ?int
@@ -167,7 +167,7 @@ $user->removeAiBudget();
 <a name="middleware-enforcement"></a>
 ## Middleware Enforcement
 
-For automatic enforcement on specific routes, Spectra provides the `spectra.budget` middleware. When a user's budget is exceeded and `hardLimit` is enabled, the middleware returns a `429 Too Many Requests` response. This prevents any AI requests from proceeding until the budget resets or is increased.
+To enforce budgets on specific routes, use the `spectra.budget` middleware. When a user's budget is exceeded and `hardLimit` is enabled, the middleware returns a `429 Too Many Requests` response. No AI requests go through until the budget resets or you raise it.
 
 ```php
 // Enforce budget for a specific provider and model
@@ -179,23 +179,23 @@ Route::middleware(['auth', 'spectra.budget'])
     ->post('/ai/generate', GenerateController::class);
 ```
 
-When `softLimit()` is configured, the middleware allows the request to proceed but still fires budget events, enabling you to implement soft warning behaviors such as sending notifications or displaying banners to the user.
+With `softLimit()`, the middleware lets the request through but still fires budget events. You can use them for soft warnings, such as sending a notification or showing the user a banner.
 
 ::: info Enforcement is pre-flight
-The middleware checks budgets **before** the request runs, using the spend recorded from *previous* requests — it cannot know what the current request will cost. The request that actually crosses a limit therefore always completes; Spectra detects the overage right after its cost is recorded and dispatches a `BudgetExceeded` event (with `wasBlocked = false`), and every *subsequent* request is then blocked by the hard limit. Listen for `BudgetExceeded` if you need to react to the crossing itself.
+The middleware checks budgets **before** the request runs, using the spend recorded from *previous* requests. It can't know what the current request will cost. So the request that actually crosses a limit always completes. Right after its cost is recorded, Spectra detects the overage and dispatches a `BudgetExceeded` event (with `wasBlocked = false`). Every *later* request is then blocked by the hard limit. Listen for `BudgetExceeded` if you need to react to the crossing itself.
 :::
 
 <a name="events"></a>
 ## Events
 
-Spectra dispatches events when budget thresholds are reached, giving you the opportunity to send notifications, trigger alerts, or take any other action in response to budget pressure.
+Spectra dispatches events when a budget threshold is reached. Listen for them to send notifications, trigger alerts, or do anything else when a budget runs low.
 
 <a name="alerts-fire-once"></a>
 ### Alerts Fire Once per Period
 
 The warning, critical, and exceeded alerts fire **once** per budget, limit, and period. For example, the monthly warning for a user fires once in October, and again in November if usage reaches it again. A daily limit can fire once per day, and a weekly limit once per week. If you change a limit, its alerts can fire again.
 
-Spectra keeps the "already sent" mark in your application's default cache store. This way it holds across PHP-FPM requests and queue workers. Use a shared cache store (such as Redis or the database) when you run more than one server. The `array` cache store is not shared between processes, so alerts can fire more than once with it.
+Spectra keeps the "already sent" mark in your application's default cache store, so it holds across PHP-FPM requests and queue workers. Use a shared cache store (such as Redis or the database) when you run more than one server. The `array` cache store is not shared between processes, so alerts can fire more than once with it.
 
 One exception: when the middleware blocks a request with a hard limit, it dispatches `BudgetExceeded` (with `wasBlocked = true`) for every blocked request.
 
@@ -261,7 +261,7 @@ Event::listen(BudgetExceeded::class, function ($event) {
 <a name="configuration"></a>
 ## Configuration
 
-Set global budget defaults in `config/spectra.php`. These values apply when individual budgets do not specify their own thresholds or behavior:
+Set global budget defaults in `config/spectra.php`. They apply when a budget doesn't set its own thresholds or behavior:
 
 ```php
 'budget' => [

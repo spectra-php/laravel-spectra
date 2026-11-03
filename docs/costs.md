@@ -1,20 +1,20 @@
 # Costs
 
-Spectra automatically calculates the cost of every tracked AI request. Costs are computed using the [pricing catalog](/pricing) (or your [scraped prices](/pricing#scraped-prices), when you turn them on) and the metrics extracted from each response — tokens, image count, audio duration, page count, or character count depending on the model type.
+Spectra calculates the cost of every tracked AI request. It uses the [pricing catalog](/pricing) (or your [scraped prices](/pricing#scraped-prices), when you turn them on) and the metrics extracted from each response: tokens, image count, audio duration, page count, or character count, depending on the model type.
 
 All costs are stored in **cents** of your reporting currency (`spectra.costs.currency`, default `USD`) with decimal precision (for example, `0.004200` cents). This gives sub-cent accuracy for high-volume operations. Each request also stores its currency in the `currency` column.
 
 <a name="how-cost-calculation-works"></a>
 ## How Cost Calculation Works
 
-When a tracked request completes, Spectra's cost calculation runs through these steps:
+When a tracked request completes, Spectra works out its cost in these steps:
 
-1. **Reported cost** — If the provider sent the real cost in the response (OpenRouter, xAI), Spectra uses it. See [Reported Cost](#reported-cost).
-2. **Model identification** — Spectra prices the model the provider actually served (from the response, stored as `snapshot`) when the catalog knows it. Otherwise it prices the model you asked for. See [How Spectra Finds a Model](/pricing#model-lookup).
-3. **Pricing lookup** — The in-memory pricing catalog is queried for the provider, model, and [tier](#pricing-tiers). The prompt size picks [long-context prices](/pricing#long-context-prices), and the request date picks [dated prices](/pricing#dated-prices).
-4. **Pricing unit resolution** — The `pricing_unit` on the model definition decides which formula to use.
-5. **Cost calculation** — The formula is applied to the extracted metrics and the prices, converted to your [reporting currency](#currency-conversion). Then the [cost multiplier](#cost-multiplier) and [tool call fees](#tool-call-fees) are applied.
-6. **Persistence** — The cost is stored in `prompt_cost`, `completion_cost`, and `total_cost_in_cents` on the request record.
+1. **Reported cost.** If the provider sent the real cost in the response (OpenRouter, xAI), Spectra uses it. See [Reported Cost](#reported-cost).
+2. **Model identification.** Spectra prices the model the provider actually served (from the response, stored as `snapshot`) when the catalog knows it. Otherwise it prices the model you asked for. See [How Spectra Finds a Model](/pricing#model-lookup).
+3. **Pricing lookup.** Spectra looks up the provider, model, and [tier](#pricing-tiers) in the in-memory pricing catalog. The prompt size picks [long-context prices](/pricing#long-context-prices), and the request date picks [dated prices](/pricing#dated-prices).
+4. **Pricing unit resolution.** The `pricing_unit` on the model definition decides which formula to use.
+5. **Cost calculation.** The formula is applied to the extracted metrics and the prices, converted to your [reporting currency](#currency-conversion). Then the [cost multiplier](#cost-multiplier) and [tool call fees](#tool-call-fees) are applied.
+6. **Persistence.** The cost is stored in `prompt_cost`, `completion_cost`, and `total_cost_in_cents` on the request record.
 
 <a name="pricing-units"></a>
 ## Pricing Units
@@ -92,7 +92,7 @@ total_cost = prompt_cost + completion_cost
 
 Reasoning tokens are part of `text_out`, so they are billed at the output price.
 
-Prices in the pricing catalog are stored in **cents per million tokens**. The division by 1,000,000 converts from per-million pricing to the actual cost for the tokens used. A price the catalog leaves empty falls back to the plain input or output price, as shown above.
+Prices in the pricing catalog are stored in **cents per million tokens**. Dividing by 1,000,000 turns the per-million price into the cost of the tokens actually used. A price the catalog leaves empty falls back to the plain input or output price, as shown above.
 
 <a name="unit-based-cost-formulas"></a>
 ## Unit-Based Cost Formulas
@@ -196,12 +196,12 @@ Configure the default tier per provider in `config/spectra.php`. It is used when
 ],
 ```
 
-Any provider slug may be listed here.
+You can list any provider slug here.
 
 <a name="per-request-tier"></a>
 ### Per-Request Tier Override
 
-Override the tier for one request using `withAITracking`:
+Override the tier for one request with `withAITracking`:
 
 ```php
 Http::withAITracking('openai', 'gpt-4o', ['pricing_tier' => 'batch'])
@@ -298,7 +298,7 @@ $estimate = $calculator->forTokens('anthropic', 'claude-sonnet-4-6', new TokenMe
 <a name="zero-cost-requests"></a>
 ## Zero-Cost Requests
 
-A request will have zero cost when:
+A request costs zero when:
 
 - The model is not in the pricing catalog (not by its id, an alias, or a snapshot date)
 - The pricing tier doesn't exist and the `standard` tier fallback also has no entry

@@ -1,27 +1,27 @@
 # Custom Providers
 
-Spectra ships with built-in support for several AI providers. You can extend it to support any additional provider by creating a provider class and one or more handler classes, then registering the provider in the configuration. Once registered, Spectra automatically detects and tracks requests to the new provider using the same pipeline as built-in providers.
+Spectra has built-in support for several AI providers. To add another one, create a provider class and one or more handler classes, then register the provider in the config. Spectra then detects and tracks requests to the new provider the same way it does for the built-in ones.
 
 <a name="how-provider-detection-works"></a>
 ## How Provider Detection Works
 
-When an outgoing HTTP request is intercepted, Spectra's `ProviderRegistry` attempts to match it against all configured providers in two steps:
+When Spectra intercepts an outgoing HTTP request, it matches it against the configured providers in two steps:
 
-1. **Host matching** — The request URL's hostname is compared against each provider's `getHosts()` list. Host patterns support `{placeholder}` syntax for variable segments, such as `{resource}.openai.azure.com`.
-2. **Endpoint matching** — The URL path is passed through the provider's `normalizeEndpoint()` method, then checked against each handler's `endpoints()` list to confirm the request targets a trackable API endpoint.
+1. **Host matching.** The request URL's hostname is compared against each provider's `getHosts()` list. Host patterns support `{placeholder}` syntax for variable segments, such as `{resource}.openai.azure.com`.
+2. **Endpoint matching.** The URL path goes through the provider's `normalizeEndpoint()` method, then is checked against each handler's `endpoints()` list to confirm the request targets a trackable API endpoint.
 
-Once matched, the provider's handler extracts normalized metrics from the response.
+Once a request matches, the provider's handler extracts normalized metrics from the response.
 
 > [!TIP]
-> Spectra only observes usage-related endpoints — requests that consume tokens, generate media, or produce other billable output. Non-usage endpoints such as listing models (`/v1/models`), health checks, or configuration lookups are not tracked, even if they target a recognized provider host.
+> Spectra only tracks usage endpoints: requests that consume tokens, generate media, or produce other billable output. Other endpoints, such as listing models (`/v1/models`), health checks, or configuration lookups, are not tracked, even on a recognized provider host.
 
 <a name="architecture-overview"></a>
 ## Architecture Overview
 
-Each provider follows a two-level architecture:
+Each provider has two levels:
 
-- **Provider class** — Extends `Provider` and defines the provider's hosts, name, and handler list. The provider is a coordinator that delegates all metric extraction to its handlers.
-- **Handler classes** — Each handler implements the `Handler` interface and owns the extraction logic for a specific endpoint type (chat completions, embeddings, images, etc.).
+- **Provider class.** Extends `Provider` and defines the provider's hosts, name, and handler list. The provider only coordinates; its handlers do all the metric extraction.
+- **Handler classes.** Each handler implements the `Handler` interface and owns the extraction logic for one endpoint type (chat completions, embeddings, images, etc.).
 
 ```
 MyProvider (extends Provider)
@@ -30,19 +30,19 @@ MyProvider (extends Provider)
 └── ImageHandler    → /v1/images/generations
 ```
 
-For providers with a single endpoint type, you need only one handler. For providers with multiple API shapes, create a handler for each endpoint type.
+A provider with a single endpoint type needs only one handler. If the provider has several API shapes, create a handler for each endpoint type.
 
 <a name="creating-a-provider"></a>
 ## Creating a Provider
 
-The following example shows how to create a provider, using Mistral AI as an illustration. Mistral is already a built-in provider, but we use it here because its API shape is straightforward and easy to follow.
+This example builds a provider for Mistral AI. Mistral is already built in, but its API is simple and easy to follow, so it makes a good example.
 
 <a name="step-1-create-the-handler"></a>
 ### Step 1: Create the Handler
 
-Handlers implement the `Handler` interface and contain all extraction logic for a specific endpoint type. The handler must define the model type, the endpoints it matches, and methods to extract metrics, the model name, and the response content.
+Handlers implement the `Handler` interface and hold all the extraction logic for one endpoint type. A handler defines the model type, the endpoints it matches, and methods that extract the metrics, the model name, and the response content.
 
-The `MatchesEndpoints` trait provides the `matchesEndpoint()` method required by the `Handler` interface. It performs an exact match against the handler's `endpoints()` array, which is sufficient for most providers. If your endpoints contain dynamic segments (for example, `/v1/models/{model}:generateContent`), you can override `matchesEndpoint()` with a custom regex implementation instead.
+The `MatchesEndpoints` trait provides the `matchesEndpoint()` method the `Handler` interface requires. It does an exact match against the handler's `endpoints()` array, which is enough for most providers. If your endpoints have dynamic segments (for example, `/v1/models/{model}:generateContent`), override `matchesEndpoint()` with your own regex instead.
 
 ```php
 <?php
@@ -112,7 +112,7 @@ class MistralChatHandler implements Handler, ExtractsModelFromResponse
 <a name="step-2-create-the-provider-class"></a>
 ### Step 2: Create the Provider Class
 
-The provider class ties everything together — it defines the provider's name, recognized hosts, and the list of handlers to use:
+The provider class ties everything together. It defines the provider's name, the hosts it recognizes, and the handlers to use:
 
 ```php
 <?php
@@ -175,12 +175,12 @@ Add an entry to the `providers` array in `config/spectra.php`:
 ],
 ```
 
-Once registered, Spectra will automatically detect and track any HTTP request to `api.mistral.ai` that targets the `/v1/chat/completions` endpoint.
+Spectra now tracks every HTTP request to `api.mistral.ai` that targets the `/v1/chat/completions` endpoint.
 
 <a name="multi-endpoint-providers"></a>
 ## Multi-Endpoint Providers
 
-When a provider has multiple API shapes — for example, separate endpoints for text, images, and audio — create a handler for each endpoint type and return them all from the provider's `handlers()` method. The `Provider` base class routes each request to the correct handler based on endpoint matching.
+When a provider has several API shapes, for example separate endpoints for text, images, and audio, create a handler for each endpoint type and return them all from the provider's `handlers()` method. The `Provider` base class routes each request to the handler whose endpoint matches.
 
 ```php
 class MyProvider extends Provider
@@ -197,16 +197,16 @@ class MyProvider extends Provider
 ```
 
 > [!NOTE]
-> When each handler targets distinct endpoints, order does not matter — Spectra checks all handlers and selects the one whose endpoint matches. When multiple handlers share the same endpoint (for example, OpenAI's `/v1/responses` serves both text and image generation), implement the `MatchesResponseShape` interface on the specialized handlers so Spectra can disambiguate based on the response body.
+> When each handler targets its own endpoints, order does not matter. Spectra checks all handlers and picks the one whose endpoint matches. When several handlers share an endpoint (for example, OpenAI's `/v1/responses` serves both text and image generation), implement the `MatchesResponseShape` interface on the specialized handlers so Spectra can tell them apart by the response body.
 
 <a name="optional-handler-interfaces"></a>
 ## Optional Handler Interfaces
 
-Handlers can implement additional interfaces for richer metric extraction and behavior:
+Handlers can implement these extra interfaces to extract more metrics or change how a request is handled.
 
 ### `HasFinishReason`
 
-AI providers include a reason for why text generation stopped in each response. OpenAI uses `finish_reason` (`stop`, `length`, `tool_calls`), while Anthropic uses `stop_reason` (`end_turn`, `max_tokens`, `stop_sequence`). Implement `HasFinishReason` to normalize this value so it appears in the dashboard and is available for filtering:
+Each response says why text generation stopped. OpenAI uses `finish_reason` (`stop`, `length`, `tool_calls`), while Anthropic uses `stop_reason` (`end_turn`, `max_tokens`, `stop_sequence`). Implement `HasFinishReason` to read this value, so it shows in the dashboard and you can filter by it:
 
 ```php
 use Spectra\Contracts\HasFinishReason;
@@ -226,7 +226,7 @@ class MyChatHandler implements Handler, HasFinishReason
 
 ### `MatchesResponseShape`
 
-Some providers use the same endpoint for different types of output. For example, OpenAI's `/v1/responses` endpoint can return both text completions and generated images. When multiple handlers match the same endpoint, Spectra calls `matchesResponse()` on each handler to determine which one should process the response. The handler that recognizes the response structure wins:
+Some providers use the same endpoint for different kinds of output. For example, OpenAI's `/v1/responses` endpoint can return both text completions and generated images. When several handlers match the same endpoint, Spectra calls `matchesResponse()` on each one to decide which should process the response. The handler that recognizes the response structure wins:
 
 ```php
 use Spectra\Contracts\MatchesResponseShape;
@@ -270,7 +270,7 @@ class MyTextHandler implements Handler, MatchesResponseShape
 
 ### `ExtractsModelFromResponse`
 
-Most AI providers include the model name in the JSON response body. Implement `ExtractsModelFromResponse` so Spectra can read the model identifier for pricing lookup and dashboard display. This is the most common model extraction approach — implement it on any handler whose response body contains a model field:
+Most AI providers include the model name in the JSON response body. Implement `ExtractsModelFromResponse` so Spectra can read the model identifier for pricing lookup and dashboard display. This is the most common way to get the model, so implement it on any handler whose response body has a model field:
 
 ```php
 use Spectra\Contracts\ExtractsModelFromResponse;
@@ -285,11 +285,11 @@ class MyChatHandler implements Handler, ExtractsModelFromResponse
 ```
 
 > [!NOTE]
-> `extractModelFromResponse()` is not part of the base `Handler` interface — it is opt-in via `ExtractsModelFromResponse`. If your handler does not implement this interface, Spectra falls back to `ExtractsModelFromRequest` (below) or the `model` field in the request body.
+> `extractModelFromResponse()` is not part of the base `Handler` interface. You opt in by implementing `ExtractsModelFromResponse`. If your handler does not implement this interface, Spectra falls back to `ExtractsModelFromRequest` (below) or the `model` field in the request body.
 
 ### `ExtractsModelFromRequest`
 
-Some providers embed the model name in the URL path rather than in the response body (for example, Google's `/v1/models/{model}:generateContent` or fal.ai's `/fal-ai/flux/dev`). Implement `ExtractsModelFromRequest` to extract the model from the request data or endpoint path. Handlers that implement this interface typically do not implement `ExtractsModelFromResponse`, although both can be combined when the model appears in both the request URL and the response body:
+Some providers put the model name in the URL path instead of the response body (for example, Google's `/v1/models/{model}:generateContent` or fal.ai's `/fal-ai/flux/dev`). Implement `ExtractsModelFromRequest` to read the model from the request data or the endpoint path. Handlers that implement this interface usually don't implement `ExtractsModelFromResponse`, but you can combine both when the model appears in the request URL and in the response body:
 
 ```php
 use Spectra\Contracts\ExtractsModelFromRequest;
@@ -312,7 +312,7 @@ class MyHandler implements Handler, ExtractsModelFromRequest
 
 ### `SkipsResponse`
 
-Some API workflows involve polling for a result that isn't immediately available. Video generation, for example, returns an unfinished job (`queued`, `in_progress`) until processing finishes. Implement `SkipsResponse` and return `true` for these non-terminal states, so Spectra does not record the polls. Only the finished response is tracked:
+Some APIs make you poll for a result that isn't ready yet. Video generation, for example, returns an unfinished job (`queued`, `in_progress`) until processing finishes. Implement `SkipsResponse` and return `true` for these unfinished states, so Spectra does not record the polls. Only the finished response is tracked:
 
 ```php
 use Spectra\Contracts\SkipsResponse;
@@ -350,7 +350,7 @@ class MyVideoHandler implements Handler, HasProviderLatency
 
 ### `HasExpiration`
 
-Generated media URLs (images, videos) are often temporary and expire after a set period. Implement `HasExpiration` so Spectra records when the generated content will become unavailable:
+Generated media URLs (images, videos) are often temporary and expire after a set period. Implement `HasExpiration` so Spectra records when the generated content stops being available:
 
 ```php
 use Illuminate\Support\Carbon;
@@ -369,7 +369,7 @@ class MyHandler implements Handler, HasExpiration
 
 ### `ReturnsBinaryResponse`
 
-Some endpoints return binary data instead of JSON (for example, text-to-speech endpoints return raw audio bytes). Implement this marker interface so Spectra knows not to JSON-decode the response body. Since binary responses cannot contain a model name, these handlers typically implement `ExtractsModelFromRequest` instead of `ExtractsModelFromResponse`:
+Some endpoints return binary data instead of JSON (for example, text-to-speech endpoints return raw audio bytes). Implement this marker interface so Spectra knows not to JSON-decode the response body. A binary response can't contain a model name, so these handlers usually implement `ExtractsModelFromRequest` instead of `ExtractsModelFromResponse`:
 
 ```php
 use Spectra\Contracts\ExtractsModelFromRequest;
@@ -472,7 +472,7 @@ You may also return these extra keys. Spectra applies them to the request:
 
 ### `HasMedia`
 
-AI providers often return generated images and videos as temporary URLs that expire after a set period. Implement `HasMedia` to download and persist these files to a Laravel filesystem disk before the URLs expire. `$rawBody` holds the raw response body for binary responses (for example, TTS audio). The following example shows how OpenAI's image handler stores generated images:
+AI providers often return generated images and videos as temporary URLs that expire after a set period. Implement `HasMedia` to download these files and save them to a Laravel filesystem disk before the URLs expire. `$rawBody` holds the raw response body for binary responses (for example, TTS audio). The following example shows how OpenAI's image handler stores generated images:
 
 ```php
 use Illuminate\Support\Facades\Http;
@@ -495,7 +495,7 @@ class MyImageHandler implements Handler, HasMedia
                 $content = base64_decode($item['b64_json']);
                 $stored[] = $persister->store($requestId, $i, $content, 'png');
             } elseif (isset($item['url'])) {
-                // Image returned as a temporary URL — download before it expires
+                // Image returned as a temporary URL: download before it expires
                 $content = Http::withoutAITracking()->get($item['url'])->body();
                 $stored[] = $persister->store($requestId, $i, $content, 'png');
             }
@@ -508,7 +508,7 @@ class MyImageHandler implements Handler, HasMedia
 
 ### `ExtractsPricingTierFromRequest` / `ExtractsPricingTierFromResponse`
 
-Implemented on the **provider class** (not the handler) when the provider offers multiple pricing tiers. These interfaces allow Spectra to detect the active tier from the request or the response. Implement one or both depending on where the tier information is available. Return a Spectra tier name (`standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, `hd`) or `null`:
+Implement these on the **provider class** (not the handler) when the provider offers several pricing tiers. They let Spectra detect the active tier from the request or the response. Implement one or both, depending on where the tier shows up. Return a Spectra tier name (`standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, `hd`) or `null`:
 
 ```php
 use Spectra\Contracts\ExtractsPricingTierFromRequest;
@@ -530,7 +530,7 @@ class MyProvider extends Provider implements ExtractsPricingTierFromRequest, Ext
 
 The tier from the response wins over the tier from the request, because the provider may serve a request at a different tier than it asked for. A tier set with `Spectra::withPricingTier()` or the `pricing_tier` option wins over both.
 
-The default pricing tier is resolved from config automatically (`spectra.costs.provider_settings.{provider}.default_tier`), so providers do not need to define it themselves. To configure a default tier for your provider, add it to `config/spectra.php`:
+Spectra reads the default pricing tier from config (`spectra.costs.provider_settings.{provider}.default_tier`), so providers don't need to define it themselves. To set a default tier for your provider, add it to `config/spectra.php`:
 
 ```php
 'provider_settings' => [
@@ -579,7 +579,7 @@ For a polled async job, `$requestData` is the body of the request that submitted
 <a name="metrics-dtos"></a>
 ## Metrics DTOs
 
-Handlers return a `Metrics` container with typed data transfer objects for each metric category. Use the DTOs that match your handler's model type:
+Handlers return a `Metrics` container that holds a typed DTO for each kind of metric. Use the DTOs that match your handler's model type:
 
 ```php
 use Spectra\Data\AudioMetrics;
@@ -628,8 +628,8 @@ new Metrics(document: new DocumentMetrics(pages: 12));
 
 | Field | Part of | Description |
 | --- | --- | --- |
-| `promptTokens` | — | All input tokens: uncached, cache reads, and cache writes |
-| `completionTokens` | — | All output tokens, including reasoning |
+| `promptTokens` | None (total) | All input tokens: uncached, cache reads, and cache writes |
+| `completionTokens` | None (total) | All output tokens, including reasoning |
 | `cachedTokens` | `promptTokens` | Input tokens read from the prompt cache |
 | `cacheWriteTokens` | `promptTokens` | Input tokens written to the prompt cache |
 | `cacheWrite1hTokens` | `cacheWriteTokens` | Cache writes with a 1-hour lifetime. The rest bill at the 5-minute rate. |
@@ -725,7 +725,7 @@ class AcmeChatHandler extends OpenAiCompatibleChatHandler
 <a name="adding-pricing"></a>
 ## Adding Pricing
 
-For accurate cost tracking, create a pricing class for your custom provider. Extend `ProviderPricing` and define models in the `define()` method:
+To track costs, create a pricing class for your custom provider. Extend `ProviderPricing` and define the models in its `define()` method:
 
 ```php
 <?php
@@ -773,7 +773,7 @@ Then register it in `config/spectra.php`:
 <a name="testing-custom-providers"></a>
 ## Testing Custom Providers
 
-Write fixture-based tests for each handler to verify correct metric extraction. Test coverage should include model name extraction, token or metric extraction, response content extraction, endpoint matching, and edge cases such as missing fields or empty responses:
+Write fixture-based tests for each handler to check that it extracts metrics correctly. Cover model name extraction, token or metric extraction, response content extraction, endpoint matching, and edge cases such as missing fields or empty responses:
 
 ```php
 use App\Spectra\Handlers\MistralChatHandler;

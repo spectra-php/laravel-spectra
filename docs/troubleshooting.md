@@ -1,6 +1,6 @@
 # Troubleshooting
 
-This page covers common issues you may encounter when using Spectra and how to resolve them.
+Common problems with Spectra, and how to fix them.
 
 ## No Requests Are Being Tracked
 
@@ -8,30 +8,30 @@ This page covers common issues you may encounter when using Spectra and how to r
 
 **Checklist:**
 
-1. **Spectra is enabled** — Verify the master switch is on:
+1. **Spectra is enabled.** Check that the master switch is on:
    ```bash
    SPECTRA_ENABLED=true
    ```
 
-2. **Watcher is enabled** — Automatic tracking requires the watcher to be active:
+2. **The watcher is enabled.** Automatic tracking needs the watcher:
    ```bash
    SPECTRA_WATCHER_ENABLED=true
    ```
 
-3. **Provider is registered** — The request hostname must match a configured provider in `spectra.providers`. For example, requests to `api.openai.com` are recognized automatically, but requests to a custom or self-hosted endpoint require a [custom provider](/custom-providers) to be registered.
+3. **The provider is registered.** The request hostname must match a provider in `spectra.providers`. Requests to `api.openai.com`, for example, are recognized automatically. Requests to a custom or self-hosted endpoint need a registered [custom provider](/custom-providers).
 
-4. **Endpoint is trackable** — The request path must match a trackable endpoint defined in the provider's handlers. For example, OpenAI tracks `/v1/chat/completions`, `/v1/embeddings`, and `/v1/images/generations`, but does not track `/v1/models` or other non-AI endpoints.
+4. **The endpoint is trackable.** The request path must match a trackable endpoint in the provider's handlers. For example, OpenAI tracks `/v1/chat/completions`, `/v1/embeddings`, and `/v1/images/generations`, but not `/v1/models` or other non-AI endpoints.
 
-5. **Migrations have run** — Ensure the `spectra_requests` table exists:
+5. **Migrations have run.** Make sure the `spectra_requests` table exists:
    ```shell
    php artisan migrate
    ```
 
-6. **Using a supported HTTP client** — Spectra automatically tracks requests made via Laravel's `Http` facade (HttpWatcher, which also covers Prism and Laravel AI), the `openai-php/laravel` SDK (OpenAiWatcher), and Guzzle with Spectra middleware (GuzzleMiddleware). Streamed responses through these clients are tracked too. Direct `curl` calls or other HTTP clients are not tracked automatically — use the [Guzzle middleware](/usage#guzzle-middleware), [`Spectra::stream()`](/usage#spectra-stream), or [manual tracking](/usage#manual-tracking) for those.
+6. **You use a supported HTTP client.** Spectra tracks requests sent through Laravel's `Http` facade (which also covers Prism and Laravel AI), the `openai-php/laravel` SDK, and Guzzle clients with Spectra's `GuzzleMiddleware`. Streamed responses through these clients are tracked too. Direct `curl` calls and other HTTP clients are not tracked automatically. For those, use the [Guzzle middleware](/usage#guzzle-middleware), [`Spectra::stream()`](/usage#spectra-stream), or [manual tracking](/usage#manual-tracking).
 
-7. **A stream was not read to the end** — A streamed request is recorded when your code reads the body to the end, closes it, or drops the response. If your code keeps the response object alive without reading it, nothing is recorded yet.
+7. **A stream was not read to the end.** A streamed request is recorded when your code reads the body to the end, closes it, or drops the response. If your code keeps the response object alive without reading it, nothing is recorded yet.
 
-8. **Saving failed** — Spectra never throws saving errors into your app. They go to your exception handler, so check your error log (for example, for a missing column after an upgrade — see [Migrations](/migrations#v2-migration)).
+8. **Saving failed.** Spectra never throws saving errors into your app. They go to your exception handler, so check your error log. A common cause is a missing column after an upgrade (see [Migrations](/migrations#v2-migration)).
 
 ## Requests Tracked But Cost Is Zero
 
@@ -39,22 +39,22 @@ This page covers common issues you may encounter when using Spectra and how to r
 
 **Checklist:**
 
-1. **Pricing class exists** — The pricing catalog must contain entries for the models you are using. Pricing is defined through `ProviderPricing` classes registered in `config/spectra.php` under `costs.pricing`. See [Pricing](/pricing) for details.
+1. **A pricing class exists.** The pricing catalog needs an entry for each model you use. Prices live in `ProviderPricing` classes, registered in `config/spectra.php` under `costs.pricing`. See [Pricing](/pricing).
 
-2. **Model name matches** — The model id must match a catalog entry: by its exact id, an alias, or the id without a snapshot date or routing suffix. See [How Spectra Finds a Model](/pricing#model-lookup). Compare the `snapshot` and `model` values in your request records with the pricing class definitions.
+2. **The model name matches.** The model id must match a catalog entry: by its exact id, an alias, or the id without a snapshot date or routing suffix. See [How Spectra Finds a Model](/pricing#model-lookup). Compare the `snapshot` and `model` values in your request records with the pricing class definitions.
 
-3. **Pricing tier exists** — If you are using a non-standard tier (such as `batch` or `flex`), a pricing tier entry must exist for that tier in the provider's pricing class.
+3. **The pricing tier exists.** If you use a non-standard tier (such as `batch` or `flex`), the provider's pricing class needs an entry for that tier.
 
-4. **Pricing unit matches metrics** — The `pricingUnit` on the model definition must correspond to the metrics available in the response. For example, a model with `pricingUnit('tokens')` requires non-null `prompt_tokens` and `completion_tokens` values.
+4. **The pricing unit matches the metrics.** The `pricingUnit` on the model definition must match the metrics in the response. For example, a model with `pricingUnit('tokens')` requires non-null `prompt_tokens` and `completion_tokens` values.
 
-5. **Cost tracking is enabled** — Verify in the configuration:
+5. **Cost tracking is enabled.** Check the configuration:
    ```php
    'costs' => [
        'enabled' => true,
    ],
    ```
 
-6. **Streamed OpenAI Chat Completions** — OpenAI only sends usage in a Chat Completions stream when the request has `'stream_options' => ['include_usage' => true]`. Without it, the request is recorded with zero tokens and zero cost. See [Streaming](/usage#streaming).
+6. **Streamed OpenAI Chat Completions.** OpenAI only sends usage in a Chat Completions stream when the request has `'stream_options' => ['include_usage' => true]`. Without it, the request is recorded with zero tokens and zero cost. See [Streaming](/usage#streaming).
 
 ## Dashboard Shows Empty Data
 
@@ -62,26 +62,26 @@ This page covers common issues you may encounter when using Spectra and how to r
 
 **Checklist:**
 
-1. **Dashboard is enabled** — Verify the dashboard is not disabled:
+1. **The dashboard is enabled.** Check that the dashboard is not turned off:
    ```bash
    SPECTRA_DASHBOARD_ENABLED=true
    ```
 
-2. **Request persistence is on** — If `store_requests` is `false`, requests are tracked in memory but not persisted to the database:
+2. **Request persistence is on.** If `store_requests` is `false`, requests are tracked in memory but not saved to the database:
    ```bash
    SPECTRA_STORE_REQUESTS=true
    ```
 
-3. **Database connection is correct** — If using a separate database, ensure the dashboard queries the same connection configured in `storage.connection`.
+3. **The database connection is correct.** If you use a separate database, make sure the dashboard reads from the connection set in `storage.connection`.
 
-4. **Authorization gate passes** — The `viewSpectra` gate must return `true` for your user. In local development this is automatic. In production, ensure the gate is defined:
+4. **The authorization gate passes.** The `viewSpectra` gate must return `true` for your user. In local development this is automatic. In production, define the gate:
    ```php
    Gate::define('viewSpectra', function ($user) {
        return $user->isAdmin();
    });
    ```
 
-5. **Middleware is correct** — If you added `auth` to dashboard middleware, make sure you are logged in when accessing the dashboard.
+5. **The middleware is correct.** If you added `auth` to the dashboard middleware, make sure you are logged in when you open the dashboard.
 
 ## Queue Persistence Not Working
 
@@ -89,12 +89,12 @@ This page covers common issues you may encounter when using Spectra and how to r
 
 **Checklist:**
 
-1. **Queue worker is running** — Ensure a worker is processing the queue:
+1. **A queue worker is running.** Make sure a worker is processing the queue:
    ```shell
    php artisan queue:work
    ```
 
-2. **Queue configuration is correct** — Verify the connection and queue name match your worker:
+2. **The queue configuration is correct.** Check that the connection and queue name match your worker:
    ```php
    'queue' => [
        'enabled' => true,
@@ -103,21 +103,21 @@ This page covers common issues you may encounter when using Spectra and how to r
    ],
    ```
 
-3. **Check failed jobs** — The `PersistSpectraRequestJob` may be failing silently:
+3. **Check failed jobs.** The `PersistSpectraRequestJob` may be failing silently:
    ```shell
    php artisan queue:failed
    ```
 
-4. **Queue takes priority over after-response** — These modes are mutually exclusive. When `queue.enabled` is `true`, the `after_response` setting is ignored.
+4. **Queue takes priority over after-response.** You can only use one of these modes. When `queue.enabled` is `true`, the `after_response` setting is ignored.
 
 ## After-Response Mode Not Working
 
 **Symptoms:** `after_response` is enabled but requests appear to persist synchronously.
 
-This is expected behavior in two scenarios:
+This is expected in two cases:
 
-- **Non-HTTP context** — After-response only works during web requests. Console commands, queue jobs, and scheduled tasks always persist synchronously because there is no HTTP response lifecycle to defer to.
-- **Queue is enabled** — When `queue.enabled` is `true`, it takes priority and `after_response` is ignored.
+- **Non-HTTP context.** After-response only works during web requests. Console commands, queue jobs, and scheduled tasks always save synchronously, because there is no HTTP response to wait for.
+- **Queue is enabled.** When `queue.enabled` is `true`, it takes priority and `after_response` is ignored.
 
 ## Budget Middleware Not Enforcing
 
@@ -141,7 +141,7 @@ This is expected behavior in two scenarios:
        ->post('/ai/chat', ChatController::class);
    ```
 
-4. **Hard limit is enabled** — With `hard_limit = false`, requests are allowed to proceed and only events are fired. Set `hard_limit = true` on the budget to block requests when exceeded.
+4. **The hard limit is enabled.** With `hard_limit = false`, requests go through and Spectra only fires events. Set `hard_limit = true` on the budget to block requests once it is exceeded.
 
 ## OpenTelemetry Export Not Appearing
 
@@ -154,16 +154,16 @@ This is expected behavior in two scenarios:
    SPECTRA_OTEL_ENABLED=true
    ```
 
-2. **Endpoint is reachable** — Test connectivity to your OTLP endpoint:
+2. **The endpoint is reachable.** Test the connection to your OTLP endpoint:
    ```shell
    curl -v http://localhost:4318/v1/traces
    ```
 
-3. **Authentication headers are configured** — Most cloud backends require authentication. Verify your headers in the configuration.
+3. **Authentication headers are set.** Most cloud backends require authentication. Check the headers in your configuration.
 
-4. **Export timing** — In after-response mode, traces export after the HTTP response. In console or queue contexts, they export synchronously. If traces appear from CLI commands but not web requests, verify that your server supports terminable middleware.
+4. **Export timing.** In after-response mode, traces are exported after the HTTP response. In console or queue contexts, they are exported synchronously. If traces show up from CLI commands but not from web requests, check that your server supports terminable middleware.
 
-5. **Timeout is sufficient** — If the OTLP endpoint is remote or slow, increase the timeout:
+5. **The timeout is long enough.** If the OTLP endpoint is remote or slow, increase the timeout:
    ```bash
    SPECTRA_OTEL_TIMEOUT=30
    ```
@@ -174,7 +174,7 @@ This is expected behavior in two scenarios:
 
 This can also happen after upgrading from 1.x: Spectra 1.x counted each poll of an async job (for example, video generation) in the daily stats.
 
-**Solution:** Rebuild the daily statistics aggregation from the raw request records:
+**Solution:** Rebuild the daily statistics from the raw request records:
 
 ```shell
 php artisan spectra:rebuild-stats
@@ -191,16 +191,16 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
 
 **Checklist:**
 
-1. **Media persistence is enabled**:
+1. **Media persistence is enabled:**
    ```bash
    SPECTRA_MEDIA_ENABLED=true
    ```
 
-2. **Disk is writable** — Ensure the configured filesystem disk and path exist and are writable by your application.
+2. **The disk is writable.** Make sure the configured filesystem disk and path exist and your application can write to them.
 
-3. **API key is available** — Some providers require an API key to download media files. Ensure keys are configured in `spectra.api_keys`.
+3. **An API key is available.** Some providers need an API key to download media files. Set the keys in `spectra.api_keys`.
 
-4. **URLs haven't expired** — Provider media URLs have limited lifetimes. If persistence is delayed (for example, via a queue with a long delay), the URLs may expire before download completes.
+4. **The URLs haven't expired.** Provider media URLs don't last long. If saving is delayed (for example, by a queue with a long delay), the URLs may expire before the download finishes.
 
 ## Macro Not Available
 
@@ -208,7 +208,7 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
 
 **Checklist:**
 
-1. **Service provider is registered** — Spectra's service provider should be auto-discovered. If not, register it manually:
+1. **The service provider is registered.** Spectra's service provider should be auto-discovered. If it isn't, register it yourself:
    ```php
    // config/app.php
    'providers' => [
@@ -216,12 +216,12 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
    ],
    ```
 
-2. **Spectra is enabled** — Macros are registered when Spectra boots:
+2. **Spectra is enabled.** Macros are registered when Spectra boots:
    ```bash
    SPECTRA_ENABLED=true
    ```
 
-3. **Check for conflicts** — Another package may have registered a macro with the same name. Laravel macros are global and the last registration wins.
+3. **Check for conflicts.** Another package may have registered a macro with the same name. Laravel macros are global, and the last registration wins.
 
 ## High Memory Usage
 
@@ -254,9 +254,9 @@ Spectra tracks each request once. Every route into a provider (the HTTP client, 
 
 **Causes:**
 
-- **Retry middleware** — If your HTTP client retries failed requests, each attempt is tracked as a separate request. This is intentional, as each retry attempt consumes tokens and incurs costs.
+- **Retry middleware.** If your HTTP client retries failed requests, each attempt is tracked as a separate request. This is intentional: every attempt uses tokens and costs money.
 
-- **No response id** — Records are only merged when the provider sends a response id. If you track the same call twice yourself (for example, with `Spectra::track()` and a custom Guzzle middleware), and the response has no id, you get two records.
+- **No response id.** Records are only merged when the provider sends a response id. If you track the same call twice yourself (for example, with `Spectra::track()` and a custom Guzzle middleware), and the response has no id, you get two records.
 
 **Solution:** Use only one tracking mechanism per request path.
 
@@ -280,7 +280,7 @@ Older rows keep their old values. Nothing is rewritten. See the [Upgrade Guide](
 
 **Symptoms:** The log shows a warning like `Spectra: no exchange rate from EUR to USD`.
 
-A pricing catalog uses another currency than your reporting currency (the built-in Scaleway catalog is in EUR). Without a rate, Spectra counts those prices 1:1, so the costs are wrong. Add the rate to `config/spectra.php`:
+A pricing catalog uses a different currency from your reporting currency (the built-in Scaleway catalog is in EUR). Without a rate, Spectra counts those prices 1:1, so the costs are wrong. Add the rate to `config/spectra.php`:
 
 ```php
 'costs' => [

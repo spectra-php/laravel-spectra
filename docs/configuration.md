@@ -1,6 +1,6 @@
 # Configuration
 
-All configuration lives in `config/spectra.php`, published during installation. Every option can be controlled via environment variables. This page provides a complete reference for all available settings.
+All configuration lives in `config/spectra.php`, which is published when you install Spectra. You can control every option with environment variables. Below is a reference for every setting.
 
 <a name="master-switch"></a>
 ## Master Switch
@@ -9,12 +9,12 @@ All configuration lives in `config/spectra.php`, published during installation. 
 'enabled' => env('SPECTRA_ENABLED', true),
 ```
 
-When set to `false`, Spectra does nothing — no request interception, no tracking, no database writes, and no dashboard routes. This allows you to disable observability entirely in specific environments without removing the package from your application.
+When set to `false`, Spectra does nothing: no request interception, no tracking, no database writes, and no dashboard routes. Use it to turn Spectra off in specific environments without removing the package from your application.
 
 <a name="storage"></a>
 ## Storage
 
-Controls how and what Spectra persists to the database. These settings let you balance storage consumption, privacy requirements, and debugging needs.
+These settings control what Spectra saves to the database, and how. Use them to balance storage use, privacy, and debugging needs.
 
 ```php
 'storage' => [
@@ -43,7 +43,7 @@ Controls how and what Spectra persists to the database. These settings let you b
 <a name="media-persistence"></a>
 ### Media Persistence
 
-Some AI endpoints return media with expiring URLs — for example, DALL-E images expire after approximately one hour, and Sora videos include an `expires_at` timestamp. When media persistence is enabled, Spectra downloads and stores generated media to a Laravel filesystem disk before the URLs expire.
+Some AI endpoints return media with expiring URLs. For example, DALL-E images expire after about one hour, and Sora videos include an `expires_at` timestamp. When media persistence is enabled, Spectra downloads the generated media and stores it on a Laravel filesystem disk before the URLs expire.
 
 ```php
 'storage' => [
@@ -58,26 +58,26 @@ Some AI endpoints return media with expiring URLs — for example, DALL-E images
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `media.enabled` | `bool` | `false` | Enable automatic media download and persistence. |
-| `media.disk` | `string\|null` | `null` | Laravel filesystem disk to store media on. `null` uses the default filesystem disk. Use `s3` or another cloud disk in production for accessibility across servers. |
+| `media.disk` | `string\|null` | `null` | Laravel filesystem disk to store media on. `null` uses the default filesystem disk. In production, use `s3` or another cloud disk so every server can reach the files. |
 | `media.path` | `string` | `spectra` | Directory path within the disk. |
 
 > [!NOTE]
-> **Binary data is always stripped from stored responses.** Regardless of whether media persistence is enabled, Spectra replaces inline base64-encoded data with `[stripped]` placeholders before saving responses to the database. This prevents multi-megabyte base64 strings from bloating the `response` column. The following formats are stripped automatically:
+> **Binary data is always stripped from stored responses.** Whether or not media persistence is enabled, Spectra replaces inline base64-encoded data with `[stripped]` placeholders before saving responses to the database. This keeps multi-megabyte base64 strings out of the `response` column. Spectra strips these formats automatically:
 > - OpenAI DALL-E: `data[].b64_json`
 > - OpenAI Responses API: `output[].result` (image generation calls)
 > - Google Gemini: `candidates[].content.parts[].inlineData.data` (images and audio)
 > - Google Imagen: `generatedImages[].image.imageBytes`
 >
-> To preserve the actual media files, enable media persistence above. Spectra will decode and store the files on disk, and the dashboard will serve them from the `media_storage_path` column.
+> To keep the actual media files, enable media persistence above. Spectra then decodes the files and stores them on disk, and the dashboard serves them from the `media_storage_path` column.
 
 Media files are stored as flat file paths in the `media_storage_path` JSON column (e.g. `["spectra/abc123/0.png", "spectra/abc123/1.png"]`). The dashboard serves images and audio directly from these paths via internal API routes. When [`spectra:prune`](/commands#spectra-prune) deletes a request, it deletes the request's stored media files too.
 
 <a name="api-keys"></a>
 ## API Keys
 
-Optional explicit API keys per provider. These take highest priority in the resolution chain and are used by internal operations such as media downloads and Google embedding token counting (via the `countTokens` API).
+You can set an API key for each provider here. Spectra uses these keys for its own calls, such as media downloads and counting Google embedding tokens (with the `countTokens` API). A key set here wins over every other config location.
 
-Spectra resolves API keys using a lookup chain that checks multiple config locations per provider. For example, for Google it checks: `spectra.api_keys.google` → `services.google.api_key` → `services.google.key` → `prism.providers.gemini.api_key` → `ai.providers.google.key`. If any key is found in the chain, it is used.
+To find a key, Spectra checks several config locations for each provider, in order. For Google, it checks `spectra.api_keys.google` → `services.google.api_key` → `services.google.key` → `prism.providers.gemini.api_key` → `ai.providers.google.key`, and uses the first key it finds.
 
 ```php
 'api_keys' => [
@@ -90,7 +90,7 @@ Spectra resolves API keys using a lookup chain that checks multiple config locat
 <a name="queue"></a>
 ## Queue
 
-Controls whether request persistence happens synchronously, after the HTTP response, or via a background queue job.
+Choose whether Spectra saves requests synchronously, after the HTTP response is sent, or in a background queue job.
 
 ```php
 'queue' => [
@@ -125,7 +125,7 @@ Controls whether request persistence happens synchronously, after the HTTP respo
 <a name="tracking-context"></a>
 ## Tracking Context
 
-Configure what contextual information Spectra captures automatically with each tracked request.
+Choose what context Spectra captures automatically with each tracked request.
 
 ```php
 'tracking' => [
@@ -234,7 +234,7 @@ Configure cost calculation and pricing tiers.
 | `currency_symbol` | `string` | `$` | Symbol shown before cost values in the dashboard. Display only. |
 | `provider_settings.*.default_tier` | `string` | `standard` | The tier used when you did not set one (with `Spectra::withPricingTier()` or the `pricing_tier` option), and neither the request nor the response says which tier was used. Tiers: `standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, `hd`. Any provider slug may be listed. See [Which Tier Is Used](/costs#tier-order). |
 | `pricing` | `array` | See above | Map provider slugs to their `ProviderPricing` class. See [Pricing](/pricing) for customization. |
-| `use_scraped_prices` | `bool` | `false` | Bill with the models in `scraped_prices_path`: each replaces the built-in model with the same id. Off, the file is ignored. A config published before these keys existed doesn't need them: Spectra adds them with their defaults. See [Scraped Prices](/pricing#scraped-prices). |
+| `use_scraped_prices` | `bool` | `false` | Bill with the models in `scraped_prices_path`: each replaces the built-in model with the same id. When it's off, the file is ignored. A config published before these keys existed doesn't need them: Spectra adds them with their defaults. See [Scraped Prices](/pricing#scraped-prices). |
 | `scraped_prices_path` | `string` | `resources/spectra/scraped-prices.json` | The scraped prices file (JSON), written by `spectra:pricing-scrape`. |
 | `firecrawl.*` | `array` | See above | API key, base URL, per-page timeout (seconds) and the default providers for [`spectra:pricing-scrape`](/pricing#scraping-prices). Without `providers`, it scrapes the providers your app has tracked requests for. Tracking never calls Firecrawl. |
 
@@ -287,7 +287,7 @@ Configure automatic HTTP request interception.
 <a name="providers"></a>
 ## Providers
 
-Map provider names to their provider classes. Each provider defines hosts, endpoints, and handlers for detecting and extracting data from AI API responses.
+Map provider names to their provider classes. Each provider defines the hosts, endpoints, and handlers Spectra uses to detect AI API responses and extract their data.
 
 For the full list of built-in providers, see [Models](/models#supported-providers).
 
@@ -304,7 +304,7 @@ Add custom providers by extending `Provider` and adding an entry here. See [Cust
 <a name="endpoint-urls"></a>
 ## Endpoint URLs
 
-Override the base URL for any provider. This is useful when routing requests through a proxy or using a self-hosted model server:
+Override the base URL for any provider, for example when you route requests through a proxy or use a self-hosted model server:
 
 ```php
 'endpoint_urls' => [
@@ -313,7 +313,7 @@ Override the base URL for any provider. This is useful when routing requests thr
 ],
 ```
 
-When the `laravel-ai` package is installed, Spectra will also check its config (`ai.providers.{provider}.url`) as a fallback.
+When the `laravel-ai` package is installed, Spectra also checks its config (`ai.providers.{provider}.url`) as a fallback.
 
 <a name="azure-openai"></a>
 ### Azure OpenAI
@@ -350,7 +350,7 @@ With `laravel-ai`, the host of `ai.providers.azure.url` (`AZURE_OPENAI_URL`) is 
 <a name="integrations"></a>
 ## Integrations
 
-Configure external integrations. Currently supports OpenTelemetry trace export. See [OpenTelemetry](/opentelemetry) for a detailed setup guide.
+Configure external integrations. Spectra currently supports exporting traces to OpenTelemetry. See [OpenTelemetry](/opentelemetry) for the setup guide.
 
 ```php
 'integrations' => [
@@ -368,7 +368,7 @@ Configure external integrations. Currently supports OpenTelemetry trace export. 
 <a name="environment-variables"></a>
 ## Environment Variables
 
-A quick reference of all environment variables supported by Spectra:
+Every environment variable Spectra supports, in one place:
 
 ```bash
 # Master switch

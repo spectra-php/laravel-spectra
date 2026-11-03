@@ -1,36 +1,36 @@
-<a href="https://mayahi.net/services" target="_blank" rel="noopener"><img src="/images/hire-me.svg" alt="Hire me — I'm available for consulting and development work" style="width: 100%; margin-bottom: 24px;" /></a>
+<a href="https://mayahi.net/services" target="_blank" rel="noopener"><img src="/images/hire-me.svg" alt="Hire me: I'm available for consulting and development work" style="width: 100%; margin-bottom: 24px;" /></a>
 
 # Introduction
 
-[Laravel Spectra](https://github.com/spectra-php/laravel-spectra) is a comprehensive observability package for AI and LLM operations in Laravel applications. It intercepts outgoing requests to AI providers, extracts usage metrics such as token counts and media quantities, calculates costs from a built-in pricing catalog, and persists analytics-ready records that power a built-in real-time dashboard.
+[Laravel Spectra](https://github.com/spectra-php/laravel-spectra) is an observability package for AI and LLM calls in Laravel applications. It intercepts outgoing requests to AI providers, reads usage metrics such as token counts and media quantities, calculates costs from a built-in pricing catalog, and saves records that feed a built-in real-time dashboard.
 
-Modern applications increasingly rely on AI APIs for text generation, image synthesis, embeddings, speech processing, and more. As usage grows, so does the need to answer critical operational questions: which models are consuming the most tokens, how much each feature costs, which users are driving the highest spend, and where latency and failure patterns emerge. Spectra provides a single, unified observability layer that answers all of these questions without requiring you to instrument each call manually.
+Applications use AI APIs for text generation, image generation, embeddings, speech, and more. As usage grows, you need answers to questions like these: which models use the most tokens, how much each feature costs, which users spend the most, and where requests are slow or fail. Spectra answers them in one place, without you instrumenting each call by hand.
 
 <img src="/images/dashboard/home.png" alt="Spectra Dashboard" style="border-radius: 8px; margin-top: 16px;" />
 
 ## How It Works
 
-When your application sends a request to a supported AI provider, Spectra intercepts it through one of several tracking mechanisms — automatic watchers, Guzzle middleware, or explicit manual tracking. The intercepted request flows through a processing pipeline that identifies the provider, resolves the appropriate handler, extracts usage metrics into typed data transfer objects, calculates the cost from the pricing catalog, and persists the complete record to the database. Daily statistics are aggregated in real time, and traces can optionally be exported to OpenTelemetry-compatible backends.
+When your application sends a request to a supported AI provider, Spectra picks it up in one of three ways: automatic tracking, Guzzle middleware, or manual tracking. Spectra then identifies the provider, picks the right handler, reads the usage metrics, calculates the cost from the pricing catalog, and saves the record to the database. Daily statistics are updated in real time, and you can also export traces to OpenTelemetry-compatible backends.
 
-The entire process is transparent to your application code. In most cases, you install the package, run the installer, and tracking begins automatically with no code changes required.
+Your application code doesn't see any of this. In most cases you install the package, run the installer, and tracking starts with no code changes.
 
 ## Supported Providers
 
 For the full list of supported providers, see [Models](/models#supported-providers).
 
-You can also add support for additional providers by creating a custom provider class. See [Custom Providers](/custom-providers) for details.
+You can add more providers by creating a custom provider class. See [Custom Providers](/custom-providers) for details.
 
 ## Key Features
 
-- **Automatic tracking** &mdash; Watchers intercept Laravel HTTP client and OpenAI PHP SDK requests with zero code changes. Guzzle middleware provides an additional integration point for direct Guzzle usage.
-- **Multimodal support** &mdash; Track text completions, embeddings, image generation, video generation, text-to-speech, and speech-to-text across all major providers.
-- **Cost calculation** &mdash; A built-in pricing catalog with token-based (including prompt-cache reads and writes, reasoning, audio, and image tokens), per-image, per-megapixel, per-video, per-minute, per-second, per-character, per-page, and per-request pricing. Multiple pricing tiers (standard, batch, flex, priority, fast, ultrafast) are supported per model, as well as long-context prices, dated prices, and catalogs in other currencies.
-- **Budget enforcement** &mdash; Define cost, token, and request-count limits per user, team, or any Eloquent model. Enforce budgets via middleware with hard blocks or soft warning events.
-- **Real-time dashboard** &mdash; A built-in SPA with request exploration, cost analysis, and per-user analytics.
-- **Streaming support** &mdash; Streamed responses are tracked automatically as your code reads them, with time-to-first-token metrics and full token accounting, including streamed image generation via OpenAI's Responses API.
-- **Media persistence** &mdash; Automatically download and store generated images and videos to any Laravel filesystem disk before provider URLs expire.
-- **Tags and metadata** &mdash; Attach custom labels and structured metadata to any request for filtering and grouping in the dashboard.
-- **User attribution** &mdash; Automatically associate requests with the authenticated user or manually assign them to any Eloquent model.
-- **Flexible persistence** &mdash; Persist records synchronously, after the HTTP response, or via a queue job depending on your latency requirements.
-- **OpenTelemetry integration** &mdash; Export AI request traces to any OTLP-compatible backend for correlation with your existing observability infrastructure.
-- **Extensible** &mdash; Add custom provider support by implementing a handler class and registering it in the configuration.
+- **Automatic tracking.** Requests made with Laravel's HTTP client and the OpenAI PHP SDK are tracked with no code changes. If you use Guzzle directly, add Spectra's Guzzle middleware.
+- **Multimodal support.** Track text completions, embeddings, image generation, video generation, text-to-speech, and speech-to-text across all major providers.
+- **Cost calculation.** A built-in pricing catalog with token-based (including prompt-cache reads and writes, reasoning, audio, and image tokens), per-image, per-megapixel, per-video, per-minute, per-second, per-character, per-page, and per-request pricing. Each model can have several pricing tiers (standard, batch, flex, priority, fast, ultrafast), long-context prices and dated prices. Catalogs can also use other currencies.
+- **Budget enforcement.** Set cost, token, and request-count limits per user, team, or any Eloquent model. Enforce them with middleware that either blocks requests (hard limit) or only fires warning events (soft limit).
+- **Real-time dashboard.** A built-in dashboard for exploring requests, analyzing costs, and viewing per-user analytics.
+- **Streaming support.** Streamed responses are tracked automatically as your code reads them, with time-to-first-token metrics and full token counts. This includes streamed image generation through OpenAI's Responses API.
+- **Media persistence.** Download generated images and videos to any Laravel filesystem disk before the provider URLs expire.
+- **Tags and metadata.** Attach labels and structured metadata to any request, then filter and group by them in the dashboard.
+- **User attribution.** Requests are linked to the authenticated user automatically, or you can assign them to any Eloquent model.
+- **Flexible persistence.** Save records synchronously, after the HTTP response, or in a queued job, depending on your latency needs.
+- **OpenTelemetry integration.** Export AI request traces to any OTLP-compatible backend, so they sit next to the rest of your observability data.
+- **Extensible.** Add a custom provider by writing a handler class and registering it in the configuration.

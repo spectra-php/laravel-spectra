@@ -1,27 +1,27 @@
 # OpenTelemetry
 
-Spectra can export AI request data to external observability platforms via the OpenTelemetry Protocol (OTLP), giving you visibility into AI operations alongside your existing monitoring infrastructure. Each tracked AI request becomes a span in your distributed tracing system, complete with provider, model, token usage, cost, latency, and status metadata.
+Spectra can export AI request data to external observability platforms over the OpenTelemetry Protocol (OTLP), so you see your AI calls next to the rest of your monitoring. Each tracked AI request becomes a span in your distributed tracing system, with its provider, model, token usage, cost, latency, and status.
 
 <a name="what-is-opentelemetry"></a>
 ## What is OpenTelemetry?
 
-[OpenTelemetry](https://opentelemetry.io/) (often abbreviated as OTel) is an open-source, vendor-neutral observability framework maintained by the Cloud Native Computing Foundation (CNCF). It defines a standard format for telemetry data — traces, metrics, and logs — that is supported by virtually every major observability platform.
+[OpenTelemetry](https://opentelemetry.io/) (often abbreviated as OTel) is an open-source, vendor-neutral observability framework maintained by the Cloud Native Computing Foundation (CNCF). It defines a standard format for telemetry data (traces, metrics, and logs), and virtually every major observability platform supports it.
 
-In practical terms, a **trace** represents the full journey of a request through your system. Each step in that journey is a **span**. Spectra creates a span for every tracked AI request, enriched with structured attributes including the provider name, model identifier, token counts, calculated cost, latency, and HTTP status code.
+In practice, a **trace** is the full journey of a request through your system. Each step in that journey is a **span**. Spectra creates a span for every tracked AI request, with attributes for the provider name, model identifier, token counts, calculated cost, latency, and HTTP status code.
 
-The key benefit of OpenTelemetry is portability. You export your traces in OTLP format once, and you can send them to any compatible backend — Jaeger, Grafana Tempo, Datadog, New Relic, Honeycomb, or dozens of others. If you later switch observability vendors, you change the endpoint configuration, not your application code.
+The main benefit of OpenTelemetry is portability. You export your traces in OTLP format once, and you can send them to any compatible backend: Jaeger, Grafana Tempo, Datadog, New Relic, Honeycomb, or dozens of others. If you switch observability vendors later, you change the endpoint configuration, not your application code.
 
 <a name="when-to-use-opentelemetry"></a>
 ## When to Use OpenTelemetry
 
-The OpenTelemetry integration is valuable when you already use an observability platform and want AI request data in the same place as the rest of your telemetry. Specific scenarios include:
+The OpenTelemetry integration is most useful when you already use an observability platform and want AI request data in the same place as the rest of your telemetry. Typical uses:
 
 - Correlating AI calls with other services in a distributed system to understand end-to-end request flow.
 - Setting up alerts on AI request latency, error rates, or cost thresholds through your existing alerting infrastructure.
 - Building unified dashboards that combine AI metrics with application performance metrics.
 - Meeting enterprise monitoring requirements that mandate centralized observability with retention policies and access controls.
 
-If you only need AI observability and don't have an existing tracing infrastructure, the built-in Spectra dashboard may be sufficient on its own.
+If you only need AI observability and don't already have tracing infrastructure, the built-in Spectra dashboard may be all you need.
 
 <a name="setup"></a>
 ## Setup
@@ -63,7 +63,7 @@ SPECTRA_OTEL_ENDPOINT=http://localhost:4318/v1/traces
 <a name="compatible-backends"></a>
 ## Compatible Backends
 
-Spectra exports traces in standard OTLP HTTP format, which is supported by all major observability platforms:
+Spectra exports traces in standard OTLP HTTP format, which all major observability platforms support:
 
 | Backend | Type | Endpoint Example |
 | --- | --- | --- |
@@ -112,7 +112,7 @@ Most cloud backends require authentication headers. Add them to the `headers` ar
 <a name="resource-attributes"></a>
 ## Resource Attributes
 
-Resource attributes are key-value pairs added to every exported trace. They describe the environment in which the trace was generated — deployment region, Kubernetes namespace, service tier, and similar infrastructure metadata. Use them to filter and group traces in your observability backend:
+Resource attributes are key-value pairs added to every exported trace. They describe the environment the trace came from, such as the deployment region, Kubernetes namespace, service tier, and similar infrastructure metadata. Use them to filter and group traces in your observability backend:
 
 ```php
 'opentelemetry' => [
@@ -142,7 +142,7 @@ OpenTelemetry export follows the same persistence mode as request storage, contr
 <a name="trace-correlation"></a>
 ## Trace Correlation
 
-Spectra assigns a `trace_id` to each tracked request. This identifier appears in both the Spectra dashboard and the exported OpenTelemetry spans, allowing you to follow a single user action across multiple AI calls and external services.
+Spectra assigns a `trace_id` to each tracked request. The same ID appears in the Spectra dashboard and in the exported OpenTelemetry spans, so you can follow a single user action across multiple AI calls and external services.
 
 ### Automatic Trace IDs
 
@@ -176,7 +176,7 @@ $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($myTraceId) {
 | Spectra Dashboard | The **Trace** card on the request page, and the requests list filter |
 | OpenTelemetry | The span's `trace_id` attribute, visible in your backend's trace view |
 
-This enables end-to-end tracing: a user clicking "Generate Summary" triggers an API route, which calls an AI model, which writes to the database, which dispatches a queue job — all linked under a single trace ID visible across both Spectra and your observability platform.
+This gives you end-to-end tracing. A user clicks "Generate Summary", which triggers an API route that calls an AI model, writes to the database, and dispatches a queue job. All of these steps share one trace ID, which you can see in both Spectra and your observability platform.
 
 <a name="span-attributes"></a>
 ## Span Name and Attributes
@@ -237,7 +237,7 @@ Spectra 2.0 renamed several attributes to follow the current conventions:
 | `gen_ai.usage.reasoning_tokens` | `gen_ai.usage.reasoning.output_tokens` |
 | `gen_ai.response.finish_reason` | `gen_ai.response.finish_reasons` (array) |
 | `spectra.is_streaming` | `gen_ai.request.stream` |
-| — | `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_write.input_tokens`, `gen_ai.conversation.id`, `error.type`, `spectra.currency`, `spectra.model` |
+| None (new in 2.0) | `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_write.input_tokens`, `gen_ai.conversation.id`, `error.type`, `spectra.currency`, `spectra.model` |
 
 If your dashboards or alerts use the old names, update them. Or extend `DefaultSpanBuilder` and override `attributes()` or `spanName()` to keep the old names (see below).
 
@@ -248,7 +248,7 @@ You can customize how spans are built by providing your own `SpanBuilder` implem
 
 ### Extending the Default Builder
 
-The easiest approach is to extend `DefaultSpanBuilder` and override the specific methods you want to change. Apart from `build()`, its methods are `protected` and designed for selective overriding:
+The easiest approach is to extend `DefaultSpanBuilder` and override only the methods you want to change. Apart from `build()`, its methods are `protected`, so you can override them one at a time:
 
 ```php
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
@@ -363,7 +363,7 @@ The `$data` array passed to `SpanBuilder::build()` holds the stored request colu
 <a name="request-transformer"></a>
 ## Request Transformer
 
-The `RequestTransformer` class controls how `SpectraRequest` models are converted into the data arrays that integrations and events receive. The default transformer extracts all relevant fields. You can extend it to add, remove, or modify fields:
+The `RequestTransformer` class controls how `SpectraRequest` models are converted into the data arrays that integrations and events receive. The default transformer extracts all relevant fields. Extend it to add, remove, or change fields:
 
 ```php
 use Spectra\Support\RequestTransformer;
@@ -398,7 +398,7 @@ Register it in `config/spectra.php`:
 <a name="events"></a>
 ## Events
 
-Spectra dispatches a `RequestTracked` event after every AI request is persisted. The event carries the same data array produced by the `RequestTransformer`, making it easy to build custom integrations without modifying Spectra internals.
+Spectra dispatches a `RequestTracked` event after every AI request is persisted. The event carries the same data array the `RequestTransformer` produces, so you can build your own integrations without changing Spectra itself.
 
 ### Listening to the Event
 
