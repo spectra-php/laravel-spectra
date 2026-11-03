@@ -23,6 +23,7 @@ use InvalidArgumentException;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Contracts\SpanBuilder;
 use Spectra\Contracts\Watcher;
+use Spectra\Enums\SpanKind;
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
 use Spectra\Integrations\OpenTelemetry\OtlpExporter;
 use Spectra\Integrations\OpenTelemetry\SpanExporter;
@@ -38,6 +39,8 @@ use Spectra\Support\RequestTransformer;
 use Spectra\Support\StatsAggregator;
 use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\RequestWriter;
+use Spectra\Support\Tracking\SpanStack;
+use Spectra\Support\Tracking\SpanWriter;
 use Spectra\Support\Tracking\TraceContext;
 use Spectra\Support\Tracking\TraceOrigin;
 
@@ -65,12 +68,14 @@ class SpectraServiceProvider extends ServiceProvider
 
         // Scoped, so global tags, trackables, pricing tier and metadata are
         // reset between queued jobs and Octane requests instead of leaking.
-        // Scoped: queue workers and Octane reset it before each job and request.
-        $this->app->scoped(TraceOrigin::class);
-
         $this->app->scoped(Spectra::class, function ($app) {
             return new Spectra($app);
         });
+
+        // Scoped too: queue workers and Octane reset them before each job and request.
+        $this->app->scoped(TraceOrigin::class);
+        $this->app->scoped(SpanStack::class);
+        $this->app->singleton(SpanWriter::class);
 
         $this->app->alias(Spectra::class, 'spectra');
 
@@ -240,15 +245,23 @@ class SpectraServiceProvider extends ServiceProvider
 
             $context->addHidden(TraceContext::TRACE_ID, TraceContext::traceId());
 
-            if (($parentSpanId = TraceContext::parentSpanId()) !== null) {
+            // The job runs under the span open right now (a Spectra::span()
+            // block, or this request's own span), else under `traceparent`.
+            $parentSpanId = rescue(
+                fn () => $this->app->make(SpanStack::class)->parentForDispatch(TraceContext::traceId(), TraceContext::parentSpanId()),
+                fn () => TraceContext::parentSpanId(),
+            );
+
+            if ($parentSpanId !== null) {
                 $context->addHidden(TraceContext::PARENT_SPAN_ID, $parentSpanId);
             }
         });
     }
 
     /**
-     * Tell TraceOrigin which job or command is running, so the AI calls they
-     * make are stored with its name.
+     * Tell TraceOrigin and SpanStack which job or command is running, so the
+     * AI calls they make are stored with its name and nest under its span,
+     * and save the span of the HTTP request once the app is done with it.
      */
     protected function registerOriginTracking(): void
     {
@@ -256,14 +269,35 @@ class SpectraServiceProvider extends ServiceProvider
         $events = $this->app->make('events');
 
         $origin = fn (): TraceOrigin => $this->app->make(TraceOrigin::class);
+        $spans = fn (): SpanStack => $this->app->make(SpanStack::class);
+        $jobKey = fn (object $job): string => 'job:'.spl_object_id($job);
 
         // A failure here must never stop the user's job or command.
-        $events->listen(JobProcessing::class, fn (JobProcessing $event) => rescue(fn () => $origin()->startJob($event->job, $event->job->resolveName())));
-        $events->listen(JobProcessed::class, fn (JobProcessed $event) => rescue(fn () => $origin()->finishJob($event->job)));
-        $events->listen(JobExceptionOccurred::class, fn (JobExceptionOccurred $event) => rescue(fn () => $origin()->finishJob($event->job)));
+        $events->listen(JobProcessing::class, fn (JobProcessing $event) => rescue(function () use ($event, $origin, $spans, $jobKey) {
+            $name = $event->job->resolveName();
 
-        $events->listen(CommandStarting::class, fn (CommandStarting $event) => rescue(fn () => $origin()->startCommand($event->command)));
-        $events->listen(CommandFinished::class, fn (CommandFinished $event) => rescue(fn () => $origin()->finishCommand($event->command)));
+            $origin()->startJob($event->job, $name);
+            $spans()->startUnit($jobKey($event->job), SpanKind::Job, config('spectra.tracking.capture_origin', true) ? $name : 'Queued job');
+        }));
+        $events->listen(JobProcessed::class, fn (JobProcessed $event) => rescue(function () use ($event, $origin, $spans, $jobKey) {
+            $origin()->finishJob($event->job);
+            $spans()->finishUnit($jobKey($event->job));
+        }));
+        $events->listen(JobExceptionOccurred::class, fn (JobExceptionOccurred $event) => rescue(function () use ($event, $origin, $spans, $jobKey) {
+            $origin()->finishJob($event->job);
+            $spans()->finishUnit($jobKey($event->job), $event->exception);
+        }));
+
+        $events->listen(CommandStarting::class, fn (CommandStarting $event) => rescue(function () use ($event, $origin, $spans) {
+            $origin()->startCommand($event->command);
+            $spans()->startCommand($event->command);
+        }));
+        $events->listen(CommandFinished::class, fn (CommandFinished $event) => rescue(function () use ($event, $origin, $spans) {
+            $origin()->finishCommand($event->command);
+            $spans()->finishCommand($event->command);
+        }));
+
+        $this->app->terminating(fn () => rescue(fn () => $spans()->finishRequest()));
     }
 
     protected function registerProviders(): void
@@ -341,6 +375,7 @@ class SpectraServiceProvider extends ServiceProvider
      */
     protected const NESTED_CONFIG_DEFAULTS = [
         'tracking.capture_origin',
+        'tracking.root_spans',
         'costs.use_scraped_prices',
         'costs.scraped_prices_path',
         'costs.firecrawl',

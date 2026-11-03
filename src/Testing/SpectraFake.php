@@ -26,6 +26,13 @@ class SpectraFake extends Spectra
     /** @var array<string, mixed> */
     protected array $fakeResponses = [];
 
+    /**
+     * Spans opened with span(), in the order they ended.
+     *
+     * @var array<int, array{name: string, attributes: array<string, mixed>, status: string, exception: ?\Throwable}>
+     */
+    protected array $spans = [];
+
     protected bool $enabled = true;
 
     /**
@@ -94,6 +101,56 @@ class SpectraFake extends Spectra
             $this->recordFailure($context, $e);
             throw $e;
         }
+    }
+
+    /**
+     * Run the callback and remember the span instead of storing it.
+     *
+     * @template TResult
+     *
+     * @param  callable(): TResult  $callback
+     * @param  array<string, mixed>  $attributes
+     * @return TResult
+     */
+    public function span(string $name, callable $callback, array $attributes = []): mixed
+    {
+        if (! $this->isEnabled()) {
+            return $callback();
+        }
+
+        try {
+            $result = $callback();
+        } catch (\Throwable $e) {
+            $this->spans[] = ['name' => $name, 'attributes' => $attributes, 'status' => 'error', 'exception' => $e];
+
+            throw $e;
+        }
+
+        $this->spans[] = ['name' => $name, 'attributes' => $attributes, 'status' => 'ok', 'exception' => null];
+
+        return $result;
+    }
+
+    /**
+     * @return array<int, array{name: string, attributes: array<string, mixed>, status: string, exception: ?\Throwable}>
+     */
+    public function getSpans(): array
+    {
+        return $this->spans;
+    }
+
+    /**
+     * Assert a span with this name was recorded, and that the callback (given
+     * the recorded span) accepts one of them when given.
+     */
+    public function assertSpanRecorded(string $name, ?callable $callback = null): void
+    {
+        $matching = array_filter(
+            $this->spans,
+            fn (array $span) => $span['name'] === $name && ($callback === null || $callback($span)),
+        );
+
+        Assert::assertNotEmpty($matching, "Expected a span named [{$name}] to be recorded, but none matched.");
     }
 
     /**
@@ -268,6 +325,7 @@ class SpectraFake extends Spectra
     public function reset(): self
     {
         $this->recorded = [];
+        $this->spans = [];
 
         return $this;
     }

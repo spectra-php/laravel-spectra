@@ -404,6 +404,32 @@ with an **Open trace** link. As everywhere in the dashboard, cost counts
 successful calls only. Duration runs from the start of the first call to the
 end of the last one.
 
+<a name="spans"></a>
+### Spans
+
+A trace is a tree. Each AI call has a span, and calls can sit inside other spans: the request, job or command they ran in, and the blocks of your code you wrap in `Spectra::span()`.
+
+**Your own spans.** Wrap a step in `Spectra::span()` to see it on the timeline, with the AI calls it makes nested inside:
+
+```php
+use Spectra\Facades\Spectra;
+
+$answer = Spectra::span('answer-question', function () use ($question) {
+    $documents = Spectra::span('retrieve-documents', fn () => $this->search($question));
+
+    return OpenAI::chat()->create([
+        'model' => 'gpt-4o',
+        'messages' => $this->prompt($question, $documents),
+    ]);
+}, ['question_length' => strlen($question)]);
+```
+
+`span()` returns what the callback returns. The span stores its start and end to the millisecond, its attributes, and whether the callback threw; the exception is re-thrown unchanged. Spans nest, and a job dispatched inside a span runs under it. Dispatch from a block body, not an arrow function: `fn () => dispatch($job)` returns the pending dispatch, which only dispatches after the span has ended. Outside a trace (with `trace_per_request` off), a span starts one for its duration.
+
+**Root spans.** Each HTTP request, queued job and Artisan command that makes an AI call gets a span of its own, named by its origin, with its calls and spans inside. A job's span sits under the span that dispatched it, so a trace reads request, job, call. A request, job or command that makes no AI call stores nothing. Turn root spans off with `root_spans` (see [Configuration](/configuration#tracking-context)).
+
+Spans are stored in the `spectra_spans` table. They are never billed or counted as requests, and `spectra:prune` deletes them with the requests. The trace page draws the tree: each span with its children indented under it.
+
 ### Setting the Trace Yourself
 
 ```php

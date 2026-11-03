@@ -31,6 +31,7 @@ use Spectra\Support\ProviderRegistry;
  * @property string|null $batch_id
  * @property string|null $trace_id
  * @property string|null $parent_span_id
+ * @property string|null $span_id
  * @property string|null $response_id
  * @property string $provider
  * @property string $model

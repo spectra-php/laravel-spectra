@@ -47,7 +47,7 @@ const failedCount = computed(() => props.trace.failed_count ?? (props.trace.requ
             </div>
         </dl>
 
-        <TraceWaterfall :requests="trace.requests || []" :duration-ms="trace.duration_ms || 0" />
+        <TraceWaterfall :requests="trace.requests || []" :spans="trace.spans || []" :duration-ms="trace.timeline_ms || trace.duration_ms || 0" />
 
         <div v-if="trace.truncated" class="border-t border-gray-100 px-5 py-2.5 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
             Showing the first {{ (trace.requests || []).length }} of {{ formatNumber(trace.request_count) }} calls.

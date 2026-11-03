@@ -71,6 +71,18 @@ Assert on the total token count across all tracked requests:
 $fake->assertTotalTokens(1500);
 ```
 
+### Spans
+
+The fake runs `Spectra::span()` callbacks and remembers the spans instead of storing them:
+
+```php
+$fake->assertSpanRecorded('retrieve-documents');
+
+$fake->assertSpanRecorded('answer-question', fn (array $span) => $span['status'] === 'ok');
+
+$spans = $fake->getSpans(); // name, attributes, status ('ok' or 'error') and exception of each
+```
+
 ### Custom Assertions
 
 For more complex checks, pass a callback that receives the recorded request data and returns a boolean:

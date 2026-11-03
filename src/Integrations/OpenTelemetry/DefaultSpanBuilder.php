@@ -26,7 +26,8 @@ class DefaultSpanBuilder implements SpanBuilder
     {
         return [
             'traceId' => $this->generateTraceId($data['trace_id'] ?? null),
-            'spanId' => $this->generateSpanId(),
+            // The call's stored span id, so its child spans point at it; rows saved before it existed get a new one.
+            'spanId' => filled($data['span_id'] ?? null) ? (string) $data['span_id'] : $this->generateSpanId(),
             // Set when the incoming request's `traceparent` started this trace.
             'parentSpanId' => (string) ($data['parent_span_id'] ?? ''),
             'name' => $this->spanName($data),

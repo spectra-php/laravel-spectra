@@ -13,6 +13,12 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Dashboard: a trace page shows a trace's calls on one millisecond timeline, with a lane per origin, cost per model, tags and trackable. The request page's Trace card links to it
 - Dashboard: a Conversations screen lists one row per `conversation_id` (turns, failures, models, trackable, cost, last activity) with totals for the filtered conversations. A conversation page shows it as a transcript: each turn's user message and reply, its calls, its cost and the cost so far. Calls with the same `conversation_turn` are one turn
 - Dashboard: the requests list filters by `conversation_id`, and the request page links its conversation
+- Spans: `Spectra::span($name, $callback, $attributes)` runs the callback as a span of the current trace. AI calls, spans and dispatched jobs inside it become its children; it records its start and end to the millisecond, its attributes, and whether it threw
+- Spans: each HTTP request, queued job and Artisan command that makes AI calls gets a root span named by its origin, so a trace is a tree (request, job, call). Units of work without an AI call store nothing. Turn it off with `tracking.root_spans` (`SPECTRA_ROOT_SPANS`)
+- Spans: every call stores its own `span_id`. OpenTelemetry exports calls with that id and their real parent, and exports the other spans too. A custom exporter gets them by also implementing `Spectra\Contracts\ExportsSpans`
+- Dashboard: the trace page draws the trace as a tree of spans and calls
+- Testing: `Spectra::fake()` records spans; `assertSpanRecorded()` and `getSpans()`
+- `spectra:prune` deletes spans with the requests
 - `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL` and `SPECTRA_FIRECRAWL_TIMEOUT`. The unprefixed `FIRECRAWL_*` names still work
 - `SpectraRequest::forTrace()` scope
 - The costs dashboard's top spenders include `trackable_type`, so a user and a team with the same id no longer collide
@@ -53,6 +59,8 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 - Run `php artisan spectra:install` to publish and run the new `add_trace_timing_columns_to_spectra_tables` migration. Until you do, Spectra keeps recording calls without the two new columns and logs a warning once per process
 - A published `config/spectra.php` gets `tracking.capture_origin` with its default (`true`), so you don't need to publish it again
+- Run `php artisan spectra:install` to publish and run the new `add_spans_to_spectra_tables` migration too. Until you do, calls are recorded as before, spans are skipped and a warning is logged once per process. A published config gets `tracking.root_spans` (`true`)
+- An async job polled again keeps the `span_id` and `parent_span_id` of the call that started it
 - If you removed a built-in provider or pricing class from your published config to turn it off, set it to `false` instead: built-ins now stay active underneath your config
 - Routes that relied on the `spectra.budget` middleware reading `provider` / `model` from the request input must pass them as arguments: `spectra.budget:openai,gpt-4o`
 - `BudgetExceeded` listeners that treat `currentUsage` and `limit` as cents should check `limitType` first: token, request and allow-list blocks now fire it too

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Spectra\Integrations\OpenTelemetry;
 
+use Carbon\CarbonInterface;
 use Composer\InstalledVersions;
 use Spectra\Contracts\SpanBuilder;
+use Spectra\Enums\SpanKind;
+use Spectra\Enums\SpanStatus;
 
 /**
  * OpenTelemetry span exporter — coordinates span building and OTLP envelope wrapping.
@@ -49,6 +52,70 @@ class SpanExporter
     public function createSpan(array $data): array
     {
         return $this->spanBuilder->build($data);
+    }
+
+    /**
+     * An OTLP span for a stored span that is not an AI call: a
+     * Spectra::span() block or the request, job or command of a trace.
+     *
+     * @param  array<string, mixed>  $span  The span's columns, dates as dates
+     * @return array<string, mixed>
+     */
+    public function createSpectraSpan(array $span): array
+    {
+        $kind = SpanKind::tryFrom((string) ($span['kind'] ?? '')) ?? SpanKind::Span;
+        $failed = ($span['status'] ?? null) === SpanStatus::Error->value;
+
+        $attributes = [
+            ['key' => 'spectra.span.kind', 'value' => ['stringValue' => $kind->value]],
+        ];
+
+        if (filled($span['origin'] ?? null)) {
+            $attributes[] = ['key' => 'spectra.origin', 'value' => ['stringValue' => (string) $span['origin']]];
+        }
+
+        foreach ((array) ($span['attributes'] ?? []) as $key => $value) {
+            $attributes[] = ['key' => (string) $key, 'value' => $this->attributeValue($value)];
+        }
+
+        return [
+            'traceId' => str_replace('-', '', (string) $span['trace_id']),
+            'spanId' => (string) $span['span_id'],
+            'parentSpanId' => (string) ($span['parent_span_id'] ?? ''),
+            'name' => (string) $span['name'],
+            'kind' => $kind->otlpKind(),
+            'startTimeUnixNano' => $this->toNano($span['started_at'] ?? null),
+            'endTimeUnixNano' => $this->toNano($span['ended_at'] ?? null),
+            'attributes' => $attributes,
+            'status' => $failed
+                ? ['code' => 2, 'message' => (string) ($span['error_message'] ?? null ?: 'Span failed')]
+                : ['code' => 1],
+            'events' => [],
+            'links' => [],
+        ];
+    }
+
+    /**
+     * An OTLP attribute value for a span attribute the app set.
+     *
+     * @return array<string, mixed>
+     */
+    protected function attributeValue(mixed $value): array
+    {
+        return match (true) {
+            is_bool($value) => ['boolValue' => $value],
+            is_int($value) => ['intValue' => $value],
+            is_float($value) => ['doubleValue' => $value],
+            is_string($value) => ['stringValue' => $value],
+            default => ['stringValue' => (string) json_encode($value)],
+        };
+    }
+
+    protected function toNano(mixed $timestamp): string
+    {
+        return $timestamp instanceof CarbonInterface
+            ? (string) ((int) $timestamp->getPreciseTimestamp(6) * 1000)
+            : '0';
     }
 
     /**

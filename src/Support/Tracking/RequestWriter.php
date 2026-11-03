@@ -51,7 +51,7 @@ class RequestWriter
     ];
 
     /** Columns added after 2.0 that a table may not have until the app migrates. */
-    protected const TRACE_COLUMNS = ['started_at', 'origin'];
+    protected const TRACE_COLUMNS = ['started_at', 'origin', 'span_id'];
 
     /** Whether the missing trace columns were already reported (the writer is a singleton). */
     protected bool $hasWarnedAboutTraceColumns = false;
@@ -129,10 +129,10 @@ class RequestWriter
 
         $previous = clone $existing;
 
-        // Keep the original row identity, start time and origin (a poll may run
-        // in another job). A status poll carries no request body, so keep the
+        // Keep the original row identity, start time, origin and place in the
+        // trace (a poll may run in another job). A status poll carries no request body, so keep the
         // one from the request that started the job.
-        $keep = ['id', 'created_at', 'started_at', 'origin'];
+        $keep = ['id', 'created_at', 'started_at', 'origin', 'span_id', 'parent_span_id'];
 
         if (empty($attributes['request']) && ! empty($existing->getAttribute('request'))) {
             $keep[] = 'request';

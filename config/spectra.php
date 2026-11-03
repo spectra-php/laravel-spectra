@@ -393,6 +393,21 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Root Spans
+        |--------------------------------------------------------------------------
+        |
+        | Whether each HTTP request, queued job and Artisan command that makes AI
+        | calls gets a span of its own, named by its origin, with its calls and
+        | Spectra::span() blocks nested inside. A queued job's span sits under
+        | the span that dispatched it, so a trace reads request, job, call. Only
+        | units of work that made at least one AI call are stored.
+        |
+        */
+
+        'root_spans' => env('SPECTRA_ROOT_SPANS', true),
+
+        /*
+        |--------------------------------------------------------------------------
         | One Trace Per Request
         |--------------------------------------------------------------------------
         |

@@ -156,6 +156,28 @@ The header's 32-character trace ID is stored as a UUID in the `trace_id` column 
 
 Turn this off with `SPECTRA_USE_TRACEPARENT=false`.
 
+### Spans and Parents
+
+Each AI call is exported with its own stored span ID, and with the span it ran in as its parent: a `Spectra::span()` block, or the request, job or command it ran in (see [Spans](/usage#spans)). Those spans are exported too, as `INTERNAL` spans (`SERVER` for a request, `CONSUMER` for a job), with their attributes, so your backend shows the same tree as the dashboard. The outermost span's parent is the incoming `traceparent` span.
+
+A custom exporter receives AI calls through `RequestExporter::export()` as before. To receive the other spans as well, also implement `Spectra\Contracts\ExportsSpans`:
+
+```php
+use Spectra\Contracts\ExportsSpans;
+use Spectra\Contracts\RequestExporter;
+
+class MyExporter implements ExportsSpans, RequestExporter
+{
+    public function exportSpan(array $span): void
+    {
+        // trace_id, span_id, parent_span_id, name, kind, origin,
+        // started_at, ended_at, duration_ms, status, error_message, attributes
+    }
+
+    // export() and exportBatch() as before
+}
+```
+
 ### Custom Trace IDs
 
 You can provide your own trace ID to integrate with an existing tracing system. Use a UUID, or a 32-character hex OpenTelemetry trace ID written as a UUID. Set it for the rest of the request or job with `Spectra::withTraceId($traceId)`, or for one call:

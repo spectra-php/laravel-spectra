@@ -6,6 +6,7 @@ namespace Spectra;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use Spectra\Data\TokenMetrics;
 use Spectra\Models\SpectraRequest;
@@ -14,6 +15,7 @@ use Spectra\Support\Query\UsageQueryBuilder;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\ResponseProcessor;
+use Spectra\Support\Tracking\SpanStack;
 use Spectra\Support\Tracking\StreamingTracker;
 use Spectra\Support\Tracking\TraceContext;
 use Throwable;
@@ -75,6 +77,8 @@ class Spectra
     {
         // Options first, so the merged tags/metadata and the global fallbacks
         // below are not overwritten by the raw per-request values.
+        $traceId = $options['trace_id'] ?? $this->globalTraceId ?? $this->requestTraceId();
+
         $context = new RequestContext([
             ...$options,
             'provider' => $provider,
@@ -83,8 +87,8 @@ class Spectra
             'metadata' => array_merge($this->globalMetadata, $options['metadata'] ?? []),
             'trackable_type' => $options['trackable_type'] ?? $this->globalTrackableType,
             'trackable_id' => $options['trackable_id'] ?? $this->globalTrackableId,
-            'trace_id' => $options['trace_id'] ?? $this->globalTraceId ?? $this->requestTraceId(),
-            'parent_span_id' => $options['parent_span_id'] ?? $this->requestParentSpanId($options),
+            'trace_id' => $traceId,
+            'parent_span_id' => $options['parent_span_id'] ?? $this->parentSpanIdFor($traceId, $options),
         ]);
 
         if ($this->globalPricingTier && $context->pricingTier === null) {
@@ -153,6 +157,64 @@ class Spectra
         // Only the callback's own exception may reach the caller: a tracking
         // failure must not cost them the result they already have.
         rescue(fn () => $this->recordSuccess($context, $this->toRawResponse($result)));
+
+        return $result;
+    }
+
+    /**
+     * Run the callback as a named span of the current trace, and return what
+     * it returns.
+     *
+     * AI calls and spans inside the callback become its children, as do the
+     * queued jobs it dispatches. The span records its start, its end and
+     * whether the callback threw; the exception is re-thrown unchanged.
+     * Outside a trace, the span starts one for the callback's duration.
+     *
+     *   $answer = Spectra::span('answer-question', fn () => $agent->run($question), [
+     *       'question_length' => strlen($question),
+     *   ]);
+     *
+     * @template TResult
+     *
+     * @param  callable(): TResult  $callback
+     * @param  array<string, mixed>  $attributes  Stored with the span and exported to OpenTelemetry
+     * @return TResult
+     */
+    public function span(string $name, callable $callback, array $attributes = []): mixed
+    {
+        if (! $this->isEnabled()) {
+            return $callback();
+        }
+
+        $startedTrace = false;
+        $traceId = $this->currentTraceId();
+
+        if ($traceId === null) {
+            $traceId = (string) Str::uuid();
+            $this->globalTraceId = $traceId;
+            $startedTrace = true;
+        }
+
+        $stack = $this->app->make(SpanStack::class);
+        $spanId = rescue(fn () => $stack->open($name, $traceId, $this->parentSpanIdFor($traceId, [], withSpans: false), $attributes));
+
+        try {
+            $result = $callback();
+        } catch (Throwable $e) {
+            if ($spanId !== null) {
+                rescue(fn () => $stack->close($spanId, $e));
+            }
+
+            throw $e;
+        } finally {
+            if ($startedTrace) {
+                $this->globalTraceId = null;
+            }
+        }
+
+        if ($spanId !== null) {
+            rescue(fn () => $stack->close($spanId));
+        }
 
         return $result;
     }
@@ -301,7 +363,28 @@ class Spectra
     }
 
     /**
-     * The incoming `traceparent` span, when this call belongs to that trace.
+     * The span a new AI call or span of the given trace belongs to: the open
+     * Spectra::span() block or unit of work (see SpanStack), else the span
+     * the work came from.
+     *
+     * @param  array<string, mixed>  $options
+     * @param  bool  $withSpans  false for the upstream span only (SpanStack adds its own)
+     */
+    protected function parentSpanIdFor(?string $traceId, array $options, bool $withSpans = true): ?string
+    {
+        $upstream = $this->requestParentSpanId($options);
+
+        // A call sent to a trace of its own doesn't join the spans of this one.
+        if (! $withSpans || (isset($options['trace_id']) && $options['trace_id'] !== $this->currentTraceId())) {
+            return $upstream;
+        }
+
+        return rescue(fn () => $this->app->make(SpanStack::class)->parentFor($traceId, $upstream), $upstream);
+    }
+
+    /**
+     * The incoming `traceparent` span (or the span that dispatched this job),
+     * when this call belongs to that trace.
      *
      * @param  array<string, mixed>  $options
      */

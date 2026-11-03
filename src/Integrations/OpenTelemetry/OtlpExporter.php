@@ -6,15 +6,17 @@ namespace Spectra\Integrations\OpenTelemetry;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Spectra\Contracts\ExportsSpans;
 use Spectra\Contracts\RequestExporter;
 
 /**
- * Sends tracked requests to an OpenTelemetry collector as OTLP/HTTP JSON spans.
+ * Sends tracked requests, and the spans around them, to an OpenTelemetry
+ * collector as OTLP/HTTP JSON spans.
  *
  * Uses Laravel's Http client instead of the OpenTelemetry SDK, so exporting
  * adds no dependency. A failed export is logged and never reaches the app.
  */
-class OtlpExporter implements RequestExporter
+class OtlpExporter implements ExportsSpans, RequestExporter
 {
     protected string $endpoint;
 
@@ -48,6 +50,15 @@ class OtlpExporter implements RequestExporter
         $payload = $this->spanExporter->exportBatch([$span]);
 
         $this->send($payload);
+    }
+
+    public function exportSpan(array $span): void
+    {
+        if (! config('spectra.integrations.opentelemetry.enabled', false)) {
+            return;
+        }
+
+        $this->send($this->spanExporter->exportBatch([$this->spanExporter->createSpectraSpan($span)]));
     }
 
     public function exportBatch(array $requests): void

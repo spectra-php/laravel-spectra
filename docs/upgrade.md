@@ -11,6 +11,8 @@ php artisan spectra:install
 
 Nothing breaks if you upgrade first: until the migration runs, Spectra saves calls without the two columns and logs a warning. See [The Trace Columns Migration](/migrations#trace-columns-migration).
 
+The same release adds the `spectra_spans` table and a `span_id` column for [spans](/usage#spans). `spectra:install` publishes both migrations. Until the spans migration runs, calls are recorded as before and spans are skipped. See [The Spans Migration](/migrations#spans-migration).
+
 <a name="from-1x-to-2"></a>
 ## From 1.x to 2.0
 

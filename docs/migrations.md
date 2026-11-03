@@ -22,6 +22,7 @@ Spectra ships these migration files:
 | `create_spectra_entries` | Creates the five tables above |
 | `change_trackable_id_to_string_on_spectra_tables` | Stores trackable ids as strings, so UUID, ULID, and integer keys all work |
 | `add_v2_tracking_columns_to_spectra_tables` | Adds the Spectra 2.0 columns (see below) |
+| `add_spans_to_spectra_tables` | Creates `spectra_spans` and adds `span_id` to `spectra_requests`, for [spans](/usage#spans) |
 | `add_trace_timing_columns_to_spectra_tables` | Adds `started_at` (to the millisecond) and `origin` for [traces](/usage#traces), with an index on `trace_id` and `started_at` |
 
 ### Publishing Schema Migrations
@@ -68,6 +69,17 @@ php artisan spectra:install
 ```
 
 Until it runs, Spectra keeps recording calls without these two columns and logs a warning once per process. Rows saved before the migration have no `started_at`; Spectra uses their `created_at` instead.
+
+<a name="spans-migration"></a>
+## The Spans Migration
+
+`add_spans_to_spectra_tables` creates the `spectra_spans` table (the `Spectra::span()` blocks and the requests, jobs and commands of each trace) and adds `span_id`, each call's own span id, to `spectra_requests`. Run the installer to publish and run it:
+
+```shell
+php artisan spectra:install
+```
+
+Until it runs, Spectra keeps recording calls, skips spans and logs a warning once per process. Calls saved before the migration have no `span_id` and show flat on the trace page.
 
 ### Custom Database Connection
 

@@ -153,10 +153,10 @@ const copyTraceId = async () => {
                         <div class="card-header">
                             <h3>Timeline</h3>
                             <span class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ origins.length > 1 ? `${origins.length} origins` : 'In the order the calls started' }}
+                                {{ trace.spans?.length ? `${trace.spans.length} ${trace.spans.length === 1 ? 'span' : 'spans'} · ${trace.request_count} calls` : (origins.length > 1 ? `${origins.length} origins` : 'In the order the calls started') }}
                             </span>
                         </div>
-                        <TraceWaterfall :requests="trace.requests" :duration-ms="trace.duration_ms" :show-origins="origins.length > 0" />
+                        <TraceWaterfall :requests="trace.requests" :spans="trace.spans || []" :duration-ms="trace.timeline_ms || trace.duration_ms" :show-origins="origins.length > 0" />
                         <div v-if="trace.truncated" class="border-t border-gray-100 px-5 py-2.5 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
                             Showing the first {{ trace.requests.length }} of {{ formatNumber(trace.request_count) }} calls.
                             <router-link :to="{ name: 'requests', query: { trace_id: trace.trace_id, period: 'all' } }" class="font-medium text-primary-600 hover:underline dark:text-primary-400">See all</router-link>

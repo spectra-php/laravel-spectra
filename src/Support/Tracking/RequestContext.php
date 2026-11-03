@@ -26,6 +26,7 @@ class RequestContext implements Arrayable
 
     public readonly string $traceId;
 
+    /** This call's own span id (16 hex characters), so exports and child spans can point at it. */
     public ?string $spanId = null;
 
     public ?string $parentSpanId = null;
@@ -232,11 +233,12 @@ class RequestContext implements Arrayable
     {
         $this->id = $attributes['id'] ?? (string) Str::ulid();
         $this->traceId = $attributes['trace_id'] ?? (string) Str::uuid();
+        $this->spanId = $attributes['span_id'] ?? bin2hex(random_bytes(8));
         $this->startedAt = $attributes['started_at'] ?? now();
 
         foreach ($attributes as $key => $value) {
             $property = Str::camel($key);
-            if (property_exists($this, $property) && ! in_array($property, ['id', 'traceId', 'startedAt'])) {
+            if (property_exists($this, $property) && ! in_array($property, ['id', 'traceId', 'spanId', 'startedAt'])) {
                 $this->{$property} = $value;
             }
         }

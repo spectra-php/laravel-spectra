@@ -7,14 +7,16 @@ namespace Spectra\Data\Responses;
 use Spectra\Data\DataTransferObject;
 
 /**
- * One trace: its totals, its calls in the order they started, the models it
- * used, its tags and trackable. The trace screen shows all of it; the request
- * screen shows the totals and calls in its Trace card.
+ * One trace: its totals, its calls in the order they started, the spans
+ * around them, the models it used, its tags and trackable. The trace screen
+ * shows all of it; the request screen shows the totals and calls in its
+ * Trace card.
  */
 readonly class TraceDetailsResponse extends DataTransferObject
 {
     /**
      * @param  array<int, array<string, mixed>>  $requests
+     * @param  array<int, array<string, mixed>>  $spans
      * @param  array<int, array<string, mixed>>  $models
      * @param  array<int, string>  $tags
      * @param  array<string, mixed>|null  $trackable
@@ -30,8 +32,10 @@ readonly class TraceDetailsResponse extends DataTransferObject
         public int $total_tokens,
         public ?string $started_at,
         public int $duration_ms,
+        public int $timeline_ms,
         public bool $truncated,
         public array $requests,
+        public array $spans,
         public array $models,
         public array $tags,
         public ?array $trackable,

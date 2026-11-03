@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraSpan;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Throwable;
 
@@ -51,6 +52,14 @@ class PruneCommand extends Command
             $requestCount += $deleted;
         } while ($deleted > 0);
 
+        $spanCount = 0;
+
+        do {
+            $spanIds = SpectraSpan::query()->where('started_at', '<', $cutoff)->limit($chunk)->pluck('id');
+            $deleted = $spanIds->isEmpty() ? 0 : SpectraSpan::query()->whereKey($spanIds->all())->delete();
+            $spanCount += $deleted;
+        } while ($deleted > 0);
+
         $statsCount = 0;
         $statsDays = $this->option('stats-days');
 
@@ -60,7 +69,7 @@ class PruneCommand extends Command
                 ->delete();
         }
 
-        $this->info("{$requestCount} requests, {$fileCount} media files and {$statsCount} daily stats pruned.");
+        $this->info("{$requestCount} requests, {$spanCount} spans, {$fileCount} media files and {$statsCount} daily stats pruned.");
 
         return self::SUCCESS;
     }

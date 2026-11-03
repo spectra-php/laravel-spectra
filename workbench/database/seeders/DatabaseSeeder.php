@@ -6,8 +6,10 @@ namespace Workbench\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Spectra\Enums\SpanKind;
 use Spectra\Facades\Spectra;
 use Spectra\Support\Tracking\ProviderErrorException;
+use Spectra\Support\Tracking\SpanStack;
 use Workbench\App\Models\User;
 
 /**
@@ -124,18 +126,33 @@ class DatabaseSeeder extends Seeder
                 }
                 $steps = [1, 1, 1, 1, 1, 2, 2, 3, 4, 5][mt_rand(0, 9)];
 
+                // The unit of work is the trace's root span, as a real request or job is.
+                $unitKey = 'demo:'.$i;
+                Carbon::setTestNow($at);
+                app(SpanStack::class)->startUnit($unitKey, $source === 'queue' ? SpanKind::Job : SpanKind::Request, $origin, $at->copy()->subMilliseconds(mt_rand(5, 60)));
+
                 for ($step = 0; $step < $steps && $i < $count; $step++, $i++) {
                     if ($at->greaterThan($realNow)) {
                         break;
                     }
 
-                    // Multi-step chains often start with a retrieval embedding.
-                    $spec = $steps > 1 && $step === 0 && mt_rand(0, 1) === 0
-                        ? $this->mix[2]
-                        : $this->mix[$this->pick($weights)];
+                    // Multi-step chains often start with a retrieval embedding, inside a span the app opens.
+                    $retrieval = $steps > 1 && $step === 0 && mt_rand(0, 1) === 0;
+                    $spec = $retrieval ? $this->mix[2] : $this->mix[$this->pick($weights)];
 
-                    $at = $this->recordOne($spec, $at, $user, $source, $origin, $conversation)->addMilliseconds(mt_rand(40, 900));
+                    $at = $retrieval
+                        ? Spectra::span('retrieve-context', function () use ($spec, $at, $user, $source, $origin, $conversation) {
+                            $end = $this->recordOne($spec, $at, $user, $source, $origin, $conversation);
+                            // The vector search after the embedding.
+                            Carbon::setTestNow($end->copy()->addMilliseconds(mt_rand(20, 120)));
+
+                            return Carbon::now();
+                        }, ['top_k' => 5])->addMilliseconds(mt_rand(40, 900))
+                        : $this->recordOne($spec, $at, $user, $source, $origin, $conversation)->addMilliseconds(mt_rand(40, 900));
                 }
+
+                Carbon::setTestNow($at->copy()->addMilliseconds(mt_rand(10, 80)));
+                app(SpanStack::class)->finishUnit($unitKey);
 
                 if ($step === 0) {
                     $i++;
