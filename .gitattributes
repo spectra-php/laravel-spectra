@@ -14,6 +14,7 @@
 /resources/images   export-ignore
 /tests              export-ignore
 /workbench          export-ignore
+/.ai                export-ignore
 .editorconfig       export-ignore
 .gitattributes      export-ignore
 .gitignore          export-ignore
