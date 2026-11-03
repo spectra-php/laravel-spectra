@@ -6,7 +6,8 @@ namespace Spectra\Actions\Traces;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Date;
-use Spectra\Actions\Trackables\ResolveTrackableMetadata;
+use Spectra\Actions\Requests\BuildModelBreakdown;
+use Spectra\Actions\Trackables\ResolveSoleTrackable;
 use Spectra\Data\Responses\TraceDetailsResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraTag;
@@ -26,12 +27,13 @@ class GetTraceDetails
     private const ISO_MILLISECONDS = 'Y-m-d\\TH:i:s.vP';
 
     public function __construct(
-        private readonly ResolveTrackableMetadata $resolveTrackableMetadata,
+        private readonly BuildModelBreakdown $buildModelBreakdown,
+        private readonly ResolveSoleTrackable $resolveSoleTrackable,
     ) {}
 
     public function __invoke(string $traceId, ?string $currentRequestId = null, int $limit = 100): ?TraceDetailsResponse
     {
-        $totals = RequestAggregateQuery::make()->forTrace($traceId)->traceTotals()->first();
+        $totals = RequestAggregateQuery::make()->forTrace($traceId)->callTotals()->first();
 
         if ($totals === null || (int) $totals->request_count === 0) {
             return null;
@@ -85,9 +87,9 @@ class GetTraceDetails
             duration_ms: max(0, (int) round((float) $totals->duration_ms)),
             truncated: $requestCount > count($requests),
             requests: $requests,
-            models: $this->models($traceId),
+            models: ($this->buildModelBreakdown)(RequestAggregateQuery::make()->forTrace($traceId)),
             tags: $this->tags($traceId),
-            trackable: $this->trackable($traceId),
+            trackable: ($this->resolveSoleTrackable)(RequestAggregateQuery::make()->forTrace($traceId)),
         );
     }
 
@@ -125,33 +127,6 @@ class GetTraceDetails
     }
 
     /**
-     * Calls, cost (2xx only) and tokens per model, most expensive first.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    private function models(string $traceId): array
-    {
-        return RequestAggregateQuery::make()
-            ->forTrace($traceId)
-            ->groupByColumns('provider', 'model')
-            ->countAs('request_count')
-            ->successfulCost()
-            ->tokenSum('tokens')
-            ->orderByDesc('cost')
-            ->get()
-            ->map(fn (SpectraRequest $row) => [
-                'provider' => $row->provider,
-                'provider_display_name' => $row->provider_display_name,
-                'model' => $row->model,
-                'request_count' => (int) $row->request_count,
-                'total_cost_in_cents' => (float) $row->cost,
-                'total_tokens' => (int) $row->tokens,
-            ])
-            ->values()
-            ->all();
-    }
-
-    /**
      * @return array<int, string>
      */
     private function tags(string $traceId): array
@@ -161,37 +136,6 @@ class GetTraceDetails
             ->orderBy('name')
             ->pluck('name')
             ->all();
-    }
-
-    /**
-     * The trackable every call of the trace belongs to, with its name and
-     * email when it is a model. Null when the calls have none, or several.
-     *
-     * @return array<string, mixed>|null
-     */
-    private function trackable(string $traceId): ?array
-    {
-        $trackables = RequestAggregateQuery::make()
-            ->forTrace($traceId)
-            ->withTrackable()
-            ->groupByColumns('trackable_type', 'trackable_id')
-            ->limit(2)
-            ->get();
-
-        if ($trackables->count() !== 1) {
-            return null;
-        }
-
-        /** @var SpectraRequest $trackable */
-        $trackable = $trackables->first();
-        $metadata = ($this->resolveTrackableMetadata)($trackables)["{$trackable->trackable_type}:{$trackable->trackable_id}"] ?? [];
-
-        return [
-            'type' => $trackable->trackable_type,
-            'id' => $trackable->trackable_id,
-            'name' => $metadata['name'] ?? null,
-            'email' => $metadata['email'] ?? null,
-        ];
     }
 
     private function startOf(SpectraRequest $call): ?CarbonInterface

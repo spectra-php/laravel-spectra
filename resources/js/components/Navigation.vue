@@ -10,6 +10,7 @@ const items = [
     { name: 'dashboard', match: 'dashboard', label: 'Overview', icon: 'M3.75 13.5h4.5v6.75h-4.5zM9.75 3.75h4.5v16.5h-4.5zM15.75 9h4.5v11.25h-4.5z' },
     { name: 'requests', match: 'request', label: 'Requests', icon: 'M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h10.5' },
     { name: 'traces', match: 'trace', label: 'Traces', icon: 'M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244' },
+    { name: 'conversations', match: 'conversation', label: 'Conversations', icon: 'M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z' },
     { name: 'costs', match: 'costs', label: 'Costs', icon: 'M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
     { name: 'trackables', match: 'trackable', label: 'Trackables', icon: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z' },
 ];
@@ -54,7 +55,7 @@ if (typeof window !== 'undefined') {
                     <Logo class="w-40" />
                 </router-link>
 
-                <div class="hidden items-center gap-1 sm:flex">
+                <div class="hidden items-center gap-1 lg:flex">
                     <router-link
                         v-for="item in items"
                         :key="item.name"
@@ -98,7 +99,7 @@ if (typeof window !== 'undefined') {
                 <button
                     type="button"
                     @click="mobileMenuOpen = !mobileMenuOpen"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 sm:hidden dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 lg:hidden dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
                     aria-label="Toggle navigation"
                     :aria-expanded="mobileMenuOpen"
                 >
@@ -110,7 +111,7 @@ if (typeof window !== 'undefined') {
             </div>
         </div>
 
-        <div v-show="mobileMenuOpen" class="border-t border-gray-200/70 px-4 py-2 sm:hidden dark:border-gray-800/80">
+        <div v-show="mobileMenuOpen" class="border-t border-gray-200/70 px-4 py-2 lg:hidden dark:border-gray-800/80">
             <router-link
                 v-for="item in items"
                 :key="item.name"

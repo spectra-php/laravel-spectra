@@ -3,6 +3,8 @@ import Requests from './screens/requests/index.vue';
 import RequestPreview from './screens/requests/preview.vue';
 import Traces from './screens/traces/index.vue';
 import TraceDetail from './screens/traces/detail.vue';
+import Conversations from './screens/conversations/index.vue';
+import ConversationDetail from './screens/conversations/detail.vue';
 import Costs from './screens/costs/index.vue';
 import Trackables from './screens/trackables/index.vue';
 import TrackableDetail from './screens/trackables/detail.vue';
@@ -32,6 +34,16 @@ export default [
         path: '/traces/:traceId',
         name: 'trace-detail',
         component: TraceDetail,
+    },
+    {
+        path: '/conversations',
+        name: 'conversations',
+        component: Conversations,
+    },
+    {
+        path: '/conversations/:conversationId',
+        name: 'conversation-detail',
+        component: ConversationDetail,
     },
     {
         path: '/costs',

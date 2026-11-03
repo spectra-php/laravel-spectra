@@ -48,6 +48,22 @@ class DatabaseSeeder extends Seeder
     protected array $tags = ['support-bot', 'search', 'summaries', 'agent', 'onboarding'];
 
     /**
+     * Support-chat exchanges for the demo conversations: what the user asks, what the model answers.
+     *
+     * @var list<array{string, string}>
+     */
+    protected array $dialogue = [
+        ['Where is my order #4821?', 'Your order #4821 shipped yesterday and should arrive on Thursday. Here is the tracking link: https://example.test/track/4821'],
+        ['Can I change the delivery address?', 'Yes. I have updated the delivery address to the one on your profile. You will get a confirmation email shortly.'],
+        ['How do I reset my password?', 'Open Settings, then Security, and choose "Reset password". We will email you a link that is valid for 30 minutes.'],
+        ['Do you ship to Canada?', 'We do. Orders to Canada usually arrive in 5 to 8 business days, and duties are included at checkout.'],
+        ['What is your refund policy?', 'You can return any item within 30 days for a full refund. Start the return from your order page and print the label.'],
+        ['Can you summarize my last three invoices?', 'Your last three invoices total $1,240: $480 in September, $410 in October and $350 in November. All three are paid.'],
+        ['Is the Pro plan billed monthly or yearly?', 'Both. Monthly is $29, and yearly is $290, which saves you two months.'],
+        ['Thanks, that is all!', 'Happy to help. Have a great day!'],
+    ];
+
+    /**
      * Where a unit of work starts: the route of a web request, or the job class of a queued one.
      *
      * @var array<string, list<string>>
@@ -69,6 +85,9 @@ class DatabaseSeeder extends Seeder
         mt_srand(42);
         $weights = array_column($this->mix, 4);
 
+        /** @var array<int, array{id: string, turn: int, at: Carbon}> $chats the open chat of each user */
+        $chats = [];
+
         // Each request freezes the clock at its own time, so remember the real time first.
         $realNow = Carbon::now();
         $today = $realNow->copy()->startOfDay();
@@ -86,6 +105,23 @@ class DatabaseSeeder extends Seeder
                 $user = $users->random();
                 $source = mt_rand(0, 3) === 0 ? 'queue' : 'web';
                 $origin = $this->origins[$source][mt_rand(0, count($this->origins[$source]) - 1)];
+
+                // A chat message continues the user's open chat when it comes later
+                // than the last message there, and now and then starts a new one.
+                $conversation = null;
+
+                if ($origin === 'POST /api/chats/{chat}/messages') {
+                    $open = $chats[$user->id] ?? null;
+
+                    if ($open === null || $open['at']->greaterThan($at) || mt_rand(1, 100) <= 25) {
+                        $open = ['id' => 'chat_'.bin2hex(random_bytes(4)), 'turn' => 0, 'at' => $at];
+                    }
+
+                    $open['turn']++;
+                    $open['at'] = $at->copy();
+                    $chats[$user->id] = $open;
+                    $conversation = $open;
+                }
                 $steps = [1, 1, 1, 1, 1, 2, 2, 3, 4, 5][mt_rand(0, 9)];
 
                 for ($step = 0; $step < $steps && $i < $count; $step++, $i++) {
@@ -98,7 +134,7 @@ class DatabaseSeeder extends Seeder
                         ? $this->mix[2]
                         : $this->mix[$this->pick($weights)];
 
-                    $at = $this->recordOne($spec, $at, $user, $source, $origin)->addMilliseconds(mt_rand(40, 900));
+                    $at = $this->recordOne($spec, $at, $user, $source, $origin, $conversation)->addMilliseconds(mt_rand(40, 900));
                 }
 
                 if ($step === 0) {
@@ -112,8 +148,9 @@ class DatabaseSeeder extends Seeder
 
     /**
      * @param  array{0: string, 1: string, 2: string, 3: string, 4: int, 5: array{int, int}, 6: array{int, int}}  $spec
+     * @param  array{id: string, turn: int, at: Carbon}|null  $conversation
      */
-    protected function recordOne(array $spec, Carbon $at, User $user, string $source, string $origin): Carbon
+    protected function recordOne(array $spec, Carbon $at, User $user, string $source, string $origin, ?array $conversation = null): Carbon
     {
         [$provider, $model, $type, $endpoint, , $promptRange, $completionRange] = $spec;
 
@@ -126,6 +163,8 @@ class DatabaseSeeder extends Seeder
             'trackable_type' => $user->getMorphClass(),
             'trackable_id' => $user->getKey(),
             'origin' => $origin,
+            'conversation_id' => $conversation['id'] ?? null,
+            'conversation_turn' => $conversation['turn'] ?? null,
             'tags' => mt_rand(1, 100) <= 60 ? [$this->tags[array_rand($this->tags)]] : [],
         ]);
         $context->modelType = $type;
@@ -169,8 +208,13 @@ class DatabaseSeeder extends Seeder
             $context->imageCount = 1;
         }
 
+        // A chat turn stores the user's message and the provider's real reply shape, for the transcript.
+        $exchange = $conversation !== null && $type === 'text'
+            ? $this->dialogue[($conversation['turn'] - 1 + crc32($conversation['id'])) % count($this->dialogue)]
+            : null;
+
         // Media handlers read their billing units from the request, as they do live.
-        $context->requestData = match ($type) {
+        $context->requestData = $exchange !== null ? $this->chatRequest($endpoint, $exchange[0]) : match ($type) {
             'tts' => [$provider === 'elevenlabs' ? 'text' : 'input' => str_repeat('Thanks for calling, how can I help you today? ', mt_rand(2, 60))],
             'video' => ['instances' => [['prompt' => 'A drone shot over a coastline at sunset']], 'parameters' => ['durationSeconds' => [4, 6, 8][mt_rand(0, 2)]]],
             default => null,
@@ -181,7 +225,7 @@ class DatabaseSeeder extends Seeder
             $context->durationSeconds = round(mb_strlen((string) reset($context->requestData)) / 15, 1);
         }
 
-        $body = match (true) {
+        $body = $exchange !== null ? $this->chatReply($endpoint, $model, $exchange[1]) : match (true) {
             $type === 'video' => ['name' => 'operations/'.bin2hex(random_bytes(6)), 'done' => true, 'response' => ['generateVideoResponse' => ['generatedSamples' => [['video' => ['uri' => 'https://example.test/demo.mp4']]]]]],
             $type === 'tts' => [],
             $provider === 'replicate' => ['id' => bin2hex(random_bytes(8)), 'model' => $model, 'status' => 'succeeded', 'output' => 'https://example.test/demo.webp', 'metrics' => ['image_count' => 1]],
@@ -199,6 +243,37 @@ class DatabaseSeeder extends Seeder
         ]);
 
         return $at->copy()->addMilliseconds($latency);
+    }
+
+    /**
+     * The request body a chat API gets for one user message.
+     *
+     * @return array<string, mixed>
+     */
+    protected function chatRequest(string $endpoint, string $message): array
+    {
+        return match (true) {
+            str_contains($endpoint, ':generateContent') => ['contents' => [['role' => 'user', 'parts' => [['text' => $message]]]]],
+            $endpoint === '/v1/responses' => ['input' => $message],
+            default => ['messages' => [['role' => 'system', 'content' => 'You are a helpful support agent.'], ['role' => 'user', 'content' => $message]]],
+        };
+    }
+
+    /**
+     * The response body a chat API returns, in the shape of its endpoint.
+     *
+     * @return array<string, mixed>
+     */
+    protected function chatReply(string $endpoint, string $model, string $text): array
+    {
+        $id = 'demo_'.bin2hex(random_bytes(8));
+
+        return match (true) {
+            str_contains($endpoint, ':generateContent') => ['candidates' => [['content' => ['role' => 'model', 'parts' => [['text' => $text]]], 'finishReason' => 'STOP']], 'modelVersion' => $model],
+            $endpoint === '/v1/responses' => ['id' => $id, 'object' => 'response', 'model' => $model, 'output' => [['type' => 'message', 'role' => 'assistant', 'content' => [['type' => 'output_text', 'text' => $text]]]]],
+            $endpoint === '/v1/messages' => ['id' => $id, 'type' => 'message', 'model' => $model, 'content' => [['type' => 'text', 'text' => $text]], 'stop_reason' => 'end_turn'],
+            default => ['id' => $id, 'object' => 'chat.completion', 'model' => $model, 'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => $text], 'finish_reason' => 'stop']]],
+        };
     }
 
     /**

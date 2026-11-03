@@ -38,7 +38,7 @@ class BuildTraceQuery
             $query->inTraces($this->matchingTraceIds($request, $dateRange));
         }
 
-        return $query->groupByColumns('trace_id')->traceTotals();
+        return $query->groupByColumns('trace_id')->callTotals();
     }
 
     /**

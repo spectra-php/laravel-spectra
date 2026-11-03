@@ -176,6 +176,14 @@ $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($conversationI
 });
 ```
 
+Give every call of one user message the same turn number, including tool calls and the embeddings you look up for it. The dashboard then shows them as one turn.
+
+The **Conversations** screen lists one row per conversation: its turns and failed calls, the models it used, its trackable, its cost and its last activity. Above the list are totals for every conversation you filter for. The filters are the same as on the requests list, and search matches part of a conversation id.
+
+Open a conversation to read it as a transcript. Each turn shows the user's message and the model's reply, the calls it made, what it cost, and what the conversation has cost so far. The message comes from the turn's first text call and the reply from its last, so an agent's tool loop reads as one exchange. A call without a turn number is a turn of its own.
+
+The transcript reads the stored request and response, so it needs `store_prompts` and `store_responses` (both on by default). With either off, the turns still show their calls and costs, without the text. See [Storage](/configuration#storage).
+
 <a name="request-metadata"></a>
 ### Request Metadata
 

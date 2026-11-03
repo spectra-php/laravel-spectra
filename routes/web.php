@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Spectra\Http\Controllers\Api\ConfigController;
+use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\CostsController;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
 use Spectra\Http\Controllers\Api\ProvidersController;
 use Spectra\Http\Controllers\Api\RequestsController;
 use Spectra\Http\Controllers\Api\ServeAudioController;
 use Spectra\Http\Controllers\Api\ServeImageController;
+use Spectra\Http\Controllers\Api\ShowConversationController;
 use Spectra\Http\Controllers\Api\ShowRequestController;
 use Spectra\Http\Controllers\Api\ShowTraceController;
 use Spectra\Http\Controllers\Api\ShowTrackableController;
@@ -33,6 +35,8 @@ Route::prefix('api')->group(function () {
     Route::get('/requests/{id}/images/{index}', ServeImageController::class)->whereUuid('id')->whereNumber('index');
     Route::get('/traces', TracesController::class);
     Route::get('/traces/{traceId}', ShowTraceController::class);
+    Route::get('/conversations', ConversationsController::class);
+    Route::get('/conversations/{conversationId}', ShowConversationController::class)->where('conversationId', '.*');
     Route::get('/costs', CostsController::class);
     Route::get('/tags', TagsController::class);
     Route::get('/trackables', TrackablesController::class);

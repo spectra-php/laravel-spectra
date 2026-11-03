@@ -104,6 +104,47 @@ class RequestAggregateQuery
         return $this;
     }
 
+    /** Only rows that belong to a conversation. */
+    public function withConversation(): self
+    {
+        $this->query->whereNotNull('conversation_id');
+
+        return $this;
+    }
+
+    /** Only the calls of one conversation. */
+    public function forConversation(string $conversationId): self
+    {
+        $this->query->where('conversation_id', $conversationId);
+
+        return $this;
+    }
+
+    /**
+     * Only the calls of the given conversations.
+     *
+     * @param  array<int, string>  $conversationIds
+     */
+    public function forConversations(array $conversationIds): self
+    {
+        $this->query->whereIn('conversation_id', $conversationIds);
+
+        return $this;
+    }
+
+    /**
+     * Only rows of the conversations the given query's conversation ids
+     * name, so a conversation keeps all its calls in its totals.
+     *
+     * @param  Builder<SpectraRequest>  $conversationIds  a query selecting conversation_id
+     */
+    public function inConversations(Builder $conversationIds): self
+    {
+        $this->query->whereIn('conversation_id', $conversationIds);
+
+        return $this;
+    }
+
     /** Only the calls of one trace. */
     public function forTrace(string $traceId): self
     {
@@ -126,12 +167,12 @@ class RequestAggregateQuery
     }
 
     /**
-     * One trace's totals: calls, failures, cost (2xx only), tokens, start and
-     * duration. A call ends at its start plus its latency (completed_at is
-     * stored to the second), and rows saved before started_at existed start
-     * at created_at.
+     * Totals of a group of calls (a trace, a conversation): calls, failures,
+     * cost (2xx only), tokens, first and last start, and duration. A call
+     * ends at its start plus its latency (completed_at is stored to the
+     * second), and rows saved before started_at existed start at created_at.
      */
-    public function traceTotals(): self
+    public function callTotals(): self
     {
         $start = $this->epochMilliseconds('COALESCE(started_at, created_at)');
 
@@ -141,8 +182,21 @@ class RequestAggregateQuery
             ->successfulCost()
             ->tokenSum('tokens')
             ->selectRaw('MIN(COALESCE(started_at, created_at)) as first_started_at')
+            ->selectRaw('MAX(COALESCE(started_at, created_at)) as last_started_at')
             ->selectRaw("MAX({$start} + COALESCE(latency_ms, 0)) - MIN({$start}) as duration_ms")
             ->selectRaw('COUNT(DISTINCT model) as model_count');
+    }
+
+    /**
+     * A conversation's totals: the call totals plus its turns. Calls with
+     * the same turn number are one turn; a call without one is a turn of
+     * its own.
+     */
+    public function conversationTotals(): self
+    {
+        return $this
+            ->callTotals()
+            ->selectRaw('COUNT(DISTINCT conversation_turn) + COALESCE(SUM(CASE WHEN conversation_turn IS NULL THEN 1 ELSE 0 END), 0) as turn_count');
     }
 
     public function filteredBy(Request $request): self

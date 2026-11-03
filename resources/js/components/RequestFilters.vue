@@ -86,6 +86,11 @@ const props = defineProps({
     },
 });
 
+const hasBadges = computed(() => activeExtraFilters.value.length
+    || (props.showTraceBadge && filters.value.trace_id)
+    || filters.value.conversation_id
+    || (props.showTrackableBadge && filters.value.trackable_type));
+
 const emit = defineEmits(['clear']);
 
 const showMoreFilters = ref(false);
@@ -299,7 +304,7 @@ onUnmounted(() => {
         </div>
     </div>
 
-    <div v-if="activeExtraFilters.length || (showTraceBadge && filters.trace_id) || (showTrackableBadge && filters.trackable_type)" class="mt-3 flex flex-wrap items-center gap-2">
+    <div v-if="hasBadges" class="mt-3 flex flex-wrap items-center gap-2">
         <span
             v-for="key in activeExtraFilters"
             :key="key"
@@ -319,6 +324,18 @@ onUnmounted(() => {
         >
             Trace: <span class="font-mono">{{ filters.trace_id }}</span>
             <button @click="filters.trace_id = ''" class="hover:text-primary-900 dark:hover:text-primary-100">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </span>
+
+        <span
+            v-if="filters.conversation_id"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
+        >
+            Conversation: <span class="font-mono">{{ filters.conversation_id }}</span>
+            <button @click="filters.conversation_id = ''" class="hover:text-primary-900 dark:hover:text-primary-100">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>

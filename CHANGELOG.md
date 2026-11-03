@@ -11,12 +11,15 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - An async job that is polled again keeps the origin and start time of the call that started it
 - Dashboard: a Traces screen lists one row per trace (origin, calls, failures, models, trackable, duration, cost) with totals for the filtered traces. It has the same filters as the requests list; a trace stays when one of its calls matches, with all its calls in its totals
 - Dashboard: a trace page shows a trace's calls on one millisecond timeline, with a lane per origin, cost per model, tags and trackable. The request page's Trace card links to it
+- Dashboard: a Conversations screen lists one row per `conversation_id` (turns, failures, models, trackable, cost, last activity) with totals for the filtered conversations. A conversation page shows it as a transcript: each turn's user message and reply, its calls, its cost and the cost so far. Calls with the same `conversation_turn` are one turn
+- Dashboard: the requests list filters by `conversation_id`, and the request page links its conversation
 - `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL` and `SPECTRA_FIRECRAWL_TIMEOUT`. The unprefixed `FIRECRAWL_*` names still work
 - `SpectraRequest::forTrace()` scope
 - The costs dashboard's top spenders include `trackable_type`, so a user and a team with the same id no longer collide
 
 #### Changed
 
+- Dashboard: the navigation collapses into the menu below 1024px wide (was 640px), so the six screens fit
 - Config: built-in providers and pricing classes stay active under a published config, so an older `config/spectra.php` no longer misses providers added since (fal.ai, Scaleway) or prices (ElevenLabs billed $0). Set an entry to `false` to turn a built-in off
 - Budgets: the `spectra.budget` middleware takes the provider and model from its arguments, then `budget.default_provider` / `budget.default_model`, and no longer reads them from the request input, which let a client name an allowed model and get past `allowed_models` / `allowed_providers`
 - Budgets: `BudgetExceeded` (`wasBlocked: true`) now fires before every hard block, not only cost limits. `limitType` is `{period}_tokens` for token limits, `{period}_requests` for request limits, and `provider` or `model` for allow-list blocks (usage and limit both 0)

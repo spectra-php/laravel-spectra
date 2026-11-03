@@ -122,6 +122,8 @@ use Spectra\Support\ProviderRegistry;
  * @property-read mixed $failed_count
  * @property-read mixed $tokens
  * @property-read mixed $first_started_at
+ * @property-read mixed $last_started_at
+ * @property-read mixed $turn_count
  * @property-read mixed $duration_ms
  * @property-read Collection<int, SpectraTag> $tags
  */

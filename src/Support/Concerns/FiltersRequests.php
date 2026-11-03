@@ -11,7 +11,7 @@ use Spectra\Support\Pricing\PricingLookup;
 
 /**
  * The filters the requests screen sends (provider, model, status, tags,
- * trace, trackable, ...), applied to a SpectraRequest query. Shared by the
+ * trace, conversation, trackable, ...), applied to a SpectraRequest query. Shared by the
  * requests list and the traces list, which keeps the traces that hold a
  * matching call. Search is left to each screen: they search different
  * columns.
@@ -21,7 +21,7 @@ trait FiltersRequests
     /** Every query parameter applyRequestFilters() reads. */
     protected const REQUEST_FILTER_KEYS = [
         'provider', 'model', 'status', 'model_type', 'capability', 'finish_reason', 'has_tool_calls',
-        'is_reasoning', 'reasoning_effort', 'trace_id', 'trackable_type', 'trackable_id', 'tag', 'tags',
+        'is_reasoning', 'reasoning_effort', 'trace_id', 'conversation_id', 'trackable_type', 'trackable_id', 'tag', 'tags',
     ];
 
     /** Whether the request sets any of the filters applyRequestFilters() reads. */
@@ -91,6 +91,10 @@ trait FiltersRequests
 
         if ($request->filled('trace_id')) {
             $query->forTrace((string) $request->input('trace_id'));
+        }
+
+        if ($request->filled('conversation_id')) {
+            $query->where('conversation_id', $request->input('conversation_id'));
         }
 
         if ($request->filled('trackable_type')) {
