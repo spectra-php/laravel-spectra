@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace Spectra;
 
 use Composer\InstalledVersions;
+use Illuminate\Console\Events\CommandFinished;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Auth\Access\Gate;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Log\Context\Repository as ContextRepository;
+use Illuminate\Queue\Events\JobExceptionOccurred;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\ServiceProvider;
@@ -33,6 +39,7 @@ use Spectra\Support\StatsAggregator;
 use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\RequestWriter;
 use Spectra\Support\Tracking\TraceContext;
+use Spectra\Support\Tracking\TraceOrigin;
 
 /**
  * Wires Spectra into the host application: config, container bindings,
@@ -58,6 +65,9 @@ class SpectraServiceProvider extends ServiceProvider
 
         // Scoped, so global tags, trackables, pricing tier and metadata are
         // reset between queued jobs and Octane requests instead of leaking.
+        // Scoped: queue workers and Octane reset it before each job and request.
+        $this->app->scoped(TraceOrigin::class);
+
         $this->app->scoped(Spectra::class, function ($app) {
             return new Spectra($app);
         });
@@ -163,6 +173,7 @@ class SpectraServiceProvider extends ServiceProvider
         $this->registerHttpMacros();
         $this->registerWatchers();
         $this->registerTracePropagation();
+        $this->registerOriginTracking();
     }
 
     protected function registerAuthorization(): void
@@ -233,6 +244,26 @@ class SpectraServiceProvider extends ServiceProvider
                 $context->addHidden(TraceContext::PARENT_SPAN_ID, $parentSpanId);
             }
         });
+    }
+
+    /**
+     * Tell TraceOrigin which job or command is running, so the AI calls they
+     * make are stored with its name.
+     */
+    protected function registerOriginTracking(): void
+    {
+        /** @var Dispatcher $events */
+        $events = $this->app->make('events');
+
+        $origin = fn (): TraceOrigin => $this->app->make(TraceOrigin::class);
+
+        // A failure here must never stop the user's job or command.
+        $events->listen(JobProcessing::class, fn (JobProcessing $event) => rescue(fn () => $origin()->startJob($event->job, $event->job->resolveName())));
+        $events->listen(JobProcessed::class, fn (JobProcessed $event) => rescue(fn () => $origin()->finishJob($event->job)));
+        $events->listen(JobExceptionOccurred::class, fn (JobExceptionOccurred $event) => rescue(fn () => $origin()->finishJob($event->job)));
+
+        $events->listen(CommandStarting::class, fn (CommandStarting $event) => rescue(fn () => $origin()->startCommand($event->command)));
+        $events->listen(CommandFinished::class, fn (CommandFinished $event) => rescue(fn () => $origin()->finishCommand($event->command)));
     }
 
     protected function registerProviders(): void
@@ -309,6 +340,7 @@ class SpectraServiceProvider extends ServiceProvider
      * would silently do nothing.
      */
     protected const NESTED_CONFIG_DEFAULTS = [
+        'tracking.capture_origin',
         'costs.use_scraped_prices',
         'costs.scraped_prices_path',
         'costs.firecrawl',

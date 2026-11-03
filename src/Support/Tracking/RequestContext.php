@@ -200,6 +200,9 @@ class RequestContext implements Arrayable
     /** Values: 'web', 'api', 'console' (queued jobs run in the console). */
     public ?string $requestSource = null;
 
+    /** The job, Artisan command or route the call came from (see {@see TraceOrigin}). */
+    public ?string $origin = null;
+
     public ?string $laravelRequestId = null;
 
     public ?string $sessionId = null;
@@ -266,6 +269,10 @@ class RequestContext implements Arrayable
             $this->requestSource = 'console';
         } elseif (app()->has('request')) {
             $this->requestSource = request()->expectsJson() ? 'api' : 'web';
+        }
+
+        if ($this->origin === null && config('spectra.tracking.capture_origin', true)) {
+            $this->origin = app(TraceOrigin::class)->current();
         }
 
         // An explicitly given trackable (per call or via Spectra::forTrackable())
@@ -509,6 +516,7 @@ class RequestContext implements Arrayable
             'media_storage_path' => $this->mediaStoragePath,
             'retry_count' => $this->retryCount,
             'request_source' => $this->requestSource,
+            'origin' => $this->origin,
             'laravel_request_id' => $this->laravelRequestId,
             'session_id' => $this->sessionId,
             'ip_address' => $this->ipAddress,

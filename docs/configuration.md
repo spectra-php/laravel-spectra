@@ -133,6 +133,7 @@ Choose what context Spectra captures automatically with each tracked request.
     'capture_ip'         => true,
     'capture_user_agent' => true,
     'capture_request_id' => true,
+    'capture_origin'     => true,
     'trace_per_request'  => true,
     'use_traceparent'    => true,
     'propagate_tags'     => true,
@@ -145,6 +146,7 @@ Choose what context Spectra captures automatically with each tracked request.
 | `capture_ip` | `bool` | `true` | Store the client's IP address in the `ip_address` column. Disable for GDPR or CCPA compliance. |
 | `capture_user_agent` | `bool` | `true` | Store the client's user agent string in the `user_agent` column. |
 | `capture_request_id` | `bool` | `true` | Store a request ID for correlation with your logs in the `laravel_request_id` column. Uses the `X-Request-ID` header if present, otherwise generates one. |
+| `capture_origin` | `bool` | `true` | Store where each call came from in the `origin` column: the queued job class, the Artisan command (`artisan reports:send`), or the route pattern of the HTTP request (`POST /chats/{chat}`). Only the pattern is stored, never the URL with its ids and query string. Env: `SPECTRA_CAPTURE_ORIGIN`. |
 | `trace_per_request` | `bool` | `true` | Give every AI call of the same HTTP request, queued job, or Artisan command one trace id. Queued jobs dispatched during a request keep its trace. Env: `SPECTRA_TRACE_PER_REQUEST`. See [Traces](/usage#traces). |
 | `use_traceparent` | `bool` | `true` | When the incoming HTTP request has a W3C `traceparent` header, use its trace id, so Spectra's spans join that trace. Env: `SPECTRA_USE_TRACEPARENT`. |
 | `propagate_tags` | `bool` | `true` | A queued job inherits the tags of the request or job that dispatched it (global tags and the `withTags()` tags around the dispatch). Env: `SPECTRA_PROPAGATE_TAGS`. See [Inherited Tags](/tags#inherited-tags). |

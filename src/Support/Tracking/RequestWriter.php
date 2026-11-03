@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Events\RequestTracked;
 use Spectra\Models\SpectraRequest;
@@ -47,6 +49,12 @@ class RequestWriter
         'total_cost_in_cents',
         'status_code',
     ];
+
+    /** Columns added after 2.0 that a table may not have until the app migrates. */
+    protected const TRACE_COLUMNS = ['started_at', 'origin'];
+
+    /** Whether the missing trace columns were already reported (the writer is a singleton). */
+    protected bool $hasWarnedAboutTraceColumns = false;
 
     public function __construct(
         protected StatsAggregator $statsAggregator,
@@ -112,7 +120,7 @@ class RequestWriter
 
         if ($existing === null) {
             try {
-                return [SpectraRequest::create($attributes), null];
+                return [$this->create($attributes), null];
             } catch (UniqueConstraintViolationException $e) {
                 // Another worker saved the same response id or row id first.
                 $existing = $this->findExisting($attributes) ?? throw $e;
@@ -121,9 +129,10 @@ class RequestWriter
 
         $previous = clone $existing;
 
-        // Keep the original row identity and start time. A status poll carries
-        // no request body, so keep the one from the request that started the job.
-        $keep = ['id', 'created_at'];
+        // Keep the original row identity, start time and origin (a poll may run
+        // in another job). A status poll carries no request body, so keep the
+        // one from the request that started the job.
+        $keep = ['id', 'created_at', 'started_at', 'origin'];
 
         if (empty($attributes['request']) && ! empty($existing->getAttribute('request'))) {
             $keep[] = 'request';
@@ -137,6 +146,51 @@ class RequestWriter
         $existing->fill(Arr::except($attributes, $keep))->save();
 
         return [$existing, $previous];
+    }
+
+    /**
+     * Insert a new row.
+     *
+     * An app that updated Spectra but hasn't run the migration that adds the
+     * trace columns must keep recording its calls, so when the table doesn't
+     * have them yet the row is saved without them (and a warning is logged
+     * once per process).
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function create(array $attributes): SpectraRequest
+    {
+        try {
+            return SpectraRequest::create($attributes);
+        } catch (QueryException $e) {
+            if ($e instanceof UniqueConstraintViolationException || ! $this->isMissingColumn($e)) {
+                throw $e;
+            }
+
+            if (! $this->hasWarnedAboutTraceColumns) {
+                $this->hasWarnedAboutTraceColumns = true;
+
+                $columns = implode(' or ', self::TRACE_COLUMNS);
+
+                Log::warning("Spectra: spectra_requests has no {$columns} column yet, so calls are saved without them. Run `php artisan spectra:install` to publish and run the new migration.");
+            }
+
+            return SpectraRequest::create(Arr::except($attributes, self::TRACE_COLUMNS));
+        }
+    }
+
+    /**
+     * Whether the insert failed on a column the table doesn't have. Checked by
+     * error code, not message: Postgres quotes the failed SQL, which names
+     * every column.
+     */
+    protected function isMissingColumn(QueryException $e): bool
+    {
+        $code = (string) ($e->errorInfo[0] ?? $e->getCode());
+
+        // MySQL, MariaDB and SQL Server use 42S22, Postgres 42703; SQLite only says so in words.
+        return in_array($code, ['42S22', '42703'], true)
+            || str_contains((string) ($e->errorInfo[2] ?? ''), 'has no column named');
     }
 
     /**

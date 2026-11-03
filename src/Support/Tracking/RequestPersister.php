@@ -146,10 +146,13 @@ class RequestPersister
             'media_storage_path' => $context->mediaStoragePath,
             'metadata' => $context->metadata ?: null,
             'request_source' => $context->requestSource,
+            'origin' => $context->origin,
             'laravel_request_id' => $context->laravelRequestId,
             'ip_address' => $context->ipAddress,
             'user_agent' => $this->truncate($context->userAgent, 1_000),
             'created_at' => $context->getStartedAt(),
+            // created_at is stored to the second; traces order calls by this one.
+            'started_at' => $context->getStartedAt(),
             'completed_at' => $context->getCompletedAt(),
         ];
     }

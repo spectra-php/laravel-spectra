@@ -27,12 +27,19 @@ class RequestTransformer
     {
         $data = $request->makeHidden($this->excludedFields())->toArray();
 
-        // Rename created_at → started_at (OpenTelemetry span convention)
-        $data['started_at'] = $request->created_at ?? now();
+        // Spans start at started_at (to the millisecond); rows saved before
+        // that column existed fall back to created_at (to the second).
+        $data['started_at'] = $request->started_at ?? $request->created_at ?? now();
         unset($data['created_at']);
 
         // Fallback for legacy records persisted before completed_at column existed
         $data['completed_at'] = $request->completed_at ?? $data['started_at'];
+
+        // completed_at is stored to the second, so it can fall just before a
+        // started_at that has milliseconds; a span never ends before it starts.
+        if ($data['completed_at']->lessThan($data['started_at'])) {
+            $data['completed_at'] = $data['started_at'];
+        }
 
         // Computed field not stored on the model
         $data['is_failed'] = $request->isFailed();

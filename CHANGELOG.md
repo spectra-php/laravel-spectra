@@ -6,6 +6,9 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 #### Added
 
+- Every call stores where it came from in the new `origin` column: the queued job class, the Artisan command (`artisan reports:send`) or the route pattern of the HTTP request (`POST /chats/{chat}`, never the URL). A synchronous job run inside a request is named by the job. Turn it off with `tracking.capture_origin` (`SPECTRA_CAPTURE_ORIGIN`)
+- Every call stores its start time to the millisecond in the new `started_at` column (`created_at` is stored to the second). OpenTelemetry spans start at it, and never end before it
+- An async job that is polled again keeps the origin and start time of the call that started it
 - `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL` and `SPECTRA_FIRECRAWL_TIMEOUT`. The unprefixed `FIRECRAWL_*` names still work
 - `SpectraRequest::forTrace()` scope
 - The costs dashboard's top spenders include `trackable_type`, so a user and a team with the same id no longer collide
@@ -43,6 +46,8 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 #### Upgrading
 
+- Run `php artisan spectra:install` to publish and run the new `add_trace_timing_columns_to_spectra_tables` migration. Until you do, Spectra keeps recording calls without the two new columns and logs a warning once per process
+- A published `config/spectra.php` gets `tracking.capture_origin` with its default (`true`), so you don't need to publish it again
 - If you removed a built-in provider or pricing class from your published config to turn it off, set it to `false` instead: built-ins now stay active underneath your config
 - Routes that relied on the `spectra.budget` middleware reading `provider` / `model` from the request input must pass them as arguments: `spectra.budget:openai,gpt-4o`
 - `BudgetExceeded` listeners that treat `currentUsage` and `limit` as cents should check `limitType` first: token, request and allow-list blocks now fire it too

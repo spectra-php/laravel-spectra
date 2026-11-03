@@ -22,6 +22,7 @@ Spectra ships these migration files:
 | `create_spectra_entries` | Creates the five tables above |
 | `change_trackable_id_to_string_on_spectra_tables` | Stores trackable ids as strings, so UUID, ULID, and integer keys all work |
 | `add_v2_tracking_columns_to_spectra_tables` | Adds the Spectra 2.0 columns (see below) |
+| `add_trace_timing_columns_to_spectra_tables` | Adds `started_at` (to the millisecond) and `origin` for [traces](/usage#traces), with an index on `trace_id` and `started_at` |
 
 ### Publishing Schema Migrations
 
@@ -56,6 +57,17 @@ It publishes only the migrations your app doesn't have yet (it compares names wi
 :::
 
 Run this migration before you deploy 2.0. Without the new columns, Spectra can't save requests. Your app keeps working, because saving errors go to your exception handler instead of being thrown, but the requests are not recorded.
+
+<a name="trace-columns-migration"></a>
+## The Trace Columns Migration
+
+`add_trace_timing_columns_to_spectra_tables` adds two columns to `spectra_requests`: `started_at`, the start of each call to the millisecond, and `origin`, the job, Artisan command or route the call came from. Run the installer to publish and run it:
+
+```shell
+php artisan spectra:install
+```
+
+Until it runs, Spectra keeps recording calls without these two columns and logs a warning once per process. Rows saved before the migration have no `started_at`; Spectra uses their `created_at` instead.
 
 ### Custom Database Connection
 

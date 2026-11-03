@@ -378,6 +378,21 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Capture Origin
+        |--------------------------------------------------------------------------
+        |
+        | Whether to store where each AI call came from: the queued job class,
+        | the Artisan command, or the route pattern of the HTTP request (for
+        | example "POST /chats/{chat}"). Only the pattern is stored, never the
+        | URL, so ids and query strings stay out of the database. Traces use
+        | it as their name in the dashboard.
+        |
+        */
+
+        'capture_origin' => env('SPECTRA_CAPTURE_ORIGIN', true),
+
+        /*
+        |--------------------------------------------------------------------------
         | One Trace Per Request
         |--------------------------------------------------------------------------
         |

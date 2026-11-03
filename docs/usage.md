@@ -365,6 +365,18 @@ The AI calls of the receiving request, and of the jobs it dispatches, then join
 the caller's trace and carry its tags. Put the middleware only on routes your
 own services call: whoever can reach the route can name the trace and tags.
 
+**Where each call came from.** Every call stores its origin: the queued job
+class running it, the Artisan command you ran (`artisan reports:send`), or
+the route pattern of the HTTP request (`POST /chats/{chat}`). A trace that
+starts in a request and continues in a job shows both. Spectra stores the
+route pattern, not the URL, so ids and query strings are not saved. Turn it
+off with `capture_origin` (see [Configuration](/configuration#tracking-context)).
+To name a call yourself, set `$ctx->origin` inside `Spectra::track()`.
+
+Each call also stores its start time to the millisecond in `started_at`, so
+the calls of a fast agent loop keep their order and spacing on the timeline.
+`created_at` is still stored to the second.
+
 In the dashboard, the request page shows a **Trace** card when a trace has
 more than one call: every call in order, a timeline, and the total cost,
 tokens, and time. You can also filter the requests list by trace id.

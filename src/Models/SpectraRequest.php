@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 use Spectra\Database\Factories\SpectraRequestFactory;
+use Spectra\Support\Casts\PreciseDateTime;
 use Spectra\Support\ProviderRegistry;
 
 /**
@@ -52,6 +53,7 @@ use Spectra\Support\ProviderRegistry;
  * @property string|null $error_type
  * @property string|null $error_message
  * @property string|null $request_source
+ * @property string|null $origin
  * @property string|null $laravel_request_id
  * @property string|null $ip_address
  * @property string|null $user_agent
@@ -76,6 +78,7 @@ use Spectra\Support\ProviderRegistry;
  * @property array<string, mixed>|null $media_storage_path
  * @property array<string, mixed>|null $metadata
  * @property CarbonInterface|null $created_at
+ * @property CarbonInterface|null $started_at
  * @property CarbonInterface|null $completed_at
  * @property CarbonInterface|null $expires_at
  * @property-read string|null $prompt
@@ -164,6 +167,7 @@ class SpectraRequest extends Model
             'completion_cost' => 'float',
             'total_cost_in_cents' => 'float',
             'created_at' => 'datetime',
+            'started_at' => PreciseDateTime::class,
             'completed_at' => 'datetime',
             'expires_at' => 'datetime',
             'latency_ms' => 'integer',

@@ -1,5 +1,16 @@
 # Upgrade Guide
 
+<a name="trace-columns"></a>
+## Trace Columns (2.x)
+
+A 2.x release adds the `started_at` and `origin` columns to `spectra_requests`, for [traces](/usage#traces). Run the installer to publish and run the migration:
+
+```shell
+php artisan spectra:install
+```
+
+Nothing breaks if you upgrade first: until the migration runs, Spectra saves calls without the two columns and logs a warning. See [The Trace Columns Migration](/migrations#trace-columns-migration).
+
 <a name="from-1x-to-2"></a>
 ## From 1.x to 2.0
 

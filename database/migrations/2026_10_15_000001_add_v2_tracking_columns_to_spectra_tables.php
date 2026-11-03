@@ -9,29 +9,15 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Get the migration connection name.
-     */
     public function getConnection(): ?string
     {
         return config('spectra.storage.connection');
     }
 
-    /**
-     * Run the migrations.
-     *
-     * Spectra 2.0 stores prompt-cache usage, page counts, error details,
-     * conversation ids and request origin, which earlier versions tracked in
-     * memory but never saved.
-     */
     public function up(): void
     {
         $schema = Schema::connection($this->getConnection());
 
-        // On a dedicated connection the Spectra database survives the app's
-        // migrate:fresh, so the columns may already exist while this
-        // migration shows as pending. Each table is checked on its own: on
-        // MySQL a failed run can leave one table changed and not the other.
         if (! $schema->hasColumn('spectra_requests', 'cached_tokens')) {
             $this->addRequestColumns($schema);
         }
@@ -74,9 +60,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         $schema = Schema::connection($this->getConnection());
