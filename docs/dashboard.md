@@ -98,6 +98,11 @@ Two failures are in the same group when they have the same provider, status code
 
 Failures saved before the [error fingerprint migration](/migrations#error-fingerprint-migration) aren't grouped until you run [`spectra:group-errors`](/commands#spectra-group-errors); the screen says how many there are.
 
+<a name="review"></a>
+## Review
+
+Once the app configures an [annotation queue](/annotations), a clipboard icon in the header opens the Review screen, with the number of traces waiting. It lists each queue with its progress; open one to read a trace's calls, give the queue's scores, and move to the next. A trace's page has an **Add to review** menu to queue it by hand.
+
 <a name="costs"></a>
 ## Costs
 

@@ -39,7 +39,8 @@ export default defineConfig({
           { text: 'Metadata', link: '/metadata' },
           { text: 'Scores', link: '/scores' },
           { text: 'Prompts', link: '/prompts' },
-          { text: 'Tools', link: '/tools' }
+          { text: 'Tools', link: '/tools' },
+          { text: 'Annotation Queues', link: '/annotations' }
         ]
       },
       {

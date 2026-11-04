@@ -100,6 +100,12 @@ $fake->assertNotScored('answer_quality');
 $scores = $fake->getScores(); // the columns each score would be saved with
 ```
 
+Traces queued with `Spectra::queueForReview()` are remembered too (see [Annotation Queues](/annotations#testing)):
+
+```php
+$fake->assertQueuedForReview('support-review');
+```
+
 ### Custom Assertions
 
 For more complex checks, pass a callback that receives the recorded request data and returns a boolean:

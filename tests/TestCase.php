@@ -58,6 +58,7 @@ class TestCase extends Orchestra
             __DIR__.'/../database/migrations/2026_11_04_000001_create_spectra_scores_table.php',
             __DIR__.'/../database/migrations/2026_11_04_000002_add_prompt_columns_to_spectra_requests_table.php',
             __DIR__.'/../database/migrations/2026_11_04_000003_add_error_fingerprint_to_spectra_requests_table.php',
+            __DIR__.'/../database/migrations/2026_11_04_000004_create_spectra_annotation_items_table.php',
         ] as $path) {
             $migration = include $path;
             $migration->up();

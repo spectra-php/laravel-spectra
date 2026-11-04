@@ -11,7 +11,9 @@ use RuntimeException;
 use Spectra\Enums\ScoreSource;
 use Spectra\Enums\SpanKind;
 use Spectra\Facades\Spectra;
+use Spectra\Models\SpectraAnnotationItem;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Annotations\AnnotationQueues;
 use Spectra\Support\Tracking\ProviderErrorException;
 use Spectra\Support\Tracking\SpanStack;
 use Workbench\App\Models\User;
@@ -177,7 +179,44 @@ class DatabaseSeeder extends Seeder
 
         Carbon::setTestNow();
 
+        $this->reviewQueuedTraces($users->take(2)->values()->all());
         $this->seedRedactedCall($users->first());
+    }
+
+    /**
+     * Two reviewers worked through the support-review queue up to three
+     * days ago, so the Review screen shows progress and traces still waiting.
+     *
+     * @param  array<int, User>  $reviewers
+     */
+    protected function reviewQueuedTraces(array $reviewers): void
+    {
+        $queues = app(AnnotationQueues::class);
+
+        SpectraAnnotationItem::query()
+            ->where('queue', 'support-review')
+            ->where('created_at', '<', Carbon::now()->subDays(3))
+            ->oldest('created_at')
+            ->get()
+            ->each(function (SpectraAnnotationItem $item) use ($queues, $reviewers): void {
+                Carbon::setTestNow($item->created_at?->copy()->addHours(mt_rand(2, 30)));
+                $reviewer = $reviewers[mt_rand(0, count($reviewers) - 1)];
+
+                if (mt_rand(1, 100) <= 8) {
+                    $queues->skip($item, $reviewer);
+
+                    return;
+                }
+
+                $helpful = mt_rand(1, 100) <= 78;
+                $queues->review($item, [
+                    'helpful' => $helpful,
+                    'accuracy' => $helpful ? mt_rand(4, 5) : mt_rand(1, 3),
+                    'issue' => $helpful ? 'none' : ['wrong-facts', 'tone', 'incomplete'][mt_rand(0, 2)],
+                ], $helpful ? null : 'Missed what the customer asked.', $reviewer);
+            });
+
+        Carbon::setTestNow();
     }
 
     /**

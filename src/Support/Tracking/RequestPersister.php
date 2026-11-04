@@ -10,6 +10,7 @@ use Spectra\Events\RequestTracked;
 use Spectra\Jobs\ExportTrackedRequestJob;
 use Spectra\Jobs\PersistSpectraRequestJob;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Annotations\AnnotationQueues;
 use Spectra\Support\Errors\ErrorFingerprint;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Pricing\RequestCostCalculator;
@@ -47,6 +48,8 @@ class RequestPersister
 
         // The tools the model asked for before this call, when tool spans are on.
         rescue(fn () => app(ToolSpanRecorder::class)->callFinished($context));
+        // The review queues that sample this call's trace.
+        rescue(fn () => app(AnnotationQueues::class)->callRecorded($context, $this->isFailed($context)));
 
         try {
             return $this->store($context);

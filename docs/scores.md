@@ -31,7 +31,7 @@ Spectra::score('sentiment', 'positive', conversationId: $chat->id);
 | `traceId` | The trace. |
 | `conversationId` | The conversation. |
 | `comment` | Free text, such as what the user wrote with their thumbs down. |
-| `source` | Who gave it: `ScoreSource::User` (an end user), `Model` (a model judging the answer), `Annotation` (a reviewer) or `Api` (your code, the default). |
+| `source` | Who gave it: `ScoreSource::User` (an end user), `Model` (a model judging the answer), `Annotation` (a reviewer; see [Annotation Queues](/annotations)) or `Api` (your code, the default). |
 | `author` | The model (for example the user) who gave the score. |
 | `metadata` | Any other key-value context, such as the judge model's name. |
 

@@ -25,6 +25,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Tools: `Spectra::tool('get_weather', fn () => ..., $arguments, id: $callId)` runs a tool the model asked for as a `tool` span of the trace, timed exactly, with its arguments and result (stored with `store_prompts`, and sampled and redacted like request bodies). `Spectra::fake()` remembers tool runs; `assertToolCalled()`
 - Tool spans: with `tracking.tool_spans` (`SPECTRA_TOOL_SPANS`, off by default), a call that sends tool results back to the model records a span per tool, from the end of the previous call to its start, read from OpenAI Chat Completions and compatible APIs, the OpenAI Responses API, Anthropic and Gemini request bodies, streamed or not. The trace timeline draws tools with their arguments and result, and OpenTelemetry exports them as `execute_tool {name}`
 - Error grouping: each failed call is saved with a fingerprint of its provider, status, error type and message, without the ids, numbers, URLs, emails, masked keys and model names that change from call to call. The dashboard's Errors screen lists the groups with their failures, share, daily trend, models and first and last seen; the requests list filters by group, and a failed call links to the calls that failed the same way. `spectra:group-errors` groups failures saved before the new migration
+- Annotation queues: queues in `spectra.annotations.queues` name the scores reviewers give (yes/no, a number in a range, or one of a set of options), and can sample a share of the traces whose calls match a filter. Traces are also queued with `Spectra::queueForReview()` or from a trace's page. The dashboard's Review screen shows each queue's progress and walks reviewers through its traces, saving their labels as Annotation scores. Reviewing needs the new `annotateSpectra` gate, which follows `viewSpectra` unless you define it. `spectra:prune` deletes old queue items, and the fake gets `assertQueuedForReview()`
 - Dashboard: the Overview has an Alerts card (each rule's value now and whether it is firing) and a Performance card (each model's error rate and p50/p95/p99 latency, and median time to first token)
 
 #### Changed
@@ -36,6 +37,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Run `php artisan spectra:install` to publish and run the new `create_spectra_scores_table` migration. Until you do, `Spectra::score()` returns `null` and logs a warning once per process; tracking is not affected
 - The same command publishes and runs `add_prompt_columns_to_spectra_requests_table`. Until it runs, calls are saved without their prompt and a warning is logged once per process
 - And `add_error_fingerprint_to_spectra_requests_table`; then run `php artisan spectra:group-errors` once to group the failures saved before it
+- And `create_spectra_annotation_items_table`. Until it runs, no trace is queued for review and a warning is logged once per process
 
 #### Fixed
 

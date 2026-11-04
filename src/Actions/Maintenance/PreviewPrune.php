@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Actions\Maintenance;
 
 use Spectra\Data\PrunePreview;
+use Spectra\Models\SpectraAnnotationItem;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
@@ -35,6 +36,7 @@ class PreviewPrune
                 ->where('date', '<', now()->subDays(max(0, $statsDays))->toDateString())
                 ->count(),
             scores: PruneEntries::scoresTableExists() ? SpectraScore::query()->where('created_at', '<', $cutoff)->count() : 0,
+            review_items: PruneEntries::reviewItemsTableExists() ? SpectraAnnotationItem::query()->where('created_at', '<', $cutoff)->count() : 0,
         );
     }
 }

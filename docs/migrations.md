@@ -115,6 +115,17 @@ php artisan spectra:group-errors
 
 Until it runs, Spectra keeps recording failed calls without a fingerprint and logs a warning once per process, and the Errors screen shows the failure count without groups.
 
+<a name="annotation-migration"></a>
+## The Annotation Migration
+
+`create_spectra_annotation_items_table` creates the `spectra_annotation_items` table for [annotation queues](/annotations). Run the installer to publish and run it:
+
+```shell
+php artisan spectra:install
+```
+
+Until it runs, no trace is queued for review and a warning is logged once per process; tracking is not affected.
+
 ### Custom Database Connection
 
 All Spectra migrations use the `spectra.storage.connection` config value. To store Spectra data in a separate database, set the connection in `config/spectra.php`:

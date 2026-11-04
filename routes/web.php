@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Spectra\Http\Controllers\Api\AlertsController;
+use Spectra\Http\Controllers\Api\Annotations\AnnotationQueuesController;
+use Spectra\Http\Controllers\Api\Annotations\NextAnnotationItemController;
+use Spectra\Http\Controllers\Api\Annotations\QueueTraceForReviewController;
+use Spectra\Http\Controllers\Api\Annotations\ReviewAnnotationItemController;
 use Spectra\Http\Controllers\Api\ConfigController;
 use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\CostsController;
@@ -56,6 +60,10 @@ Route::prefix('api')->group(function () {
     Route::get('/scores', ScoresController::class);
     Route::get('/prompts', PromptsController::class);
     Route::get('/errors', ErrorsController::class);
+    Route::get('/annotations', AnnotationQueuesController::class);
+    Route::get('/annotations/{queue}/next', NextAnnotationItemController::class)->where('queue', '[A-Za-z0-9._\-]+');
+    Route::post('/annotations/{queue}/items', QueueTraceForReviewController::class)->where('queue', '[A-Za-z0-9._\-]+');
+    Route::post('/annotations/items/{id}', ReviewAnnotationItemController::class)->whereUuid('id');
     Route::get('/tags', TagsController::class);
     Route::get('/trackables', TrackablesController::class);
     Route::get('/trackables/view/{id}', ShowTrackableController::class);

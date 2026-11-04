@@ -7,6 +7,7 @@ namespace Spectra\Actions\Maintenance;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Storage;
 use Spectra\Data\PruneResult;
+use Spectra\Models\SpectraAnnotationItem;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
@@ -15,7 +16,7 @@ use Spectra\Support\Maintenance\MaintenanceHistory;
 use Throwable;
 
 /**
- * Deletes requests, spans and scores older than the retention, the media files
+ * Deletes requests, spans, scores and review queue items older than the retention, the media files
  * stored for those requests, and, only when asked, old daily stats.
  *
  * Daily stats are the long-term history behind the dashboard charts, so they
@@ -44,6 +45,7 @@ class PruneEntries
             media_files: $mediaFiles,
             daily_stats: $statsDays === null ? 0 : $this->pruneDailyStats($statsDays),
             scores: static::scoresTableExists() ? $this->pruneScores($cutoff, $chunk) : 0,
+            review_items: static::reviewItemsTableExists() ? $this->pruneReviewItems($cutoff, $chunk) : 0,
         );
 
         MaintenanceHistory::record(MaintenanceHistory::PRUNE, [
@@ -117,6 +119,34 @@ class PruneEntries
         do {
             $spanIds = SpectraSpan::query()->where('started_at', '<', $cutoff)->limit($chunk)->pluck('id');
             $deleted = $spanIds->isEmpty() ? 0 : SpectraSpan::query()->whereKey($spanIds->all())->delete();
+            $count += $deleted;
+        } while ($deleted > 0);
+
+        return $count;
+    }
+
+    /**
+     * An app that hasn't run the annotation migration yet has no
+     * spectra_annotation_items table; pruning the rest must still work there.
+     */
+    public static function reviewItemsTableExists(): bool
+    {
+        $item = new SpectraAnnotationItem;
+
+        return $item->getConnection()->getSchemaBuilder()->hasTable($item->getTable());
+    }
+
+    /**
+     * Delete review queue items created before the cutoff, whose traces are
+     * pruned with them, and return how many were deleted.
+     */
+    protected function pruneReviewItems(CarbonInterface $cutoff, int $chunk): int
+    {
+        $count = 0;
+
+        do {
+            $itemIds = SpectraAnnotationItem::query()->where('created_at', '<', $cutoff)->limit($chunk)->pluck('id');
+            $deleted = $itemIds->isEmpty() ? 0 : SpectraAnnotationItem::query()->whereKey($itemIds->all())->delete();
             $count += $deleted;
         } while ($deleted > 0);
 

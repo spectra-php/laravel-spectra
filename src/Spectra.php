@@ -9,11 +9,13 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
+use InvalidArgumentException;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ScoreSource;
 use Spectra\Enums\SpanKind;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
+use Spectra\Support\Annotations\AnnotationQueues;
 use Spectra\Support\Query\CostQueryBuilder;
 use Spectra\Support\Query\UsageQueryBuilder;
 use Spectra\Support\Redaction\Redactor;
@@ -333,6 +335,27 @@ class Spectra
         return $this->app->make(ScoreRecorder::class)->record(
             $name, $value, $request, $traceId, $conversationId, $comment, $source, $author, $metadata,
         );
+    }
+
+    /**
+     * Put a trace in a review queue of `spectra.annotations.queues`, for a
+     * person to label on the dashboard's Review screen. Without a trace id,
+     * the current trace goes in. A trace already in the queue keeps its
+     * place. Returns whether the trace is in the queue.
+     *
+     *   Spectra::queueForReview('support-review');
+     *
+     * @throws InvalidArgumentException when the queue isn't configured, or there is no trace
+     */
+    public function queueForReview(string $queue, ?string $traceId = null): bool
+    {
+        $queues = $this->app->make(AnnotationQueues::class);
+        $queues->find($queue);
+        $traceId ??= $this->currentTraceId();
+
+        throw_if(blank($traceId), InvalidArgumentException::class, 'There is no trace to queue for review. Pass a trace id outside a request, job or command.');
+
+        return $queues->add($queue, $traceId);
     }
 
     /**

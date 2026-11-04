@@ -12,6 +12,7 @@ use Spectra\Enums\ScoreSource;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
 use Spectra\Spectra;
+use Spectra\Support\Annotations\AnnotationQueues;
 use Spectra\Support\Scoring\ScoreRecorder;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\ResponseProcessor;
@@ -38,6 +39,13 @@ class SpectraFake extends Spectra
      * @var array<int, array{name: string, kind: string, attributes: array<string, mixed>, id: ?string, result: mixed, status: string, exception: ?\Throwable}>
      */
     protected array $spans = [];
+
+    /**
+     * Traces queued with queueForReview().
+     *
+     * @var array<int, array{queue: string, trace_id: string}>
+     */
+    protected array $reviewQueue = [];
 
     /**
      * Scores recorded with score(), as the columns they would be saved with.
@@ -296,6 +304,30 @@ class SpectraFake extends Spectra
         $matching = Arr::where($this->scores, fn (array $score) => $name === null || $score['name'] === $name);
 
         Assert::assertEmpty($matching, $name === null ? 'Expected no scores to be recorded.' : "Expected no score named [{$name}] to be recorded.");
+    }
+
+    /**
+     * Remember the trace as queued for review instead of saving it. The
+     * queue must be configured, as it must for the real call.
+     */
+    public function queueForReview(string $queue, ?string $traceId = null): bool
+    {
+        app(AnnotationQueues::class)->find($queue);
+        $traceId ??= $this->currentTraceId() ?? 'fake-trace';
+
+        $this->reviewQueue[] = ['queue' => $queue, 'trace_id' => $traceId];
+
+        return true;
+    }
+
+    /**
+     * Assert a trace (the given one, or any) was queued for review in the queue.
+     */
+    public function assertQueuedForReview(string $queue, ?string $traceId = null): void
+    {
+        $matching = Arr::where($this->reviewQueue, fn (array $item) => $item['queue'] === $queue && ($traceId === null || $item['trace_id'] === $traceId));
+
+        Assert::assertNotEmpty($matching, "Expected a trace to be queued for review in [{$queue}], but none was.");
     }
 
     /**

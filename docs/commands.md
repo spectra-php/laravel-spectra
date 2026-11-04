@@ -28,7 +28,7 @@ php artisan migrate
 <a name="spectra-prune"></a>
 ## `spectra:prune`
 
-Deletes old request records and the media files stored for them, so storage doesn't keep growing. Pruning can't be undone. Make sure your retention period meets your audit and compliance requirements before you schedule this command.
+Deletes old request records, with their spans, scores, review queue items and media files, so storage doesn't keep growing. Pruning can't be undone. Make sure your retention period meets your audit and compliance requirements before you schedule this command.
 
 ```shell
 php artisan spectra:prune [--hours=24] [--stats-days=] [--chunk=1000]
@@ -185,7 +185,7 @@ php artisan spectra:group-errors
 | Command | Purpose | Typical Usage |
 | --- | --- | --- |
 | `spectra:install` | Interactive setup; publishes missing migrations | After `composer require` and after upgrading |
-| `spectra:prune --hours=168` | Delete old request data and media | Scheduled daily for retention management |
+| `spectra:prune --hours=168` | Delete old request data, review queue items and media | Scheduled daily for retention management |
 | `spectra:rebuild-stats --yesterday` | Rebuild aggregated statistics | Scheduled daily, after data corrections, or once after upgrading |
 | `spectra:pricing-scrape` | Save new provider prices to the scraped prices file | Before a release picks them up; review and commit the file |
 | `spectra:pause` / `spectra:resume` | Stop and restart storing requests | During load tests or incidents |

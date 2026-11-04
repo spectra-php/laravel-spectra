@@ -38,6 +38,7 @@ use Spectra\Http\Middleware\EnforceBudgetLimit;
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
 use Spectra\Integrations\OpenTelemetry\OtlpExporter;
 use Spectra\Integrations\OpenTelemetry\SpanExporter;
+use Spectra\Support\Annotations\AnnotationQueues;
 use Spectra\Support\ApiKeyResolver;
 use Spectra\Support\Budget\BudgetEnforcer;
 use Spectra\Support\HttpMacros;
@@ -93,6 +94,7 @@ class SpectraServiceProvider extends ServiceProvider
         $this->app->scoped(ToolSpanRecorder::class);
         $this->app->singleton(SpanWriter::class);
         $this->app->singleton(ScoreRecorder::class);
+        $this->app->singleton(AnnotationQueues::class);
         $this->app->singleton(Redactor::class);
 
         $this->app->alias(Spectra::class, 'spectra');
@@ -186,6 +188,8 @@ class SpectraServiceProvider extends ServiceProvider
      * Define the viewSpectra and manageSpectra gates as local-only, unless the
      * app defined its own. manageSpectra runs the dashboard's maintenance
      * actions, so allowing viewSpectra in production does not allow it.
+     * annotateSpectra (reviewing traces in the annotation queues) follows
+     * viewSpectra unless the app defines it.
      */
     protected function registerAuthorization(): void
     {
@@ -194,6 +198,10 @@ class SpectraServiceProvider extends ServiceProvider
                 if (! $gate->has($ability)) {
                     $gate->define($ability, fn ($user = null) => $app->environment('local'));
                 }
+            }
+
+            if (! $gate->has('annotateSpectra')) {
+                $gate->define('annotateSpectra', fn ($user = null) => $gate->forUser($user)->allows('viewSpectra'));
             }
         });
     }

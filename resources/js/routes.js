@@ -11,6 +11,8 @@ import Errors from './screens/errors/index.vue';
 import Trackables from './screens/trackables/index.vue';
 import TrackableDetail from './screens/trackables/detail.vue';
 import Maintenance from './screens/maintenance/index.vue';
+import Review from './screens/review/index.vue';
+import ReviewQueue from './screens/review/queue.vue';
 
 export default [
     {
@@ -72,6 +74,16 @@ export default [
         path: '/trackables/view/:id',
         name: 'trackable-detail',
         component: TrackableDetail,
+    },
+    {
+        path: '/review',
+        name: 'review',
+        component: Review,
+    },
+    {
+        path: '/review/:queue',
+        name: 'review-queue',
+        component: ReviewQueue,
     },
     {
         path: '/maintenance',

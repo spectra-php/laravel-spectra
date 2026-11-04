@@ -1020,6 +1020,43 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Annotation Queues
+    |--------------------------------------------------------------------------
+    |
+    | Queues of traces for people to review on the dashboard's Review screen.
+    | Each queue names the scores a reviewer gives: `boolean` (yes or no),
+    | `numeric` with a `min` and `max`, or `categorical` with `options`. The
+    | scores are saved like any other, with the Annotation source.
+    |
+    | `sample` queues that share of the traces whose calls match `filter`
+    | (provider, model, prompt_name, prompt_version, tag, origin, failed) as
+    | they are recorded. Without it, add traces with Spectra::queueForReview()
+    | or from a trace's page. Reviewing needs the annotateSpectra gate, which
+    | follows viewSpectra unless you define it.
+    |
+    | Docs: https://spectraphp.com/annotations
+    |
+    */
+
+    'annotations' => [
+
+        'queues' => [
+            // 'support-review' => [
+            //     'description' => 'Check the support agent\'s answers',
+            //     'scores' => [
+            //         'helpful' => 'boolean',
+            //         'accuracy' => ['type' => 'numeric', 'min' => 1, 'max' => 5],
+            //         'issue' => ['type' => 'categorical', 'options' => ['wrong-facts', 'tone', 'incomplete']],
+            //     ],
+            //     'sample' => 0.05,
+            //     'filter' => ['prompt_name' => 'support-answer'],
+            // ],
+        ],
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Automatic HTTP Watcher
     |--------------------------------------------------------------------------
     |

@@ -35,6 +35,31 @@ const loadTrace = async () => {
 
 onMounted(loadTrace);
 
+// Put this trace in a review queue, when the app has queues and the user may review.
+const reviewQueues = ref([]);
+const queuedIn = ref('');
+const queueError = ref('');
+onMounted(async () => {
+    try {
+        const data = await apiRequest('get', '/annotations');
+        reviewQueues.value = data.can_annotate && data.migrated ? data.queues : [];
+    } catch {
+        reviewQueues.value = [];
+    }
+});
+const queueForReview = async (event) => {
+    const queue = event.target.value;
+    event.target.value = '';
+    if (!queue) return;
+    queueError.value = '';
+    try {
+        await apiRequest('post', `/annotations/${encodeURIComponent(queue)}/items`, { trace_id: route.params.traceId });
+        queuedIn.value = queue;
+    } catch {
+        queueError.value = 'Could not add it to the queue.';
+    }
+};
+
 watch(() => route.params.traceId, (traceId, previous) => {
     if (traceId && traceId !== previous) loadTrace();
 });
@@ -115,10 +140,18 @@ const copyTraceId = async () => {
                         <template v-if="startedAt"><span aria-hidden="true">·</span> {{ startedAt }}</template>
                     </p>
                 </div>
-                <router-link
-                    :to="{ name: 'requests', query: { trace_id: trace.trace_id, period: 'all' } }"
-                    class="btn btn-secondary self-start"
-                >View calls in Requests</router-link>
+                <div class="flex flex-wrap items-center gap-2 self-start">
+                    <span v-if="queuedIn" class="text-xs text-gray-500 dark:text-gray-400">In <router-link :to="{ name: 'review-queue', params: { queue: queuedIn } }" class="font-mono text-primary-600 hover:underline dark:text-primary-400">{{ queuedIn }}</router-link></span>
+                    <span v-if="queueError" class="text-xs text-red-600 dark:text-red-400">{{ queueError }}</span>
+                    <select v-if="reviewQueues.length" class="form-select form-select-sm" aria-label="Add to a review queue" @change="queueForReview">
+                        <option value="">Add to review…</option>
+                        <option v-for="queue in reviewQueues" :key="queue.name" :value="queue.name">{{ queue.name }}</option>
+                    </select>
+                    <router-link
+                        :to="{ name: 'requests', query: { trace_id: trace.trace_id, period: 'all' } }"
+                        class="btn btn-secondary"
+                    >View calls in Requests</router-link>
+                </div>
             </div>
 
             <!-- Summary -->

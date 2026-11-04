@@ -37,7 +37,7 @@ class PruneCommand extends Command
             chunk: (int) $this->option('chunk'),
         );
 
-        $this->info("{$result->requests} requests, {$result->spans} spans, {$result->scores} scores, {$result->media_files} media files and {$result->daily_stats} daily stats pruned.");
+        $this->info("{$result->requests} requests, {$result->spans} spans, {$result->scores} scores, {$result->review_items} review items, {$result->media_files} media files and {$result->daily_stats} daily stats pruned.");
 
         return self::SUCCESS;
     }
