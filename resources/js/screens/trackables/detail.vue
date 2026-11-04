@@ -16,7 +16,11 @@ import ProviderLogo from '@/components/ProviderLogo.vue';
 const route = useRoute();
 const router = useRouter();
 const { formatNumber, formatCompact, formatShortDate, formatCurrency, currencySymbol, formatDuration, formatDurationSeconds, truncate, providerChartColor, apiRequest } = useHelpers();
-const { period, startDate, endDate, periodLabel } = usePeriodQuery();
+// `type` tells the API which model the id belongs to, so it stays in the URL with the period.
+const { period, startDate, endDate, periodLabel, applyQueryState, syncQueryToRouter } = usePeriodQuery({
+    filterKeys: ['type'],
+    getFilters: () => ({ type: route.query.type }),
+});
 const { providers, loadProviders, providerDisplayName } = useProviders();
 const { createBarChart, createLineChart, createDoughnutChart } = useCharts();
 const loading = useLoading();
@@ -131,6 +135,7 @@ const loadTrackable = async () => {
 };
 
 const onRangeChange = async () => {
+    await syncQueryToRouter();
     await loadTrackable();
 };
 
@@ -315,6 +320,8 @@ const observer = new MutationObserver((mutations) => {
 });
 
 onMounted(async () => {
+    applyQueryState();
+    await syncQueryToRouter(null, true);
     await Promise.all([loadConfig(), loadProviders()]);
     await loadTrackable();
     observer.observe(document.documentElement, { attributes: true });

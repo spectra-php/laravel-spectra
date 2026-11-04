@@ -127,7 +127,12 @@ const goToTrackable = (trackable) => {
     router.push({
         name: 'trackable-detail',
         params: { id: trackable.trackable_id },
-        query: { type: trackable.trackable_type },
+        // Keep the period, so the trackable opens on the range the list shows.
+        query: {
+            type: trackable.trackable_type,
+            period: period.value,
+            ...(startDate.value && endDate.value ? { start_date: startDate.value, end_date: endDate.value } : {}),
+        },
     });
 };
 
