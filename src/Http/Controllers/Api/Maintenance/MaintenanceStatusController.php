@@ -21,11 +21,13 @@ class MaintenanceStatusController extends BaseApiController
      */
     public function __invoke(Request $request, GetMaintenanceStatus $action): MaintenanceStatusResponse
     {
-        $request->merge(['hours' => $request->query('hours', 24)]);
-        $validated = $request->validate(BaseMaintenanceController::retentionRules());
+        $validated = $request->validate([
+            'hours' => ['nullable', 'integer', 'min:1', 'max:876000'],
+            'stats_days' => ['nullable', 'integer', 'min:1', 'max:36500'],
+        ]);
 
         return $action(
-            (int) $validated['hours'],
+            (int) ($validated['hours'] ?? 24),
             isset($validated['stats_days']) ? (int) $validated['stats_days'] : null,
         );
     }
