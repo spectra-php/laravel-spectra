@@ -16,6 +16,11 @@ use Spectra\Data\TokenMetrics;
  * total already contains cached tokens and cache writes, and the output total
  * already contains reasoning tokens, which matches the TokenMetrics contract,
  * so the totals are passed through and only the breakdowns are read.
+ *
+ * GPT-5.6 and later split cache writes by lifetime in
+ * `cache_write_tokens_details` (`ttl_30m_tokens`, `ttl_12h_tokens`). The 12h
+ * writes are reported as cacheWrite1hTokens, so they bill at the catalog's
+ * `cacheWrite1hPrice` and the 30m writes at `cacheWrite5mPrice`.
  */
 final class OpenAiUsage
 {
@@ -50,6 +55,7 @@ final class OpenAiUsage
             cachedTokens: self::int($input, 'cached_tokens'),
             reasoningTokens: self::int($output, 'reasoning_tokens'),
             cacheWriteTokens: self::int($input, 'cache_write_tokens'),
+            cacheWrite1hTokens: self::cacheWrites12h($input),
             audioInputTokens: self::uncached($input, $cachedByModality, 'audio_tokens'),
             imageInputTokens: self::uncached($input, $cachedByModality, 'image_tokens'),
             audioOutputTokens: self::int($output, 'audio_tokens'),
@@ -75,6 +81,7 @@ final class OpenAiUsage
             cachedTokens: self::int($input, 'cached_tokens') ?: self::int($usage, 'cached_tokens'),
             reasoningTokens: self::int($output, 'reasoning_tokens') ?: self::int($usage, 'reasoning_tokens'),
             cacheWriteTokens: self::int($input, 'cache_write_tokens') ?: self::int($usage, 'cache_write_tokens'),
+            cacheWrite1hTokens: self::cacheWrites12h($input),
             audioInputTokens: self::uncached($input, $cachedByModality, 'audio_tokens'),
             imageInputTokens: self::uncached($input, $cachedByModality, 'image_tokens'),
             audioOutputTokens: self::int($output, 'audio_tokens'),
@@ -165,6 +172,18 @@ final class OpenAiUsage
         }
 
         return 0;
+    }
+
+    /**
+     * Cache writes with the 12-hour lifetime, capped at the write total.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    private static function cacheWrites12h(array $input): int
+    {
+        $writes = self::details($input, 'cache_write_tokens_details');
+
+        return min(self::int($writes, 'ttl_12h_tokens'), self::int($input, 'cache_write_tokens'));
     }
 
     /**

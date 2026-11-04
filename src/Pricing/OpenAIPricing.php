@@ -8,11 +8,15 @@ namespace Spectra\Pricing;
  * OpenAI price catalog, in US cents per 1M tokens (or per unit).
  *
  * Prices checked against https://developers.openai.com/api/docs/pricing and
- * the model pages on 2026-10-15.
+ * the model pages on 2026-10-15; cache-write rates, GPT-6 Rosalind and GPT-6
+ * Astra for Law re-checked on 2026-11-04.
  *
  * - `priority` holds Fast mode prices (OpenAI renamed Priority processing to
- *   Fast mode on 2026-07-30); `cacheWrite5mPrice` holds OpenAI's single
- *   cache-write rate (GPT-5.6 and later, 1.25x input).
+ *   Fast mode on 2026-07-30).
+ * - Cache writes (GPT-5.6 and later): `cacheWrite5mPrice` holds the 30m
+ *   rate (1.25x input) and `cacheWrite1hPrice` the 12h rate (2.5x input,
+ *   Responses API only). Both are total write rates, not surcharges. The
+ *   usage splits writes by lifetime (`ttl_30m_tokens`, `ttl_12h_tokens`).
  * - Long context: prompts over 272K input tokens are billed at 2x input and
  *   1.5x output for the whole request (`aboveInputTokens: 272_000`). For the
  *   GPT-6 and GPT-5.6 families the cache rates double too ("2x input and
@@ -60,104 +64,104 @@ class OpenAIPricing extends ProviderPricing
         $this->model('gpt-6-astra', fn ($m) => $m
             ->displayName('GPT-6 Astra')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 1000, outputPrice: 5000, cachedInputPrice: 100, cacheWrite5mPrice: 1250)
-            ->tier('standard', inputPrice: 2000, outputPrice: 7500, cachedInputPrice: 200, cacheWrite5mPrice: 2500, aboveInputTokens: 272_000)
-            ->tier('batch', inputPrice: 500, outputPrice: 2500, cachedInputPrice: 50, cacheWrite5mPrice: 625)
-            ->tier('batch', inputPrice: 1000, outputPrice: 3750, cachedInputPrice: 100, cacheWrite5mPrice: 1250, aboveInputTokens: 272_000)
-            ->tier('flex', inputPrice: 500, outputPrice: 2500, cachedInputPrice: 50, cacheWrite5mPrice: 625)
-            ->tier('flex', inputPrice: 1000, outputPrice: 3750, cachedInputPrice: 100, cacheWrite5mPrice: 1250, aboveInputTokens: 272_000)
-            ->tier('priority', inputPrice: 2000, outputPrice: 10000, cachedInputPrice: 200, cacheWrite5mPrice: 2500)
-            ->tier('priority', inputPrice: 4000, outputPrice: 15000, cachedInputPrice: 400, cacheWrite5mPrice: 5000, aboveInputTokens: 272_000)
-            ->tier('ultrafast', inputPrice: 6000, outputPrice: 30000, cachedInputPrice: 600, cacheWrite5mPrice: 7500)
-            ->tier('ultrafast', inputPrice: 12000, outputPrice: 45000, cachedInputPrice: 1200, cacheWrite5mPrice: 15000, aboveInputTokens: 272_000));
+            ->tier('standard', inputPrice: 1000, outputPrice: 5000, cachedInputPrice: 100, cacheWrite5mPrice: 1250, cacheWrite1hPrice: 2500)
+            ->tier('standard', inputPrice: 2000, outputPrice: 7500, cachedInputPrice: 200, cacheWrite5mPrice: 2500, cacheWrite1hPrice: 5000, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 500, outputPrice: 2500, cachedInputPrice: 50, cacheWrite5mPrice: 625, cacheWrite1hPrice: 1250)
+            ->tier('batch', inputPrice: 1000, outputPrice: 3750, cachedInputPrice: 100, cacheWrite5mPrice: 1250, cacheWrite1hPrice: 2500, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 500, outputPrice: 2500, cachedInputPrice: 50, cacheWrite5mPrice: 625, cacheWrite1hPrice: 1250)
+            ->tier('flex', inputPrice: 1000, outputPrice: 3750, cachedInputPrice: 100, cacheWrite5mPrice: 1250, cacheWrite1hPrice: 2500, aboveInputTokens: 272_000)
+            ->tier('priority', inputPrice: 2000, outputPrice: 10000, cachedInputPrice: 200, cacheWrite5mPrice: 2500, cacheWrite1hPrice: 5000)
+            ->tier('priority', inputPrice: 4000, outputPrice: 15000, cachedInputPrice: 400, cacheWrite5mPrice: 5000, cacheWrite1hPrice: 10000, aboveInputTokens: 272_000)
+            ->tier('ultrafast', inputPrice: 6000, outputPrice: 30000, cachedInputPrice: 600, cacheWrite5mPrice: 7500, cacheWrite1hPrice: 15000)
+            ->tier('ultrafast', inputPrice: 12000, outputPrice: 45000, cachedInputPrice: 1200, cacheWrite5mPrice: 15000, cacheWrite1hPrice: 30000, aboveInputTokens: 272_000));
 
         $this->model('gpt-6.1-sol', fn ($m) => $m
             ->displayName('GPT-6.1 Sol')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 10, cacheWrite5mPrice: 250)
-            ->tier('standard', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 20, cacheWrite5mPrice: 500, aboveInputTokens: 272_000)
-            ->tier('batch', inputPrice: 100, outputPrice: 500, cachedInputPrice: 5, cacheWrite5mPrice: 125)
-            ->tier('batch', inputPrice: 200, outputPrice: 750, cachedInputPrice: 10, cacheWrite5mPrice: 250, aboveInputTokens: 272_000)
-            ->tier('flex', inputPrice: 100, outputPrice: 500, cachedInputPrice: 5, cacheWrite5mPrice: 125)
-            ->tier('flex', inputPrice: 200, outputPrice: 750, cachedInputPrice: 10, cacheWrite5mPrice: 250, aboveInputTokens: 272_000)
-            ->tier('priority', inputPrice: 400, outputPrice: 2000, cachedInputPrice: 20, cacheWrite5mPrice: 500)
-            ->tier('priority', inputPrice: 800, outputPrice: 3000, cachedInputPrice: 40, cacheWrite5mPrice: 1000, aboveInputTokens: 272_000)
-            ->tier('ultrafast', inputPrice: 1200, outputPrice: 6000, cachedInputPrice: 60, cacheWrite5mPrice: 1500)
-            ->tier('ultrafast', inputPrice: 2400, outputPrice: 9000, cachedInputPrice: 120, cacheWrite5mPrice: 3000, aboveInputTokens: 272_000));
+            ->tier('standard', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 10, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500)
+            ->tier('standard', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 20, cacheWrite5mPrice: 500, cacheWrite1hPrice: 1000, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 100, outputPrice: 500, cachedInputPrice: 5, cacheWrite5mPrice: 125, cacheWrite1hPrice: 250)
+            ->tier('batch', inputPrice: 200, outputPrice: 750, cachedInputPrice: 10, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 100, outputPrice: 500, cachedInputPrice: 5, cacheWrite5mPrice: 125, cacheWrite1hPrice: 250)
+            ->tier('flex', inputPrice: 200, outputPrice: 750, cachedInputPrice: 10, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500, aboveInputTokens: 272_000)
+            ->tier('priority', inputPrice: 400, outputPrice: 2000, cachedInputPrice: 20, cacheWrite5mPrice: 500, cacheWrite1hPrice: 1000)
+            ->tier('priority', inputPrice: 800, outputPrice: 3000, cachedInputPrice: 40, cacheWrite5mPrice: 1000, cacheWrite1hPrice: 2000, aboveInputTokens: 272_000)
+            ->tier('ultrafast', inputPrice: 1200, outputPrice: 6000, cachedInputPrice: 60, cacheWrite5mPrice: 1500, cacheWrite1hPrice: 3000)
+            ->tier('ultrafast', inputPrice: 2400, outputPrice: 9000, cachedInputPrice: 120, cacheWrite5mPrice: 3000, cacheWrite1hPrice: 6000, aboveInputTokens: 272_000));
 
         $this->model('gpt-6.1-terra', fn ($m) => $m
             ->displayName('GPT-6.1 Terra')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 100, outputPrice: 500, cachedInputPrice: 5, cacheWrite5mPrice: 125)
-            ->tier('standard', inputPrice: 200, outputPrice: 750, cachedInputPrice: 10, cacheWrite5mPrice: 250, aboveInputTokens: 272_000)
-            ->tier('batch', inputPrice: 50, outputPrice: 250, cachedInputPrice: 2.5, cacheWrite5mPrice: 62.5)
-            ->tier('batch', inputPrice: 100, outputPrice: 375, cachedInputPrice: 5, cacheWrite5mPrice: 125, aboveInputTokens: 272_000)
-            ->tier('flex', inputPrice: 50, outputPrice: 250, cachedInputPrice: 2.5, cacheWrite5mPrice: 62.5)
-            ->tier('flex', inputPrice: 100, outputPrice: 375, cachedInputPrice: 5, cacheWrite5mPrice: 125, aboveInputTokens: 272_000)
-            ->tier('priority', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 10, cacheWrite5mPrice: 250)
-            ->tier('priority', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 20, cacheWrite5mPrice: 500, aboveInputTokens: 272_000));
+            ->tier('standard', inputPrice: 100, outputPrice: 500, cachedInputPrice: 5, cacheWrite5mPrice: 125, cacheWrite1hPrice: 250)
+            ->tier('standard', inputPrice: 200, outputPrice: 750, cachedInputPrice: 10, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 50, outputPrice: 250, cachedInputPrice: 2.5, cacheWrite5mPrice: 62.5, cacheWrite1hPrice: 125)
+            ->tier('batch', inputPrice: 100, outputPrice: 375, cachedInputPrice: 5, cacheWrite5mPrice: 125, cacheWrite1hPrice: 250, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 50, outputPrice: 250, cachedInputPrice: 2.5, cacheWrite5mPrice: 62.5, cacheWrite1hPrice: 125)
+            ->tier('flex', inputPrice: 100, outputPrice: 375, cachedInputPrice: 5, cacheWrite5mPrice: 125, cacheWrite1hPrice: 250, aboveInputTokens: 272_000)
+            ->tier('priority', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 10, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500)
+            ->tier('priority', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 20, cacheWrite5mPrice: 500, cacheWrite1hPrice: 1000, aboveInputTokens: 272_000));
 
         $this->model('gpt-6-sol', fn ($m) => $m
             ->displayName('GPT-6 Sol')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 20, cacheWrite5mPrice: 250)
-            ->tier('standard', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 40, cacheWrite5mPrice: 500, aboveInputTokens: 272_000)
-            ->tier('batch', inputPrice: 100, outputPrice: 500, cachedInputPrice: 10, cacheWrite5mPrice: 125)
-            ->tier('batch', inputPrice: 200, outputPrice: 750, cachedInputPrice: 20, cacheWrite5mPrice: 250, aboveInputTokens: 272_000)
-            ->tier('flex', inputPrice: 100, outputPrice: 500, cachedInputPrice: 10, cacheWrite5mPrice: 125)
-            ->tier('flex', inputPrice: 200, outputPrice: 750, cachedInputPrice: 20, cacheWrite5mPrice: 250, aboveInputTokens: 272_000)
-            ->tier('priority', inputPrice: 400, outputPrice: 2000, cachedInputPrice: 40, cacheWrite5mPrice: 500)
-            ->tier('priority', inputPrice: 800, outputPrice: 3000, cachedInputPrice: 80, cacheWrite5mPrice: 1000, aboveInputTokens: 272_000));
+            ->tier('standard', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 20, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500)
+            ->tier('standard', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 40, cacheWrite5mPrice: 500, cacheWrite1hPrice: 1000, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 100, outputPrice: 500, cachedInputPrice: 10, cacheWrite5mPrice: 125, cacheWrite1hPrice: 250)
+            ->tier('batch', inputPrice: 200, outputPrice: 750, cachedInputPrice: 20, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 100, outputPrice: 500, cachedInputPrice: 10, cacheWrite5mPrice: 125, cacheWrite1hPrice: 250)
+            ->tier('flex', inputPrice: 200, outputPrice: 750, cachedInputPrice: 20, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500, aboveInputTokens: 272_000)
+            ->tier('priority', inputPrice: 400, outputPrice: 2000, cachedInputPrice: 40, cacheWrite5mPrice: 500, cacheWrite1hPrice: 1000)
+            ->tier('priority', inputPrice: 800, outputPrice: 3000, cachedInputPrice: 80, cacheWrite5mPrice: 1000, cacheWrite1hPrice: 2000, aboveInputTokens: 272_000));
 
         $this->model('gpt-6-luna', fn ($m) => $m
             ->displayName('GPT-6 Luna')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 10, outputPrice: 50, cachedInputPrice: 1, cacheWrite5mPrice: 12.5)
-            ->tier('standard', inputPrice: 20, outputPrice: 75, cachedInputPrice: 2, cacheWrite5mPrice: 25, aboveInputTokens: 272_000)
-            ->tier('batch', inputPrice: 5, outputPrice: 25, cachedInputPrice: 0.5, cacheWrite5mPrice: 6.25)
-            ->tier('batch', inputPrice: 10, outputPrice: 37.5, cachedInputPrice: 1, cacheWrite5mPrice: 12.5, aboveInputTokens: 272_000)
-            ->tier('flex', inputPrice: 5, outputPrice: 25, cachedInputPrice: 0.5, cacheWrite5mPrice: 6.25)
-            ->tier('flex', inputPrice: 10, outputPrice: 37.5, cachedInputPrice: 1, cacheWrite5mPrice: 12.5, aboveInputTokens: 272_000)
-            ->tier('priority', inputPrice: 20, outputPrice: 100, cachedInputPrice: 2, cacheWrite5mPrice: 25)
-            ->tier('priority', inputPrice: 40, outputPrice: 150, cachedInputPrice: 4, cacheWrite5mPrice: 50, aboveInputTokens: 272_000));
+            ->tier('standard', inputPrice: 10, outputPrice: 50, cachedInputPrice: 1, cacheWrite5mPrice: 12.5, cacheWrite1hPrice: 25)
+            ->tier('standard', inputPrice: 20, outputPrice: 75, cachedInputPrice: 2, cacheWrite5mPrice: 25, cacheWrite1hPrice: 50, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 5, outputPrice: 25, cachedInputPrice: 0.5, cacheWrite5mPrice: 6.25, cacheWrite1hPrice: 12.5)
+            ->tier('batch', inputPrice: 10, outputPrice: 37.5, cachedInputPrice: 1, cacheWrite5mPrice: 12.5, cacheWrite1hPrice: 25, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 5, outputPrice: 25, cachedInputPrice: 0.5, cacheWrite5mPrice: 6.25, cacheWrite1hPrice: 12.5)
+            ->tier('flex', inputPrice: 10, outputPrice: 37.5, cachedInputPrice: 1, cacheWrite5mPrice: 12.5, cacheWrite1hPrice: 25, aboveInputTokens: 272_000)
+            ->tier('priority', inputPrice: 20, outputPrice: 100, cachedInputPrice: 2, cacheWrite5mPrice: 25, cacheWrite1hPrice: 50)
+            ->tier('priority', inputPrice: 40, outputPrice: 150, cachedInputPrice: 4, cacheWrite5mPrice: 50, cacheWrite1hPrice: 100, aboveInputTokens: 272_000));
 
         // Promotional price, "available at least through November 21, 2026".
         // The price after the promotion has not been published yet.
         $this->model('gpt-5.6-sol', fn ($m) => $m
             ->displayName('GPT-5.6 Sol')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 400, outputPrice: 2000, cachedInputPrice: 40, cacheWrite5mPrice: 500)
-            ->tier('standard', inputPrice: 800, outputPrice: 3000, cachedInputPrice: 80, cacheWrite5mPrice: 1000, aboveInputTokens: 272_000)
-            ->tier('batch', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 20, cacheWrite5mPrice: 250)
-            ->tier('batch', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 40, cacheWrite5mPrice: 500, aboveInputTokens: 272_000)
-            ->tier('flex', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 20, cacheWrite5mPrice: 250)
-            ->tier('flex', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 40, cacheWrite5mPrice: 500, aboveInputTokens: 272_000)
-            ->tier('priority', inputPrice: 800, outputPrice: 4000, cachedInputPrice: 80, cacheWrite5mPrice: 1000)
-            ->tier('priority', inputPrice: 1600, outputPrice: 6000, cachedInputPrice: 160, cacheWrite5mPrice: 2000, aboveInputTokens: 272_000));
+            ->tier('standard', inputPrice: 400, outputPrice: 2000, cachedInputPrice: 40, cacheWrite5mPrice: 500, cacheWrite1hPrice: 1000)
+            ->tier('standard', inputPrice: 800, outputPrice: 3000, cachedInputPrice: 80, cacheWrite5mPrice: 1000, cacheWrite1hPrice: 2000, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 20, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500)
+            ->tier('batch', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 40, cacheWrite5mPrice: 500, cacheWrite1hPrice: 1000, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 200, outputPrice: 1000, cachedInputPrice: 20, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500)
+            ->tier('flex', inputPrice: 400, outputPrice: 1500, cachedInputPrice: 40, cacheWrite5mPrice: 500, cacheWrite1hPrice: 1000, aboveInputTokens: 272_000)
+            ->tier('priority', inputPrice: 800, outputPrice: 4000, cachedInputPrice: 80, cacheWrite5mPrice: 1000, cacheWrite1hPrice: 2000)
+            ->tier('priority', inputPrice: 1600, outputPrice: 6000, cachedInputPrice: 160, cacheWrite5mPrice: 2000, cacheWrite1hPrice: 4000, aboveInputTokens: 272_000));
 
         $this->model('gpt-5.6-terra', fn ($m) => $m
             ->displayName('GPT-5.6 Terra')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 200, outputPrice: 1200, cachedInputPrice: 20, cacheWrite5mPrice: 250)
-            ->tier('standard', inputPrice: 400, outputPrice: 1800, cachedInputPrice: 40, cacheWrite5mPrice: 500, aboveInputTokens: 272_000)
-            ->tier('batch', inputPrice: 100, outputPrice: 600, cachedInputPrice: 10, cacheWrite5mPrice: 125)
-            ->tier('batch', inputPrice: 200, outputPrice: 900, cachedInputPrice: 20, cacheWrite5mPrice: 250, aboveInputTokens: 272_000)
-            ->tier('flex', inputPrice: 100, outputPrice: 600, cachedInputPrice: 10, cacheWrite5mPrice: 125)
-            ->tier('flex', inputPrice: 200, outputPrice: 900, cachedInputPrice: 20, cacheWrite5mPrice: 250, aboveInputTokens: 272_000)
-            ->tier('priority', inputPrice: 400, outputPrice: 2400, cachedInputPrice: 40, cacheWrite5mPrice: 500)
-            ->tier('priority', inputPrice: 800, outputPrice: 3600, cachedInputPrice: 80, cacheWrite5mPrice: 1000, aboveInputTokens: 272_000));
+            ->tier('standard', inputPrice: 200, outputPrice: 1200, cachedInputPrice: 20, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500)
+            ->tier('standard', inputPrice: 400, outputPrice: 1800, cachedInputPrice: 40, cacheWrite5mPrice: 500, cacheWrite1hPrice: 1000, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 100, outputPrice: 600, cachedInputPrice: 10, cacheWrite5mPrice: 125, cacheWrite1hPrice: 250)
+            ->tier('batch', inputPrice: 200, outputPrice: 900, cachedInputPrice: 20, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 100, outputPrice: 600, cachedInputPrice: 10, cacheWrite5mPrice: 125, cacheWrite1hPrice: 250)
+            ->tier('flex', inputPrice: 200, outputPrice: 900, cachedInputPrice: 20, cacheWrite5mPrice: 250, cacheWrite1hPrice: 500, aboveInputTokens: 272_000)
+            ->tier('priority', inputPrice: 400, outputPrice: 2400, cachedInputPrice: 40, cacheWrite5mPrice: 500, cacheWrite1hPrice: 1000)
+            ->tier('priority', inputPrice: 800, outputPrice: 3600, cachedInputPrice: 80, cacheWrite5mPrice: 1000, cacheWrite1hPrice: 2000, aboveInputTokens: 272_000));
 
         $this->model('gpt-5.6-luna', fn ($m) => $m
             ->displayName('GPT-5.6 Luna')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 20, outputPrice: 120, cachedInputPrice: 2, cacheWrite5mPrice: 25)
-            ->tier('standard', inputPrice: 40, outputPrice: 180, cachedInputPrice: 4, cacheWrite5mPrice: 50, aboveInputTokens: 272_000)
-            ->tier('batch', inputPrice: 10, outputPrice: 60, cachedInputPrice: 1, cacheWrite5mPrice: 12.5)
-            ->tier('batch', inputPrice: 20, outputPrice: 90, cachedInputPrice: 2, cacheWrite5mPrice: 25, aboveInputTokens: 272_000)
-            ->tier('flex', inputPrice: 10, outputPrice: 60, cachedInputPrice: 1, cacheWrite5mPrice: 12.5)
-            ->tier('flex', inputPrice: 20, outputPrice: 90, cachedInputPrice: 2, cacheWrite5mPrice: 25, aboveInputTokens: 272_000)
-            ->tier('priority', inputPrice: 40, outputPrice: 240, cachedInputPrice: 4, cacheWrite5mPrice: 50)
-            ->tier('priority', inputPrice: 80, outputPrice: 360, cachedInputPrice: 8, cacheWrite5mPrice: 100, aboveInputTokens: 272_000));
+            ->tier('standard', inputPrice: 20, outputPrice: 120, cachedInputPrice: 2, cacheWrite5mPrice: 25, cacheWrite1hPrice: 50)
+            ->tier('standard', inputPrice: 40, outputPrice: 180, cachedInputPrice: 4, cacheWrite5mPrice: 50, cacheWrite1hPrice: 100, aboveInputTokens: 272_000)
+            ->tier('batch', inputPrice: 10, outputPrice: 60, cachedInputPrice: 1, cacheWrite5mPrice: 12.5, cacheWrite1hPrice: 25)
+            ->tier('batch', inputPrice: 20, outputPrice: 90, cachedInputPrice: 2, cacheWrite5mPrice: 25, cacheWrite1hPrice: 50, aboveInputTokens: 272_000)
+            ->tier('flex', inputPrice: 10, outputPrice: 60, cachedInputPrice: 1, cacheWrite5mPrice: 12.5, cacheWrite1hPrice: 25)
+            ->tier('flex', inputPrice: 20, outputPrice: 90, cachedInputPrice: 2, cacheWrite5mPrice: 25, cacheWrite1hPrice: 50, aboveInputTokens: 272_000)
+            ->tier('priority', inputPrice: 40, outputPrice: 240, cachedInputPrice: 4, cacheWrite5mPrice: 50, cacheWrite1hPrice: 100)
+            ->tier('priority', inputPrice: 80, outputPrice: 360, cachedInputPrice: 8, cacheWrite5mPrice: 100, cacheWrite1hPrice: 200, aboveInputTokens: 272_000));
     }
 
     /** GPT-5 to GPT-5.5. */
@@ -329,12 +333,26 @@ class OpenAIPricing extends ProviderPricing
         $this->model('gpt-5.6-cyber', fn ($m) => $m
             ->displayName('GPT-5.6 Cyber')
             ->canGenerateText()
-            ->tier('standard', inputPrice: 1250, outputPrice: 7500, cachedInputPrice: 125, cacheWrite5mPrice: 1562.5));
+            ->tier('standard', inputPrice: 1250, outputPrice: 7500, cachedInputPrice: 125, cacheWrite5mPrice: 1562.5, cacheWrite1hPrice: 3125));
 
         $this->model('gpt-5.5-cyber', fn ($m) => $m
             ->displayName('GPT-5.5 Cyber')
             ->canGenerateText()
             ->tier('standard', inputPrice: 1250, outputPrice: 7500, cachedInputPrice: 125));
+
+        // OpenAI lists no Batch, Flex or Fast price for gpt-6-rosalind.
+        $this->model('gpt-6-rosalind', fn ($m) => $m
+            ->displayName('GPT-6 Rosalind')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 1500, outputPrice: 7500, cachedInputPrice: 150, cacheWrite5mPrice: 1875, cacheWrite1hPrice: 3750)
+            ->tier('standard', inputPrice: 3000, outputPrice: 11250, cachedInputPrice: 300, cacheWrite5mPrice: 3750, cacheWrite1hPrice: 7500, aboveInputTokens: 272_000));
+
+        // Promotional price, "available at least through December 31, 2026".
+        // OpenAI lists no long-context or cache-write price for it.
+        $this->model('gpt-6-astra-law', fn ($m) => $m
+            ->displayName('GPT-6 Astra for Law')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 1000, outputPrice: 5000, cachedInputPrice: 100));
 
         // Billing for gpt-rosalind-research began on 2026-10-05; it was free before.
         $this->model('gpt-rosalind-research', fn ($m) => $m

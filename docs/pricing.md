@@ -79,8 +79,8 @@ Tier names: `standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, and `h
 | `inputPrice` | Uncached input tokens |
 | `outputPrice` | Output tokens, including reasoning tokens |
 | `cachedInputPrice` | Input tokens read from the prompt cache. Falls back to `inputPrice`. |
-| `cacheWrite5mPrice` | Input tokens written to the prompt cache (Anthropic 5-minute writes, and OpenAI's only write rate). Falls back to `inputPrice`. |
-| `cacheWrite1hPrice` | Input tokens written to the prompt cache with a 1-hour lifetime (Anthropic). Falls back to `cacheWrite5mPrice`, then `inputPrice`. |
+| `cacheWrite5mPrice` | Input tokens written to the prompt cache (Anthropic 5-minute writes, OpenAI 30-minute writes). Falls back to `inputPrice`. |
+| `cacheWrite1hPrice` | Input tokens written to the prompt cache with a longer lifetime (Anthropic 1-hour writes, OpenAI 12-hour writes). Falls back to `cacheWrite5mPrice`, then `inputPrice`. |
 | `audioInputPrice` | Audio input tokens. Falls back to `inputPrice`. |
 | `audioOutputPrice` | Audio output tokens. Falls back to `outputPrice`. |
 | `imageInputPrice` | Image input tokens. Falls back to `inputPrice`. |
@@ -556,7 +556,7 @@ class MyProviderPricing extends ProviderPricing
 
 The built-in catalog is maintained by hand. Spectra does not fetch prices from provider APIs. Provider prices change, and new models ship often, so the catalog needs a review from time to time. Between releases, you can pick up new prices yourself with [`spectra:pricing-scrape`](#scraping-prices).
 
-**Prices last reviewed: 2026-10-29.**
+**Prices last reviewed: 2026-11-04.**
 
 When reviewing, check each provider's official pricing page and update the matching `ProviderPricing` class under `src/Pricing/`:
 

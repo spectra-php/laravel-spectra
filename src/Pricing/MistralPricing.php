@@ -335,6 +335,45 @@ class MistralPricing extends ProviderPricing
             ->tier('standard', pricePerUnit: 0.1)
             ->tier('batch', pricePerUnit: 0.05));
 
+        // Voxtral 3 (released 2026-10-20). The pricing page also lists cached
+        // rates (10% of the price), which per-unit entries cannot express.
+        $this->model('voxtral-mini-tts-3-0', fn ($m) => $m
+            ->displayName('Voxtral TTS 3')
+            ->aliases('voxtral-mini-tts-3', 'voxtral-mini-tts-realtime-3-0', 'voxtral-mini-tts-realtime-3', 'voxtral-mini-tts-realtime-latest')
+            ->type('audio')
+            ->pricingUnit('characters')
+            ->canGenerateAudio()
+            ->tier('standard', pricePerUnit: 1300));
+
+        $this->model('voxtral-mini-transcribe-3-0', fn ($m) => $m
+            ->displayName('Voxtral Mini Transcribe 3')
+            ->aliases('voxtral-mini-transcribe-3', 'voxtral-mini-transcribe-latest')
+            ->type('audio')
+            ->pricingUnit('minute')
+            ->canGenerateText()
+            ->tier('standard', pricePerUnit: 0.35));
+
+        $this->model('voxtral-mini-transcribe-realtime-3-0', fn ($m) => $m
+            ->displayName('Voxtral Mini Transcribe Realtime 3')
+            ->aliases('voxtral-mini-transcribe-realtime-3', 'voxtral-mini-transcribe-realtime-latest')
+            ->type('audio')
+            ->pricingUnit('minute')
+            ->canGenerateText()
+            ->tier('standard', pricePerUnit: 0.8));
+
+        $this->model('voxtral-small-transcribe-3-0', fn ($m) => $m
+            ->displayName('Voxtral Small Transcribe 3')
+            ->aliases('voxtral-small-transcribe-3', 'voxtral-small-transcribe-latest')
+            ->type('audio')
+            ->pricingUnit('minute')
+            ->canGenerateText()
+            ->tier('standard', pricePerUnit: 0.4));
+
+        // Voxtral TTS (26.03) was deprecated on 2026-10-31 and retires on
+        // 2027-04-30. The Voxtral TTS 3 card lists voxtral-mini-tts-latest,
+        // but Mistral's migration guide says the alias moves to Voxtral 3
+        // "within a month of GA" and Voxtral 3 is still a public preview, so
+        // it stays here until Mistral moves it.
         $this->model('voxtral-mini-tts-latest', fn ($m) => $m
             ->displayName('Voxtral Mini TTS')
             ->aliases('voxtral-mini-tts-2603')

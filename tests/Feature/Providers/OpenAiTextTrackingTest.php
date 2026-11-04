@@ -60,6 +60,31 @@ it('uses the tier from the response when the request named none', function () {
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(12.0, 1e-9);
 });
 
+it('bills 12h cache writes at the 12h rate and 30m writes at the 30m rate', function (int $writes30m, int $writes12h, float $expectedCents) {
+    $response = $this->loadMockResponse('openai/response_cache_writes_priority.json');
+    $response['usage']['input_tokens_details']['cache_write_tokens_details'] = [
+        'ttl_30m_tokens' => $writes30m,
+        'ttl_12h_tokens' => $writes12h,
+    ];
+    Http::fake(['api.openai.com/*' => Http::response($response)]);
+
+    Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.6-sol', 'input' => 'Check the contract.']);
+
+    $row = SpectraRequest::sole();
+
+    expect($row->cache_write_tokens)->toBe(4000)
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta($expectedCents, 1e-9);
+})->with([
+    // gpt-5.6-sol priority (Fast): in 800, cached 80, 30m write 1000, 12h write 2000, out 4000.
+    // Uncached input = 20000 - 15000 - 4000 = 1000.
+    // (1000*800 + 15000*80 + 4000*2000 + 1500*4000) / 1M = 16.0
+    'every write 12h' => [0, 4000, 16.0],
+    // (1000*800 + 15000*80 + 1000*1000 + 3000*2000 + 1500*4000) / 1M = 15.0
+    'mixed lifetimes' => [1000, 3000, 15.0],
+    // (1000*800 + 15000*80 + 4000*1000 + 1500*4000) / 1M = 12.0
+    'every write 30m (the default)' => [4000, 0, 12.0],
+]);
+
 it('falls back to the requested tier when the response has none', function () {
     $response = $this->loadMockResponse('openai/chat_completion_cache_writes.json');
     unset($response['service_tier']);

@@ -317,6 +317,13 @@ class GooglePricing extends ProviderPricing
             ->tier('batch', inputPrice: 50, outputPrice: 250, cachedInputPrice: 5)
             ->tier('batch', inputPrice: 100, outputPrice: 500, cachedInputPrice: 10, since: '2027-01-01'));
 
+        // Live API endpoint; Google lists no caching or Batch price for it.
+        $this->model('gemini-robotics-er-2-streaming-preview', fn ($m) => $m
+            ->displayName('Gemini Robotics-ER 2 Streaming Preview')
+            ->canGenerateText()
+            ->tier('standard', inputPrice: 100, outputPrice: 500)
+            ->tier('standard', inputPrice: 200, outputPrice: 1000, since: '2027-01-01'));
+
         $this->model('gemini-robotics-er-1.6-preview', fn ($m) => $m
             ->displayName('Gemini Robotics-ER 1.6 Preview')
             ->retiredOn('2026-08-31')

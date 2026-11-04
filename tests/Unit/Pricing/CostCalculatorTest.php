@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
+use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
 use Spectra\Support\Pricing\CostCalculator;
 
@@ -51,4 +53,30 @@ it('returns zero per-unit cost for unknown models', function () {
 
     expect($calculator->calculateBySearches('unknown', 'nope')['total_cost_in_cents'])->toEqualWithDelta(0.0, 1e-9)
         ->and($calculator->calculateByImages('unknown', 'nope', 5)['total_cost_in_cents'])->toEqualWithDelta(0.0, 1e-9);
+});
+
+it('prices the models added in the 2026-11-01 review', function () {
+    $calculator = new CostCalculator;
+
+    // gpt-6-rosalind: $15 / $75, and $30 / $112.50 above 272K input tokens.
+    $rosalind = $calculator->calculate('openai', 'gpt-6-rosalind', 100_000, 100_000);
+    expect($rosalind['total_cost_in_cents'])->toEqualWithDelta(900, 1e-9);
+
+    $rosalindLong = $calculator->calculate('openai', 'gpt-6-rosalind', 300_000, 100_000);
+    expect($rosalindLong['total_cost_in_cents'])->toEqualWithDelta(300_000 * 3000 / 1e6 + 100_000 * 11250 / 1e6, 1e-9);
+
+    // gpt-6-astra-law: $10 / $50 (promotional).
+    $law = $calculator->calculate('openai', 'gpt-6-astra-law', 100_000, 100_000);
+    expect($law['total_cost_in_cents'])->toEqualWithDelta(600, 1e-9);
+
+    // gemini-robotics-er-2-streaming-preview: $1 / $5, doubling on 2027-01-01.
+    $tokens = new TokenMetrics(promptTokens: 1_000_000, completionTokens: 1_000_000);
+    expect($calculator->forTokens('google', 'gemini-robotics-er-2-streaming-preview', $tokens, at: CarbonImmutable::parse('2026-11-01'))['total_cost_in_cents'])->toEqual(600)
+        ->and($calculator->forTokens('google', 'gemini-robotics-er-2-streaming-preview', $tokens, at: CarbonImmutable::parse('2027-01-01'))['total_cost_in_cents'])->toEqual(1200);
+
+    // Voxtral 3: TTS $13 / 1M chars; transcription per minute.
+    expect($calculator->calculateByCharacters('mistral', 'voxtral-mini-tts-3-0', 1_000_000)['total_cost_in_cents'])->toEqual(1300)
+        ->and($calculator->calculateByDuration('mistral', 'voxtral-mini-transcribe-latest', 600)['total_cost_in_cents'])->toEqualWithDelta(3.5, 1e-9)
+        ->and($calculator->calculateByDuration('mistral', 'voxtral-mini-transcribe-realtime-3', 600)['total_cost_in_cents'])->toEqualWithDelta(8.0, 1e-9)
+        ->and($calculator->calculateByDuration('mistral', 'voxtral-small-transcribe-3-0', 600)['total_cost_in_cents'])->toEqualWithDelta(4.0, 1e-9);
 });

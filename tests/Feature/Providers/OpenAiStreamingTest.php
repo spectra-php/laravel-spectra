@@ -47,6 +47,27 @@ it('records a completed responses stream with cached tokens and the served tier'
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(1.6, 1e-9);
 });
 
+it('bills the 12h cache writes of a responses stream at the 12h rate', function () {
+    $body = str_replace(
+        ['gpt-5.4-2026-03-05', '"service_tier":"priority"', '"input_tokens_details":{"cached_tokens":4000}'],
+        ['gpt-5.6-sol', '"service_tier":"default"', '"input_tokens_details":{"cached_tokens":1000,"cache_write_tokens":3000,"cache_write_tokens_details":{"ttl_30m_tokens":1000,"ttl_12h_tokens":2000}}'],
+        openAiStreamFixture('responses_stream_completed.sse'),
+    );
+    Http::fake(['api.openai.com/*' => Http::response($body, 200, ['Content-Type' => 'text/event-stream; charset=utf-8'])]);
+
+    Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.6-sol', 'stream' => true, 'input' => 'x'])->body();
+
+    $row = SpectraRequest::sole();
+
+    // gpt-5.6-sol standard: in 400, cached 40, 30m write 500, 12h write 1000, out 2000.
+    // Uncached input = 5000 - 1000 cached - 3000 written = 1000.
+    // (1000*400 + 1000*40 + 1000*500 + 2000*1000 + 300*2000) / 1M = 3.54
+    expect($row->is_streaming)->toBeTrue()
+        ->and($row->pricing_tier)->toBe('standard')
+        ->and($row->cache_write_tokens)->toBe(3000)
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(3.54, 1e-9);
+});
+
 it('records the usage of a responses stream that ends incomplete', function () {
     fakeOpenAiStream('responses_stream_incomplete.sse');
 

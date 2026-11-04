@@ -13,7 +13,10 @@ namespace Spectra\Pricing;
  * {@see self::VIDEO_PRICES}.
  *
  * Source: https://fal.ai/pricing and each model page's billing details
- * (image models last reviewed 2026-10-15, video models 2026-10-27).
+ * (image models last reviewed 2026-10-15, video models 2026-11-04). The
+ * pricing page lists Kling v3 at a flat $0.14 per second; the model pages
+ * bill $0.168 with audio and $0.112 without, which is what is used here.
+ * Kling's voice control ($0.196 per second) is not detected.
  */
 class FalAiPricing extends ProviderPricing
 {
@@ -28,6 +31,7 @@ class FalAiPricing extends ProviderPricing
      */
     public const VIDEO_PRICES = [
         'fal-ai/kling-video/v3/pro/text-to-video' => ['*' => [16.8, 11.2]],
+        'fal-ai/kling-video/v3/pro/image-to-video' => ['*' => [16.8, 11.2]],
         'fal-ai/veo3.1' => ['720p' => [40, 20], '1080p' => [40, 20], '4k' => [60, 40]],
         'fal-ai/veo3.1/fast' => ['720p' => [15, 10], '1080p' => [15, 10], '4k' => [35, 30]],
         'fal-ai/veo3.1/lite' => ['720p' => [5, 3], '1080p' => [8, 5]],
@@ -179,6 +183,13 @@ class FalAiPricing extends ProviderPricing
             ->pricingUnit('second')
             ->canGenerateVideo()
             ->tier('standard', pricePerUnit: self::defaultVideoPrice('fal-ai/kling-video/v3/pro/text-to-video')));
+
+        $this->model('fal-ai/kling-video/v3/pro/image-to-video', fn ($m) => $m
+            ->displayName('Kling 3.0 Pro Image-to-Video')
+            ->type('video')
+            ->pricingUnit('second')
+            ->canGenerateVideo()
+            ->tier('standard', pricePerUnit: self::defaultVideoPrice('fal-ai/kling-video/v3/pro/image-to-video')));
 
         $this->model('fal-ai/veo3.1', fn ($m) => $m
             ->displayName('Veo 3.1')

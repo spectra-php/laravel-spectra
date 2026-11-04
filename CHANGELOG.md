@@ -22,6 +22,10 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL` and `SPECTRA_FIRECRAWL_TIMEOUT`. The unprefixed `FIRECRAWL_*` names still work
 - `SpectraRequest::forTrace()` scope
 - The costs dashboard's top spenders include `trackable_type`, so a user and a team with the same id no longer collide
+- OpenAI: GPT-6 Rosalind (`gpt-6-rosalind`, with its long-context price) and GPT-6 Astra for Law (`gpt-6-astra-law`, promotional price through 2026-12-31)
+- Google: Gemini Robotics-ER 2 Streaming Preview (`gemini-robotics-er-2-streaming-preview`), $1 / $5 per 1M tokens, doubling on 2027-01-01
+- Mistral: Voxtral TTS 3 (`voxtral-mini-tts-3-0`, $13 per 1M characters), Voxtral Mini Transcribe 3 ($0.0035 per minute), Voxtral Mini Transcribe Realtime 3 ($0.008) and Voxtral Small Transcribe 3 ($0.004), with the `-3` and `-latest` ids their model cards list. `voxtral-mini-tts-latest` stays on Voxtral TTS (26.03) until Mistral moves it
+- fal.ai: Kling 3.0 Pro image-to-video (`fal-ai/kling-video/v3/pro/image-to-video`), priced like text-to-video ($0.168 per second with audio, $0.112 without)
 
 #### Changed
 
@@ -41,6 +45,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 #### Fixed
 
+- OpenAI: 12-hour prompt cache writes (GPT-5.6 and later, Responses API) were billed at the 30-minute rate (1.25x input). They now bill at the 12-hour rate (2.5x input), read from the usage's `input_tokens_details.cache_write_tokens_details.ttl_12h_tokens`, for streamed and non-streamed responses
 - Usage API: `UsageQueryBuilder::byProvider()`, `byModel()` and `dailyUsage()`, and the `HasAiUsageStats` methods (`getAiUsageForPeriod()`, `getAiUsageByProvider()`, `getAiUsageByModel()` and the today/week/month shortcuts) always reported `total_tokens` as 0: the sum was read through the model's own `total_tokens` accessor
 - Tracking errors no longer reach your code. `Spectra::track()` returns your result when recording fails, a malformed stream chunk is skipped instead of ending your `foreach`, and a provider field of the wrong type drops only that field: the request is still recorded with its cost
 - A retried persist job no longer saves a duplicate row and counts the spend twice, and a failing stats update, budget report, export or `RequestTracked` listener no longer loses the row. A failed save after the response is reported and no longer stops the app's other terminating callbacks

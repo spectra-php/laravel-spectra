@@ -191,6 +191,9 @@ it('prices fal video by resolution and audio', function (string $model, array $i
     // Per-second prices from each model page (2026-10-27).
     // Kling 3.0 Pro without audio: 11.2 cents × 10 s.
     'kling without audio' => ['fal-ai/kling-video/v3/pro/text-to-video', ['duration' => '10', 'generate_audio' => false], 10.0, 112.0],
+    // Kling 3.0 Pro image-to-video bills like text-to-video: 16.8 cents × 5 s with audio, 11.2 × 10 s without.
+    'kling image-to-video with audio' => ['fal-ai/kling-video/v3/pro/image-to-video', ['duration' => '5', 'start_image_url' => 'https://example.com/cat.png'], 5.0, 84.0],
+    'kling image-to-video without audio' => ['fal-ai/kling-video/v3/pro/image-to-video', ['duration' => '10', 'start_image_url' => 'https://example.com/cat.png', 'generate_audio' => false], 10.0, 112.0],
     // Veo 3.1 at its default 720p, with audio: 40 cents × 8 s.
     'veo 3.1 defaults to 720p with audio' => ['fal-ai/veo3.1', ['duration' => '8s'], 8.0, 320.0],
     // Veo 3.1 4K without audio: 40 cents × 4 s.
