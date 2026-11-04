@@ -40,6 +40,27 @@ These settings control what Spectra saves to the database, and how. Use them to 
 | `store_request_data` | `bool\|null` | `null` | Store the raw request body sent to the provider (the full JSON body, including sampling settings) in the `request` column. When `null`, follows `store_prompts`. Set it to `true` to keep the body with `store_prompts` off; the prompts are then stored with it. When it resolves to `false`, the raw body is not saved. `store_system_prompts` and `store_tools` apply either way. |
 | `store_embeddings` | `bool` | `false` | Store embedding vector values in the response column. Embedding requests are always tracked (tokens, costs, latency), but the float-vector arrays can be very large. When disabled, vectors are replaced with `[stripped]`. |
 
+<a name="sampling"></a>
+### Payload Sampling
+
+Request and response bodies are most of what Spectra stores. On a busy app, keep them for a share of traces only. Every call is still recorded with its tokens, cost, latency and status, so costs, budgets, alerts and the dashboard's numbers stay exact.
+
+```php
+'storage' => [
+    'sampling' => [
+        'rate' => env('SPECTRA_PAYLOAD_SAMPLE_RATE', 1.0), // 0.1 keeps 10% of traces' bodies
+        'keep_failures' => true,
+    ],
+],
+```
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `rate` | `float` | `1.0` | The share of traces, from 0 to 1, whose request and response bodies are stored. |
+| `keep_failures` | `bool` | `true` | Always store the bodies of failed calls, which you need most when debugging. |
+
+All calls of a trace are kept or dropped together, picked by the trace id, so a kept trace shows its whole story. A call without a stored body says so on its request page.
+
 <a name="redaction"></a>
 ### Redaction
 
@@ -513,7 +534,8 @@ SPECTRA_OTEL_ENDPOINT=http://localhost:4318/v1/traces
 SPECTRA_OTEL_SERVICE_VERSION=1.0.0
 SPECTRA_OTEL_TIMEOUT=10
 
-# Redaction
+# Payload sampling and redaction
+SPECTRA_PAYLOAD_SAMPLE_RATE=1.0
 SPECTRA_REDACTION_ENABLED=false
 
 # Alerts

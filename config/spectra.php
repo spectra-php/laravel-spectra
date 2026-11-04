@@ -196,6 +196,26 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Payload Sampling
+        |--------------------------------------------------------------------------
+        |
+        | The share of traces (0 to 1) whose request and response bodies are
+        | stored. Every call is still recorded with its tokens, cost, latency
+        | and status; sampling only drops the bodies, which are most of the
+        | storage. All calls of a trace are kept or dropped together, and
+        | failed calls always keep theirs unless `keep_failures` is off.
+        |
+        | Docs: https://spectraphp.com/configuration#sampling
+        |
+        */
+
+        'sampling' => [
+            'rate' => (float) env('SPECTRA_PAYLOAD_SAMPLE_RATE', 1.0),
+            'keep_failures' => true,
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
         | Redaction
         |--------------------------------------------------------------------------
         |

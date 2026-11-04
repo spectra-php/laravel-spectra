@@ -224,6 +224,12 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                             </div>
                         </template>
                     </div>
+                    <div v-else class="card">
+                        <div class="card-header"><h3>Payload</h3></div>
+                        <p class="card-body text-sm text-gray-500 dark:text-gray-400">
+                            Not stored. This call's request and response bodies were sampled out, or the storage settings don't keep them. Its tokens, cost and latency are recorded either way.
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Details -->

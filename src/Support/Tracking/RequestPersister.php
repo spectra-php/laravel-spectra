@@ -106,6 +106,7 @@ class RequestPersister
         // switch allows it; never fall back to the context, which always has them.
         $requestData = $data['request_data'] ?? null;
         $response = $data['response'] ?? null;
+        $keepsPayload = $this->keepsPayload($context);
 
         return [
             'id' => $context->id,
@@ -126,8 +127,8 @@ class RequestPersister
             'pricing_tier' => $pricingTier,
             'trackable_type' => $context->trackableType,
             'trackable_id' => $context->trackableId,
-            'request' => $this->redact($this->sanitizeForJson($requestData)),
-            'response' => $this->redact($this->sanitizeResponse($context, $response)),
+            'request' => $keepsPayload ? $this->redact($this->sanitizeForJson($requestData)) : null,
+            'response' => $keepsPayload ? $this->redact($this->sanitizeResponse($context, $response)) : null,
             'prompt_tokens' => $context->promptTokens,
             'completion_tokens' => $context->completionTokens,
             'cached_tokens' => $context->cachedTokens,
@@ -169,6 +170,30 @@ class RequestPersister
             'started_at' => $context->getStartedAt(),
             'completed_at' => $context->getCompletedAt(),
         ];
+    }
+
+    /**
+     * Determine if this call's request and response bodies are stored. With
+     * `storage.sampling.rate` below 1, only that share of traces keep them
+     * (every call of a trace together, picked by its trace id), and failed
+     * calls always do unless `keep_failures` is off. Metrics and cost are
+     * stored for every call either way.
+     */
+    protected function keepsPayload(RequestContext $context): bool
+    {
+        $rate = (float) config('spectra.storage.sampling.rate', 1.0);
+
+        if ($rate >= 1.0) {
+            return true;
+        }
+
+        $failed = $context->errorType !== null || $context->httpStatus === null || $context->httpStatus < 200 || $context->httpStatus > 299;
+
+        if ($failed && config('spectra.storage.sampling.keep_failures', true)) {
+            return true;
+        }
+
+        return $rate > 0.0 && (crc32($context->traceId) % 10_000) < $rate * 10_000;
     }
 
     /**
