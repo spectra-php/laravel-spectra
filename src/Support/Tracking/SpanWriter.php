@@ -11,6 +11,7 @@ use Spectra\Contracts\ExportsSpans;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Jobs\PersistSpectraSpanJob;
 use Spectra\Models\SpectraSpan;
+use Spectra\Support\Redaction\Redactor;
 use Throwable;
 
 /**
@@ -48,6 +49,11 @@ class SpanWriter
         }
 
         rescue(function () use ($attributes, $deferrable): void {
+            // Masked before it is queued, so personal data never reaches the queue either.
+            $redactor = app(Redactor::class);
+            $attributes['attributes'] = $redactor->redact($attributes['attributes'] ?? null);
+            $attributes['error_message'] = $redactor->redact($attributes['error_message'] ?? null);
+
             if (config('spectra.queue.enabled')) {
                 $this->dispatch(new PersistSpectraSpanJob($attributes));
 

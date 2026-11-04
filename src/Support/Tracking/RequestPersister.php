@@ -12,6 +12,7 @@ use Spectra\Jobs\PersistSpectraRequestJob;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Pricing\RequestCostCalculator;
+use Spectra\Support\Redaction\Redactor;
 use Spectra\Support\RequestTransformer;
 use Throwable;
 
@@ -125,8 +126,8 @@ class RequestPersister
             'pricing_tier' => $pricingTier,
             'trackable_type' => $context->trackableType,
             'trackable_id' => $context->trackableId,
-            'request' => $this->sanitizeForJson($requestData),
-            'response' => $this->sanitizeResponse($context, $response),
+            'request' => $this->redact($this->sanitizeForJson($requestData)),
+            'response' => $this->redact($this->sanitizeResponse($context, $response)),
             'prompt_tokens' => $context->promptTokens,
             'completion_tokens' => $context->completionTokens,
             'cached_tokens' => $context->cachedTokens,
@@ -155,7 +156,7 @@ class RequestPersister
             'is_streaming' => $context->isStreaming,
             'status_code' => $context->httpStatus,
             'error_type' => $context->errorType,
-            'error_message' => $this->truncate($context->errorMessage, 10_000),
+            'error_message' => $this->redact($this->truncate($context->errorMessage, 10_000)),
             'media_storage_path' => $context->mediaStoragePath ?: null,
             'metadata' => $context->metadata ?: null,
             'request_source' => $context->requestSource,
@@ -168,6 +169,14 @@ class RequestPersister
             'started_at' => $context->getStartedAt(),
             'completed_at' => $context->getCompletedAt(),
         ];
+    }
+
+    /**
+     * Mask personal data and secrets in a stored value when redaction is on.
+     */
+    protected function redact(mixed $value): mixed
+    {
+        return app(Redactor::class)->redact($value);
     }
 
     /**

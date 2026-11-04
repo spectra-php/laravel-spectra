@@ -196,6 +196,30 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Redaction
+        |--------------------------------------------------------------------------
+        |
+        | Masks personal data and secrets before anything is stored: request
+        | and response bodies, error messages, span attributes and score
+        | comments. A match becomes [REDACTED:email] and so on; token counts
+        | and costs are unaffected. `patterns` picks the built-in ones (email,
+        | credit_card, api_key, ip_address, phone); `custom` adds your own as
+        | name => regex. Spectra::redactUsing() adds a callback.
+        |
+        | Docs: https://spectraphp.com/configuration#redaction
+        |
+        */
+
+        'redaction' => [
+            'enabled' => env('SPECTRA_REDACTION_ENABLED', false),
+            'patterns' => ['email', 'credit_card', 'api_key', 'ip_address', 'phone'],
+            'custom' => [
+                // 'account' => '/ACC-\d{8}/',
+            ],
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
         | Media Persistence
         |--------------------------------------------------------------------------
         |

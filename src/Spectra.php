@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra;
 
+use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -14,6 +15,7 @@ use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
 use Spectra\Support\Query\CostQueryBuilder;
 use Spectra\Support\Query\UsageQueryBuilder;
+use Spectra\Support\Redaction\Redactor;
 use Spectra\Support\Scoring\ScoreRecorder;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\RequestPersister;
@@ -274,6 +276,22 @@ class Spectra
         return $this->app->make(ScoreRecorder::class)->record(
             $name, $value, $request, $traceId, $conversationId, $comment, $source, $author, $metadata,
         );
+    }
+
+    /**
+     * Redact every stored string with this callback too, after the built-in
+     * and custom patterns, when `spectra.storage.redaction.enabled` is on.
+     * Call it once, from a service provider's boot method.
+     *
+     *   Spectra::redactUsing(fn (string $text) => preg_replace('/ACC-\d{8}/', '[REDACTED:account]', $text));
+     *
+     * @param  Closure(string): string  $callback
+     */
+    public function redactUsing(Closure $callback): self
+    {
+        $this->app->make(Redactor::class)->using($callback);
+
+        return $this;
     }
 
     /**

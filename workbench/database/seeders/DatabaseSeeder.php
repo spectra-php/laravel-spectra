@@ -168,6 +168,37 @@ class DatabaseSeeder extends Seeder
         }
 
         Carbon::setTestNow();
+
+        $this->seedRedactedCall($users->first());
+    }
+
+    /**
+     * One support call tracked with redaction on, so the dashboard shows what
+     * a masked prompt and reply look like.
+     */
+    protected function seedRedactedCall(User $user): void
+    {
+        config()->set('spectra.storage.redaction.enabled', true);
+        Spectra::newTrace();
+
+        Spectra::track('openai', 'gpt-5.4-mini', fn () => [
+            'id' => 'chatcmpl-redaction-demo',
+            'model' => 'gpt-5.4-mini',
+            'choices' => [['index' => 0, 'finish_reason' => 'stop', 'message' => [
+                'role' => 'assistant',
+                'content' => 'Thanks! I sent the refund confirmation to jonas.berg@example.com. The card ending 4242 will be credited in 3-5 days.',
+            ]]],
+            'usage' => ['prompt_tokens' => 64, 'completion_tokens' => 31],
+        ], [
+            'endpoint' => '/v1/chat/completions',
+            'trackable_type' => $user->getMorphClass(),
+            'trackable_id' => $user->getKey(),
+            'request_data' => ['model' => 'gpt-5.4-mini', 'messages' => [
+                ['role' => 'user', 'content' => 'Refund order 1234567812345678 to card 4242 4242 4242 4242. Email jonas.berg@example.com or call +49 30 1234 5678. My old key was sk-proj-Abc123def456ghi789jkl012mno345.'],
+            ]],
+        ]);
+
+        config()->set('spectra.storage.redaction.enabled', false);
     }
 
     /**

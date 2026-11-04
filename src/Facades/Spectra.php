@@ -28,6 +28,7 @@ use Spectra\Testing\SpectraFake;
  * @method static mixed track(string $provider, string $model, callable $callback, array<string, mixed> $options = [])
  * @method static mixed span(string $name, callable $callback, array<string, mixed> $attributes = [])
  * @method static SpectraScore|null score(string $name, int|float|bool|string $value, SpectraRequest|string|null $request = null, ?string $traceId = null, ?string $conversationId = null, ?string $comment = null, ScoreSource|string $source = ScoreSource::Api, ?Model $author = null, array<string, mixed> $metadata = [])
+ * @method static \Spectra\Spectra redactUsing(\Closure $callback)
  * @method static StreamingTracker stream(?string $provider = null, ?string $model = null, array<string, mixed> $options = [])
  * @method static \Spectra\Spectra addGlobalTags(array<int, string> $tags)
  * @method static mixed withTags(array<int, string> $tags, callable $callback)

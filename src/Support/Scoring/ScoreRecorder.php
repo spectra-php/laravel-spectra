@@ -14,6 +14,7 @@ use Spectra\Enums\ScoreType;
 use Spectra\Events\ScoreRecorded;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
+use Spectra\Support\Redaction\Redactor;
 use Throwable;
 
 /**
@@ -120,7 +121,7 @@ class ScoreRecorder
                 ScoreType::Numeric => (float) $value,
             },
             'label' => $type === ScoreType::Categorical ? (string) $value : null,
-            'comment' => filled($comment) ? $comment : null,
+            'comment' => filled($comment) ? app(Redactor::class)->redact($comment) : null,
             'source' => $source instanceof ScoreSource ? $source : ScoreSource::from($source),
             'request_id' => filled($requestId) ? $requestId : null,
             'trace_id' => filled($traceId) ? $traceId : null,

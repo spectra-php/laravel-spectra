@@ -40,6 +40,41 @@ These settings control what Spectra saves to the database, and how. Use them to 
 | `store_request_data` | `bool\|null` | `null` | Store the raw request body sent to the provider (the full JSON body, including sampling settings) in the `request` column. When `null`, follows `store_prompts`. Set it to `true` to keep the body with `store_prompts` off; the prompts are then stored with it. When it resolves to `false`, the raw body is not saved. `store_system_prompts` and `store_tools` apply either way. |
 | `store_embeddings` | `bool` | `false` | Store embedding vector values in the response column. Embedding requests are always tracked (tokens, costs, latency), but the float-vector arrays can be very large. When disabled, vectors are replaced with `[stripped]`. |
 
+<a name="redaction"></a>
+### Redaction
+
+Turn on redaction to mask personal data and secrets before Spectra stores anything: request and response bodies, error messages, [span](/usage#spans) attributes and [score](/scores) comments. A match is replaced with a label, such as `[REDACTED:email]`. Token counts and costs are not affected, and the payload keeps its shape, so the dashboard still shows it.
+
+```php
+'storage' => [
+    'redaction' => [
+        'enabled' => env('SPECTRA_REDACTION_ENABLED', false),
+        'patterns' => ['email', 'credit_card', 'api_key', 'ip_address', 'phone'],
+        'custom' => [
+            'account' => '/ACC-\d{8}/',
+        ],
+    ],
+],
+```
+
+| Pattern | Masks |
+| --- | --- |
+| `email` | Email addresses. |
+| `credit_card` | Card numbers of 13 to 19 digits, with or without spaces or dashes, that pass the Luhn check. Other long numbers, like order ids, are kept. |
+| `api_key` | OpenAI, Anthropic, AWS, GitHub, Slack and Google keys, and `Bearer` tokens. |
+| `ip_address` | IPv4 addresses. |
+| `phone` | International phone numbers that start with `+`. |
+
+`custom` adds your own as `name => regex`; each match becomes `[REDACTED:name]`. For anything a regex can't express, add a callback in a service provider's `boot` method. It gets every string after the patterns have run:
+
+```php
+use Spectra\Facades\Spectra;
+
+Spectra::redactUsing(fn (string $text) => $this->customerNames->mask($text));
+```
+
+Redaction runs before a request or span is queued, so personal data never reaches your queue either. Rows saved before you turned it on are not changed. To stop storing prompts or responses at all, use `store_prompts` and `store_responses` instead.
+
 <a name="media-persistence"></a>
 ### Media Persistence
 
@@ -477,6 +512,9 @@ SPECTRA_OTEL_ENABLED=false
 SPECTRA_OTEL_ENDPOINT=http://localhost:4318/v1/traces
 SPECTRA_OTEL_SERVICE_VERSION=1.0.0
 SPECTRA_OTEL_TIMEOUT=10
+
+# Redaction
+SPECTRA_REDACTION_ENABLED=false
 
 # Alerts
 SPECTRA_ALERTS_COOLDOWN=60

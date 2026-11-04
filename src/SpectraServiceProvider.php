@@ -45,6 +45,7 @@ use Spectra\Support\Pricing\PricingCatalog;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Pricing\RequestCostCalculator;
 use Spectra\Support\ProviderRegistry;
+use Spectra\Support\Redaction\Redactor;
 use Spectra\Support\RequestTransformer;
 use Spectra\Support\Scoring\ScoreRecorder;
 use Spectra\Support\StatsAggregator;
@@ -89,6 +90,7 @@ class SpectraServiceProvider extends ServiceProvider
         $this->app->scoped(SpanStack::class);
         $this->app->singleton(SpanWriter::class);
         $this->app->singleton(ScoreRecorder::class);
+        $this->app->singleton(Redactor::class);
 
         $this->app->alias(Spectra::class, 'spectra');
 

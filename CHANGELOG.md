@@ -19,6 +19,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Scores: the Overview has a Scores card (share of yes, average, top labels per score name), and the request, trace and conversation pages list their scores. `ScoreRecorded` fires for every saved score, and `spectra:prune` deletes old scores with the requests
 - Testing: `Spectra::fake()` keeps scores in memory; `assertScored()`, `assertNotScored()` and `getScores()`
 - Alerts: rules in `spectra.alerts.rules` watch the error rate, p95 or average latency, spend or call count over a window, for the whole app or one provider or model. `php artisan spectra:check-alerts` (schedule it) notifies email, a Slack webhook and a JSON webhook when a rule fires, again after `cooldown` minutes, and when it recovers, and dispatches `AlertTriggered` / `AlertResolved`
+- Redaction: with `storage.redaction.enabled` (`SPECTRA_REDACTION_ENABLED`), emails, card numbers (Luhn-checked), API keys and bearer tokens, IP addresses and phone numbers are masked as `[REDACTED:email]` and so on in stored request and response bodies, error messages, span attributes and score comments, before anything is saved or queued. Pick the built-in patterns, add your own regexes under `custom`, or a callback with `Spectra::redactUsing()`
 - Dashboard: the Overview has an Alerts card (each rule's value now and whether it is firing) and a Performance card (each model's error rate and p50/p95/p99 latency, and median time to first token)
 
 #### Changed
