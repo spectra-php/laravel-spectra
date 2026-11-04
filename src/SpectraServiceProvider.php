@@ -53,6 +53,7 @@ use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\RequestWriter;
 use Spectra\Support\Tracking\SpanStack;
 use Spectra\Support\Tracking\SpanWriter;
+use Spectra\Support\Tracking\ToolSpanRecorder;
 use Spectra\Support\Tracking\TraceContext;
 use Spectra\Support\Tracking\TraceOrigin;
 
@@ -88,6 +89,7 @@ class SpectraServiceProvider extends ServiceProvider
         // Scoped too: queue workers and Octane reset them before each job and request.
         $this->app->scoped(TraceOrigin::class);
         $this->app->scoped(SpanStack::class);
+        $this->app->scoped(ToolSpanRecorder::class);
         $this->app->singleton(SpanWriter::class);
         $this->app->singleton(ScoreRecorder::class);
         $this->app->singleton(Redactor::class);

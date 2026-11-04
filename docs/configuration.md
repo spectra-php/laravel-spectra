@@ -191,6 +191,7 @@ Choose what context Spectra captures automatically with each tracked request.
     'capture_request_id' => true,
     'capture_origin'     => true,
     'root_spans'         => true,
+    'tool_spans'         => false,
     'trace_per_request'  => true,
     'use_traceparent'    => true,
     'propagate_tags'     => true,
@@ -205,6 +206,7 @@ Choose what context Spectra captures automatically with each tracked request.
 | `capture_request_id` | `bool` | `true` | Store a request ID for correlation with your logs in the `laravel_request_id` column. Uses the `X-Request-ID` header if present, otherwise generates one. |
 | `capture_origin` | `bool` | `true` | Store where each call came from in the `origin` column: the queued job class, the Artisan command (`artisan reports:send`), or the route pattern of the HTTP request (`POST /chats/{chat}`). Only the pattern is stored, never the URL with its ids and query string. Env: `SPECTRA_CAPTURE_ORIGIN`. |
 | `root_spans` | `bool` | `true` | Give each HTTP request, queued job and Artisan command that makes AI calls a span of its own, with its calls and spans inside. Only units of work that made an AI call are stored. Needs `trace_per_request`: with it off, each call is a trace of its own and no root span is stored. Env: `SPECTRA_ROOT_SPANS`. See [Spans](/usage#spans). |
+| `tool_spans` | `bool` | `false` | Draw the tools a model asked for in the trace: when a call sends tool results back, a `tool` span per result, with its arguments and result. Tools run through `Spectra::tool()` are recorded either way. Env: `SPECTRA_TOOL_SPANS`. See [Tools](/tools#tools-the-model-asked-for). |
 | `trace_per_request` | `bool` | `true` | Give every AI call of the same HTTP request, queued job, or Artisan command one trace id. Queued jobs dispatched during a request keep its trace. Turning it off also turns off `root_spans`. Env: `SPECTRA_TRACE_PER_REQUEST`. See [Traces](/usage#traces). |
 | `use_traceparent` | `bool` | `true` | When the incoming HTTP request has a W3C `traceparent` header, use its trace id, so Spectra's spans join that trace. Env: `SPECTRA_USE_TRACEPARENT`. |
 | `propagate_tags` | `bool` | `true` | A queued job inherits the tags of the request or job that dispatched it (global tags and the `withTags()` tags around the dispatch). Env: `SPECTRA_PROPAGATE_TAGS`. See [Inherited Tags](/tags#inherited-tags). |

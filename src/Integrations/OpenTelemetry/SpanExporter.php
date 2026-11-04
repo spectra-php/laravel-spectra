@@ -58,7 +58,9 @@ class SpanExporter
 
     /**
      * An OTLP span for a stored span that is not an AI call: a
-     * Spectra::span() block or the request, job or command of a trace.
+     * Spectra::span() block, a tool, or the request, job or command of a
+     * trace. A tool is named and tagged as the OpenTelemetry GenAI
+     * conventions say: `execute_tool {name}`, `gen_ai.operation.name`.
      *
      * @param  array<string, mixed>  $span  The span's columns, dates as dates
      * @return array<string, mixed>
@@ -72,6 +74,10 @@ class SpanExporter
             ['key' => 'spectra.span.kind', 'value' => ['stringValue' => $kind->value]],
         ];
 
+        if ($kind === SpanKind::Tool) {
+            $attributes[] = ['key' => 'gen_ai.operation.name', 'value' => ['stringValue' => 'execute_tool']];
+        }
+
         if (filled($span['origin'] ?? null)) {
             $attributes[] = ['key' => 'spectra.origin', 'value' => ['stringValue' => (string) $span['origin']]];
         }
@@ -84,7 +90,7 @@ class SpanExporter
             'traceId' => str_replace('-', '', (string) $span['trace_id']),
             'spanId' => (string) $span['span_id'],
             'parentSpanId' => (string) ($span['parent_span_id'] ?? ''),
-            'name' => (string) $span['name'],
+            'name' => $kind === SpanKind::Tool ? 'execute_tool '.$span['name'] : (string) $span['name'],
             'kind' => $kind->otlpKind(),
             'startTimeUnixNano' => $this->toNano($span['started_at'] ?? null),
             'endTimeUnixNano' => $this->toNano($span['ended_at'] ?? null),

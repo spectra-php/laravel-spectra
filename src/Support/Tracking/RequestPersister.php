@@ -44,6 +44,9 @@ class RequestPersister
             return new SpectraRequest;
         }
 
+        // The tools the model asked for before this call, when tool spans are on.
+        rescue(fn () => app(ToolSpanRecorder::class)->callFinished($context));
+
         try {
             return $this->store($context);
         } catch (Throwable $e) {
@@ -183,19 +186,9 @@ class RequestPersister
      */
     protected function keepsPayload(RequestContext $context): bool
     {
-        $rate = (float) config('spectra.storage.sampling.rate', 1.0);
-
-        if ($rate >= 1.0) {
-            return true;
-        }
-
         $failed = $context->errorType !== null || $context->httpStatus === null || $context->httpStatus < 200 || $context->httpStatus > 299;
 
-        if ($failed && config('spectra.storage.sampling.keep_failures', true)) {
-            return true;
-        }
-
-        return $rate > 0.0 && (crc32($context->traceId) % 10_000) < $rate * 10_000;
+        return app(PayloadSampler::class)->keeps($context->traceId, $failed);
     }
 
     /**

@@ -512,6 +512,26 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Tool Spans
+        |--------------------------------------------------------------------------
+        |
+        | Whether the tools a model asks for are drawn in the trace. When an AI
+        | call sends tool results back to the model, Spectra records a "tool"
+        | span per result, from the end of the previous call to the start of
+        | this one, with the tool's arguments and result (stored only when
+        | store_prompts is on, and subject to redaction and sampling). Tools
+        | run through Spectra::tool() are recorded either way, timed exactly.
+        |
+        | Off by default: it adds spans to traces and OpenTelemetry exports.
+        |
+        | Docs: https://spectraphp.com/tools
+        |
+        */
+
+        'tool_spans' => env('SPECTRA_TOOL_SPANS', false),
+
+        /*
+        |--------------------------------------------------------------------------
         | One Trace Per Request
         |--------------------------------------------------------------------------
         |

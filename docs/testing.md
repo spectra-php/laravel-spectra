@@ -73,14 +73,16 @@ $fake->assertTotalTokens(1500);
 
 ### Spans
 
-The fake runs `Spectra::span()` callbacks and remembers the spans instead of storing them:
+The fake runs `Spectra::span()` and `Spectra::tool()` callbacks and remembers the spans instead of storing them:
 
 ```php
 $fake->assertSpanRecorded('retrieve-documents');
 
 $fake->assertSpanRecorded('answer-question', fn (array $span) => $span['status'] === 'ok');
 
-$spans = $fake->getSpans(); // name, attributes, status ('ok' or 'error') and exception of each
+$fake->assertToolCalled('get_weather', fn (array $arguments) => $arguments['city'] === 'Paris');
+
+$spans = $fake->getSpans(); // name, kind ('span' or 'tool'), attributes (a tool's arguments), id, result, status ('ok' or 'error') and exception of each
 ```
 
 <a name="scores"></a>

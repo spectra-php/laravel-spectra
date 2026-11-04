@@ -61,7 +61,7 @@ A trace groups the AI calls of one HTTP request, queued job or Artisan command. 
 
 <img class="screenshot" src="/images/dashboard/trace-detail.png" alt="A trace timeline" />
 
-Open a trace to see its calls on one timeline, in the order they started, to the millisecond. The request, job or command sits at the top, and the calls are nested under the [spans](/usage#spans) they ran in, such as the `retrieve-context` span above. The side panel shows the cost, calls and tokens per model, the trackable, the origins and the tags.
+Open a trace to see its calls on one timeline, in the order they started, to the millisecond. The request, job or command sits at the top, and the calls are nested under the [spans](/usage#spans) they ran in, such as the `retrieve-context` span above. A [tool](/tools) shows with a wrench between the calls around it; click it to see its arguments and result. The side panel shows the cost, calls and tokens per model, the trackable, the origins and the tags.
 
 <a name="conversations"></a>
 ## Conversations

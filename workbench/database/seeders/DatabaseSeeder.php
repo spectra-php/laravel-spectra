@@ -6,6 +6,7 @@ namespace Workbench\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use RuntimeException;
 use Spectra\Enums\ScoreSource;
 use Spectra\Enums\SpanKind;
 use Spectra\Facades\Spectra;
@@ -152,6 +153,11 @@ class DatabaseSeeder extends Seeder
                             return Carbon::now();
                         }, ['top_k' => 5])->addMilliseconds(mt_rand(40, 900))
                         : $this->recordOne($spec, $at, $user, $source, $origin, $conversation)->addMilliseconds(mt_rand(40, 900));
+
+                    // Between the steps of a chain, the model often asks for tools the app runs.
+                    if ($spec[2] === 'text' && $step < $steps - 1 && mt_rand(1, 100) <= 60) {
+                        $at = $this->runTools($at);
+                    }
                 }
 
                 Carbon::setTestNow($at->copy()->addMilliseconds(mt_rand(10, 80)));
@@ -171,6 +177,42 @@ class DatabaseSeeder extends Seeder
         Carbon::setTestNow();
 
         $this->seedRedactedCall($users->first());
+    }
+
+    /**
+     * Run one or two of the support agent's tools with Spectra::tool(), as
+     * the app would between two calls of a chain, and return when they ended.
+     */
+    protected function runTools(Carbon $at): Carbon
+    {
+        $tools = [
+            ['search_docs', ['query' => 'refund policy for annual plans', 'limit' => 3], [['title' => 'Refunds and cancellations', 'score' => 0.91], ['title' => 'Annual billing', 'score' => 0.84], ['title' => 'Changing plans', 'score' => 0.62]]],
+            ['get_order', ['order_id' => 4821], ['id' => 4821, 'status' => 'shipped', 'total' => 129.0, 'currency' => 'EUR', 'carrier' => 'DHL']],
+            ['lookup_customer', ['customer_id' => 'cus_7Hq2'], ['plan' => 'pro', 'seats' => 12, 'since' => '2024-03-18']],
+            ['create_ticket', ['subject' => 'Double charge on invoice INV-2291', 'priority' => 'high'], ['ticket_id' => 'T-10482', 'status' => 'open']],
+        ];
+
+        foreach (range(1, mt_rand(1, 2)) as $ignored) {
+            [$name, $arguments, $result] = $tools[mt_rand(0, count($tools) - 1)];
+            Carbon::setTestNow($at);
+            $fails = $name === 'get_order' && mt_rand(1, 100) <= 15;
+
+            try {
+                Spectra::tool($name, function () use ($at, $fails, $result) {
+                    Carbon::setTestNow($at->copy()->addMilliseconds(mt_rand(30, 1_200)));
+
+                    throw_if($fails, RuntimeException::class, 'Order service timed out after 1s');
+
+                    return $result;
+                }, $arguments, id: 'call_'.bin2hex(random_bytes(6)));
+            } catch (RuntimeException) {
+                // The agent tells the model the tool failed and carries on.
+            }
+
+            $at = Carbon::now()->addMilliseconds(mt_rand(5, 40));
+        }
+
+        return $at;
     }
 
     /**

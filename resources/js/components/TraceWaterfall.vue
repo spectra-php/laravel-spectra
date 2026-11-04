@@ -1,13 +1,14 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Money from '@/components/Money.vue';
+import JsonViewer from '@/components/JsonViewer.vue';
 
 const props = defineProps({
     // The trace's calls in the order they started, as the API sends them.
     requests: { type: Array, required: true },
-    // Spans around the calls (Spectra::span() blocks, the request, job or command). With any, the trace is drawn as a tree.
+    // Spans around the calls (Spectra::span() blocks, tools, the request, job or command). With any, the trace is drawn as a tree.
     spans: { type: Array, default: () => [] },
     durationMs: { type: Number, default: 0 },
     // Without spans: start a new lane, headed by its origin, whenever the origin changes (request → job).
@@ -19,7 +20,22 @@ const { formatDuration } = useHelpers();
 // Bars share one time scale: the whole trace, at least 1ms so nothing divides by zero.
 const span = computed(() => Math.max(1, props.durationMs || 0));
 
-const kindLabels = { span: 'span', request: 'request', job: 'job', command: 'command' };
+const kindLabels = { span: 'span', request: 'request', job: 'job', command: 'command', tool: 'tool' };
+
+// A tool row opens to show the arguments the model passed and the result it got back.
+const ARGUMENTS = 'gen_ai.tool.call.arguments';
+const RESULT = 'gen_ai.tool.call.result';
+const expanded = ref(new Set());
+
+const isTool = (row) => row.kind === 'tool';
+const toggle = (row) => {
+    const next = new Set(expanded.value);
+    next.has(row.key) ? next.delete(row.key) : next.add(row.key);
+    expanded.value = next;
+};
+const hasContent = (row) => row.attributes && (ARGUMENTS in row.attributes || RESULT in row.attributes);
+// The JSON viewer takes objects, arrays and strings; anything else shows as text.
+const viewable = (value) => (value !== null && typeof value === 'object') || typeof value === 'string' ? value : JSON.stringify(value);
 
 const bar = (offset, length) => ({
     left: Math.min(100, (offset / span.value) * 100),
@@ -112,16 +128,24 @@ const nameColumn = computed(() => {
                 <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400" :title="row.origin || 'No origin recorded'">{{ row.origin || 'No origin recorded' }}</span>
             </li>
 
-            <!-- A span: a Spectra::span() block, or the request, job or command -->
+            <!-- A span: a Spectra::span() block, a tool, or the request, job or command -->
             <li v-if="row.type === 'span'">
-                <div class="group relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 bg-gray-50/40 px-5 py-2 sm:grid-cols-[1.5rem_minmax(0,var(--name-column))_minmax(0,1fr)_4.5rem_6rem] dark:bg-white/[0.015]">
-                    <span class="col-start-1 row-start-1 text-gray-300 sm:col-start-auto sm:row-start-auto dark:text-gray-600" aria-hidden="true">
-                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h10.5m-10.5 5.25h6" /></svg>
+                <component
+                    :is="isTool(row) ? 'button' : 'div'"
+                    :type="isTool(row) ? 'button' : undefined"
+                    :aria-expanded="isTool(row) ? expanded.has(row.key) : undefined"
+                    class="group relative grid w-full grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 bg-gray-50/40 px-5 py-2 text-left sm:grid-cols-[1.5rem_minmax(0,var(--name-column))_minmax(0,1fr)_4.5rem_6rem] dark:bg-white/[0.015]"
+                    :class="isTool(row) ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.03]' : ''"
+                    @click="isTool(row) && toggle(row)"
+                >
+                    <span class="col-start-1 row-start-1 sm:col-start-auto sm:row-start-auto" :class="isTool(row) ? 'text-amber-500 dark:text-amber-400' : 'text-gray-300 dark:text-gray-600'" aria-hidden="true">
+                        <svg v-if="isTool(row)" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" /></svg>
+                        <svg v-else class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h10.5m-10.5 5.25h6" /></svg>
                     </span>
 
                     <span class="col-start-2 row-start-1 flex min-w-0 items-center gap-2 sm:col-start-auto sm:row-start-auto" :style="indent(row.depth)">
                         <span class="truncate font-mono text-[13px] font-medium text-gray-700 dark:text-gray-200" :title="row.name">{{ row.name }}</span>
-                        <span class="badge badge-secondary shrink-0 !px-1.5 !py-0 text-[10px]">{{ kindLabels[row.kind] || row.kind }}</span>
+                        <span class="badge shrink-0 !px-1.5 !py-0 text-[10px]" :class="isTool(row) ? 'badge-warning' : 'badge-secondary'">{{ kindLabels[row.kind] || row.kind }}</span>
                         <span v-if="row.is_error" class="badge badge-danger shrink-0 !px-1.5 !py-0 text-[11px]" :title="row.error_message || ''">Failed</span>
                     </span>
 
@@ -129,7 +153,7 @@ const nameColumn = computed(() => {
                         <span class="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gray-100 dark:bg-gray-800" aria-hidden="true"></span>
                         <span
                             class="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-[3px]"
-                            :class="row.is_error ? 'bg-red-400/70 dark:bg-red-400/60' : 'bg-gray-300 dark:bg-gray-600'"
+                            :class="row.is_error ? 'bg-red-400/70 dark:bg-red-400/60' : isTool(row) ? 'bg-amber-300 dark:bg-amber-500/60' : 'bg-gray-300 dark:bg-gray-600'"
                             :style="{ left: row.left + '%', width: row.width + '%' }"
                         ></span>
                         <span
@@ -139,7 +163,19 @@ const nameColumn = computed(() => {
                     </span>
 
                     <span class="col-start-3 row-start-1 text-right text-xs tabular-nums text-gray-500 sm:col-start-auto sm:row-start-auto dark:text-gray-400">{{ formatDuration(row.duration_ms) }}</span>
-                    <span class="hidden sm:block" aria-hidden="true"></span>
+                    <span class="hidden justify-end text-gray-400 sm:flex dark:text-gray-500" aria-hidden="true">
+                        <svg v-if="isTool(row)" class="h-3.5 w-3.5 transition-transform" :class="expanded.has(row.key) ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                    </span>
+                </component>
+
+                <!-- A tool's arguments and result -->
+                <div v-if="isTool(row) && expanded.has(row.key)" class="border-t border-gray-100 bg-gray-50/60 px-5 py-3 dark:border-gray-800/80 dark:bg-white/[0.02]">
+                    <p v-if="row.is_error && row.error_message" class="mb-2 text-xs text-red-600 dark:text-red-400">{{ row.error_message }}</p>
+                    <div v-if="hasContent(row)" class="grid gap-3 lg:grid-cols-2">
+                        <JsonViewer v-if="'gen_ai.tool.call.arguments' in row.attributes" title="Arguments" :data="viewable(row.attributes['gen_ai.tool.call.arguments'])" max-height="16rem" />
+                        <JsonViewer v-if="'gen_ai.tool.call.result' in row.attributes" title="Result" :data="viewable(row.attributes['gen_ai.tool.call.result'])" max-height="16rem" />
+                    </div>
+                    <p v-else class="text-xs text-gray-500 dark:text-gray-400">The arguments and result were not stored: <code>store_prompts</code> is off, or payload sampling skipped this trace.</p>
                 </div>
             </li>
 

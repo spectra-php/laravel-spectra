@@ -37,7 +37,7 @@ class SpanStack
     /**
      * Open Spectra::span() blocks, innermost last.
      *
-     * @var list<array{span_id: string, parent_span_id: ?string, trace_id: string, name: string, origin: ?string, started_at: CarbonInterface, attributes: array<string, mixed>, opened: int}>
+     * @var list<array{span_id: string, parent_span_id: ?string, trace_id: string, name: string, kind: SpanKind, origin: ?string, started_at: CarbonInterface, attributes: array<string, mixed>, opened: int}>
      */
     protected array $spans = [];
 
@@ -141,12 +141,12 @@ class SpanStack
     }
 
     /**
-     * Open a Spectra::span() block as the child of the current span.
+     * Open a Spectra::span() or Spectra::tool() block as the child of the current span.
      *
      * @param  array<string, mixed>  $attributes
      * @return string the new span's id, to close it with
      */
-    public function open(string $name, string $traceId, ?string $upstreamParentSpanId, array $attributes = []): string
+    public function open(string $name, string $traceId, ?string $upstreamParentSpanId, array $attributes = [], SpanKind $kind = SpanKind::Span): string
     {
         $spanId = $this->newSpanId();
         $parentSpanId = $this->parentFor($traceId, $upstreamParentSpanId);
@@ -156,6 +156,7 @@ class SpanStack
             'parent_span_id' => $parentSpanId,
             'trace_id' => $traceId,
             'name' => $name,
+            'kind' => $kind,
             'origin' => $this->origin(),
             'started_at' => Date::now(),
             'attributes' => $attributes,
@@ -166,9 +167,12 @@ class SpanStack
     }
 
     /**
-     * Close the span opened as $spanId (and any left open inside it) and save it.
+     * Close the span opened as $spanId (and any left open inside it) and save
+     * it, with the attributes known only at its end added to its own.
+     *
+     * @param  array<string, mixed>  $attributes
      */
-    public function close(string $spanId, ?Throwable $error = null): void
+    public function close(string $spanId, ?Throwable $error = null, array $attributes = []): void
     {
         while ($this->spans !== []) {
             $span = array_pop($this->spans);
@@ -179,17 +183,54 @@ class SpanStack
                 spanId: $span['span_id'],
                 parentSpanId: $span['parent_span_id'],
                 name: $span['name'],
-                kind: SpanKind::Span,
+                kind: $span['kind'],
                 origin: $span['origin'],
                 startedAt: $span['started_at'],
                 error: $isTarget ? $error : null,
-                attributes: $span['attributes'],
+                attributes: $isTarget ? [...$span['attributes'], ...$attributes] : $span['attributes'],
             ));
 
             if ($isTarget) {
                 return;
             }
         }
+    }
+
+    /**
+     * Save a span that already ended, timed by the caller: a tool Spectra
+     * worked out from the calls around it.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function recordFinished(
+        string $name,
+        SpanKind $kind,
+        string $traceId,
+        ?string $parentSpanId,
+        CarbonInterface $startedAt,
+        CarbonInterface $endedAt,
+        array $attributes = [],
+        ?string $errorMessage = null,
+    ): void {
+        $row = $this->attributes(
+            traceId: $traceId,
+            spanId: $this->newSpanId(),
+            parentSpanId: $parentSpanId,
+            name: $name,
+            kind: $kind,
+            origin: $this->origin(),
+            startedAt: $startedAt,
+            error: null,
+            attributes: $attributes,
+            endedAt: $endedAt,
+        );
+
+        if ($errorMessage !== null) {
+            $row['status'] = SpanStatus::Error->value;
+            $row['error_message'] = mb_substr($errorMessage, 0, 10_000);
+        }
+
+        $this->writer->record($row);
     }
 
     /**
@@ -331,7 +372,7 @@ class SpanStack
     }
 
     /**
-     * Build the span row's attributes, timed from its start until now.
+     * Build the span row's attributes, timed from its start until it ended (now, by default).
      *
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
@@ -346,8 +387,9 @@ class SpanStack
         CarbonInterface $startedAt,
         ?Throwable $error,
         array $attributes,
+        ?CarbonInterface $endedAt = null,
     ): array {
-        $endedAt = Date::now();
+        $endedAt ??= Date::now();
 
         return [
             'trace_id' => $traceId,

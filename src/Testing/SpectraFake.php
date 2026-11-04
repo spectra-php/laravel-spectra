@@ -32,9 +32,10 @@ class SpectraFake extends Spectra
     protected array $fakeResponses = [];
 
     /**
-     * Spans opened with span(), in the order they ended.
+     * Spans opened with span() and tool(), in the order they ended. A tool's
+     * attributes are its arguments.
      *
-     * @var array<int, array{name: string, attributes: array<string, mixed>, status: string, exception: ?\Throwable}>
+     * @var array<int, array{name: string, kind: string, attributes: array<string, mixed>, id: ?string, result: mixed, status: string, exception: ?\Throwable}>
      */
     protected array $spans = [];
 
@@ -147,23 +148,55 @@ class SpectraFake extends Spectra
             return $callback();
         }
 
+        return $this->runFakeSpan($name, 'span', $callback, $attributes);
+    }
+
+    /**
+     * Run the tool and remember it as a `tool` span instead of storing it.
+     *
+     * @template TResult
+     *
+     * @param  callable(): TResult  $callback
+     * @param  array<string, mixed>  $arguments
+     * @return TResult
+     */
+    public function tool(string $name, callable $callback, array $arguments = [], ?string $id = null): mixed
+    {
+        if (! $this->isEnabled()) {
+            return $callback();
+        }
+
+        return $this->runFakeSpan($name, 'tool', $callback, $arguments, $id);
+    }
+
+    /**
+     * Run the callback and remember the span it made.
+     *
+     * @template TResult
+     *
+     * @param  callable(): TResult  $callback
+     * @param  array<string, mixed>  $attributes
+     * @return TResult
+     */
+    protected function runFakeSpan(string $name, string $kind, callable $callback, array $attributes, ?string $id = null): mixed
+    {
         try {
             $result = $callback();
         } catch (\Throwable $e) {
-            $this->spans[] = ['name' => $name, 'attributes' => $attributes, 'status' => 'error', 'exception' => $e];
+            $this->spans[] = ['name' => $name, 'kind' => $kind, 'attributes' => $attributes, 'id' => $id, 'result' => null, 'status' => 'error', 'exception' => $e];
 
             throw $e;
         }
 
-        $this->spans[] = ['name' => $name, 'attributes' => $attributes, 'status' => 'ok', 'exception' => null];
+        $this->spans[] = ['name' => $name, 'kind' => $kind, 'attributes' => $attributes, 'id' => $id, 'result' => $result, 'status' => 'ok', 'exception' => null];
 
         return $result;
     }
 
     /**
-     * Get the spans recorded with span(), in the order they ended.
+     * Get the spans recorded with span() and tool(), in the order they ended.
      *
-     * @return array<int, array{name: string, attributes: array<string, mixed>, status: string, exception: ?\Throwable}>
+     * @return array<int, array{name: string, kind: string, attributes: array<string, mixed>, id: ?string, result: mixed, status: string, exception: ?\Throwable}>
      */
     public function getSpans(): array
     {
@@ -182,6 +215,20 @@ class SpectraFake extends Spectra
         );
 
         Assert::assertNotEmpty($matching, "Expected a span named [{$name}] to be recorded, but none matched.");
+    }
+
+    /**
+     * Assert the tool ran through Spectra::tool(), and that the callback
+     * (given its arguments and the span) accepts one of its runs when given.
+     */
+    public function assertToolCalled(string $name, ?callable $callback = null): void
+    {
+        $matching = Arr::where(
+            $this->spans,
+            fn (array $span) => $span['kind'] === 'tool' && $span['name'] === $name && ($callback === null || $callback($span['attributes'], $span)),
+        );
+
+        Assert::assertNotEmpty($matching, "Expected the tool [{$name}] to be called, but it was not.");
     }
 
     /**

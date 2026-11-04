@@ -158,7 +158,7 @@ Turn this off with `SPECTRA_USE_TRACEPARENT=false`.
 
 ### Spans and Parents
 
-Each AI call is exported with its own stored span ID, and with the span it ran in as its parent: a `Spectra::span()` block, or the request, job or command it ran in (see [Spans](/usage#spans)). Those spans are exported too, as `INTERNAL` spans (`SERVER` for a request, `CONSUMER` for a job), with their attributes, so your backend shows the same tree as the dashboard. The outermost span's parent is the incoming `traceparent` span.
+Each AI call is exported with its own stored span ID, and with the span it ran in as its parent: a `Spectra::span()` block, or the request, job or command it ran in (see [Spans](/usage#spans)). Those spans are exported too, as `INTERNAL` spans (`SERVER` for a request, `CONSUMER` for a job), with their attributes, so your backend shows the same tree as the dashboard. A [tool](/tools) is exported as `execute_tool {name}` with `gen_ai.operation.name` set to `execute_tool`, as the GenAI conventions name tool runs. The outermost span's parent is the incoming `traceparent` span.
 
 A custom exporter receives AI calls through `RequestExporter::export()` as before. To receive the other spans as well, also implement `Spectra\Contracts\ExportsSpans`:
 

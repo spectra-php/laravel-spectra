@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ScoreSource;
+use Spectra\Enums\SpanKind;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
 use Spectra\Support\Query\CostQueryBuilder;
@@ -22,6 +23,7 @@ use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\ResponseProcessor;
 use Spectra\Support\Tracking\SpanStack;
 use Spectra\Support\Tracking\StreamingTracker;
+use Spectra\Support\Tracking\ToolSpanRecorder;
 use Spectra\Support\Tracking\TraceContext;
 use Throwable;
 
@@ -211,6 +213,52 @@ class Spectra
      */
     public function span(string $name, callable $callback, array $attributes = []): mixed
     {
+        return $this->runInSpan($name, SpanKind::Span, $callback, $attributes);
+    }
+
+    /**
+     * Run a tool the model asked for as a `tool` span of the current trace,
+     * and return what it returns.
+     *
+     * The span stores the tool's name, its call id, its arguments and its
+     * result (when `store_prompts` is on and the trace's payloads are
+     * sampled), and fails when the tool throws. With `tracking.tool_spans`
+     * on, the call that sends the result back doesn't record it again.
+     *
+     *   $weather = Spectra::tool('get_weather', fn () => $this->weather($city), ['city' => $city], id: $call['id']);
+     *
+     * @template TResult
+     *
+     * @param  callable(): TResult  $callback
+     * @param  array<string, mixed>  $arguments  The arguments the model passed
+     * @param  string|null  $id  The tool call id from the model's reply
+     * @return TResult
+     */
+    public function tool(string $name, callable $callback, array $arguments = [], ?string $id = null): mixed
+    {
+        $recorder = $this->app->make(ToolSpanRecorder::class);
+
+        return $this->runInSpan($name, SpanKind::Tool, $callback, [], function (string $traceId, mixed $result, ?Throwable $error) use ($recorder, $name, $id, $arguments): array {
+            $recorder->toolWrapped($traceId, $name, $id);
+
+            return $recorder->attributes($name, $id, $traceId, $error !== null, $arguments, $result, hasResult: $error === null);
+        });
+    }
+
+    /**
+     * Run the callback inside a new span of the current trace (starting a
+     * trace for it when there is none), and return what it returns. The
+     * callback's exception is re-thrown unchanged.
+     *
+     * @template TResult
+     *
+     * @param  callable(): TResult  $callback
+     * @param  array<string, mixed>  $attributes
+     * @param  (Closure(string, mixed, ?Throwable): array<string, mixed>)|null  $finish  Attributes known at the end, from the trace id, result and error
+     * @return TResult
+     */
+    protected function runInSpan(string $name, SpanKind $kind, callable $callback, array $attributes, ?Closure $finish = null): mixed
+    {
         if (! $this->isEnabled()) {
             return $callback();
         }
@@ -225,13 +273,13 @@ class Spectra
         }
 
         $stack = $this->app->make(SpanStack::class);
-        $spanId = rescue(fn () => $stack->open($name, $traceId, $this->parentSpanIdFor($traceId, [], withSpans: false), $attributes));
+        $spanId = rescue(fn () => $stack->open($name, $traceId, $this->parentSpanIdFor($traceId, [], withSpans: false), $attributes, $kind));
 
         try {
             $result = $callback();
         } catch (Throwable $e) {
             if ($spanId !== null) {
-                rescue(fn () => $stack->close($spanId, $e));
+                rescue(fn () => $stack->close($spanId, $e, $finish instanceof Closure ? $finish($traceId, null, $e) : []));
             }
 
             throw $e;
@@ -242,7 +290,7 @@ class Spectra
         }
 
         if ($spanId !== null) {
-            rescue(fn () => $stack->close($spanId));
+            rescue(fn () => $stack->close($spanId, null, $finish instanceof Closure ? $finish($traceId, $result, null) : []));
         }
 
         return $result;
