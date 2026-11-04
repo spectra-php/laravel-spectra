@@ -51,10 +51,15 @@ class RequestWriter
     ];
 
     /** Columns added after 2.0 that a table may not have until the app migrates. */
-    protected const TRACE_COLUMNS = ['started_at', 'origin', 'span_id'];
+    protected const OPTIONAL_COLUMNS = ['started_at', 'origin', 'span_id', 'prompt_name', 'prompt_version'];
 
-    /** Whether the missing trace columns were already reported (the writer is a singleton). */
-    protected bool $hasWarnedAboutTraceColumns = false;
+    /**
+     * The optional columns this table turned out not to have, once an insert
+     * failed on one (the writer is a singleton, so it is checked once).
+     *
+     * @var array<int, string>|null
+     */
+    protected ?array $missingColumns = null;
 
     /**
      * Create a new request writer instance.
@@ -151,7 +156,7 @@ class RequestWriter
             $keep[] = 'model';
         }
 
-        $existing->fill(Arr::except($attributes, $keep))->save();
+        $existing->fill(Arr::except($this->withoutMissingColumns($attributes), $keep))->save();
 
         return [$existing, $previous];
     }
@@ -159,30 +164,54 @@ class RequestWriter
     /**
      * Insert a new row.
      *
-     * An app that updated Spectra but hasn't run the migration that adds the
-     * trace columns must keep recording its calls, so when the table doesn't
-     * have them yet the row is saved without them (and a warning is logged
-     * once per process).
+     * An app that updated Spectra but hasn't run a migration that adds
+     * optional columns must keep recording its calls, so when the table
+     * lacks some, the row is saved without exactly those (and a warning
+     * naming them is logged once per process).
      *
      * @param  array<string, mixed>  $attributes
      */
     protected function create(array $attributes): SpectraRequest
     {
         try {
-            return SpectraRequest::query()->create($attributes);
+            return SpectraRequest::query()->create($this->withoutMissingColumns($attributes));
         } catch (QueryException $e) {
-            throw_if($e instanceof UniqueConstraintViolationException || ! $this->isMissingColumn($e), $e);
+            throw_if($e instanceof UniqueConstraintViolationException || ! $this->isMissingColumn($e) || $this->missingColumns !== null, $e);
 
-            if (! $this->hasWarnedAboutTraceColumns) {
-                $this->hasWarnedAboutTraceColumns = true;
+            $this->missingColumns = $this->detectMissingColumns();
 
-                $columns = implode(' or ', self::TRACE_COLUMNS);
+            if ($this->missingColumns !== []) {
+                $columns = collect($this->missingColumns)->implode(', ');
 
-                Log::warning("Spectra: spectra_requests has no {$columns} column yet, so calls are saved without them. Run `php artisan spectra:install` to publish and run the new migration.");
+                Log::warning("Spectra: spectra_requests has no {$columns} column yet, so calls are saved without them. Run `php artisan spectra:install` to publish and run the new migrations.");
             }
 
-            return SpectraRequest::query()->create(Arr::except($attributes, self::TRACE_COLUMNS));
+            return SpectraRequest::query()->create($this->withoutMissingColumns($attributes));
         }
+    }
+
+    /**
+     * Leave out the optional columns the table is known not to have.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    protected function withoutMissingColumns(array $attributes): array
+    {
+        return $this->missingColumns ? Arr::except($attributes, $this->missingColumns) : $attributes;
+    }
+
+    /**
+     * The optional columns the requests table doesn't have.
+     *
+     * @return array<int, string>
+     */
+    protected function detectMissingColumns(): array
+    {
+        $model = new SpectraRequest;
+        $existing = $model->getConnection()->getSchemaBuilder()->getColumnListing($model->getTable());
+
+        return collect(self::OPTIONAL_COLUMNS)->diff($existing)->values()->all();
     }
 
     /**

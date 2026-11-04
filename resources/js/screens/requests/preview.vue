@@ -285,6 +285,10 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                                 <dt>Conversation</dt>
                                 <dd class="font-mono text-xs"><router-link :to="{ name: 'conversation-detail', params: { conversationId: request.conversation_id } }" class="text-primary-600 hover:underline dark:text-primary-400" :title="request.conversation_id">{{ request.conversation_id }}</router-link><span v-if="request.conversation_turn" class="text-gray-400"> · turn {{ request.conversation_turn }}</span></dd>
                             </div>
+                            <div v-if="request.prompt_name">
+                                <dt>Prompt</dt>
+                                <dd class="font-mono text-xs"><router-link :to="{ name: 'prompts' }" class="text-primary-600 hover:underline dark:text-primary-400">{{ request.prompt_name }}</router-link><span v-if="request.prompt_version" class="text-gray-400"> · {{ request.prompt_version }}</span></dd>
+                            </div>
                             <div v-if="request.request_source">
                                 <dt>Source</dt>
                                 <dd class="capitalize">{{ request.request_source }}</dd>

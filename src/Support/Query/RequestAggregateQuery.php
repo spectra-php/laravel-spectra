@@ -94,6 +94,14 @@ class RequestAggregateQuery
         return $this;
     }
 
+    /** Only rows that name a prompt template. */
+    public function withPrompt(): self
+    {
+        $this->query->whereNotNull('prompt_name');
+
+        return $this;
+    }
+
     /** Only rows that belong to a trace. */
     public function withTrace(): self
     {

@@ -21,6 +21,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Alerts: rules in `spectra.alerts.rules` watch the error rate, p95 or average latency, spend or call count over a window, for the whole app or one provider or model. `php artisan spectra:check-alerts` (schedule it) notifies email, a Slack webhook and a JSON webhook when a rule fires, again after `cooldown` minutes, and when it recovers, and dispatches `AlertTriggered` / `AlertResolved`
 - Redaction: with `storage.redaction.enabled` (`SPECTRA_REDACTION_ENABLED`), emails, card numbers (Luhn-checked), API keys and bearer tokens, IP addresses and phone numbers are masked as `[REDACTED:email]` and so on in stored request and response bodies, error messages, span attributes and score comments, before anything is saved or queued. Pick the built-in patterns, add your own regexes under `custom`, or a callback with `Spectra::redactUsing()`
 - Payload sampling: `storage.sampling.rate` (`SPECTRA_PAYLOAD_SAMPLE_RATE`, default 1) stores request and response bodies for only that share of traces, all calls of a trace together, while every call is still recorded with its tokens, cost and latency. Failed calls keep their bodies (`keep_failures`). The request page says when a body wasn't stored
+- Prompt versions: `Spectra::withPrompt('support-answer', 'v3', fn () => ...)` tags every AI call inside the callback with a prompt template and its version (or pass `prompt_name` / `prompt_version` to `track()`, or call `$context->usingPrompt()`). The dashboard's Prompts screen compares versions on calls, error rate, average cost, tokens and latency, and scores, and the requests list filters by prompt
 - Dashboard: the Overview has an Alerts card (each rule's value now and whether it is firing) and a Performance card (each model's error rate and p50/p95/p99 latency, and median time to first token)
 
 #### Changed
@@ -30,6 +31,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 #### Upgrading
 
 - Run `php artisan spectra:install` to publish and run the new `create_spectra_scores_table` migration. Until you do, `Spectra::score()` returns `null` and logs a warning once per process; tracking is not affected
+- The same command publishes and runs `add_prompt_columns_to_spectra_requests_table`. Until it runs, calls are saved without their prompt and a warning is logged once per process
 
 #### Fixed
 

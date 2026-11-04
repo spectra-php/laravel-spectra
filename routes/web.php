@@ -17,6 +17,7 @@ use Spectra\Http\Controllers\Api\Maintenance\PruneController;
 use Spectra\Http\Controllers\Api\Maintenance\RebuildStatsController;
 use Spectra\Http\Controllers\Api\Maintenance\RecordingController;
 use Spectra\Http\Controllers\Api\PerformanceController;
+use Spectra\Http\Controllers\Api\PromptsController;
 use Spectra\Http\Controllers\Api\ProvidersController;
 use Spectra\Http\Controllers\Api\RequestsController;
 use Spectra\Http\Controllers\Api\ScoresController;
@@ -52,6 +53,7 @@ Route::prefix('api')->group(function () {
     Route::get('/conversations/{conversationId}', ShowConversationController::class)->where('conversationId', '.*');
     Route::get('/costs', CostsController::class);
     Route::get('/scores', ScoresController::class);
+    Route::get('/prompts', PromptsController::class);
     Route::get('/tags', TagsController::class);
     Route::get('/trackables', TrackablesController::class);
     Route::get('/trackables/view/{id}', ShowTrackableController::class);

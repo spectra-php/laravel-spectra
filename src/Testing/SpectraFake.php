@@ -98,6 +98,8 @@ class SpectraFake extends Spectra
             ...$options,
             'tags' => $this->mergedTags($options['tags'] ?? []),
             'metadata' => array_merge($this->globalMetadata, $options['metadata'] ?? []),
+            'prompt_name' => $options['prompt_name'] ?? $this->scopedPrompt['name'] ?? null,
+            'prompt_version' => $options['prompt_version'] ?? $this->scopedPrompt['version'] ?? null,
         ]);
     }
 

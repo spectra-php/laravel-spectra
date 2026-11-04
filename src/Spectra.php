@@ -52,6 +52,13 @@ class Spectra
      */
     protected array $scopedTags = [];
 
+    /**
+     * The prompt template and version set by withPrompt(), for the calls inside it.
+     *
+     * @var array{name: string, version: ?string}|null
+     */
+    protected ?array $scopedPrompt = null;
+
     protected ?string $globalTrackableType = null;
 
     protected string|int|null $globalTrackableId = null;
@@ -102,6 +109,8 @@ class Spectra
             'trackable_id' => $options['trackable_id'] ?? $this->globalTrackableId,
             'trace_id' => $traceId,
             'parent_span_id' => $options['parent_span_id'] ?? $this->parentSpanIdFor($traceId, $options),
+            'prompt_name' => $options['prompt_name'] ?? $this->scopedPrompt['name'] ?? null,
+            'prompt_version' => $options['prompt_version'] ?? $this->scopedPrompt['version'] ?? null,
         ]);
 
         if ($this->globalPricingTier && $context->pricingTier === null) {
@@ -346,6 +355,25 @@ class Spectra
             return $callback();
         } finally {
             $this->scopedTags = $previous;
+        }
+    }
+
+    /**
+     * Run the callback with every AI call inside it tagged with this prompt
+     * template and version, so the dashboard's Prompts screen can compare
+     * versions on cost, errors, latency and scores.
+     *
+     *   $reply = Spectra::withPrompt('support-answer', 'v3', fn () => $agent->reply($message));
+     */
+    public function withPrompt(string $name, ?string $version, callable $callback): mixed
+    {
+        $previous = $this->scopedPrompt;
+        $this->scopedPrompt = ['name' => $name, 'version' => $version];
+
+        try {
+            return $callback();
+        } finally {
+            $this->scopedPrompt = $previous;
         }
     }
 

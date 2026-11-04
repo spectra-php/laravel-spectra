@@ -6,6 +6,7 @@ import TraceDetail from './screens/traces/detail.vue';
 import Conversations from './screens/conversations/index.vue';
 import ConversationDetail from './screens/conversations/detail.vue';
 import Costs from './screens/costs/index.vue';
+import Prompts from './screens/prompts/index.vue';
 import Trackables from './screens/trackables/index.vue';
 import TrackableDetail from './screens/trackables/detail.vue';
 import Maintenance from './screens/maintenance/index.vue';
@@ -50,6 +51,11 @@ export default [
         path: '/costs',
         name: 'costs',
         component: Costs,
+    },
+    {
+        path: '/prompts',
+        name: 'prompts',
+        component: Prompts,
     },
     {
         path: '/trackables',

@@ -319,6 +319,27 @@ it('keeps the tags of withTags() on a stream read after the callback', function 
     expect(SpectraRequest::with('tags')->sole()->tags->pluck('name')->all())->toBe(['reply']);
 });
 
+it('tags requests sent inside withPrompt()', function () {
+    $completion = $this->loadMockResponse('openai/completion.json');
+    Http::fake(['api.openai.com/*' => Http::sequence([
+        Http::response([...$completion, 'id' => 'chatcmpl-1']),
+        Http::response([...$completion, 'id' => 'chatcmpl-2']),
+    ])]);
+
+    Spectra::withPrompt('support-answer', 'v3', fn () => Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']));
+    Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
+
+    expect(SpectraRequest::query()->oldest()->pluck('prompt_version')->all())->toBe(['v3', null]);
+});
+
+it('keeps the prompt of withPrompt() on a stream read after the callback', function () {
+    $response = Spectra::withPrompt('support-answer', 'v4', fn () => streamedRequest(openAiStreamBody()));
+
+    $response->body();
+
+    expect(SpectraRequest::query()->sole()->only(['prompt_name', 'prompt_version']))->toBe(['prompt_name' => 'support-answer', 'prompt_version' => 'v4']);
+});
+
 it('nests withTags() calls and restores the outer tags, even after an exception', function () {
     $seen = Spectra::withTags(['outer'], function () {
         $inner = Spectra::withTags(['inner'], fn () => Spectra::startRequest('openai', 'gpt-4o')->tags);

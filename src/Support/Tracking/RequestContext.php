@@ -229,6 +229,11 @@ class RequestContext implements Arrayable
 
     public ?int $conversationTurn = null;
 
+    /** The prompt template the call used, to compare its versions. */
+    public ?string $promptName = null;
+
+    public ?string $promptVersion = null;
+
     protected CarbonInterface $startedAt;
 
     protected ?CarbonInterface $completedAt = null;
@@ -497,6 +502,17 @@ class RequestContext implements Arrayable
     }
 
     /**
+     * Name the prompt template, and its version, the request used.
+     */
+    public function usingPrompt(string $name, ?string $version = null): self
+    {
+        $this->promptName = $name;
+        $this->promptVersion = $version;
+
+        return $this;
+    }
+
+    /**
      * Set the pricing tier the request is billed at.
      *
      * @param  string|PricingTier  $tier  The pricing tier (batch, flex, standard, priority)
@@ -585,6 +601,8 @@ class RequestContext implements Arrayable
             'tags' => $this->tags,
             'metadata' => $this->metadata,
             'conversation_id' => $this->conversationId,
+            'prompt_name' => $this->promptName,
+            'prompt_version' => $this->promptVersion,
             'conversation_turn' => $this->conversationTurn,
             'created_at' => $this->startedAt,
             'updated_at' => $this->completedAt ?? now(),

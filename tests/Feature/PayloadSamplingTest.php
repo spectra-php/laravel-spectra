@@ -8,16 +8,16 @@ declare(strict_types=1);
  * every call is still recorded with its tokens and cost. Failed calls keep
  * their bodies unless keep_failures is off.
  */
-
 use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
+use Spectra\Spectra;
 
 /**
  * Track one call in the given trace, failed or not.
  */
 function trackSampledCall(string $traceId, bool $failed = false): SpectraRequest
 {
-    $manager = app(\Spectra\Spectra::class);
+    $manager = app(Spectra::class);
     $context = $manager->startRequest('openai', 'gpt-4o', [
         'trace_id' => $traceId,
         'request_data' => ['model' => 'gpt-4o', 'messages' => [['role' => 'user', 'content' => 'Hi']]],

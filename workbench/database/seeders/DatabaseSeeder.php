@@ -95,6 +95,7 @@ class DatabaseSeeder extends Seeder
         // Each request freezes the clock at its own time, so remember the real time first.
         $realNow = Carbon::now();
         $today = $realNow->copy()->startOfDay();
+        $this->promptCutover = $today->copy()->subDays(12);
 
         for ($day = 29; $day >= 0; $day--) {
             $date = $today->copy()->subDays($day);
@@ -201,6 +202,28 @@ class DatabaseSeeder extends Seeder
         config()->set('spectra.storage.redaction.enabled', false);
     }
 
+    /** When support-answer v3 replaced v2. */
+    protected ?Carbon $promptCutover = null;
+
+    /**
+     * The prompt template and version a demo call used, if any.
+     *
+     * @param  array{id: string, turn: int, at: Carbon}|null  $conversation
+     * @return array{0: ?string, 1: ?string}
+     */
+    protected function promptFor(string $type, string $origin, ?array $conversation, ?Carbon $at = null): array
+    {
+        if ($conversation !== null && $type === 'text') {
+            return ['support-answer', $at !== null && $this->promptCutover !== null && $at->lessThan($this->promptCutover) ? 'v2' : 'v3'];
+        }
+
+        if ($origin === 'App\\Jobs\\SummarizeDocument' && $type === 'text') {
+            return ['document-summary', 'v1'];
+        }
+
+        return [null, null];
+    }
+
     /**
      * Score some chat answers the way an app would: the user's thumbs up or
      * down on the answer, a model's 1-5 rating of the last call, and now and
@@ -249,6 +272,10 @@ class DatabaseSeeder extends Seeder
             'conversation_id' => $conversation['id'] ?? null,
             'conversation_turn' => $conversation['turn'] ?? null,
             'tags' => mt_rand(1, 100) <= 60 ? [$this->tags[array_rand($this->tags)]] : [],
+            // Chat answers and document summaries come from versioned prompts;
+            // support-answer v3 replaced v2 twelve days ago.
+            'prompt_name' => $this->promptFor($type, $origin, $conversation)[0],
+            'prompt_version' => $this->promptFor($type, $origin, $conversation, $at)[1],
         ]);
         $context->modelType = $type;
         $context->isStreaming = $streaming;

@@ -92,6 +92,17 @@ php artisan spectra:install
 
 Until it runs, `Spectra::score()` returns `null` and logs a warning once per process; tracking is not affected.
 
+<a name="prompt-columns-migration"></a>
+## The Prompt Columns Migration
+
+`add_prompt_columns_to_spectra_requests_table` adds the `prompt_name` and `prompt_version` columns to `spectra_requests`, for [prompt versions](/prompts). Run the installer to publish and run it:
+
+```shell
+php artisan spectra:install
+```
+
+Until it runs, Spectra keeps recording calls without the prompt and logs a warning once per process.
+
 ### Custom Database Connection
 
 All Spectra migrations use the `spectra.storage.connection` config value. To store Spectra data in a separate database, set the connection in `config/spectra.php`:

@@ -77,6 +77,11 @@ The conversations list shows one row per [conversation](/usage#conversation-trac
 
 Open a conversation to read it as a transcript. Each turn shows the user's message and the model's reply, the calls the turn made, what the turn cost and what the conversation has cost so far. A failed call is marked in red. The transcript needs `store_prompts` and `store_responses`; with either off, the turns still show their calls and costs.
 
+<a name="prompts"></a>
+## Prompts
+
+The prompts screen compares the versions of each [prompt](/prompts) your calls were tagged with: their calls, error rate, average cost, tokens and latency, their top scores, and when each was last used. Click a version to see its calls. The screen lists the prompts once your app tags calls with `Spectra::withPrompt()`.
+
 <a name="costs"></a>
 ## Costs
 

@@ -31,6 +31,7 @@ use Spectra\Testing\SpectraFake;
  * @method static \Spectra\Spectra redactUsing(\Closure $callback)
  * @method static StreamingTracker stream(?string $provider = null, ?string $model = null, array<string, mixed> $options = [])
  * @method static \Spectra\Spectra addGlobalTags(array<int, string> $tags)
+ * @method static mixed withPrompt(string $name, ?string $version, callable $callback)
  * @method static mixed withTags(array<int, string> $tags, callable $callback)
  * @method static array<int, string> currentTags()
  * @method static array<string, string> propagationHeaders()

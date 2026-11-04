@@ -116,6 +116,8 @@ class RequestPersister
             'span_id' => $context->spanId,
             'response_id' => $context->responseId,
             'conversation_id' => $context->conversationId,
+            'prompt_name' => $context->promptName,
+            'prompt_version' => $context->promptVersion,
             'conversation_turn' => $context->conversationTurn,
             'provider' => $context->provider,
             'model' => $this->resolveDisplayName($context->provider, $context->model),

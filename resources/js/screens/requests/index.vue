@@ -28,7 +28,7 @@ const availableReasoningEfforts = ref([]);
 const modelTypes = ref([]);
 const isBootstrapping = ref(true);
 
-const filterKeys = ['search', 'provider', 'model', 'status', 'tag', 'model_type', 'finish_reason', 'has_tool_calls', 'is_reasoning', 'reasoning_effort', 'trace_id', 'conversation_id', 'trackable_type', 'trackable_id', 'sort_by', 'sort_dir'];
+const filterKeys = ['search', 'provider', 'model', 'status', 'tag', 'model_type', 'finish_reason', 'has_tool_calls', 'is_reasoning', 'reasoning_effort', 'trace_id', 'conversation_id', 'trackable_type', 'trackable_id', 'prompt_name', 'prompt_version', 'sort_by', 'sort_dir'];
 const clearableFilterKeys = filterKeys.filter((key) => !['sort_by', 'sort_dir'].includes(key));
 const requestSortOptions = [
     { value: 'created_at', label: 'Sort by Time' },

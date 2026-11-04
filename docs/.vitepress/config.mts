@@ -37,7 +37,8 @@ export default defineConfig({
           { text: 'Alerts', link: '/alerts' },
           { text: 'Tags', link: '/tags' },
           { text: 'Metadata', link: '/metadata' },
-          { text: 'Scores', link: '/scores' }
+          { text: 'Scores', link: '/scores' },
+          { text: 'Prompts', link: '/prompts' }
         ]
       },
       {
