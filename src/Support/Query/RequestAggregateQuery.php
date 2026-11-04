@@ -230,6 +230,16 @@ class RequestAggregateQuery
     }
 
     /**
+     * Requests outside 2xx (or with no status) under the given alias.
+     *
+     * @param  literal-string  $alias
+     */
+    public function failedCount(string $alias = 'failed_count'): self
+    {
+        return $this->aggregate('COALESCE(SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 0 ELSE 1 END), 0)', $alias, 'integer');
+    }
+
+    /**
      * Cost over successful requests only (safe on unfiltered row sets).
      *
      * @param  literal-string  $alias

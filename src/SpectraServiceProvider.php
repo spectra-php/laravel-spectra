@@ -21,6 +21,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
+use Spectra\Console\Commands\CheckAlertsCommand;
 use Spectra\Console\Commands\InstallCommand;
 use Spectra\Console\Commands\PauseCommand;
 use Spectra\Console\Commands\PruneCommand;
@@ -478,6 +479,7 @@ class SpectraServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
+                CheckAlertsCommand::class,
                 InstallCommand::class,
                 PauseCommand::class,
                 PruneCommand::class,

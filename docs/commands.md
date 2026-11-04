@@ -162,6 +162,15 @@ php artisan spectra:resume
 
 While paused, AI calls keep working, but Spectra stores no request, span or media file. Their cost is not recorded, so it doesn't count toward [budgets](/budgets). The flag is kept in your default cache store, so every server and queue worker sees it when they share that store; `cache:clear` resumes recording. The dashboard's Maintenance screen has the same switch.
 
+<a name="spectra-check-alerts"></a>
+## `spectra:check-alerts`
+
+Checks the [alert rules](/alerts) in `spectra.alerts.rules` against the stored calls, prints each rule's value now, and notifies when a rule starts firing, keeps firing past its cooldown, or recovers. Schedule it every few minutes:
+
+```php
+Schedule::command('spectra:check-alerts')->everyFiveMinutes();
+```
+
 ## Command Summary
 
 | Command | Purpose | Typical Usage |
@@ -171,3 +180,4 @@ While paused, AI calls keep working, but Spectra stores no request, span or medi
 | `spectra:rebuild-stats --yesterday` | Rebuild aggregated statistics | Scheduled daily, after data corrections, or once after upgrading |
 | `spectra:pricing-scrape` | Save new provider prices to the scraped prices file | Before a release picks them up; review and commit the file |
 | `spectra:pause` / `spectra:resume` | Stop and restart storing requests | During load tests or incidents |
+| `spectra:check-alerts` | Check the alert rules and notify | Scheduled every few minutes |

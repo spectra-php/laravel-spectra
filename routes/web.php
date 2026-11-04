@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Spectra\Http\Controllers\Api\AlertsController;
 use Spectra\Http\Controllers\Api\ConfigController;
 use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\CostsController;
@@ -15,6 +16,7 @@ use Spectra\Http\Controllers\Api\Maintenance\PricingStatusController;
 use Spectra\Http\Controllers\Api\Maintenance\PruneController;
 use Spectra\Http\Controllers\Api\Maintenance\RebuildStatsController;
 use Spectra\Http\Controllers\Api\Maintenance\RecordingController;
+use Spectra\Http\Controllers\Api\PerformanceController;
 use Spectra\Http\Controllers\Api\ProvidersController;
 use Spectra\Http\Controllers\Api\RequestsController;
 use Spectra\Http\Controllers\Api\ScoresController;
@@ -35,6 +37,8 @@ use Spectra\Http\Controllers\DashboardController;
 Route::prefix('api')->group(function () {
     Route::get('/config', ConfigController::class);
     Route::get('/stats', StatsController::class);
+    Route::get('/performance', PerformanceController::class);
+    Route::get('/alerts', AlertsController::class);
     Route::get('/requests', RequestsController::class);
     // Request ids are UUIDs; anything else is a 404 rather than a query
     // PostgreSQL's uuid column rejects with an error.

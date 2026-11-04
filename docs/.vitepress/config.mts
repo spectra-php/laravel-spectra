@@ -34,6 +34,7 @@ export default defineConfig({
           { text: 'Pricing', link: '/pricing' },
           { text: 'Costs', link: '/costs' },
           { text: 'Budgets', link: '/budgets' },
+          { text: 'Alerts', link: '/alerts' },
           { text: 'Tags', link: '/tags' },
           { text: 'Metadata', link: '/metadata' },
           { text: 'Scores', link: '/scores' }

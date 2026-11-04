@@ -19,6 +19,8 @@ The overview answers "how much AI are we using, and what does it cost?" at a gla
 - **Requests over time**, one point per day.
 - **Breakdown** of requests by provider or by model type.
 - **Top models** by request volume, and the **recent requests**.
+- **Alerts**: each [alert rule](/alerts) with its value now and whether it is firing. It shows once you configure rules.
+- **Performance**: each model's error rate and its p50, p95 and p99 latency, and the median time to first token of streamed calls.
 - **Scores**: each [score](/scores) name given in the period, with the share of yes, the average, or the most common labels. It shows once your app records scores.
 
 The request, trace and conversation pages list their own scores too, with any comment, who gave each one, and a link to the call a score was given to.

@@ -14,6 +14,8 @@ import ProviderLogo from '@/components/ProviderLogo.vue';
 import Sparkline from '@/components/Sparkline.vue';
 import Money from '@/components/Money.vue';
 import ScoreSummaryCard from '@/components/ScoreSummaryCard.vue';
+import PerformanceCard from '@/components/PerformanceCard.vue';
+import AlertsCard from '@/components/AlertsCard.vue';
 
 const router = useRouter();
 const { formatNumber, formatCompact, formatShortDate, formatDuration, formatDurationSeconds, truncate, providerChartColor, seriesColor, apiRequest } = useHelpers();
@@ -99,9 +101,31 @@ const loadScores = async () => {
     }
 };
 
+// The Performance and Alerts cards.
+const performance = ref([]);
+const alerts = ref({ alerts: [], error: null });
+
+const loadPerformance = async () => {
+    try {
+        performance.value = (await apiRequest('get', '/performance?' + buildQueryParams().toString())).models || [];
+    } catch (error) {
+        performance.value = [];
+    }
+};
+
+const loadAlerts = async () => {
+    try {
+        alerts.value = await apiRequest('get', '/alerts');
+    } catch (error) {
+        alerts.value = { alerts: [], error: null };
+    }
+};
+
 const loadStats = async () => {
     loading.value = true;
     loadScores();
+    loadPerformance();
+    loadAlerts();
     try {
         const data = await apiRequest('get', '/stats?' + buildQueryParams().toString());
         stats.value = data;
@@ -310,6 +334,8 @@ onUnmounted(() => {
             </StatCard>
         </div>
 
+        <AlertsCard v-if="alerts.alerts?.length || alerts.error" class="mb-4" :alerts="alerts.alerts" :error="alerts.error" />
+
         <!-- Media usage (only kinds that appear in this period) -->
         <div
             v-if="!loading && mediaCards.length"
@@ -506,6 +532,8 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
+
+        <PerformanceCard v-if="performance.length" class="mt-4" :models="performance" />
 
         <ScoreSummaryCard v-if="scoreSummary.length" class="mt-4" :scores="scoreSummary" />
 

@@ -917,6 +917,45 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Alerts
+    |--------------------------------------------------------------------------
+    |
+    | Rules `php artisan spectra:check-alerts` checks over the stored calls.
+    | Schedule the command every few minutes. Each rule watches one metric
+    | over a window of minutes: error_rate (0-1), latency_p95 or latency_avg
+    | (milliseconds, successful calls), cost (cents) or requests (count),
+    | and fires when it goes `above` or `below` its threshold. Rate and
+    | latency rules wait for `min_requests` calls in the window (default 10).
+    | `provider` and `model` narrow a rule to one provider or model.
+    |
+    | A firing rule notifies once, then again after `cooldown` minutes while
+    | it keeps firing, and once more when it recovers. It also dispatches the
+    | AlertTriggered and AlertResolved events.
+    |
+    */
+
+    'alerts' => [
+
+        'rules' => [
+            // ['name' => 'High error rate', 'metric' => 'error_rate', 'above' => 0.1, 'window' => 15],
+            // ['name' => 'Slow OpenAI', 'metric' => 'latency_p95', 'above' => 20000, 'provider' => 'openai'],
+            // ['name' => 'Spend spike', 'metric' => 'cost', 'above' => 5000, 'window' => 60],
+        ],
+
+        'cooldown' => (int) env('SPECTRA_ALERTS_COOLDOWN', 60),
+
+        'notify' => [
+            // Comma-separated email addresses.
+            'mail' => env('SPECTRA_ALERTS_MAIL'),
+            'slack_webhook_url' => env('SPECTRA_ALERTS_SLACK_WEBHOOK_URL'),
+            // Receives a JSON POST with the alert, its status, metric, value and threshold.
+            'webhook_url' => env('SPECTRA_ALERTS_WEBHOOK_URL'),
+        ],
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Automatic HTTP Watcher
     |--------------------------------------------------------------------------
     |

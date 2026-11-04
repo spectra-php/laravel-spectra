@@ -263,6 +263,33 @@ Configure budget enforcement defaults.
 | `default_provider` | `string` | `openai` | The provider the `spectra.budget` middleware checks when the route names none (`spectra.budget:anthropic`). Request input is never used. It matters only for budgets with allowed providers. |
 | `default_model` | `string` | `gpt-5.2` | The model the `spectra.budget` middleware checks when the route names none (`spectra.budget:openai,gpt-4o`). Request input is never used. It matters only for budgets with allowed models. |
 
+<a name="alerts"></a>
+## Alerts
+
+Rules `spectra:check-alerts` checks, and where it sends notifications. See [Alerts](/alerts).
+
+```php
+'alerts' => [
+    'rules' => [
+        ['name' => 'High error rate', 'metric' => 'error_rate', 'above' => 0.1, 'window' => 15],
+    ],
+    'cooldown' => env('SPECTRA_ALERTS_COOLDOWN', 60),
+    'notify' => [
+        'mail' => env('SPECTRA_ALERTS_MAIL'),
+        'slack_webhook_url' => env('SPECTRA_ALERTS_SLACK_WEBHOOK_URL'),
+        'webhook_url' => env('SPECTRA_ALERTS_WEBHOOK_URL'),
+    ],
+],
+```
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `rules` | `array` | `[]` | The alert rules: `name`, `metric`, `above` or `below`, and optionally `window`, `min_requests`, `provider` and `model`. |
+| `cooldown` | `int` | `60` | Minutes before a rule that keeps firing notifies again. |
+| `notify.mail` | `string` | `null` | Comma-separated email addresses. |
+| `notify.slack_webhook_url` | `string` | `null` | A Slack incoming webhook. |
+| `notify.webhook_url` | `string` | `null` | A URL that receives a JSON POST per firing and recovery. |
+
 <a name="watcher"></a>
 ## Watcher
 
@@ -450,4 +477,10 @@ SPECTRA_OTEL_ENABLED=false
 SPECTRA_OTEL_ENDPOINT=http://localhost:4318/v1/traces
 SPECTRA_OTEL_SERVICE_VERSION=1.0.0
 SPECTRA_OTEL_TIMEOUT=10
+
+# Alerts
+SPECTRA_ALERTS_COOLDOWN=60
+SPECTRA_ALERTS_MAIL=
+SPECTRA_ALERTS_SLACK_WEBHOOK_URL=
+SPECTRA_ALERTS_WEBHOOK_URL=
 ```
