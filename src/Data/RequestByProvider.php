@@ -26,7 +26,7 @@ readonly class RequestByProvider extends DataTransferObject
     {
         return $items->map(fn (SpectraRequest $item) => new self(
             provider: $item->provider,
-            count: (int) $item->count,
+            count: $item->count,
         ));
     }
 }

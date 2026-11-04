@@ -43,7 +43,7 @@ trait MeasuresJobLatency
         }
 
         try {
-            return (int) Carbon::parse($value)->getTimestampMs();
+            return Carbon::parse($value)->getTimestampMs();
         } catch (Throwable) {
             return null;
         }

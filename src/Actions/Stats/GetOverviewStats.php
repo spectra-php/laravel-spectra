@@ -27,17 +27,17 @@ class GetOverviewStats
             ->first();
 
         return new OverviewStatsResponse(
-            total_requests: (int) ($stats->total_requests ?? 0),
-            total_tokens: (int) ($stats->tokens_sum ?? 0),
-            total_cost_in_cents: (float) ($stats->cost ?? 0),
-            avg_latency: (float) ($stats->latency_avg ?? 0),
-            total_images: (int) ($stats->images_sum ?? 0),
-            total_videos: (int) ($stats->videos_sum ?? 0),
-            total_duration_seconds: (float) ($stats->duration_seconds_sum ?? 0),
-            total_input_characters: (int) ($stats->input_characters_sum ?? 0),
-            tts_characters: (int) ($stats->tts_characters_sum ?? 0),
-            tts_duration_seconds: (float) ($stats->tts_duration_sum ?? 0),
-            stt_duration_seconds: (float) ($stats->stt_duration_sum ?? 0),
+            total_requests: $stats->total_requests ?? 0,
+            total_tokens: $stats->tokens_sum ?? 0,
+            total_cost_in_cents: $stats->cost ?? 0,
+            avg_latency: $stats->latency_avg ?? 0,
+            total_images: $stats->images_sum ?? 0,
+            total_videos: $stats->videos_sum ?? 0,
+            total_duration_seconds: $stats->duration_seconds_sum ?? 0,
+            total_input_characters: $stats->input_characters_sum ?? 0,
+            tts_characters: $stats->tts_characters_sum ?? 0,
+            tts_duration_seconds: $stats->tts_duration_sum ?? 0,
+            stt_duration_seconds: $stats->stt_duration_sum ?? 0,
         );
     }
 }

@@ -24,7 +24,7 @@ class GetCostsByProvider
             RequestAggregateQuery::make($dateRange)
                 ->successfulOnly()
                 ->groupByColumns('provider')
-                ->selectRaw('SUM(total_cost_in_cents) as cost')
+                ->successfulCost()
                 ->orderByDesc('cost')
                 ->get()
         );

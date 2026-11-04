@@ -27,10 +27,10 @@ readonly class Tag extends DataTransferObject
     public static function fromCollection(Collection $tags): Collection
     {
         return $tags->map(fn (SpectraTag $tag) => new self(
-            id: (string) $tag->id,
+            id: $tag->id,
             name: $tag->name,
             slug: $tag->slug,
-            count: (int) ($tag->requests_count ?? 0),
+            count: $tag->requests_count ?? 0,
         ));
     }
 }

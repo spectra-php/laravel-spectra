@@ -57,11 +57,11 @@ class FormatConversationsList
 
             return [
                 'conversation_id' => (string) $conversation->conversation_id,
-                'request_count' => (int) $conversation->request_count,
-                'turn_count' => (int) $conversation->turn_count,
-                'failed_count' => (int) $conversation->failed_count,
-                'total_cost_in_cents' => (float) $conversation->cost,
-                'total_tokens' => (int) $conversation->tokens,
+                'request_count' => $conversation->request_count,
+                'turn_count' => $conversation->turn_count,
+                'failed_count' => $conversation->failed_count,
+                'total_cost_in_cents' => $conversation->cost,
+                'total_tokens' => $conversation->tokens,
                 'started_at' => $this->format($conversation->first_started_at),
                 'last_activity_at' => $this->format($conversation->last_started_at),
                 'models' => $calls

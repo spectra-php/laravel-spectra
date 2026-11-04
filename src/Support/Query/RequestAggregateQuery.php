@@ -22,6 +22,10 @@ use Spectra\Support\DateRange;
  * shared aggregate select bundles — so each Action only declares the parts
  * unique to its endpoint. Not part of the public package API; user-facing
  * querying lives in CostQueryBuilder / UsageQueryBuilder.
+ *
+ * Every aggregate alias it selects is cast where it is selected (SUM and AVG
+ * come back as strings on MySQL and PostgreSQL), so Actions read typed values
+ * and never cast them again.
  */
 class RequestAggregateQuery
 {
@@ -178,13 +182,13 @@ class RequestAggregateQuery
 
         return $this
             ->countAs('request_count')
-            ->selectRaw('COALESCE(SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 0 ELSE 1 END), 0) as failed_count')
+            ->aggregate('COALESCE(SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 0 ELSE 1 END), 0)', 'failed_count', 'integer')
             ->successfulCost()
             ->tokenSum('tokens')
             ->selectRaw('MIN(COALESCE(started_at, created_at)) as first_started_at')
             ->selectRaw('MAX(COALESCE(started_at, created_at)) as last_started_at')
-            ->selectRaw("MAX({$start} + COALESCE(latency_ms, 0)) - MIN({$start}) as duration_ms")
-            ->selectRaw('COUNT(DISTINCT model) as model_count');
+            ->aggregate("COALESCE(MAX({$start} + COALESCE(latency_ms, 0)) - MIN({$start}), 0)", 'duration_ms', 'float')
+            ->aggregate('COUNT(DISTINCT model)', 'model_count', 'integer');
     }
 
     /**
@@ -196,7 +200,7 @@ class RequestAggregateQuery
     {
         return $this
             ->callTotals()
-            ->selectRaw('COUNT(DISTINCT conversation_turn) + COALESCE(SUM(CASE WHEN conversation_turn IS NULL THEN 1 ELSE 0 END), 0) as turn_count');
+            ->aggregate('COUNT(DISTINCT conversation_turn) + COALESCE(SUM(CASE WHEN conversation_turn IS NULL THEN 1 ELSE 0 END), 0)', 'turn_count', 'integer');
     }
 
     public function filteredBy(Request $request): self
@@ -213,7 +217,7 @@ class RequestAggregateQuery
      */
     public function countAs(string $alias = 'count'): self
     {
-        return $this->selectRaw("COUNT(*) as {$alias}");
+        return $this->aggregate('COUNT(*)', $alias, 'integer');
     }
 
     /**
@@ -223,17 +227,17 @@ class RequestAggregateQuery
      */
     public function successfulCost(string $alias = 'cost'): self
     {
-        return $this->selectRaw($this->successfulCostSum($alias));
+        return $this->aggregate($this->successfulCostExpression(), $alias, 'float');
     }
 
     /**
-     * Latency over successful requests only.
+     * Average latency over successful requests only; 0 when none succeeded.
      *
      * @param  literal-string  $alias
      */
     public function successfulLatency(string $alias = 'avg_latency'): self
     {
-        return $this->selectRaw($this->successfulLatencyAvg($alias));
+        return $this->aggregate("COALESCE({$this->successfulLatencyExpression()}, 0)", $alias, 'float');
     }
 
     /**
@@ -243,36 +247,36 @@ class RequestAggregateQuery
      */
     public function tokenSum(string $alias = 'tokens_sum'): self
     {
-        return $this->selectRaw("COALESCE(SUM(prompt_tokens + completion_tokens), 0) as {$alias}");
+        return $this->aggregate('COALESCE(SUM(prompt_tokens + completion_tokens), 0)', $alias, 'integer');
     }
 
     /** The per-modality usage sums shared by the model/type breakdowns. */
     public function usageSums(): self
     {
         return $this
-            ->selectRaw('COALESCE(SUM(image_count), 0) as images_sum')
-            ->selectRaw('COALESCE(SUM(video_count), 0) as videos_sum')
-            ->selectRaw('COALESCE(SUM(input_characters), 0) as input_characters_sum')
-            ->selectRaw('COALESCE(SUM(duration_seconds), 0) as duration_seconds_sum');
+            ->aggregate('COALESCE(SUM(image_count), 0)', 'images_sum', 'integer')
+            ->aggregate('COALESCE(SUM(video_count), 0)', 'videos_sum', 'integer')
+            ->aggregate('COALESCE(SUM(input_characters), 0)', 'input_characters_sum', 'integer')
+            ->aggregate('COALESCE(SUM(duration_seconds), 0)', 'duration_seconds_sum', 'float');
     }
 
     /** The TTS/STT sums shared by the overview and trackable stats. */
     public function audioSums(): self
     {
         return $this
-            ->selectRaw("COALESCE(SUM(CASE WHEN model_type = 'tts' THEN input_characters ELSE 0 END), 0) as tts_characters_sum")
-            ->selectRaw("COALESCE(SUM(CASE WHEN model_type = 'tts' THEN duration_seconds ELSE 0 END), 0) as tts_duration_sum")
-            ->selectRaw("COALESCE(SUM(CASE WHEN model_type = 'stt' THEN duration_seconds ELSE 0 END), 0) as stt_duration_sum");
+            ->aggregate("COALESCE(SUM(CASE WHEN model_type = 'tts' THEN input_characters ELSE 0 END), 0)", 'tts_characters_sum', 'integer')
+            ->aggregate("COALESCE(SUM(CASE WHEN model_type = 'tts' THEN duration_seconds ELSE 0 END), 0)", 'tts_duration_sum', 'float')
+            ->aggregate("COALESCE(SUM(CASE WHEN model_type = 'stt' THEN duration_seconds ELSE 0 END), 0)", 'stt_duration_sum', 'float');
     }
 
     /** Image, video and audio usage as the trackables screens show it. */
     public function mediaSums(): self
     {
         return $this
-            ->selectRaw('COALESCE(SUM(image_count), 0) as images_sum')
-            ->selectRaw('COALESCE(SUM(video_count), 0) as videos_sum')
-            ->selectRaw("COALESCE(SUM(CASE WHEN model_type = 'tts' THEN input_characters ELSE 0 END), 0) as tts_characters_sum")
-            ->selectRaw("COALESCE(SUM(CASE WHEN model_type IN ('tts', 'stt') THEN duration_seconds ELSE 0 END), 0) as audio_duration_sum");
+            ->aggregate('COALESCE(SUM(image_count), 0)', 'images_sum', 'integer')
+            ->aggregate('COALESCE(SUM(video_count), 0)', 'videos_sum', 'integer')
+            ->aggregate("COALESCE(SUM(CASE WHEN model_type = 'tts' THEN input_characters ELSE 0 END), 0)", 'tts_characters_sum', 'integer')
+            ->aggregate("COALESCE(SUM(CASE WHEN model_type IN ('tts', 'stt') THEN duration_seconds ELSE 0 END), 0)", 'audio_duration_sum', 'float');
     }
 
     /** Bucket rows by calendar date (adds select, group, and order). */
@@ -290,6 +294,20 @@ class RequestAggregateQuery
     public function groupByColumns(string ...$columns): self
     {
         $this->query->select($columns)->groupBy($columns);
+
+        return $this;
+    }
+
+    /**
+     * Select an aggregate under an alias, cast to its type.
+     *
+     * @param  literal-string  $expression
+     * @param  literal-string  $alias
+     * @param  'integer'|'float'  $cast
+     */
+    protected function aggregate(string $expression, string $alias, string $cast): self
+    {
+        $this->query->selectRaw("{$expression} as {$alias}")->withCasts([$alias => $cast]);
 
         return $this;
     }

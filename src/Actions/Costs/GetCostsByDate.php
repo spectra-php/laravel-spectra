@@ -23,7 +23,7 @@ class GetCostsByDate
             RequestAggregateQuery::make($dateRange)
                 ->successfulOnly()
                 ->byDate()
-                ->selectRaw('SUM(total_cost_in_cents) as cost')
+                ->successfulCost()
                 ->get()
         );
     }

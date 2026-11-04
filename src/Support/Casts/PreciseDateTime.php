@@ -44,7 +44,7 @@ class PreciseDateTime implements CastsAttributes
             return null;
         }
 
-        $date = $value instanceof DateTimeInterface ? Date::instance($value) : Date::parse((string) $value);
+        $date = $value instanceof DateTimeInterface ? Date::instance($value) : Date::parse($value);
 
         return $date->format(self::FORMAT);
     }

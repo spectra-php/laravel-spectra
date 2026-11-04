@@ -40,7 +40,7 @@ class TrackedStream implements StreamInterface
         protected Closure $onEnd,
     ) {
         try {
-            $this->position = $this->fed = (int) ($stream->tell());
+            $this->position = $this->fed = $stream->tell();
         } catch (Throwable) {
             $this->position = $this->fed = 0;
         }

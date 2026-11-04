@@ -36,8 +36,8 @@ readonly class CostByUser extends DataTransferObject
 
             return new self(
                 user_id: (string) $item->trackable_id,
-                requests: (int) $item->requests,
-                cost: (float) $item->cost,
+                requests: $item->requests,
+                cost: $item->cost,
                 user_name: $meta['name'] ?? null,
                 trackable_type: $item->trackable_type,
             );

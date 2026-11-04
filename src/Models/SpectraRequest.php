@@ -188,6 +188,8 @@ class SpectraRequest extends Model
             'media_storage_path' => 'json',
             'metadata' => 'json',
             'status_code' => 'integer',
+            // A freshly created row still holds the trackable's own key type.
+            'trackable_id' => 'string',
         ];
     }
 

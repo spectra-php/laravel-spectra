@@ -25,7 +25,7 @@ readonly class RequestByDate extends DataTransferObject
     {
         return $items->map(fn (SpectraRequest $item) => new self(
             date: $item->date,
-            count: (int) $item->count,
+            count: $item->count,
         ));
     }
 }

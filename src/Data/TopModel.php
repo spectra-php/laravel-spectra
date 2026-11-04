@@ -29,8 +29,8 @@ readonly class TopModel extends DataTransferObject
         return $items->map(fn (SpectraRequest $item) => new self(
             model: $item->model,
             provider: $item->provider,
-            count: (int) $item->count,
-            cost: (float) $item->cost,
+            count: $item->count,
+            cost: $item->cost,
         ));
     }
 }

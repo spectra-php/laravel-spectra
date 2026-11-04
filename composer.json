@@ -51,7 +51,8 @@
         "pestphp/pest-plugin-laravel": "^3.0||^4.0||^5.0",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan-deprecation-rules": "^2.0",
-        "phpstan/phpstan-phpunit": "^2.0"
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0"
     },
     "autoload": {
         "psr-4": {
@@ -95,6 +96,11 @@
             "aliases": {
                 "Spectra": "Spectra\\Facades\\Spectra"
             }
+        },
+        "phpstan/extension-installer": {
+            "ignore": [
+                "phpstan/phpstan-strict-rules"
+            ]
         }
     },
     "minimum-stability": "dev",

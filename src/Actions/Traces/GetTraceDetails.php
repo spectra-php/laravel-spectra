@@ -42,11 +42,11 @@ class GetTraceDetails
     {
         $totals = RequestAggregateQuery::make()->forTrace($traceId)->callTotals()->first();
 
-        if ($totals === null || (int) $totals->request_count === 0) {
+        if ($totals === null || $totals->request_count === 0) {
             return null;
         }
 
-        $requestCount = (int) $totals->request_count;
+        $requestCount = $totals->request_count;
 
         $spans = $this->spans($traceId);
 
@@ -80,7 +80,7 @@ class GetTraceDetails
             'is_error' => $call->isFailed(),
             'is_streaming' => $call->is_streaming,
             'total_tokens' => $call->prompt_tokens + $call->completion_tokens,
-            'total_cost_in_cents' => (float) $call->total_cost_in_cents,
+            'total_cost_in_cents' => $call->total_cost_in_cents,
             'latency_ms' => $call->latency_ms,
             'created_at' => $call->created_at?->toIso8601String(),
             'started_at' => $this->startOf($call)?->format(self::ISO_MILLISECONDS),
@@ -107,12 +107,12 @@ class GetTraceDetails
             parent_span_id: $this->upstreamParentSpanId($requests, $spanRows),
             origin: $calls->first(fn (SpectraRequest $call) => filled($call->origin))?->origin,
             request_count: $requestCount,
-            failed_count: (int) $totals->failed_count,
+            failed_count: $totals->failed_count,
             position: $this->position($traceId, $currentRequestId, $requests),
-            total_cost_in_cents: (float) $totals->cost,
-            total_tokens: (int) $totals->tokens,
+            total_cost_in_cents: $totals->cost,
+            total_tokens: $totals->tokens,
             started_at: $traceStart?->format(self::ISO_MILLISECONDS),
-            duration_ms: max(0, (int) round((float) $totals->duration_ms)),
+            duration_ms: max(0, (int) round($totals->duration_ms)),
             timeline_ms: $this->timelineMs($requests, $spanRows),
             truncated: $requestCount > count($requests),
             requests: $requests,

@@ -24,7 +24,7 @@ class GetTrackableCostsByDate
                 ->forTrackable($type, $id)
                 ->successfulOnly()
                 ->byDate()
-                ->selectRaw('SUM(total_cost_in_cents) as cost')
+                ->successfulCost()
                 ->get()
         );
     }

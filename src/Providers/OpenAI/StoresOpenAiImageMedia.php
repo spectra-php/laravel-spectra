@@ -113,7 +113,7 @@ trait StoresOpenAiImageMedia
         }
 
         $path = parse_url($url, PHP_URL_PATH);
-        $extension = strtolower((string) pathinfo(is_string($path) ? $path : '', PATHINFO_EXTENSION));
+        $extension = strtolower(pathinfo(is_string($path) ? $path : '', PATHINFO_EXTENSION));
         $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif', 'heic', 'heif'];
 
         if (in_array($extension, $allowed, true)) {

@@ -25,7 +25,7 @@ readonly class CostByDate extends DataTransferObject
     {
         return $items->map(fn (SpectraRequest $item) => new self(
             date: $item->date,
-            cost: (float) $item->cost,
+            cost: $item->cost,
         ));
     }
 }

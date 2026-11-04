@@ -37,13 +37,13 @@ readonly class CostByModelType extends DataTransferObject
             label: $item->model_type
                 ? (ModelType::tryFrom($item->model_type)?->label() ?? ucfirst($item->model_type))
                 : 'Unknown',
-            requests: (int) $item->requests,
-            tokens: (int) $item->tokens_sum,
-            images: (int) $item->images_sum,
-            videos: (int) $item->videos_sum,
-            input_characters: (int) $item->input_characters_sum,
-            duration_seconds: (float) $item->duration_seconds_sum,
-            cost: (float) $item->cost,
+            requests: $item->requests,
+            tokens: $item->tokens_sum,
+            images: $item->images_sum,
+            videos: $item->videos_sum,
+            input_characters: $item->input_characters_sum,
+            duration_seconds: $item->duration_seconds_sum,
+            cost: $item->cost,
         ));
     }
 }

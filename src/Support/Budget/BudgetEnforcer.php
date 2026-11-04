@@ -149,7 +149,7 @@ class BudgetEnforcer
         // resolving the trackable model costs an extra query.
         $hasBudget = SpectraBudget::query()
             ->where('budgetable_type', $type)
-            ->where('budgetable_id', (string) $id)
+            ->where('budgetable_id', $id)
             ->active()
             ->exists();
 
@@ -157,7 +157,7 @@ class BudgetEnforcer
             return;
         }
 
-        $budgetable = $this->resolveBudgetable($type, (string) $id);
+        $budgetable = $this->resolveBudgetable($type, $id);
 
         if ($budgetable === null) {
             return;
@@ -165,7 +165,7 @@ class BudgetEnforcer
 
         $this->recordUsage(
             $budgetable,
-            (int) ceil((float) $request->total_cost_in_cents),
+            $this->toWholeCents($request->total_cost_in_cents),
             ($request->prompt_tokens ?? 0) + ($request->completion_tokens ?? 0)
         );
     }

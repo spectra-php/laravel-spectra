@@ -118,7 +118,7 @@ class TextStreaming extends StreamHandler
         if (in_array($type, self::TERMINAL_EVENTS, true)) {
             $response = is_array($data['response'] ?? null) ? $data['response'] : [];
 
-            return TextHandler::responseFinishReason($response) ?? substr((string) $type, strlen('response.'));
+            return TextHandler::responseFinishReason($response) ?? substr($type, strlen('response.'));
         }
 
         return null;

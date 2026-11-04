@@ -17,7 +17,7 @@ trait AggregatesSuccessfulRequests
      */
     protected function successfulCostSum(string $alias): string
     {
-        return "COALESCE(SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END), 0) as {$alias}";
+        return "{$this->successfulCostExpression()} as {$alias}";
     }
 
     /**
@@ -26,6 +26,22 @@ trait AggregatesSuccessfulRequests
      */
     protected function successfulLatencyAvg(string $alias): string
     {
-        return "AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as {$alias}";
+        return "{$this->successfulLatencyExpression()} as {$alias}";
+    }
+
+    /** @return literal-string */
+    protected function successfulCostExpression(): string
+    {
+        return 'COALESCE(SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END), 0)';
+    }
+
+    /**
+     * Null when no request succeeded.
+     *
+     * @return literal-string
+     */
+    protected function successfulLatencyExpression(): string
+    {
+        return 'AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END)';
     }
 }

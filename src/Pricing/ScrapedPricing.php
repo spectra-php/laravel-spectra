@@ -44,7 +44,7 @@ class ScrapedPricing extends ProviderPricing
     ];
 
     /**
-     * @param  array<string, mixed>  $data  Model id => model array.
+     * @param  array<array-key, mixed>  $data  Model id => model array (a numeric id decodes as an int key).
      */
     public function __construct(
         protected string $slug,

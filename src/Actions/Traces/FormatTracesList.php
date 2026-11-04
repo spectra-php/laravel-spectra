@@ -58,12 +58,12 @@ class FormatTracesList
             return [
                 'trace_id' => (string) $trace->trace_id,
                 'origin' => $calls->first(fn (SpectraRequest $call) => filled($call->origin))?->origin,
-                'request_count' => (int) $trace->request_count,
-                'failed_count' => (int) $trace->failed_count,
-                'total_cost_in_cents' => (float) $trace->cost,
-                'total_tokens' => (int) $trace->tokens,
+                'request_count' => $trace->request_count,
+                'failed_count' => $trace->failed_count,
+                'total_cost_in_cents' => $trace->cost,
+                'total_tokens' => $trace->tokens,
                 'started_at' => blank($trace->first_started_at) ? null : Date::parse((string) $trace->first_started_at)->format(self::ISO_MILLISECONDS),
-                'duration_ms' => max(0, (int) round((float) $trace->duration_ms)),
+                'duration_ms' => max(0, (int) round($trace->duration_ms)),
                 'models' => $calls
                     ->unique(fn (SpectraRequest $call) => "{$call->provider}|{$call->model}")
                     ->map(fn (SpectraRequest $call) => [

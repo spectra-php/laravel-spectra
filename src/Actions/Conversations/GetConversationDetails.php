@@ -39,7 +39,7 @@ class GetConversationDetails
     {
         $totals = RequestAggregateQuery::make()->forConversation($conversationId)->conversationTotals()->first();
 
-        if ($totals === null || (int) $totals->request_count === 0) {
+        if ($totals === null || $totals->request_count === 0) {
             return null;
         }
 
@@ -57,14 +57,14 @@ class GetConversationDetails
 
         return new ConversationDetailsResponse(
             conversation_id: $conversationId,
-            request_count: (int) $totals->request_count,
-            turn_count: (int) $totals->turn_count,
-            failed_count: (int) $totals->failed_count,
-            total_cost_in_cents: (float) $totals->cost,
-            total_tokens: (int) $totals->tokens,
+            request_count: $totals->request_count,
+            turn_count: $totals->turn_count,
+            failed_count: $totals->failed_count,
+            total_cost_in_cents: $totals->cost,
+            total_tokens: $totals->tokens,
             started_at: $this->format($totals->first_started_at),
             last_activity_at: $this->format($totals->last_started_at),
-            truncated: (int) $totals->request_count > $calls->count(),
+            truncated: $totals->request_count > $calls->count(),
             stores_prompts: (bool) config('spectra.storage.store_prompts', true),
             stores_responses: (bool) config('spectra.storage.store_responses', true),
             turns: $this->turns($calls),
@@ -106,7 +106,7 @@ class GetConversationDetails
                     'failed_count' => $turnCalls->filter(fn (SpectraRequest $call) => $call->isFailed())->count(),
                     'total_cost_in_cents' => $cost,
                     'running_cost_in_cents' => $runningCost,
-                    'total_tokens' => (int) $turnCalls->sum(fn (SpectraRequest $call) => $call->prompt_tokens + $call->completion_tokens),
+                    'total_tokens' => $turnCalls->sum(fn (SpectraRequest $call) => $call->prompt_tokens + $call->completion_tokens),
                     'duration_ms' => $this->durationMs($turnCalls),
                     'trace_id' => $first->trace_id,
                     'calls' => $turnCalls->map(fn (SpectraRequest $call) => [
@@ -119,7 +119,7 @@ class GetConversationDetails
                         'is_error' => $call->isFailed(),
                         'finish_reason' => $call->finish_reason,
                         'total_tokens' => $call->prompt_tokens + $call->completion_tokens,
-                        'total_cost_in_cents' => (float) $call->total_cost_in_cents,
+                        'total_cost_in_cents' => $call->total_cost_in_cents,
                         'latency_ms' => $call->latency_ms,
                     ])->values()->all(),
                 ];

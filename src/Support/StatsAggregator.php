@@ -56,8 +56,8 @@ class StatsAggregator
     protected function amounts(SpectraRequest $request): array
     {
         $successful = $request->isSuccessful();
-        $promptTokens = (int) ($request->prompt_tokens ?? 0);
-        $completionTokens = (int) ($request->completion_tokens ?? 0);
+        $promptTokens = $request->prompt_tokens ?? 0;
+        $completionTokens = $request->completion_tokens ?? 0;
 
         return [
             'request_count' => 1,
@@ -66,16 +66,16 @@ class StatsAggregator
             'prompt_tokens' => $promptTokens,
             'completion_tokens' => $completionTokens,
             'total_tokens' => $promptTokens + $completionTokens,
-            'total_cached_tokens' => (int) ($request->cached_tokens ?? 0),
-            'total_cache_write_tokens' => (int) ($request->cache_write_tokens ?? 0),
-            'total_reasoning_tokens' => (int) ($request->reasoning_tokens ?? 0),
-            'total_images' => (int) ($request->image_count ?? 0),
-            'total_videos' => (int) ($request->video_count ?? 0),
-            'total_pages' => (int) ($request->page_count ?? 0),
+            'total_cached_tokens' => $request->cached_tokens ?? 0,
+            'total_cache_write_tokens' => $request->cache_write_tokens ?? 0,
+            'total_reasoning_tokens' => $request->reasoning_tokens ?? 0,
+            'total_images' => $request->image_count ?? 0,
+            'total_videos' => $request->video_count ?? 0,
+            'total_pages' => $request->page_count ?? 0,
             'total_duration_seconds' => (float) ($request->duration_seconds ?? 0),
-            'total_input_characters' => (int) ($request->input_characters ?? 0),
+            'total_input_characters' => $request->input_characters ?? 0,
             'total_cost_in_cents' => (float) ($request->total_cost_in_cents ?? 0),
-            'total_latency_ms' => (int) ($request->latency_ms ?? 0),
+            'total_latency_ms' => $request->latency_ms ?? 0,
         ];
     }
 

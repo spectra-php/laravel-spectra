@@ -379,7 +379,7 @@ class SpectraDailyStat extends Model
 
         $totalRequests = (int) ($stats->total_requests ?? 0);
         $successfulRequests = (int) ($stats->successful_requests ?? 0);
-        $totalLatencyMs = (int) ($stats->total_latency_ms ?? 0);
+        $totalLatencyMs = $stats->total_latency_ms ?? 0;
 
         return [
             'total_requests' => $totalRequests,
@@ -390,15 +390,15 @@ class SpectraDailyStat extends Model
                 : 0,
             'total_prompt_tokens' => (int) ($stats->total_prompt_tokens ?? 0),
             'total_completion_tokens' => (int) ($stats->total_completion_tokens ?? 0),
-            'total_tokens' => (int) ($stats->total_tokens ?? 0),
-            'total_images' => (int) ($stats->total_images ?? 0),
-            'total_videos' => (int) ($stats->total_videos ?? 0),
+            'total_tokens' => $stats->total_tokens ?? 0,
+            'total_images' => $stats->total_images ?? 0,
+            'total_videos' => $stats->total_videos ?? 0,
             'total_duration_seconds' => (float) ($stats->total_duration_seconds ?? 0),
-            'total_input_characters' => (int) ($stats->total_input_characters ?? 0),
-            'total_reasoning_tokens' => (int) ($stats->total_reasoning_tokens ?? 0),
-            'total_cached_tokens' => (int) ($stats->total_cached_tokens ?? 0),
-            'total_cache_write_tokens' => (int) ($stats->total_cache_write_tokens ?? 0),
-            'total_pages' => (int) ($stats->total_pages ?? 0),
+            'total_input_characters' => $stats->total_input_characters ?? 0,
+            'total_reasoning_tokens' => $stats->total_reasoning_tokens ?? 0,
+            'total_cached_tokens' => $stats->total_cached_tokens ?? 0,
+            'total_cache_write_tokens' => $stats->total_cache_write_tokens ?? 0,
+            'total_pages' => $stats->total_pages ?? 0,
             'total_cost_in_cents' => (float) ($stats->total_cost_in_cents ?? 0),
             'total_cost' => (float) ($stats->total_cost_in_cents ?? 0) / 100,
             'avg_latency_ms' => $totalRequests > 0

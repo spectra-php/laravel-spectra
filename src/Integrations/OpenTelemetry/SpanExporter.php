@@ -23,13 +23,13 @@ class SpanExporter
 
     protected string $serviceVersion;
 
-    /** @var array<string, string> */
+    /** @var array<string, scalar> */
     protected array $resourceAttributes = [];
 
     protected SpanBuilder $spanBuilder;
 
     /**
-     * @param  array<string, string>  $resourceAttributes
+     * @param  array<string, scalar>  $resourceAttributes
      */
     public function __construct(
         ?string $serviceName = null,

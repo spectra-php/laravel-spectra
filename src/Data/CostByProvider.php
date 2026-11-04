@@ -25,7 +25,7 @@ readonly class CostByProvider extends DataTransferObject
     {
         return $items->map(fn (SpectraRequest $item) => new self(
             provider: $item->provider,
-            cost: (float) $item->cost,
+            cost: $item->cost,
         ));
     }
 }

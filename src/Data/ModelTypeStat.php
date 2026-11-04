@@ -34,9 +34,9 @@ readonly class ModelTypeStat extends DataTransferObject
             label: $row->model_type
                 ? (ModelType::tryFrom($row->model_type)?->label() ?? $row->model_type)
                 : 'Unknown',
-            count: (int) $row->count,
-            cost: (float) $row->cost,
-            avg_latency: (float) $row->avg_latency,
+            count: $row->count,
+            cost: $row->cost,
+            avg_latency: $row->avg_latency,
         ));
     }
 }

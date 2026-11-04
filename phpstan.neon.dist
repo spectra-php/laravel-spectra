@@ -7,3 +7,15 @@ parameters:
         - src
     tmpDir: build/phpstan
     reportUnmatchedIgnoredErrors: true
+
+# From phpstan-strict-rules only the useless-cast check (the extension
+# installer skips the package's own config): a value is cast where it enters
+# untyped, never again once it has its type.
+services:
+    -
+        class: PHPStan\Rules\Cast\UselessCastRule
+        arguments:
+            treatPhpDocTypesAsCertain: %treatPhpDocTypesAsCertain%
+            treatPhpDocTypesAsCertainTip: %tips.treatPhpDocTypesAsCertain%
+        tags:
+            - phpstan.rules.rule

@@ -30,9 +30,9 @@ class BuildModelBreakdown
                 'provider' => $row->provider,
                 'provider_display_name' => $row->provider_display_name,
                 'model' => $row->model,
-                'request_count' => (int) $row->request_count,
-                'total_cost_in_cents' => (float) $row->cost,
-                'total_tokens' => (int) $row->tokens,
+                'request_count' => $row->request_count,
+                'total_cost_in_cents' => $row->cost,
+                'total_tokens' => $row->tokens,
             ])
             ->values()
             ->all();

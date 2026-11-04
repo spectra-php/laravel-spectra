@@ -543,8 +543,8 @@ class ResponseProcessor
      */
     protected function resolveAudioModelType(array $modelData, string $modelSlug): ModelType
     {
-        $canAudio = (bool) $modelData['can_generate_audio'];
-        $canText = (bool) $modelData['can_generate_text'];
+        $canAudio = $modelData['can_generate_audio'];
+        $canText = $modelData['can_generate_text'];
 
         // TTS: generates audio but not text
         if ($canAudio && ! $canText) {

@@ -32,13 +32,13 @@ readonly class UsageByProvider extends DataTransferObject
     {
         return $items->map(fn (SpectraRequest $item) => new self(
             provider: $item->provider,
-            requests: (int) $item->requests,
-            tokens: (int) $item->tokens_sum,
-            images: (int) $item->images_sum,
-            videos: (int) $item->videos_sum,
-            tts_characters: (int) $item->tts_characters_sum,
-            audio_duration: (float) $item->audio_duration_sum,
-            cost: (float) $item->cost,
+            requests: $item->requests,
+            tokens: $item->tokens_sum,
+            images: $item->images_sum,
+            videos: $item->videos_sum,
+            tts_characters: $item->tts_characters_sum,
+            audio_duration: $item->audio_duration_sum,
+            cost: $item->cost,
         ));
     }
 }

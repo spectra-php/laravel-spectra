@@ -52,7 +52,7 @@ class ScrapePricingCommand extends Command
             return self::FAILURE;
         }
 
-        $file = $this->option('path') ? new ScrapedPricesFile((string) $this->option('path')) : PricingCatalog::scrapedPricesFile();
+        $file = $this->option('path') ? new ScrapedPricesFile($this->option('path')) : PricingCatalog::scrapedPricesFile();
 
         try {
             $data = $file->read();
@@ -63,7 +63,7 @@ class ScrapePricingCommand extends Command
         }
 
         $scraper = FirecrawlPriceScraper::fromConfig();
-        $urls = array_values(array_filter((array) $this->option('url')));
+        $urls = array_values(array_filter($this->option('url')));
         $scraped = 0;
 
         foreach ($catalogs as $provider => $pricing) {
@@ -141,7 +141,7 @@ class ScrapePricingCommand extends Command
     protected function catalogsToScrape(): ?array
     {
         $builtIn = PricingCatalog::builtIn();
-        $requested = array_values(array_filter((array) $this->argument('provider')));
+        $requested = array_values(array_filter($this->argument('provider')));
 
         if ($this->option('url') && count($requested) !== 1) {
             $this->components->error('--url needs exactly one provider, e.g. `spectra:pricing-scrape openai --url=https://...`.');

@@ -28,9 +28,9 @@ readonly class UsageByModel extends DataTransferObject
     {
         return $items->map(fn (SpectraRequest $item) => new self(
             model: $item->model,
-            requests: (int) $item->requests,
-            tokens: (int) $item->tokens_sum,
-            cost: (float) $item->cost,
+            requests: $item->requests,
+            tokens: $item->tokens_sum,
+            cost: $item->cost,
         ));
     }
 }
