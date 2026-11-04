@@ -6,8 +6,10 @@ namespace Workbench\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Spectra\Enums\ScoreSource;
 use Spectra\Enums\SpanKind;
 use Spectra\Facades\Spectra;
+use Spectra\Models\SpectraRequest;
 use Spectra\Support\Tracking\ProviderErrorException;
 use Spectra\Support\Tracking\SpanStack;
 use Workbench\App\Models\User;
@@ -152,7 +154,12 @@ class DatabaseSeeder extends Seeder
                 }
 
                 Carbon::setTestNow($at->copy()->addMilliseconds(mt_rand(10, 80)));
+                $traceId = Spectra::currentTraceId();
                 app(SpanStack::class)->finishUnit($unitKey);
+
+                if ($conversation !== null && $traceId !== null) {
+                    $this->scoreChatTurn($traceId, $conversation['id'], $user);
+                }
 
                 if ($step === 0) {
                     $i++;
@@ -161,6 +168,34 @@ class DatabaseSeeder extends Seeder
         }
 
         Carbon::setTestNow();
+    }
+
+    /**
+     * Score some chat answers the way an app would: the user's thumbs up or
+     * down on the answer, a model's 1-5 rating of the last call, and now and
+     * then the conversation's sentiment.
+     */
+    protected function scoreChatTurn(string $traceId, string $conversationId, User $user): void
+    {
+        $lastCall = SpectraRequest::query()->where('trace_id', $traceId)->latest('created_at')->value('id');
+
+        if (mt_rand(1, 100) <= 45) {
+            $helpful = mt_rand(1, 100) <= 78;
+            $comments = $helpful
+                ? [null, null, null, 'Exactly what I needed', 'Clear and quick, thanks']
+                : [null, 'It ignored my order number', 'Too long, I just wanted the steps', 'Wrong refund policy'];
+
+            Spectra::score('helpful', $helpful, traceId: $traceId, comment: $comments[mt_rand(0, count($comments) - 1)], source: ScoreSource::User, author: $user);
+        }
+
+        if ($lastCall !== null && mt_rand(1, 100) <= 35) {
+            Spectra::score('answer_quality', mt_rand(25, 50) / 10, request: $lastCall, source: ScoreSource::Model, metadata: ['judge' => 'gpt-5.4-mini']);
+        }
+
+        if (mt_rand(1, 100) <= 10) {
+            $sentiments = ['positive', 'positive', 'neutral', 'negative'];
+            Spectra::score('sentiment', $sentiments[mt_rand(0, 3)], conversationId: $conversationId, source: ScoreSource::Model);
+        }
     }
 
     /**

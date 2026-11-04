@@ -7,7 +7,9 @@ namespace Spectra\Facades;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Facade;
 use Spectra\Data\TokenMetrics;
+use Spectra\Enums\ScoreSource;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraScore;
 use Spectra\Support\Query\CostQueryBuilder;
 use Spectra\Support\Query\UsageQueryBuilder;
 use Spectra\Support\Tracking\RequestContext;
@@ -25,6 +27,7 @@ use Spectra\Testing\SpectraFake;
  * @method static SpectraRequest recordFailure(RequestContext $context, \Throwable $exception, ?int $httpStatus = null)
  * @method static mixed track(string $provider, string $model, callable $callback, array<string, mixed> $options = [])
  * @method static mixed span(string $name, callable $callback, array<string, mixed> $attributes = [])
+ * @method static SpectraScore|null score(string $name, int|float|bool|string $value, SpectraRequest|string|null $request = null, ?string $traceId = null, ?string $conversationId = null, ?string $comment = null, ScoreSource|string $source = ScoreSource::Api, ?Model $author = null, array<string, mixed> $metadata = [])
  * @method static StreamingTracker stream(?string $provider = null, ?string $model = null, array<string, mixed> $options = [])
  * @method static \Spectra\Spectra addGlobalTags(array<int, string> $tags)
  * @method static mixed withTags(array<int, string> $tags, callable $callback)
@@ -56,6 +59,9 @@ use Spectra\Testing\SpectraFake;
  * @method static void assertTotalTokens(int $expectedTokens)
  * @method static void assertSpanRecorded(string $name, ?callable $callback = null)
  * @method static array<int, array<string, mixed>> getSpans()
+ * @method static void assertScored(string $name, ?callable $callback = null)
+ * @method static void assertNotScored(?string $name = null)
+ * @method static array<int, array<string, mixed>> getScores()
  * @method static array<int, array<string, mixed>> getRecorded()
  * @method static array<int, array<string, mixed>> getSuccessful()
  * @method static array<int, array<string, mixed>> getFailed()

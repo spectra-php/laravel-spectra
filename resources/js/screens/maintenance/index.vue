@@ -29,7 +29,7 @@ const canManage = computed(() => status.value?.can_manage === true);
 const preview = computed(() => status.value?.preview || {});
 const totals = computed(() => status.value?.totals || {});
 const pending = computed(() => status.value?.pending || {});
-const nothingToPrune = computed(() => !preview.value.requests && !preview.value.spans && !preview.value.daily_stats);
+const nothingToPrune = computed(() => !preview.value.requests && !preview.value.spans && !preview.value.scores && !preview.value.daily_stats);
 
 const queryString = () => {
     const params = new URLSearchParams({ hours: String(hours.value) });
@@ -121,6 +121,7 @@ const pruneSummary = computed(() => {
     const parts = [`${formatNumber(preview.value.requests || 0)} requests`];
     if (preview.value.requests_with_media) parts.push(`the media of ${formatNumber(preview.value.requests_with_media)} of them`);
     parts.push(`${formatNumber(preview.value.spans || 0)} spans`);
+    if (preview.value.scores) parts.push(`${formatNumber(preview.value.scores)} scores`);
     if (pruneStats.value) parts.push(`${formatNumber(preview.value.daily_stats || 0)} daily stats`);
 
     return parts.join(', ');
@@ -176,7 +177,7 @@ onUnmounted(() => clearTimeout(pollTimer));
                 </div>
                 <div class="card-body space-y-4">
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Deletes requests and spans older than the retention, with the media files stored for them. Daily stats, the history behind the charts, are kept unless you prune them too. This can't be undone.
+                        Deletes requests, spans and scores older than the retention, with the media files stored for them. Daily stats, the history behind the charts, are kept unless you prune them too. This can't be undone.
                     </p>
 
                     <div class="flex flex-wrap items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
@@ -220,7 +221,7 @@ onUnmounted(() => clearTimeout(pollTimer));
 
                     <div v-if="status?.last_prune" class="border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
                         Last pruned {{ formatDateTime(status.last_prune.at) }}, keeping {{ retentionLabel(status.last_prune.hours) }}:
-                        {{ formatNumber(status.last_prune.requests) }} requests, {{ formatNumber(status.last_prune.spans) }} spans,
+                        {{ formatNumber(status.last_prune.requests) }} requests, {{ formatNumber(status.last_prune.spans) }} spans,<template v-if="status.last_prune.scores"> {{ formatNumber(status.last_prune.scores) }} scores,</template>
                         {{ formatNumber(status.last_prune.media_files) }} media files and {{ formatNumber(status.last_prune.daily_stats) }} daily stats.
                     </div>
                 </div>

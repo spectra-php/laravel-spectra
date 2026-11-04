@@ -17,6 +17,7 @@ use Spectra\Http\Controllers\Api\Maintenance\RebuildStatsController;
 use Spectra\Http\Controllers\Api\Maintenance\RecordingController;
 use Spectra\Http\Controllers\Api\ProvidersController;
 use Spectra\Http\Controllers\Api\RequestsController;
+use Spectra\Http\Controllers\Api\ScoresController;
 use Spectra\Http\Controllers\Api\ServeAudioController;
 use Spectra\Http\Controllers\Api\ServeImageController;
 use Spectra\Http\Controllers\Api\ShowConversationController;
@@ -46,6 +47,7 @@ Route::prefix('api')->group(function () {
     Route::get('/conversations', ConversationsController::class);
     Route::get('/conversations/{conversationId}', ShowConversationController::class)->where('conversationId', '.*');
     Route::get('/costs', CostsController::class);
+    Route::get('/scores', ScoresController::class);
     Route::get('/tags', TagsController::class);
     Route::get('/trackables', TrackablesController::class);
     Route::get('/trackables/view/{id}', ShowTrackableController::class);

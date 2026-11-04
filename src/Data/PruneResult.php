@@ -17,5 +17,6 @@ readonly class PruneResult extends DataTransferObject
         public int $spans,
         public int $media_files,
         public int $daily_stats,
+        public int $scores = 0,
     ) {}
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Data\Responses;
 
 use Spectra\Data\DataTransferObject;
+use Spectra\Data\ScoreEntry;
 
 /**
  * One conversation as a transcript: its totals and its turns in order, each
@@ -20,6 +21,7 @@ readonly class ConversationDetailsResponse extends DataTransferObject
      * @param  array<int, array<string, mixed>>  $models
      * @param  array<int, string>  $tags
      * @param  array<string, mixed>|null  $trackable
+     * @param  array<int, ScoreEntry>  $scores
      */
     public function __construct(
         public string $conversation_id,
@@ -37,5 +39,6 @@ readonly class ConversationDetailsResponse extends DataTransferObject
         public array $models,
         public array $tags,
         public ?array $trackable,
+        public array $scores = [],
     ) {}
 }

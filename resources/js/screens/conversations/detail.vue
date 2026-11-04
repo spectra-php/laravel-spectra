@@ -7,6 +7,7 @@ import Breadcrumb from '@/components/Breadcrumb.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import Money from '@/components/Money.vue';
+import ScoresCard from '@/components/ScoresCard.vue';
 
 const route = useRoute();
 const { formatNumber, formatDuration, apiRequest } = useHelpers();
@@ -224,6 +225,8 @@ const missingReply = computed(() => conversation.value?.stores_responses ? 'No r
                             </li>
                         </ul>
                     </div>
+
+                    <ScoresCard v-if="conversation.scores?.length" :scores="conversation.scores" />
 
                     <!-- Context -->
                     <div class="card">

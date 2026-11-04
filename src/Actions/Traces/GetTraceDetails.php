@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use Spectra\Actions\Requests\BuildModelBreakdown;
+use Spectra\Actions\Scores\GetScores;
 use Spectra\Actions\Trackables\ResolveSoleTrackable;
 use Spectra\Data\Responses\TraceDetailsResponse;
 use Spectra\Models\SpectraRequest;
@@ -40,6 +41,7 @@ class GetTraceDetails
     public function __construct(
         private readonly BuildModelBreakdown $buildModelBreakdown,
         private readonly ResolveSoleTrackable $resolveSoleTrackable,
+        private readonly GetScores $getScores,
     ) {}
 
     /**
@@ -127,6 +129,7 @@ class GetTraceDetails
             models: ($this->buildModelBreakdown)(RequestAggregateQuery::make()->forTrace($traceId)),
             tags: $this->tags($traceId),
             trackable: ($this->resolveSoleTrackable)(RequestAggregateQuery::make()->forTrace($traceId)),
+            scores: ($this->getScores)(traceId: $traceId),
         );
     }
 

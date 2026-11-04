@@ -6,10 +6,10 @@ namespace Spectra\Support;
 
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
-use Spectra\Models\SpectraRequest;
 
 /**
  * The period a dashboard screen asks for, read from the request's `period`,
@@ -89,7 +89,9 @@ readonly class DateRange
     /**
      * Limit the query to rows whose date column falls in the range.
      *
-     * @param  Builder<SpectraRequest>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function apply(Builder $query, string $column = 'created_at'): void
     {

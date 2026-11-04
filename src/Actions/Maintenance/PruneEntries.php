@@ -9,12 +9,13 @@ use Illuminate\Support\Facades\Storage;
 use Spectra\Data\PruneResult;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraScore;
 use Spectra\Models\SpectraSpan;
 use Spectra\Support\Maintenance\MaintenanceHistory;
 use Throwable;
 
 /**
- * Deletes requests and spans older than the retention, the media files
+ * Deletes requests, spans and scores older than the retention, the media files
  * stored for those requests, and, only when asked, old daily stats.
  *
  * Daily stats are the long-term history behind the dashboard charts, so they
@@ -42,6 +43,7 @@ class PruneEntries
             spans: static::spansTableExists() ? $this->pruneSpans($cutoff, $chunk) : 0,
             media_files: $mediaFiles,
             daily_stats: $statsDays === null ? 0 : $this->pruneDailyStats($statsDays),
+            scores: static::scoresTableExists() ? $this->pruneScores($cutoff, $chunk) : 0,
         );
 
         MaintenanceHistory::record(MaintenanceHistory::PRUNE, [
@@ -62,6 +64,17 @@ class PruneEntries
         $span = new SpectraSpan;
 
         return $span->getConnection()->getSchemaBuilder()->hasTable($span->getTable());
+    }
+
+    /**
+     * An app that updated Spectra but hasn't run the scores migration yet has
+     * no spectra_scores table; pruning the rest must still work there.
+     */
+    public static function scoresTableExists(): bool
+    {
+        $score = new SpectraScore;
+
+        return $score->getConnection()->getSchemaBuilder()->hasTable($score->getTable());
     }
 
     /**
@@ -104,6 +117,22 @@ class PruneEntries
         do {
             $spanIds = SpectraSpan::query()->where('started_at', '<', $cutoff)->limit($chunk)->pluck('id');
             $deleted = $spanIds->isEmpty() ? 0 : SpectraSpan::query()->whereKey($spanIds->all())->delete();
+            $count += $deleted;
+        } while ($deleted > 0);
+
+        return $count;
+    }
+
+    /**
+     * Delete scores created before the cutoff in chunks and return how many were deleted.
+     */
+    protected function pruneScores(CarbonInterface $cutoff, int $chunk): int
+    {
+        $count = 0;
+
+        do {
+            $scoreIds = SpectraScore::query()->where('created_at', '<', $cutoff)->limit($chunk)->pluck('id');
+            $deleted = $scoreIds->isEmpty() ? 0 : SpectraScore::query()->whereKey($scoreIds->all())->delete();
             $count += $deleted;
         } while ($deleted > 0);
 

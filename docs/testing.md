@@ -83,6 +83,21 @@ $fake->assertSpanRecorded('answer-question', fn (array $span) => $span['status']
 $spans = $fake->getSpans(); // name, attributes, status ('ok' or 'error') and exception of each
 ```
 
+<a name="scores"></a>
+### Scores
+
+The fake checks `Spectra::score()` the same way and keeps the scores in memory instead of saving them. Without a target, a score goes to the current trace (or `fake-trace`):
+
+```php
+$fake->assertScored('helpful');
+
+$fake->assertScored('helpful', fn (array $score) => $score['value'] === 1.0 && $score['comment'] === 'Thanks');
+
+$fake->assertNotScored('answer_quality');
+
+$scores = $fake->getScores(); // the columns each score would be saved with
+```
+
 ### Custom Assertions
 
 For more complex checks, pass a callback that receives the recorded request data and returns a boolean:

@@ -13,6 +13,20 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 ## v3.1.0 - 2026-11-04
 
+#### Added
+
+- Scores: `Spectra::score('helpful', true, traceId: $id)` records user feedback, a model's judgement or a reviewer's label on a call, a trace or a conversation. A yes/no, a number or a category; with a comment, its source (`ScoreSource::User`, `Model`, `Annotation`, `Api`), the user who gave it, and metadata. Without a target it scores the current trace
+- Scores: the Overview has a Scores card (share of yes, average, top labels per score name), and the request, trace and conversation pages list their scores. `ScoreRecorded` fires for every saved score, and `spectra:prune` deletes old scores with the requests
+- Testing: `Spectra::fake()` keeps scores in memory; `assertScored()`, `assertNotScored()` and `getScores()`
+
+#### Changed
+
+- `RequestContext::$id` is the id the call is saved under (a UUID), so code inside `Spectra::track()` can score the call before it is saved. It used to be a separate ULID that was never stored
+
+#### Upgrading
+
+- Run `php artisan spectra:install` to publish and run the new `create_spectra_scores_table` migration. Until you do, `Spectra::score()` returns `null` and logs a warning once per process; tracking is not affected
+
 #### Fixed
 
 - Dashboard: every price uses one format: two decimals from $1 (`$1,234.56`), four below (`$0.0579`, `$0.0007`), and `<$0.0001` for less, with the exact amount on hover. Tiny costs no longer show in e-notation (`$1.8e-8`), and the cost charts' axes and tooltips use the same format

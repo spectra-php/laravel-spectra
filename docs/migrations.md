@@ -81,6 +81,17 @@ php artisan spectra:install
 
 Until it runs, Spectra keeps recording calls, skips spans and logs a warning once per process. Calls saved before the migration have no `span_id` and show flat on the trace page.
 
+<a name="scores-migration"></a>
+## The Scores Migration
+
+`create_spectra_scores_table` creates the `spectra_scores` table for [scores](/scores). Run the installer to publish and run it:
+
+```shell
+php artisan spectra:install
+```
+
+Until it runs, `Spectra::score()` returns `null` and logs a warning once per process; tracking is not affected.
+
 ### Custom Database Connection
 
 All Spectra migrations use the `spectra.storage.connection` config value. To store Spectra data in a separate database, set the connection in `config/spectra.php`:

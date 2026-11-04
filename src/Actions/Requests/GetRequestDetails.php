@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Requests;
 
+use Spectra\Actions\Scores\GetScores;
 use Spectra\Actions\Traces\GetTraceDetails;
 use Spectra\Data\Responses\RequestDetailsResponse;
 use Spectra\Models\SpectraRequest;
@@ -25,6 +26,7 @@ class GetRequestDetails
     public function __construct(
         private readonly PricingLookup $pricingLookup,
         private readonly GetTraceDetails $getTraceDetails,
+        private readonly GetScores $getScores,
     ) {}
 
     /**
@@ -54,6 +56,8 @@ class GetRequestDetails
         if (in_array($request->model_type, ['image', 'tts', 'video'], true)) {
             $data['media_storage_enabled'] = (bool) config('spectra.storage.media.enabled');
         }
+
+        $data['scores'] = ($this->getScores)(requestId: $request->id);
 
         $data['trace'] = filled($request->trace_id)
             ? ($this->getTraceDetails)($request->trace_id, $request->id, self::TRACE_LIMIT)?->toArray()

@@ -13,6 +13,7 @@ import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Sparkline from '@/components/Sparkline.vue';
 import Money from '@/components/Money.vue';
+import ScoreSummaryCard from '@/components/ScoreSummaryCard.vue';
 
 const router = useRouter();
 const { formatNumber, formatCompact, formatShortDate, formatDuration, formatDurationSeconds, truncate, providerChartColor, seriesColor, apiRequest } = useHelpers();
@@ -87,8 +88,20 @@ const loadConfig = async () => {
     }
 };
 
+// The Scores card; empty (and hidden) until the app records scores.
+const scoreSummary = ref([]);
+
+const loadScores = async () => {
+    try {
+        scoreSummary.value = (await apiRequest('get', '/scores?' + buildQueryParams().toString())).scores || [];
+    } catch (error) {
+        scoreSummary.value = [];
+    }
+};
+
 const loadStats = async () => {
     loading.value = true;
+    loadScores();
     try {
         const data = await apiRequest('get', '/stats?' + buildQueryParams().toString());
         stats.value = data;
@@ -493,6 +506,8 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
+
+        <ScoreSummaryCard v-if="scoreSummary.length" class="mt-4" :scores="scoreSummary" />
 
         <!-- Latency by model type -->
         <div

@@ -7,6 +7,7 @@ namespace Spectra\Actions\Maintenance;
 use Spectra\Data\PrunePreview;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraScore;
 use Spectra\Models\SpectraSpan;
 
 /**
@@ -16,7 +17,7 @@ use Spectra\Models\SpectraSpan;
 class PreviewPrune
 {
     /**
-     * Count the requests, spans and daily stats older than the retention.
+     * Count the requests, spans, scores and daily stats older than the retention.
      */
     public function __invoke(int $hours, ?int $statsDays = null): PrunePreview
     {
@@ -33,6 +34,7 @@ class PreviewPrune
             daily_stats: $statsDays === null ? 0 : SpectraDailyStat::query()
                 ->where('date', '<', now()->subDays(max(0, $statsDays))->toDateString())
                 ->count(),
+            scores: PruneEntries::scoresTableExists() ? SpectraScore::query()->where('created_at', '<', $cutoff)->count() : 0,
         );
     }
 }

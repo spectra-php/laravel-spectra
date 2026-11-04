@@ -46,6 +46,7 @@ it('publishes only the missing migrations when run again', function () {
         'add_v2_tracking_columns_to_spectra_tables.php',
         'change_trackable_id_to_string_on_spectra_tables.php',
         'create_spectra_entries.php',
+        'create_spectra_scores_table.php',
     ]);
 
     // Nothing left to publish the third time.

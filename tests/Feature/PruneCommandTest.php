@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraScore;
 
 /**
  * spectra:prune deletes old requests and their media, keeps daily stats
@@ -44,4 +45,19 @@ it('prunes requests when the spans table does not exist yet', function () {
 
     expect(SpectraRequest::query()->count())->toBe(0)
         ->and(SpectraDailyStat::query()->count())->toBe(0);
+});
+
+it('prunes scores older than the cutoff, and works before the scores migration runs', function () {
+    SpectraScore::query()->create(['name' => 'helpful', 'type' => 'boolean', 'value' => 1, 'source' => 'user', 'trace_id' => 't1', 'created_at' => now()->subDays(3)]);
+    $recent = SpectraScore::query()->create(['name' => 'helpful', 'type' => 'boolean', 'value' => 0, 'source' => 'user', 'trace_id' => 't2']);
+
+    $this->artisan('spectra:prune', ['--hours' => 24, '--chunk' => 1])
+        ->expectsOutputToContain('1 scores')
+        ->assertSuccessful();
+
+    expect(SpectraScore::query()->pluck('id')->all())->toBe([$recent->id]);
+
+    Schema::connection(config('spectra.storage.connection'))->drop('spectra_scores');
+
+    $this->artisan('spectra:prune')->assertSuccessful();
 });

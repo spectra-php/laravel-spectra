@@ -9,9 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use Spectra\Data\TokenMetrics;
+use Spectra\Enums\ScoreSource;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraScore;
 use Spectra\Support\Query\CostQueryBuilder;
 use Spectra\Support\Query\UsageQueryBuilder;
+use Spectra\Support\Scoring\ScoreRecorder;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\ResponseProcessor;
@@ -232,6 +235,45 @@ class Spectra
         }
 
         return $result;
+    }
+
+    /**
+     * Record a score on an AI call, a trace or a conversation: a user's
+     * thumbs up, a rating, a model's judgement or a reviewer's label.
+     *
+     * The value's type sets the score's: true/false is a yes/no score, a
+     * number is a numeric one, a string is a category. Without a call,
+     * trace or conversation, the score goes to the current trace.
+     *
+     *   Spectra::score('helpful', true, traceId: $traceId, source: ScoreSource::User);
+     *   Spectra::score('accuracy', 0.82, request: $requestId, source: ScoreSource::Model);
+     *   Spectra::score('sentiment', 'positive', conversationId: $chat->id);
+     *
+     * Returns the saved score, or null when it could not be saved (Spectra
+     * disabled, the scores migration not run yet, or a database error,
+     * which is reported). A wrong argument throws an InvalidArgumentException.
+     *
+     * @param  SpectraRequest|string|null  $request  The call, or its id ($context->id inside Spectra::track())
+     * @param  array<string, mixed>  $metadata
+     */
+    public function score(
+        string $name,
+        int|float|bool|string $value,
+        SpectraRequest|string|null $request = null,
+        ?string $traceId = null,
+        ?string $conversationId = null,
+        ?string $comment = null,
+        ScoreSource|string $source = ScoreSource::Api,
+        ?Model $author = null,
+        array $metadata = [],
+    ): ?SpectraScore {
+        if ($request === null && $traceId === null && $conversationId === null) {
+            $traceId = $this->currentTraceId();
+        }
+
+        return $this->app->make(ScoreRecorder::class)->record(
+            $name, $value, $request, $traceId, $conversationId, $comment, $source, $author, $metadata,
+        );
     }
 
     /**

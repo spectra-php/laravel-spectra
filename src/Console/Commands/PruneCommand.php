@@ -25,7 +25,7 @@ class PruneCommand extends Command
     protected $description = 'Prune stale entries from the Spectra database';
 
     /**
-     * Delete requests, spans and their media older than the cutoff, and old daily stats when asked.
+     * Delete requests, spans, scores and media older than the cutoff, and old daily stats when asked.
      */
     public function handle(PruneEntries $prune): int
     {
@@ -37,7 +37,7 @@ class PruneCommand extends Command
             chunk: (int) $this->option('chunk'),
         );
 
-        $this->info("{$result->requests} requests, {$result->spans} spans, {$result->media_files} media files and {$result->daily_stats} daily stats pruned.");
+        $this->info("{$result->requests} requests, {$result->spans} spans, {$result->scores} scores, {$result->media_files} media files and {$result->daily_stats} daily stats pruned.");
 
         return self::SUCCESS;
     }

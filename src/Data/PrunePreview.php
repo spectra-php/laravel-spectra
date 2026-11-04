@@ -20,5 +20,6 @@ readonly class PrunePreview extends DataTransferObject
         public int $requests_with_media,
         public int $spans,
         public int $daily_stats,
+        public int $scores = 0,
     ) {}
 }

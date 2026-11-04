@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Spectra\Testing;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use PHPUnit\Framework\Assert;
 use Spectra\Data\TokenMetrics;
+use Spectra\Enums\ScoreSource;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraScore;
 use Spectra\Spectra;
+use Spectra\Support\Scoring\ScoreRecorder;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\ResponseProcessor;
 
@@ -33,6 +37,13 @@ class SpectraFake extends Spectra
      * @var array<int, array{name: string, attributes: array<string, mixed>, status: string, exception: ?\Throwable}>
      */
     protected array $spans = [];
+
+    /**
+     * Scores recorded with score(), as the columns they would be saved with.
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    protected array $scores = [];
 
     protected bool $enabled = true;
 
@@ -169,6 +180,73 @@ class SpectraFake extends Spectra
         );
 
         Assert::assertNotEmpty($matching, "Expected a span named [{$name}] to be recorded, but none matched.");
+    }
+
+    /**
+     * Check the score like Spectra::score() and remember it instead of saving it.
+     *
+     * @param  array<string, mixed>  $metadata
+     */
+    public function score(
+        string $name,
+        int|float|bool|string $value,
+        SpectraRequest|string|null $request = null,
+        ?string $traceId = null,
+        ?string $conversationId = null,
+        ?string $comment = null,
+        ScoreSource|string $source = ScoreSource::Api,
+        ?Model $author = null,
+        array $metadata = [],
+    ): ?SpectraScore {
+        if ($request === null && $traceId === null && $conversationId === null) {
+            $traceId = $this->currentTraceId() ?? 'fake-trace';
+        }
+
+        $attributes = app(ScoreRecorder::class)->attributes(
+            $name, $value, $request, $traceId, $conversationId, $comment, $source, $author, $metadata,
+        );
+
+        if (! $this->isEnabled()) {
+            return null;
+        }
+
+        $this->scores[] = $attributes;
+
+        return new SpectraScore($attributes);
+    }
+
+    /**
+     * Get the scores recorded with score(), as the columns they would be saved with.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getScores(): array
+    {
+        return $this->scores;
+    }
+
+    /**
+     * Assert a score with this name was recorded, and that the callback (given
+     * the score's columns) accepts one of them when given.
+     */
+    public function assertScored(string $name, ?callable $callback = null): void
+    {
+        $matching = Arr::where(
+            $this->scores,
+            fn (array $score) => $score['name'] === $name && ($callback === null || $callback($score)),
+        );
+
+        Assert::assertNotEmpty($matching, "Expected a score named [{$name}] to be recorded, but none matched.");
+    }
+
+    /**
+     * Assert no score was recorded, or none with this name.
+     */
+    public function assertNotScored(?string $name = null): void
+    {
+        $matching = Arr::where($this->scores, fn (array $score) => $name === null || $score['name'] === $name);
+
+        Assert::assertEmpty($matching, $name === null ? 'Expected no scores to be recorded.' : "Expected no score named [{$name}] to be recorded.");
     }
 
     /**
@@ -386,6 +464,7 @@ class SpectraFake extends Spectra
     {
         $this->recorded = [];
         $this->spans = [];
+        $this->scores = [];
 
         return $this;
     }

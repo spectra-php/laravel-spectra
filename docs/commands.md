@@ -42,7 +42,7 @@ php artisan spectra:prune [--hours=24] [--stats-days=] [--chunk=1000]
 | `--stats-days=` | (not set) | Also delete daily stats older than N days. Without this option, daily stats are kept. |
 | `--chunk=` | `1000` | How many rows to delete per query |
 
-The command deletes rows from `spectra_requests` whose `created_at` is older than the cutoff, and rows from `spectra_spans` that started before it. It works in chunks, so a large table is not locked by one huge query. Their tags in `spectra_requests_tags` are removed by cascade delete. Media files stored for these requests (see [Media Persistence](/configuration#media-persistence)) are deleted from the media disk too.
+The command deletes rows from `spectra_requests` whose `created_at` is older than the cutoff, rows from `spectra_spans` that started before it, and rows from `spectra_scores` created before it. It works in chunks, so a large table is not locked by one huge query. Their tags in `spectra_requests_tags` are removed by cascade delete. Media files stored for these requests (see [Media Persistence](/configuration#media-persistence)) are deleted from the media disk too.
 
 Daily stats (`spectra_daily_stats`) are the long-term history behind the dashboard charts, so they are **kept** by default. Pass `--stats-days` to prune them too.
 

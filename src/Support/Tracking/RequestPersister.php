@@ -107,6 +107,7 @@ class RequestPersister
         $response = $data['response'] ?? null;
 
         return [
+            'id' => $context->id,
             'batch_id' => $data['batch_id'] ?? null,
             'trace_id' => $data['trace_id'] ?? null,
             'parent_span_id' => $context->parentSpanId,

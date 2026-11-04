@@ -8,6 +8,7 @@ import ProviderLogo from '@/components/ProviderLogo.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import TraceWaterfall from '@/components/TraceWaterfall.vue';
 import Money from '@/components/Money.vue';
+import ScoresCard from '@/components/ScoresCard.vue';
 
 const route = useRoute();
 const { formatNumber, formatDuration, apiRequest } = useHelpers();
@@ -186,6 +187,8 @@ const copyTraceId = async () => {
                             </li>
                         </ul>
                     </div>
+
+                    <ScoresCard v-if="trace.scores?.length" :scores="trace.scores" />
 
                     <!-- Context -->
                     <div class="card">
