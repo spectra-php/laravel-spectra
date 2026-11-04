@@ -12,7 +12,7 @@ paths:
 `SpectraRequest`, `SpectraBudget`, `SpectraTag` and `SpectraDailyStat` read their connection from `config('spectra.storage.connection')` and their tables start with `spectra_`. Keep that for every new model. Ids are UUIDs (`HasUuids`); trackable and budgetable ids are strings, because users' models may use UUID, ULID or integer keys.
 
 ## Keep the @property docblock in step with the migrations
-Each model lists every column as `@property` and every computed or aggregate alias as `@property-read`. When a migration adds a column, add it here in the same change, so PHPStan stays clean.
+Each model lists every column as `@property`, and every accessor and `withCount()` alias as `@property-read`. When a migration adds a column, add it here in the same change, so PHPStan stays clean.
 
 ## Cast every typed column
 Declare casts in `casts()`: `integer`, `boolean`, `array`, `datetime`. Type-hint dates as `CarbonInterface`, never `Illuminate\Support\Carbon`: apps may switch to `CarbonImmutable` with `Date::use()` (`ImmutableDatesTest`). Use the package's existing style (`$guarded = []`, a `$table` only where the name doesn't resolve); the Laravel 13 model attributes are not available on Laravel 12.
@@ -28,6 +28,9 @@ Users run SQLite, MySQL, MariaDB and PostgreSQL. Prefer the query builder; when 
 
 ## Where queries live
 One filter on one model is a scope. Dashboard aggregates go through `Support/Query/RequestAggregateQuery`. `CostQueryBuilder` and `UsageQueryBuilder` back the public `HasAiUsage` API, so their method names are public API. No repositories.
+
+## An aggregate alias never shares a name with an accessor
+Reading an alias through a model runs the accessor of the same name instead: `SUM(prompt_tokens + completion_tokens) as total_tokens` on `SpectraRequest` runs its `totalTokens()` accessor, which adds two columns the query never selected and returns 0. Name aliases for what they sum (`tokens_sum`, as `RequestAggregateQuery`, `UsageQueryBuilder` and `HasAiUsageStats` do), and map them to the public key (`total_tokens`) when you build the result. Aggregating on `toBase()` avoids accessors too.
 
 ## Filter and aggregate in the database
 Never `->get()` a table and filter in PHP. Select only the columns you read, aggregate in SQL, use `pluck()` for lists, and delete or update large sets in chunks (`spectra:prune` deletes in batches so a big table is not locked by one query).

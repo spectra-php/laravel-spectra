@@ -12,12 +12,21 @@ The package supports PHP 8.2 and Laravel 12 and 13 (`composer.json`). Don't use 
 Spectra runs inside other people's apps, on their HTTP calls. A failure while tracking, pricing, persisting or exporting must never reach the user's code: run the step through a guard that calls `report($e)` and carries on (`GuzzleMiddleware::safely()`, `RequestPersister`). Only errors the user asked for may throw: `BudgetExceededException` from a hard limit, and the user's own exception re-thrown from `Spectra::track()`.
 
 ## Check emptiness with filled() / blank()
-Check for an empty value with Laravel's `filled()` / `blank()`. Never write `$x !== ''`, `$x === ''`, `$x !== null && $x !== ''`, `$x === null || $x === ''`, `trim($x) === ''` or `is_string($x) && $x !== ''`. For a value that is already typed (a `?string` property, config, request input read with `$request->string()`), `filled($x)` alone is enough.
+Check for an empty value with Laravel's `filled()` / `blank()`. Never write `empty($x)`, `! empty($x)`, `$x !== ''`, `$x === ''`, `$x !== null && $x !== ''`, `$x === null || $x === ''`, `trim($x) === ''` or `is_string($x) && $x !== ''`. Read a payload key as `filled($data['key'] ?? null)`. For a local array that PHPStan must see as non-empty afterwards (`max()`, `$items[array_key_first($items)]`), compare with `=== []`. A flag that is truthy, not filled, reads as `if ($data['stream'] ?? false)`. For a value that is already typed (a `?string` property, config, request input read with `$request->string()`), `filled($x)` alone is enough.
 Exception: streamed text deltas and raw stream bytes (`StreamingTracker`, `TrackedStream`, `StreamEventParser`), where a lone space or newline is real output, so compare with `''`.
 
 ## Read provider payloads plainly; the pipeline catches bad shapes
 Provider JSON is `mixed` and changes without notice. Read a string with `filled()` alone: `filled($data['model'] ?? null) ? $data['model'] : null`, `($content['type'] ?? null) === 'output_text' && filled($content['text'] ?? null)`. Never pair it with `is_string()`. `ResponseProcessor` and `StreamingTracker` run each extraction step under its own guard, so a value of the wrong type drops only that field and the request is still recorded with its cost.
 Keep a type check only where a wrong type would give a wrong number or a broken loop: `is_numeric()` before a value goes into token or cost maths, `is_array()` before a `foreach`. Never assume a key exists: read with `?? null`, `Arr::get()` or `data_get()`.
+
+## Cast once, where an untyped value enters
+Cast where a value first enters without a type: a provider payload number (`(int) ($usage['prompt_tokens'] ?? 0)`, needed under `strict_types`), a DB aggregate alias, config, a header, a JSON key. Never cast a value that already has its type: `composer analyse` runs phpstan-strict-rules' useless-cast check and fails on one. If the check is wrong because a docblock overstates the type (config a user writes, JSON object keys that decode as ints), fix the docblock and keep the cast. Never silence the check.
+
+## Assign defaults with ??=
+Write `$x ??= $y`, never `$x = $x ?? $y` or `if ($x === null) { $x = $y; }`.
+
+## Empty, not null, for lists
+A list or map that can be empty is `array $x = []`, not `?array $x = null`. Use null only when "absent" must be stored or reported differently from "empty". `RequestContext`'s nullable arrays are public API and stay as they are until a major release.
 
 ## Choose boring code over clever code
 Prefer an early return, `if` or `match` to nested ternaries, and drop the `else` after a `return`. More lines for more clarity is a good trade. Reach for the framework helper first, as `.ai/rules/laravel-first.md` lists.

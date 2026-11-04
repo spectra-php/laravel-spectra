@@ -15,7 +15,7 @@ An Action is invokable: its one public method is `__invoke()` (`tests/Unit/ArchT
 Take a `DateRange`, ids, or the `Request` when the Action reads the dashboard's filters. Return a DTO from `Spectra\Data`, a `Collection<int, XData>`, a paginator or a scalar; give collections and arrays a generic docblock (`@return Collection<int, CostByProvider>`). Never return an HTTP response.
 
 ## Aggregate with RequestAggregateQuery
-Build dashboard aggregates on `Support/Query/RequestAggregateQuery` (`make($dateRange)`, `successfulOnly()`, `forTrackable()`, `successfulCost()`, `byDate()`, `groupByColumns()`, …). Add a method there instead of repeating SQL in an Action. Don't bring back a `Queries/` folder.
+Build dashboard aggregates on `Support/Query/RequestAggregateQuery` (`make($dateRange)`, `successfulOnly()`, `forTrackable()`, `successfulCost()`, `byDate()`, `groupByColumns()`, …). Add a method there instead of repeating SQL in an Action; a new aggregate selects through its protected `aggregate($expression, $alias, $cast)`, so the alias comes back typed on every driver. Actions and row DTOs read those aliases as they are and never cast them again (`AggregateCastsTest` locks the casts). Don't bring back a `Queries/` folder.
 
 ## Counts include failures; cost and latency don't
 Request counts include failed requests. Cost and latency aggregate over 2xx only, through `AggregatesSuccessfulRequests`. A failed request is any status outside 200–299, or null, so success plus failed always equals total. Keep every new aggregate on this convention.

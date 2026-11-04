@@ -36,6 +36,8 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Pricing: dated ids that only add a date to a model id (`claude-sonnet-4-20250514`) are no longer listed as aliases. They resolve to the same price through date stripping, but `getAliases()` no longer returns them
 - Tracking: media downloads time out (30 seconds for images, 60 for videos), and a file that fails is skipped
 - Dev-only files (`bin/`, `whisky.json`, `pint.json`, the PHPStan configs) are no longer in the package download
+- `SpectraRequest::$trackable_id` is always a string, also on a row just created from an integer key, the same as a row read back from the database
+- A whitespace-only API key in config (`spectra.api_keys.*`, `ai.providers.*.key`) counts as unset, like an empty one
 
 #### Fixed
 
@@ -43,6 +45,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Tracking errors no longer reach your code. `Spectra::track()` returns your result when recording fails, a malformed stream chunk is skipped instead of ending your `foreach`, and a provider field of the wrong type drops only that field: the request is still recorded with its cost
 - A retried persist job no longer saves a duplicate row and counts the spend twice, and a failing stats update, budget report, export or `RequestTracked` listener no longer loses the row. A failed save after the response is reported and no longer stops the app's other terminating callbacks
 - Budgets: a database or cache error during the middleware's check is reported and the request goes through, instead of a 500
+- Budgets: the spend recorded for a tracked request is rounded up to whole cents like every other budget total, so float noise can no longer add a cent
 - OpenTelemetry: exports no longer all fail when `SPECTRA_OTEL_TIMEOUT` is set
 - Google: Veo videos tracked over HTTP are billed from the submitted duration and resolution (they were recorded at $0)
 - Pricing: a model from a second catalog that shares a provider slug is converted at its own catalog's currency, so a custom USD `scaleway` catalog no longer makes the built-in EUR prices count as USD. Tool-call prices too
