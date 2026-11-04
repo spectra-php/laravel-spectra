@@ -23,11 +23,17 @@ class TextToSpeechHandler implements ExtractsModelFromRequest, Handler, HasMedia
     /** The model the API uses when the request names none. */
     public const DEFAULT_MODEL = 'eleven_multilingual_v2';
 
+    /**
+     * Get the model type ElevenLabs speech requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Tts;
     }
 
+    /**
+     * Get the ElevenLabs text to speech endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -36,12 +42,17 @@ class TextToSpeechHandler implements ExtractsModelFromRequest, Handler, HasMedia
         ];
     }
 
+    /**
+     * Determine if the path is a text to speech call for a voice, streamed or not.
+     */
     public function matchesEndpoint(string $endpoint): bool
     {
         return (bool) preg_match('#^/v1/text-to-speech/[^/]+(/stream)?$#', $endpoint);
     }
 
     /**
+     * Build the audio usage from the characters of the request text.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -54,13 +65,21 @@ class TextToSpeechHandler implements ExtractsModelFromRequest, Handler, HasMedia
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the placeholder recorded in place of the generated speech.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return '[audio]';
     }
 
-    /** @param  array<string, mixed>  $requestData */
+    /**
+     * Get the request's `model_id`, or ElevenLabs' default speech model.
+     *
+     * @param  array<string, mixed>  $requestData
+     */
     public function extractModelFromRequest(array $requestData, string $endpoint): ?string
     {
         $model = $requestData['model_id'] ?? null;
@@ -69,6 +88,8 @@ class TextToSpeechHandler implements ExtractsModelFromRequest, Handler, HasMedia
     }
 
     /**
+     * Store the speech body as a pcm or mp3 file, following the requested output format.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */

@@ -15,6 +15,9 @@ use Spectra\Support\Tracking\GuzzleMiddleware;
  */
 class WithTrackingMacro
 {
+    /**
+     * Register the Http::withAITracking() macro that tracks a request for the given provider and model.
+     */
     public static function register(): void
     {
         Http::macro('withAITracking', function (string $provider, string $model = 'unknown', array $options = []) {

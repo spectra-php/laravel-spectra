@@ -24,11 +24,17 @@ class RerankHandler implements ExtractsModelFromResponse, Handler, MatchesRespon
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type Cohere rerank requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get the Cohere v1 and v2 rerank endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -38,6 +44,8 @@ class RerankHandler implements ExtractsModelFromResponse, Handler, MatchesRespon
     }
 
     /**
+     * Build the billed search units of a Cohere rerank response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -54,7 +62,11 @@ class RerankHandler implements ExtractsModelFromResponse, Handler, MatchesRespon
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Describe a Cohere rerank response by its number of results.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $results = $response['results'] ?? null;
@@ -66,7 +78,11 @@ class RerankHandler implements ExtractsModelFromResponse, Handler, MatchesRespon
         return '[rerank: '.count($results).' results]';
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Cohere rerank response with relevance scores.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return isset($data['results'][0]['relevance_score']);

@@ -23,11 +23,16 @@ use Spectra\Support\Tracking\RequestContext;
  */
 class RequestCostCalculator
 {
+    /**
+     * Create a new request cost calculator instance.
+     */
     public function __construct(
         protected CostCalculator $costCalculator,
     ) {}
 
     /**
+     * Calculate a tracked request's cost in cents, with multipliers, tool-call fees and reported costs.
+     *
      * @return array{prompt_cost?: float, completion_cost?: float, total_cost_in_cents: float}
      */
     public function forContext(RequestContext $context, string|PricingTier|null $pricingTier = null): array
@@ -87,6 +92,9 @@ class RequestCostCalculator
         return $context->model;
     }
 
+    /**
+     * Determine if the request succeeded, so a per-request model bills it.
+     */
     protected function succeeded(RequestContext $context): bool
     {
         return $context->errorType === null && ($context->httpStatus ?? 200) < 400;

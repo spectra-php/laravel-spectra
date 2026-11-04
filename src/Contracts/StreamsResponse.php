@@ -13,5 +13,8 @@ use Spectra\Support\Tracking\StreamHandler;
  */
 interface StreamsResponse
 {
+    /**
+     * Get the handler that reads text, usage and finish reason from stream chunks.
+     */
     public function streamingHandler(): StreamHandler;
 }

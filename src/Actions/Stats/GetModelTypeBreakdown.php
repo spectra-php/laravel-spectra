@@ -16,6 +16,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetModelTypeBreakdown
 {
     /**
+     * Get the requests, cost and latency per model type for the date range and layout.
+     *
      * @return Collection<int, ModelTypeStat>
      */
     public function __invoke(DateRange $dateRange, string $layout): Collection

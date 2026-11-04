@@ -60,17 +60,25 @@ class Spectra
 
     protected ?RequestContext $pendingStreamContext = null;
 
+    /**
+     * Create a new Spectra instance.
+     */
     public function __construct(Application $app)
     {
         $this->app = $app;
     }
 
+    /**
+     * Determine if tracking is enabled in the config.
+     */
     public function isEnabled(): bool
     {
         return (bool) config('spectra.enabled', true);
     }
 
     /**
+     * Start a request context with the globals, tags, trackable and trace applied.
+     *
      * @param  array<string, mixed>  $options
      */
     public function startRequest(string $provider, string $model, array $options = []): RequestContext
@@ -101,6 +109,8 @@ class Spectra
     }
 
     /**
+     * Complete the context with the processed response and usage, and persist it.
+     *
      * @param  TokenMetrics|array<string, mixed>  $usage
      */
     public function recordSuccess(RequestContext $context, mixed $response, TokenMetrics|array $usage = []): SpectraRequest
@@ -121,6 +131,9 @@ class Spectra
         return $this->getPersister()->persist($context);
     }
 
+    /**
+     * Mark the context as failed with the exception and persist it.
+     */
     public function recordFailure(
         RequestContext $context,
         Throwable $exception,
@@ -132,6 +145,8 @@ class Spectra
     }
 
     /**
+     * Run the callback as a tracked AI request, and return what it returns.
+     *
      * @param  array<string, mixed>  $options
      */
     public function track(
@@ -230,8 +245,7 @@ class Spectra
      *       echo $chunk;
      *   }
      *   $result = $tracker->finish();
-     */
-    /**
+     *
      * @param  array<string, mixed>  $options
      */
     public function stream(?string $provider = null, ?string $model = null, array $options = []): StreamingTracker
@@ -240,6 +254,8 @@ class Spectra
     }
 
     /**
+     * Add tags to every request tracked for the rest of the request, job or command.
+     *
      * @param  array<int, string>  $tags
      */
     public function addGlobalTags(array $tags): self
@@ -309,9 +325,18 @@ class Spectra
      */
     protected function mergedTags(array $tags): array
     {
-        return array_values(array_unique(array_merge(TraceContext::tags(), $this->globalTags, $this->scopedTags, $tags)));
+        return collect(TraceContext::tags())
+            ->merge($this->globalTags)
+            ->merge($this->scopedTags)
+            ->merge($tags)
+            ->uniqueStrict()
+            ->values()
+            ->all();
     }
 
+    /**
+     * Use this pricing tier for requests that don't set their own.
+     */
     public function withPricingTier(string $tier): self
     {
         $this->globalPricingTier = $tier;
@@ -357,6 +382,9 @@ class Spectra
         return $this;
     }
 
+    /**
+     * Get the trace id of the current request, job or command, when trace_per_request is on.
+     */
     protected function requestTraceId(): ?string
     {
         return config('spectra.tracking.trace_per_request', true) ? TraceContext::traceId() : null;
@@ -398,6 +426,8 @@ class Spectra
     }
 
     /**
+     * Add metadata to every request tracked for the rest of the request, job or command.
+     *
      * @param  array<string, mixed>  $metadata
      */
     public function withMetadata(array $metadata): self
@@ -407,6 +437,9 @@ class Spectra
         return $this;
     }
 
+    /**
+     * Forget the global tags, trackable, pricing tier, trace id and metadata.
+     */
     public function clearGlobals(): self
     {
         $this->globalTags = [];
@@ -425,6 +458,9 @@ class Spectra
         return $this;
     }
 
+    /**
+     * Attribute every request tracked from now on to the given model.
+     */
     public function forTrackable(Model $trackable): self
     {
         $this->globalTrackableType = $trackable->getMorphClass();
@@ -433,6 +469,9 @@ class Spectra
         return $this;
     }
 
+    /**
+     * Attribute every request tracked from now on to the given user or user id.
+     */
     public function forUser(Model|int $user): self
     {
         if (is_int($user)) {
@@ -453,16 +492,25 @@ class Spectra
         return $model::query()->findOrFail($id);
     }
 
+    /**
+     * Get the context of the request started last.
+     */
     public function getCurrentContext(): ?RequestContext
     {
         return $this->currentContext;
     }
 
+    /**
+     * Hold the context a stream will pick up when it starts.
+     */
     public function setPendingStreamContext(RequestContext $context): void
     {
         $this->pendingStreamContext = $context;
     }
 
+    /**
+     * Take the pending stream context, leaving none behind.
+     */
     public function consumePendingStreamContext(): ?RequestContext
     {
         $context = $this->pendingStreamContext;
@@ -481,21 +529,33 @@ class Spectra
         }
     }
 
+    /**
+     * Begin a fluent query on recorded requests: counts, tokens, cost and latency.
+     */
     public function usage(): UsageQueryBuilder
     {
         return new UsageQueryBuilder;
     }
 
+    /**
+     * Begin a fluent query on the cost of recorded requests.
+     */
     public function costs(): CostQueryBuilder
     {
         return new CostQueryBuilder;
     }
 
+    /**
+     * Get the persister that stores completed request contexts.
+     */
     public function getPersister(): RequestPersister
     {
         return $this->app->make(RequestPersister::class);
     }
 
+    /**
+     * Convert the callback's result to an array the response processor can read.
+     */
     protected function toRawResponse(mixed $result): mixed
     {
         if (is_array($result)) {

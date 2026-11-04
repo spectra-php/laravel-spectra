@@ -19,11 +19,17 @@ class GetRequestDetails
     /** Trace calls returned with a request; the requests list shows the rest. */
     private const TRACE_LIMIT = 100;
 
+    /**
+     * Create a new get request details action instance.
+     */
     public function __construct(
         private readonly PricingLookup $pricingLookup,
         private readonly GetTraceDetails $getTraceDetails,
     ) {}
 
+    /**
+     * Get the request with its payloads, tags, capabilities, media URLs and trace.
+     */
     public function __invoke(string $id): RequestDetailsResponse
     {
         $request = SpectraRequest::query()->with('tags')->findOrFail($id);
@@ -57,6 +63,8 @@ class GetRequestDetails
     }
 
     /**
+     * Get the URLs of the request's images, from the media disk or the stored response.
+     *
      * @return array<int, string>
      */
     private function resolveImageUrls(string $requestId, SpectraRequest $request): array

@@ -24,6 +24,9 @@ class ChatHandler extends OpenAiCompatibleChatHandler
 {
     use MatchesParametricEndpoints;
 
+    /**
+     * Get the Scaleway chat completions and responses paths, with or without a project id.
+     */
     public function endpoints(): array
     {
         return [
@@ -48,6 +51,8 @@ class ChatHandler extends OpenAiCompatibleChatHandler
     }
 
     /**
+     * Build the token usage of a chat completions or Responses API usage object.
+     *
      * @param  array<string, mixed>  $usage
      */
     public function tokensFromUsage(array $usage): TokenMetrics
@@ -65,7 +70,11 @@ class ChatHandler extends OpenAiCompatibleChatHandler
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the text of every chat choice or Responses output item.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         if (is_array($response['choices'] ?? null)) {
@@ -105,18 +114,29 @@ class ChatHandler extends OpenAiCompatibleChatHandler
         return null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the first choice's finish reason, or the Responses status.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return data_get($response, 'choices.0.finish_reason') ?? $response['status'] ?? null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Scaleway chat completion or response.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return in_array($data['object'] ?? null, ['chat.completion', 'response'], true);
     }
 
+    /**
+     * Create the stream handler for Scaleway chat and Responses streams.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new ScalewayStreaming($this);

@@ -15,6 +15,9 @@ class ShowTraceController extends BaseApiController
     /** Calls the trace screen shows; the requests list, filtered by trace, has the rest. */
     private const CALL_LIMIT = 500;
 
+    /**
+     * Get the trace screen's data, or a 404 when the trace has no calls.
+     */
     public function __invoke(string $traceId, GetTraceDetails $getTraceDetails): TraceDetailsResponse
     {
         return $getTraceDetails($traceId, limit: self::CALL_LIMIT) ?? abort(404);

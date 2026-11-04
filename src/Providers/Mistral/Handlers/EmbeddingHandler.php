@@ -23,11 +23,17 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type Mistral embedding requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Embedding;
     }
 
+    /**
+     * Get the Mistral embeddings endpoint path.
+     */
     public function endpoints(): array
     {
         return [
@@ -36,6 +42,8 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     }
 
     /**
+     * Build the prompt tokens of a Mistral embeddings response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -49,7 +57,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Describe the first embedding of a Mistral response by its dimensions.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $embedding = data_get($response, 'data.0.embedding');
@@ -63,7 +75,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
         return "[embedding: {$dimensions} dimensions]";
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Mistral embeddings list.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return ($data['object'] ?? null) === 'list' && isset($data['data'][0]['embedding']);

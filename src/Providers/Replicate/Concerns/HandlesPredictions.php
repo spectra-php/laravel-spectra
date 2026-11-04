@@ -23,7 +23,11 @@ trait HandlesPredictions
 {
     use MatchesParametricEndpoints;
 
-    /** @return array<string> */
+    /**
+     * Get the Replicate prediction create, poll and cancel endpoint paths.
+     *
+     * @return array<string>
+     */
     public function endpoints(): array
     {
         return [
@@ -49,7 +53,11 @@ trait HandlesPredictions
         return ! is_string($status) || in_array($status, ['starting', 'processing'], true);
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the model a Replicate prediction reports.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractModelFromResponse(array $response): ?string
     {
         return filled($response['model'] ?? null) ? $response['model'] : null;
@@ -95,7 +103,11 @@ trait HandlesPredictions
         return filled($error) ? $error : "Prediction {$status}";
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the status of a Replicate prediction as its finish reason.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return is_string($response['status'] ?? null) ? $response['status'] : null;
@@ -175,14 +187,14 @@ trait HandlesPredictions
      * The output URLs of a prediction (a single URL or a list of them).
      *
      * @param  array<string, mixed>  $data
-     * @return list<string>
+     * @return array<int, string>
      */
     protected function outputUrls(array $data): array
     {
         $output = $data['output'] ?? null;
         $items = is_array($output) ? $output : [$output];
 
-        return array_values(array_filter($items, fn ($item) => is_string($item) && $this->isUrl($item)));
+        return collect($items)->filter(fn (mixed $item) => is_string($item) && $this->isUrl($item))->values()->all();
     }
 
     /**
@@ -214,11 +226,17 @@ trait HandlesPredictions
         };
     }
 
+    /**
+     * Determine if a prediction output value is a URL.
+     */
     protected function isUrl(string $value): bool
     {
         return (bool) filter_var($value, FILTER_VALIDATE_URL);
     }
 
+    /**
+     * Parse a prediction timestamp, or return null when it is blank or invalid.
+     */
     protected function timestamp(mixed $value): ?CarbonImmutable
     {
         if (blank($value)) {

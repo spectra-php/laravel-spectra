@@ -34,12 +34,17 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     /** Seconds to wait for a generated image to download. */
     protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 30;
 
+    /**
+     * Get the model type Replicate image predictions are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Image;
     }
 
     /**
+     * Build the image count from `metrics.image_count` or the output image URLs.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -54,7 +59,11 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the output URLs of a Replicate prediction, one per line.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $urls = $this->outputUrls($response);
@@ -62,13 +71,19 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         return $urls !== [] ? implode("\n", $urls) : null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the prediction produced images.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return $this->predictionKind($data) === 'image';
     }
 
     /**
+     * Download and store every output image, skipping any that fail.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -103,16 +118,19 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
      * Output URLs that are not clearly another kind of file (audio, video).
      *
      * @param  array<string, mixed>  $data
-     * @return list<string>
+     * @return array<int, string>
      */
     protected function imageUrls(array $data): array
     {
-        return array_values(array_filter(
-            $this->outputUrls($data),
-            fn (string $url) => ! in_array($this->fileKind($url), ['video', 'audio'], true),
-        ));
+        return collect($this->outputUrls($data))
+            ->filter(fn (string $url) => ! in_array($this->fileKind($url), ['video', 'audio'], true))
+            ->values()
+            ->all();
     }
 
+    /**
+     * Get the file extension for an image content type, defaulting to png.
+     */
     private function resolveExtensionFromContentType(?string $contentType): string
     {
         if (filled($contentType)) {

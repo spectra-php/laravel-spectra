@@ -12,6 +12,9 @@ use Spectra\Data\Responses\ProvidersResponse;
  */
 class ProvidersController extends BaseApiController
 {
+    /**
+     * Get every provider the dashboard can show.
+     */
     public function __invoke(GetProviders $action): ProvidersResponse
     {
         return $action();

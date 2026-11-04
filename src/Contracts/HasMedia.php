@@ -13,6 +13,8 @@ namespace Spectra\Contracts;
 interface HasMedia
 {
     /**
+     * Store the response's generated files on the media disk and return their paths.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */

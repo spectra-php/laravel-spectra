@@ -23,17 +23,25 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type Mistral transcriptions are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Stt;
     }
 
+    /**
+     * Get the Mistral audio transcription endpoint path.
+     */
     public function endpoints(): array
     {
         return ['/v1/audio/transcriptions'];
     }
 
     /**
+     * Build the tokens and audio length of a Mistral transcription.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -58,7 +66,11 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the transcript text of a Mistral transcription.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return $response['text'] ?? null;

@@ -19,12 +19,17 @@ use Spectra\Support\MediaPersister;
  */
 class ImageHandler extends ChatHandler implements HasMedia
 {
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Image;
     }
 
     /**
+     * Get the chat metrics plus the number of generated images.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -40,7 +45,11 @@ class ImageHandler extends ChatHandler implements HasMedia
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the message text, with a placeholder naming the generated images.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $parts = [];
@@ -71,6 +80,8 @@ class ImageHandler extends ChatHandler implements HasMedia
     }
 
     /**
+     * Store the images from the message data URLs and return their paths.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -110,7 +121,11 @@ class ImageHandler extends ChatHandler implements HasMedia
         return $stored;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Count the images across all choices' messages.
+     *
+     * @param  array<string, mixed>  $data
+     */
     private function countImages(array $data): int
     {
         $choices = $data['choices'] ?? null;

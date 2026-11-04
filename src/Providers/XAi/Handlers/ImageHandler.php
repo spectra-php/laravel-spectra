@@ -30,11 +30,17 @@ class ImageHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
     use MatchesParametricEndpoints;
     use StoresOpenAiImageMedia;
 
+    /**
+     * Get the model type xAI image requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Image;
     }
 
+    /**
+     * Get the xAI image generation, edit and deferred result endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -59,6 +65,8 @@ class ImageHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
     }
 
     /**
+     * Build the image count, prompt-rewriting tokens and reported cost of an xAI image job.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */

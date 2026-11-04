@@ -25,21 +25,33 @@ use Spectra\Support\DateRange;
  */
 trait HasAiUsageStats
 {
+    /**
+     * Get this model's AI usage since the start of today.
+     */
     public function aiUsageToday(): UsageStats
     {
         return $this->getAiUsageForPeriod(now()->startOfDay(), now());
     }
 
+    /**
+     * Get this model's AI usage since the start of this week.
+     */
     public function aiUsageThisWeek(): UsageStats
     {
         return $this->getAiUsageForPeriod(now()->startOfWeek(), now());
     }
 
+    /**
+     * Get this model's AI usage since the start of this month.
+     */
     public function aiUsageThisMonth(): UsageStats
     {
         return $this->getAiUsageForPeriod(now()->startOfMonth(), now());
     }
 
+    /**
+     * Get this model's request counts, tokens, cost and latency between two dates.
+     */
     public function getAiUsageForPeriod(CarbonInterface|string $start, CarbonInterface|string $end): UsageStats
     {
         $stats = $this->aiRequests()
@@ -68,6 +80,9 @@ trait HasAiUsageStats
         );
     }
 
+    /**
+     * Get this model's requests, tokens and cost per provider, this month by default.
+     */
     public function getAiUsageByProvider(CarbonInterface|string|null $start = null, CarbonInterface|string|null $end = null): array
     {
         $start ??= now()->startOfMonth();
@@ -94,6 +109,9 @@ trait HasAiUsageStats
             ->toArray();
     }
 
+    /**
+     * Get this model's requests, tokens and cost per provider and model, this month by default.
+     */
     public function getAiUsageByModel(CarbonInterface|string|null $start = null, CarbonInterface|string|null $end = null): array
     {
         $start ??= now()->startOfMonth();
@@ -121,6 +139,9 @@ trait HasAiUsageStats
             ->toArray();
     }
 
+    /**
+     * Get this model's most recent AI requests.
+     */
     public function recentAiRequests(int $limit = 10): Collection
     {
         return $this->aiRequests()
@@ -129,6 +150,9 @@ trait HasAiUsageStats
             ->get();
     }
 
+    /**
+     * Get this model's AI requests that cost the most.
+     */
     public function expensiveAiRequests(int $limit = 10): Collection
     {
         return $this->aiRequests()

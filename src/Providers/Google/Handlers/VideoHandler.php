@@ -36,11 +36,17 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     /** Seconds to wait for a generated video to download. */
     protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 60;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Video;
     }
 
+    /**
+     * Get the Veo submit and operation poll endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -51,13 +57,19 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         ];
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Determine if the Veo operation is still running and should not be recorded yet.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function shouldSkipResponse(array $responseData): bool
     {
         return ($responseData['done'] ?? false) !== true;
     }
 
     /**
+     * Get the video count and billed seconds of a finished Veo operation.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -83,13 +95,21 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the model from the response's `modelVersion`.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractModelFromResponse(array $response): ?string
     {
         return filled($response['modelVersion'] ?? null) ? $response['modelVersion'] : null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the generated video URIs, one per line.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $samples = $this->extractSamples($response);
@@ -113,7 +133,11 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         return implode("\n", $parts);
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get `COMPLETE` or `PROCESSING` as the finish reason of a Veo operation.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         if (isset($response['done'])) {
@@ -123,7 +147,11 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         return null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Veo operation or a finished Veo response.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         // Completed Veo response (either format)
@@ -153,6 +181,8 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     }
 
     /**
+     * Download and store the generated videos and return their paths.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -220,6 +250,8 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     }
 
     /**
+     * Map raw video items to their URI and mime type.
+     *
      * @param  array<mixed>  $items
      * @return array<int, array{uri: string|null, mimeType: string}>
      */

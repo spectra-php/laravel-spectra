@@ -32,6 +32,9 @@ class ChatHandler extends OpenAiCompatibleChatHandler implements SkipsResponse
 {
     use MatchesParametricEndpoints;
 
+    /**
+     * Get the xAI chat completions and deferred completion endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -41,6 +44,8 @@ class ChatHandler extends OpenAiCompatibleChatHandler implements SkipsResponse
     }
 
     /**
+     * Build the token usage, server-side tool calls and reported cost of an xAI completion.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -57,6 +62,8 @@ class ChatHandler extends OpenAiCompatibleChatHandler implements SkipsResponse
     }
 
     /**
+     * Build the token usage of an xAI completion, adding its image input tokens.
+     *
      * @param  array<string, mixed>  $usage
      */
     public function tokensFromUsage(array $usage): TokenMetrics
@@ -76,12 +83,17 @@ class ChatHandler extends OpenAiCompatibleChatHandler implements SkipsResponse
         );
     }
 
+    /**
+     * Determine if reasoning tokens are billed on top of completion tokens, which xAI does.
+     */
     protected function reasoningTokensAreSeparate(): bool
     {
         return true;
     }
 
     /**
+     * Get the exact charge xAI reports in `cost_in_usd_ticks`, in cents.
+     *
      * @param  array<string, mixed>  $usage
      * @param  array<string, mixed>  $responseData
      */
@@ -102,6 +114,9 @@ class ChatHandler extends OpenAiCompatibleChatHandler implements SkipsResponse
             && ($responseData === [] || isset($responseData['request_id']));
     }
 
+    /**
+     * Create the stream handler for xAI chat completion streams.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new ChatStreaming($this);

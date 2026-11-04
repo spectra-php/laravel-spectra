@@ -30,17 +30,25 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type Ollama chat requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get Ollama's native chat and generate endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/api/chat', '/api/generate'];
     }
 
     /**
+     * Build the token usage from Ollama's `prompt_eval_count` and `eval_count`.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -54,24 +62,39 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the generated text of an Ollama generate or chat response.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return $response['response'] ?? $response['message']['content'] ?? null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the `done_reason` of an Ollama response.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return $response['done_reason'] ?? null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a native Ollama chat or generate response.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return isset($data['model']) && (isset($data['done']) || isset($data['message']));
     }
 
+    /**
+     * Create the stream handler for Ollama's newline-delimited JSON streams.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new ChatStreaming;

@@ -16,6 +16,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetTopModels
 {
     /**
+     * Get the most used models by request count, with their cost.
+     *
      * @return Collection<int, TopModel>
      */
     public function __invoke(DateRange $dateRange, string $layout, int $limit = 5): Collection

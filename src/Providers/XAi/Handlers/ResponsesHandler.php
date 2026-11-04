@@ -35,17 +35,25 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type xAI Responses requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get the xAI Responses API endpoint path.
+     */
     public function endpoints(): array
     {
         return ['/v1/responses'];
     }
 
     /**
+     * Build the token usage, server-side tool calls and reported cost of an xAI response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -88,7 +96,11 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the `output_text` content of every output item, one per line.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $texts = [];
@@ -104,13 +116,21 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
         return $texts !== [] ? implode("\n", $texts) : null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the status of an xAI response as its finish reason.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return is_string($response['status'] ?? null) ? $response['status'] : null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is an xAI Responses API object.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return ($data['object'] ?? null) === 'response';
@@ -126,6 +146,9 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
         return in_array($responseData['status'] ?? null, ['queued', 'in_progress'], true);
     }
 
+    /**
+     * Create the stream handler for xAI Responses API streams.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new ResponsesStreaming($this);

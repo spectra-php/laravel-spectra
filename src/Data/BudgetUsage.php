@@ -10,6 +10,9 @@ namespace Spectra\Data;
  */
 readonly class BudgetUsage extends DataTransferObject
 {
+    /**
+     * Create a new budget usage instance.
+     */
     public function __construct(
         public int $dailyCost = 0,
         public int $weeklyCost = 0,

@@ -12,12 +12,17 @@ use Spectra\Models\SpectraRequest;
  */
 readonly class CostByProvider extends DataTransferObject
 {
+    /**
+     * Create a new cost by provider instance.
+     */
     public function __construct(
         public ?string $provider,
         public float $cost,
     ) {}
 
     /**
+     * Build one row per provider from the per-provider cost aggregate rows.
+     *
      * @param  Collection<int, SpectraRequest>  $items
      * @return Collection<int, self>
      */

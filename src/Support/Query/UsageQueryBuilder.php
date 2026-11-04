@@ -37,11 +37,17 @@ class UsageQueryBuilder
 
     protected ?CarbonInterface $endDate = null;
 
+    /**
+     * Create a new usage query over all tracked requests.
+     */
     public function __construct()
     {
         $this->query = SpectraRequest::query();
     }
 
+    /**
+     * Only include requests to the given provider.
+     */
     public function provider(string $provider): self
     {
         $this->query->where('provider', $provider);
@@ -49,6 +55,9 @@ class UsageQueryBuilder
         return $this;
     }
 
+    /**
+     * Only include requests for the given model.
+     */
     public function model(string $model): self
     {
         $this->query->where('model', $model);
@@ -56,6 +65,9 @@ class UsageQueryBuilder
         return $this;
     }
 
+    /**
+     * Only include requests tracked for the given model (a user, team…).
+     */
     public function forTrackable(Model $trackable): self
     {
         $this->query->where('trackable_type', $trackable->getMorphClass())
@@ -64,6 +76,9 @@ class UsageQueryBuilder
         return $this;
     }
 
+    /**
+     * Only include requests made between the two dates, the end date inclusive.
+     */
     public function between(CarbonInterface|string $start, CarbonInterface|string $end): self
     {
         $this->startDate = $start instanceof CarbonInterface ? $start : Carbon::parse($start);
@@ -74,21 +89,33 @@ class UsageQueryBuilder
         return $this;
     }
 
+    /**
+     * Only include requests made since the start of today.
+     */
     public function today(): self
     {
         return $this->between(now()->startOfDay(), now());
     }
 
+    /**
+     * Only include requests made since the start of this week.
+     */
     public function thisWeek(): self
     {
         return $this->between(now()->startOfWeek(), now());
     }
 
+    /**
+     * Only include requests made since the start of this month.
+     */
     public function thisMonth(): self
     {
         return $this->between(now()->startOfMonth(), now());
     }
 
+    /**
+     * Only include requests made in the last given number of days.
+     */
     public function lastDays(int $days): self
     {
         return $this->between(now()->subDays($days), now());
@@ -119,6 +146,9 @@ class UsageQueryBuilder
         return $this;
     }
 
+    /**
+     * Only include requests with the given tag, or with any value of a `key:value` tag.
+     */
     public function withTag(string $key, ?string $value = null): self
     {
         if ($value === null) {
@@ -135,26 +165,41 @@ class UsageQueryBuilder
         return $this;
     }
 
+    /**
+     * Get the number of matching requests, failed ones included.
+     */
     public function count(): int
     {
         return $this->query->count();
     }
 
+    /**
+     * Get the prompt and completion tokens of the matching requests.
+     */
     public function totalTokens(): int
     {
         return (int) $this->query->sum(DB::raw('prompt_tokens + completion_tokens'));
     }
 
+    /**
+     * Get the prompt tokens of the matching requests.
+     */
     public function promptTokens(): int
     {
         return (int) $this->query->sum('prompt_tokens');
     }
 
+    /**
+     * Get the completion tokens of the matching requests.
+     */
     public function completionTokens(): int
     {
         return (int) $this->query->sum('completion_tokens');
     }
 
+    /**
+     * Get the average latency of the successful matching requests, in milliseconds.
+     */
     public function averageLatency(): float
     {
         $result = $this->query->clone()->selectRaw($this->successfulLatencyAvg('avg_latency_ms'))->toBase()->first();
@@ -162,6 +207,9 @@ class UsageQueryBuilder
         return round((float) ($result->avg_latency_ms ?? 0), 2);
     }
 
+    /**
+     * Get the cost of the successful matching requests, in cents.
+     */
     public function totalCostCents(): float
     {
         $result = $this->query->clone()->selectRaw($this->successfulCostSum('total_cost'))->toBase()->first();
@@ -169,11 +217,17 @@ class UsageQueryBuilder
         return (float) ($result->total_cost ?? 0);
     }
 
+    /**
+     * Get the cost of the successful matching requests in whole currency units (cents / 100).
+     */
     public function totalCostDollars(): float
     {
         return round($this->totalCostCents() / 100, 4);
     }
 
+    /**
+     * Get the counts, tokens, cost and latency of the matching requests in one query.
+     */
     public function stats(): UsageStats
     {
         $result = $this->query
@@ -228,6 +282,8 @@ class UsageQueryBuilder
     }
 
     /**
+     * Get the request count, tokens, cost and latency per provider.
+     *
      * @return Collection<int, array{provider: string, request_count: int, total_tokens: int, total_cost_in_cents: float, total_cost: float, avg_latency_ms: float}>
      */
     public function byProvider(): Collection
@@ -253,6 +309,8 @@ class UsageQueryBuilder
     }
 
     /**
+     * Get the request count, tokens, cost and latency per provider and model.
+     *
      * @return Collection<int, array{provider: string, model: string, request_count: int, total_tokens: int, total_cost_in_cents: float, total_cost: float, avg_latency_ms: float}>
      */
     public function byModel(): Collection
@@ -280,6 +338,8 @@ class UsageQueryBuilder
     }
 
     /**
+     * Get the request count, tokens and cost per day for the last given number of days.
+     *
      * @return Collection<int, array{date: mixed, request_count: int, total_tokens: int, total_cost_in_cents: float, total_cost: float}>
      */
     public function dailyUsage(int $days = 30): Collection
@@ -305,6 +365,8 @@ class UsageQueryBuilder
     }
 
     /**
+     * Get the underlying Eloquent query, with every filter applied so far.
+     *
      * @return Builder<SpectraRequest>
      */
     public function getQuery(): Builder
@@ -313,6 +375,8 @@ class UsageQueryBuilder
     }
 
     /**
+     * Get the matching requests.
+     *
      * @return Collection<int, SpectraRequest>
      */
     public function get(): Collection
@@ -321,6 +385,8 @@ class UsageQueryBuilder
     }
 
     /**
+     * Get the matching requests a page at a time.
+     *
      * @return LengthAwarePaginator<int, SpectraRequest>
      */
     public function paginate(int $perPage = 15): LengthAwarePaginator

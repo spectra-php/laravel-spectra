@@ -26,11 +26,17 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get the Messages API endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/v1/messages'];
@@ -111,14 +117,16 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
     {
         $serverToolUse = is_array($usage['server_tool_use'] ?? null) ? $usage['server_tool_use'] : [];
 
-        return array_filter([
+        return collect([
             'web_search_requests' => Payload::int($serverToolUse['web_search_requests'] ?? null),
             'web_fetch_requests' => Payload::int($serverToolUse['web_fetch_requests'] ?? null),
             'code_execution_requests' => Payload::int($serverToolUse['code_execution_requests'] ?? null),
-        ]);
+        ])->filter()->all();
     }
 
     /**
+     * Get the compaction iterations of a usage object, which the top-level counts leave out.
+     *
      * @param  array<string, mixed>  $usage
      * @return list<array<string, mixed>>
      */
@@ -134,7 +142,11 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
         ));
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the text of a message, joining its text content blocks.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         if (! isset($response['content'])) {
@@ -166,19 +178,30 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
         return count($texts) === 1 ? $texts[0] : implode("\n", $texts);
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the message's stop reason.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return $response['stop_reason'] ?? null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Messages API message.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return ($data['type'] ?? null) === 'message'
             || (isset($data['content']) && isset($data['stop_reason']));
     }
 
+    /**
+     * Get the stream handler for a streamed message.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new MessageStreaming;

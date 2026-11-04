@@ -23,17 +23,25 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type Ollama embedding requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Embedding;
     }
 
+    /**
+     * Get Ollama's native embed endpoint path.
+     */
     public function endpoints(): array
     {
         return ['/api/embed'];
     }
 
     /**
+     * Build the input tokens of an Ollama embed response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -46,7 +54,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Describe an Ollama embed response by its vector count and dimensions.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         if (! isset($response['embeddings']) || ! is_array($response['embeddings'])) {
@@ -59,7 +71,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
         return "[embedding: {$count} vectors, {$dimensions} dimensions]";
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is an Ollama embed response.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return isset($data['model'], $data['embeddings']);

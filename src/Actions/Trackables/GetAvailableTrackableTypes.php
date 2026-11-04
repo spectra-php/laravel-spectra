@@ -14,6 +14,8 @@ use Spectra\Support\DateRange;
 class GetAvailableTrackableTypes
 {
     /**
+     * Get the trackable types that made requests in the date range.
+     *
      * @return array<int, string>
      */
     public function __invoke(DateRange $dateRange): array

@@ -58,6 +58,9 @@ class FalAiPricing extends ProviderPricing
         return $multiplier !== 1.0 ? $multiplier : null;
     }
 
+    /**
+     * Get the catalog price of a fal video model: its first resolution, with audio.
+     */
     protected static function defaultVideoPrice(string $model): float
     {
         $prices = self::VIDEO_PRICES[$model];
@@ -65,16 +68,25 @@ class FalAiPricing extends ProviderPricing
         return (float) $prices[array_key_first($prices)][0];
     }
 
+    /**
+     * Get the provider slug the fal.ai prices are recorded under.
+     */
     public function provider(): string
     {
         return 'falai';
     }
 
+    /**
+     * Get the fal.ai pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://fal.ai/pricing'];
     }
 
+    /**
+     * Register the built-in fal.ai models and their prices.
+     */
     protected function define(): void
     {
         $this->model('fal-ai/flux/dev', fn ($m) => $m

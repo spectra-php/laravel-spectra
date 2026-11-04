@@ -23,16 +23,25 @@ class Anthropic extends Provider implements ExtractsCostMultiplier, ExtractsPric
     /** Price multiplier for `inference_geo: "us"` (Claude 4.6 and later; the API rejects it on older models). */
     public const US_INFERENCE_MULTIPLIER = 1.1;
 
+    /**
+     * Get the provider's slug.
+     */
     public function getProvider(): string
     {
         return 'anthropic';
     }
 
+    /**
+     * Get the hosts Anthropic's API is served from.
+     */
     public function getHosts(): array
     {
         return ['api.anthropic.com'];
     }
 
+    /**
+     * Get the handlers for Anthropic's endpoints.
+     */
     public function handlers(): array
     {
         return [
@@ -60,13 +69,19 @@ class Anthropic extends Provider implements ExtractsCostMultiplier, ExtractsPric
         return null;
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Get the pricing tier the response's usage says the request was served at.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function extractPricingTierFromResponse(array $responseData): ?string
     {
         return self::pricingTierFromUsage(self::usageFrom($responseData));
     }
 
     /**
+     * Get the US-only inference surcharge, read from the response usage or the request.
+     *
      * @param  array<string, mixed>  $responseData
      * @param  array<string, mixed>  $requestData
      */
@@ -110,6 +125,9 @@ class Anthropic extends Provider implements ExtractsCostMultiplier, ExtractsPric
         return $tier ?? ($speed === 'standard' ? PricingTier::Standard->value : null);
     }
 
+    /**
+     * Get the price multiplier for an `inference_geo` value.
+     */
     public static function costMultiplierForGeo(mixed $inferenceGeo): ?float
     {
         return $inferenceGeo === 'us' ? self::US_INFERENCE_MULTIPLIER : null;

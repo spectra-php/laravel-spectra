@@ -17,16 +17,25 @@ use Spectra\Providers\Provider;
  */
 class ElevenLabs extends Provider
 {
+    /**
+     * Get the slug ElevenLabs requests are recorded under.
+     */
     public function getProvider(): string
     {
         return 'elevenlabs';
     }
 
+    /**
+     * Get the hosts the ElevenLabs API is served from.
+     */
     public function getHosts(): array
     {
         return ['api.elevenlabs.io'];
     }
 
+    /**
+     * Get the handlers for ElevenLabs speech, transcription, sound effects and music.
+     */
     public function handlers(): array
     {
         return [

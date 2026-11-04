@@ -57,10 +57,16 @@ class ModelDefinition
     /** @var list<TierEntry> */
     protected array $tiers = [];
 
+    /**
+     * Create a new model definition for the given model id.
+     */
     public function __construct(
         protected string $internalName,
     ) {}
 
+    /**
+     * Set the name the dashboard shows for the model.
+     */
     public function displayName(string $name): static
     {
         $this->displayName = $name;
@@ -68,6 +74,9 @@ class ModelDefinition
         return $this;
     }
 
+    /**
+     * Set the kind of model (text, image, video, audio, embedding…).
+     */
     public function type(string $type): static
     {
         $this->type = $type;
@@ -75,6 +84,9 @@ class ModelDefinition
         return $this;
     }
 
+    /**
+     * Set the unit the model is billed in (tokens, characters, images, seconds…).
+     */
     public function pricingUnit(PricingUnit|string $unit): static
     {
         if (is_string($unit)) {
@@ -92,7 +104,7 @@ class ModelDefinition
      */
     public function aliases(string ...$aliases): static
     {
-        $this->aliases = array_values(array_unique([...$this->aliases, ...$aliases]));
+        $this->aliases = array_values(collect([...$this->aliases, ...$aliases])->uniqueStrict()->all());
 
         return $this;
     }
@@ -108,6 +120,9 @@ class ModelDefinition
         return $this;
     }
 
+    /**
+     * Mark the model as able to generate text.
+     */
     public function canGenerateText(): static
     {
         $this->canGenerateText = true;
@@ -115,6 +130,9 @@ class ModelDefinition
         return $this;
     }
 
+    /**
+     * Mark the model as able to generate images.
+     */
     public function canGenerateImages(): static
     {
         $this->canGenerateImages = true;
@@ -122,6 +140,9 @@ class ModelDefinition
         return $this;
     }
 
+    /**
+     * Mark the model as able to generate video.
+     */
     public function canGenerateVideo(): static
     {
         $this->canGenerateVideo = true;
@@ -129,6 +150,9 @@ class ModelDefinition
         return $this;
     }
 
+    /**
+     * Mark the model as able to generate audio.
+     */
     public function canGenerateAudio(): static
     {
         $this->canGenerateAudio = true;
@@ -213,12 +237,17 @@ class ModelDefinition
         return $this;
     }
 
+    /**
+     * Get the model id the catalog lists the model under.
+     */
     public function getInternalName(): string
     {
         return $this->internalName;
     }
 
     /**
+     * Get the other model ids that bill like this one.
+     *
      * @return list<string>
      */
     public function getAliases(): array
@@ -227,6 +256,8 @@ class ModelDefinition
     }
 
     /**
+     * Get the model's name, type, unit, capabilities, aliases and retirement date as an array.
+     *
      * @return array<string, mixed>
      */
     public function toModelArray(): array
@@ -246,6 +277,8 @@ class ModelDefinition
     }
 
     /**
+     * Get every registered tier price row, in registration order.
+     *
      * @return list<TierEntry>
      */
     public function toTiersArray(): array
@@ -253,6 +286,9 @@ class ModelDefinition
         return $this->tiers;
     }
 
+    /**
+     * Validate a Y-m-d pricing date and return it normalized.
+     */
     protected function normalizeDate(string $date): string
     {
         try {

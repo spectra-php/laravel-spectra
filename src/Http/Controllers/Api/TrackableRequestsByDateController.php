@@ -15,6 +15,9 @@ use Spectra\Support\DateRange;
  */
 class TrackableRequestsByDateController extends BaseApiController
 {
+    /**
+     * Get one trackable's request count per day for the selected period.
+     */
     public function __invoke(
         Request $request,
         string $id,

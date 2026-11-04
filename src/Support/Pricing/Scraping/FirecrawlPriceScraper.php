@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Pricing\Scraping;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Spectra\Enums\PricingUnit;
@@ -24,12 +25,18 @@ class FirecrawlPriceScraper
     /** Firecrawl rejects page timeouts above five minutes. */
     protected const MAX_PAGE_TIMEOUT_MS = 300_000;
 
+    /**
+     * Create a new Firecrawl price scraper instance.
+     */
     public function __construct(
         protected string $apiKey,
         protected string $baseUrl = 'https://api.firecrawl.dev/v2',
         protected int $timeout = 180,
     ) {}
 
+    /**
+     * Create a scraper with the API key, URL and timeout from `spectra.costs.firecrawl`.
+     */
     public static function fromConfig(): self
     {
         return new self(
@@ -82,7 +89,7 @@ class FirecrawlPriceScraper
             throw new RuntimeException("Firecrawl found no prices on {$url}.");
         }
 
-        return new ScrapedPage($url, array_values(array_filter($models, 'is_array')), is_string($markdown) ? $markdown : '');
+        return new ScrapedPage($url, array_values(Arr::where($models, fn (mixed $row) => is_array($row))), is_string($markdown) ? $markdown : '');
     }
 
     /**
@@ -96,7 +103,7 @@ class FirecrawlPriceScraper
     public static function schema(CatalogShape $shape): array
     {
         $price = fn (string $description) => ['type' => ['number', 'null'], 'description' => $description];
-        $prices = array_filter([
+        $prices = Arr::where([
             'input' => $price('Input tokens.'),
             'output' => $price('Output tokens.'),
             'cached_input' => $price('Cached input tokens (cache hits / reads).'),
@@ -107,7 +114,7 @@ class FirecrawlPriceScraper
             'image_input' => $price('Image input tokens.'),
             'image_output' => $price('Image output tokens.'),
             'price_per_unit' => $price('For models not billed per token: the price per unit (image, minute, second, character, ...).'),
-        ], fn (string $field) => $shape->allowsField(CatalogShape::FIELDS[$field]), ARRAY_FILTER_USE_KEY);
+        ], fn (array $schema, string $field) => $shape->allowsField(CatalogShape::FIELDS[$field]));
 
         return [
             'type' => 'object',
@@ -131,7 +138,7 @@ class FirecrawlPriceScraper
                             ],
                             'unit' => [
                                 'type' => ['string', 'null'],
-                                'enum' => [...array_column(PricingUnit::cases(), 'value'), null],
+                                'enum' => [...Arr::pluck(PricingUnit::cases(), 'value'), null],
                             ],
                         ],
                         'required' => ['model_id', 'tier'],
@@ -142,6 +149,9 @@ class FirecrawlPriceScraper
         ];
     }
 
+    /**
+     * Build the extraction prompt, naming the catalog's tiers, currency and known model ids.
+     */
     protected function prompt(ProviderPricing $pricing, CatalogShape $shape): string
     {
         $known = [];
@@ -157,7 +167,7 @@ class FirecrawlPriceScraper
                 : "{$definition->getInternalName()} (per {$model['pricing_unit']})";
         }
 
-        $tiers = array_intersect_key([
+        $tiers = Arr::only([
             'standard' => '"standard" for regular prices',
             'batch' => '"batch" for Batch API prices',
             'flex' => '"flex" for Flex processing',
@@ -165,7 +175,7 @@ class FirecrawlPriceScraper
             'fast' => '"fast" for Fast mode',
             'ultrafast' => '"ultrafast" for Ultrafast processing',
             'hd' => '"hd" for HD quality media',
-        ], array_flip($shape->tierLabels()));
+        ], $shape->tierLabels());
 
         $currency = strtoupper($pricing->currency());
 

@@ -21,6 +21,8 @@ use Spectra\Support\Payload;
 final class GeminiUsage
 {
     /**
+     * Get the token totals of a Gemini `usageMetadata` object.
+     *
      * @param  array<string, mixed>  $usageMetadata
      */
     public static function tokens(array $usageMetadata): TokenMetrics
@@ -105,16 +107,16 @@ final class GeminiUsage
             $chunks = is_array($grounding['groundingChunks'] ?? null) ? $grounding['groundingChunks'] : [];
 
             $hasWeb = $queries > 0 || isset($grounding['searchEntryPoint'])
-                || array_filter($chunks, fn ($chunk) => is_array($chunk) && isset($chunk['web'])) !== [];
+                || collect($chunks)->contains(fn (mixed $chunk) => is_array($chunk) && isset($chunk['web']));
 
             $search += $queries > 0 ? $queries : ($hasWeb ? 1 : 0);
 
-            if (array_filter($chunks, fn ($chunk) => is_array($chunk) && isset($chunk['maps'])) !== []) {
+            if (collect($chunks)->contains(fn (mixed $chunk) => is_array($chunk) && isset($chunk['maps']))) {
                 $maps++;
             }
         }
 
-        return array_filter(['google_search' => $search, 'google_maps' => $maps]);
+        return collect(['google_search' => $search, 'google_maps' => $maps])->filter()->all();
     }
 
     /**
@@ -149,7 +151,7 @@ final class GeminiUsage
      */
     public static function mergeChunks(array $chunks): array
     {
-        $chunks = array_values(array_filter($chunks, 'is_array'));
+        $chunks = collect($chunks)->filter(fn (mixed $chunk) => is_array($chunk))->values()->all();
 
         if ($chunks === []) {
             return [];
@@ -198,6 +200,8 @@ final class GeminiUsage
     }
 
     /**
+     * Append a streamed part, joining it to the previous part when both are plain text.
+     *
      * @param  list<mixed>  $parts
      * @return list<mixed>
      */
@@ -227,6 +231,8 @@ final class GeminiUsage
     }
 
     /**
+     * Get a numeric usage field as an integer, or zero.
+     *
      * @param  array<string, mixed>  $data
      */
     protected static function int(array $data, string $key): int

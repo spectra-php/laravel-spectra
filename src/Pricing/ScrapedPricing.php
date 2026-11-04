@@ -44,6 +44,8 @@ class ScrapedPricing extends ProviderPricing
     ];
 
     /**
+     * Create a new scraped catalog instance for one provider's entries in the file.
+     *
      * @param  array<array-key, mixed>  $data  Model id => model array (a numeric id decodes as an int key).
      */
     public function __construct(
@@ -52,16 +54,25 @@ class ScrapedPricing extends ProviderPricing
         protected string $catalogCurrency = 'USD',
     ) {}
 
+    /**
+     * Get the provider slug this scraped catalog was saved under.
+     */
     public function provider(): string
     {
         return $this->slug;
     }
 
+    /**
+     * Get the currency the scraped prices were written in.
+     */
     public function currency(): string
     {
         return $this->catalogCurrency;
     }
 
+    /**
+     * Register each scraped model, skipping with a warning any entry that fails to parse.
+     */
     protected function define(): void
     {
         foreach ($this->data as $id => $model) {
@@ -99,7 +110,7 @@ class ScrapedPricing extends ProviderPricing
         }
 
         if (filled($model['aliases'] ?? null)) {
-            $definition->aliases(...array_map('strval', (array) $model['aliases']));
+            $definition->aliases(...Arr::map((array) $model['aliases'], fn (mixed $alias) => (string) $alias));
         }
 
         if (isset($model['retired_on'])) {
@@ -159,28 +170,30 @@ class ScrapedPricing extends ProviderPricing
     {
         $model = $definition->toModelArray();
 
-        return array_filter([
+        return Arr::where([
             'display_name' => $model['display_name'],
             'type' => $model['type'],
             'pricing_unit' => $model['pricing_unit'],
-            'capabilities' => array_keys(array_filter([
+            'capabilities' => collect([
                 'text' => $model['can_generate_text'],
                 'images' => $model['can_generate_images'],
                 'video' => $model['can_generate_video'],
                 'audio' => $model['can_generate_audio'],
-            ])),
+            ])->filter()->keys()->all(),
             'aliases' => $model['aliases'],
             'retired_on' => $model['retired_on'],
-            'tiers' => array_map(static::tierToArray(...), $definition->toTiersArray()),
-        ], fn ($value) => $value !== null && $value !== []);
+            'tiers' => Arr::map($definition->toTiersArray(), static::tierToArray(...)),
+        ], fn (mixed $value) => $value !== null && $value !== []);
     }
 
     /**
+     * Get the JSON form of a tier row, without its null prices.
+     *
      * @param  array<string, mixed>  $row  A ModelDefinition tier entry.
      * @return array<string, mixed>
      */
     public static function tierToArray(array $row): array
     {
-        return array_filter($row, fn ($value) => $value !== null);
+        return Arr::whereNotNull($row);
     }
 }

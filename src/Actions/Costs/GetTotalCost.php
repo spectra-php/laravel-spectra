@@ -12,6 +12,9 @@ use Spectra\Support\Query\RequestAggregateQuery;
  */
 class GetTotalCost
 {
+    /**
+     * Get the total cost of successful requests in the date range.
+     */
     public function __invoke(DateRange $dateRange): float
     {
         return RequestAggregateQuery::make($dateRange)

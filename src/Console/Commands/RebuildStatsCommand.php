@@ -25,6 +25,9 @@ class RebuildStatsCommand extends Command
 
     protected $description = 'Rebuild aggregated statistics from request data';
 
+    /**
+     * Rebuild the daily stats for yesterday, a date range or all stored requests.
+     */
     public function handle(StatsAggregator $aggregator): int
     {
         if ($this->option('yesterday')) {

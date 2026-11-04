@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Integrations\OpenTelemetry;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Spectra\Contracts\ExportsSpans;
@@ -26,6 +27,8 @@ class OtlpExporter implements ExportsSpans, RequestExporter
     protected SpanExporter $spanExporter;
 
     /**
+     * Create a new OTLP exporter instance, reading the endpoint and headers from config.
+     *
      * @param  array<string, string>  $headers
      */
     public function __construct(
@@ -40,6 +43,9 @@ class OtlpExporter implements ExportsSpans, RequestExporter
         $this->spanExporter = $spanExporter ?? new SpanExporter;
     }
 
+    /**
+     * Export a tracked request to the collector as a single span.
+     */
     public function export(array $data): void
     {
         if (! config('spectra.integrations.opentelemetry.enabled', false)) {
@@ -52,6 +58,9 @@ class OtlpExporter implements ExportsSpans, RequestExporter
         $this->send($payload);
     }
 
+    /**
+     * Export a stored Spectra span to the collector.
+     */
     public function exportSpan(array $span): void
     {
         if (! config('spectra.integrations.opentelemetry.enabled', false)) {
@@ -61,15 +70,18 @@ class OtlpExporter implements ExportsSpans, RequestExporter
         $this->send($this->spanExporter->exportBatch([$this->spanExporter->createSpectraSpan($span)]));
     }
 
+    /**
+     * Export several tracked requests to the collector in one OTLP payload.
+     */
     public function exportBatch(array $requests): void
     {
         if (! config('spectra.integrations.opentelemetry.enabled', false)) {
             return;
         }
 
-        $spans = array_map(
+        $spans = Arr::map(
+            $requests,
             fn (array $data) => $this->spanExporter->createSpan($data),
-            $requests
         );
 
         $payload = $this->spanExporter->exportBatch($spans);
@@ -78,6 +90,8 @@ class OtlpExporter implements ExportsSpans, RequestExporter
     }
 
     /**
+     * Post an OTLP payload to the collector, logging a failure instead of throwing.
+     *
      * @param  array<string, mixed>  $payload
      */
     protected function send(array $payload): bool
@@ -119,11 +133,17 @@ class OtlpExporter implements ExportsSpans, RequestExporter
         return (float) $timeout;
     }
 
+    /**
+     * Get the collector endpoint spans are posted to.
+     */
     public function getEndpoint(): string
     {
         return $this->endpoint;
     }
 
+    /**
+     * Set the collector endpoint spans are posted to.
+     */
     public function setEndpoint(string $endpoint): self
     {
         $this->endpoint = $endpoint;
@@ -131,6 +151,9 @@ class OtlpExporter implements ExportsSpans, RequestExporter
         return $this;
     }
 
+    /**
+     * Add a header to every export request.
+     */
     public function withHeader(string $name, string $value): self
     {
         $this->headers[$name] = $value;
@@ -138,6 +161,9 @@ class OtlpExporter implements ExportsSpans, RequestExporter
         return $this;
     }
 
+    /**
+     * Authenticate exports to the collector with a bearer token.
+     */
     public function withBearerToken(string $token): self
     {
         $this->headers['Authorization'] = 'Bearer '.$token;
@@ -145,6 +171,9 @@ class OtlpExporter implements ExportsSpans, RequestExporter
         return $this;
     }
 
+    /**
+     * Authenticate exports to the collector with an API key header.
+     */
     public function withApiKey(string $key, string $headerName = 'x-api-key'): self
     {
         $this->headers[$headerName] = $key;

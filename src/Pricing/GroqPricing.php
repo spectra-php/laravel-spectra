@@ -22,16 +22,25 @@ namespace Spectra\Pricing;
  */
 class GroqPricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the Groq prices are recorded under.
+     */
     public function provider(): string
     {
         return 'groq';
     }
 
+    /**
+     * Get the Groq pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://console.groq.com/docs/models'];
     }
 
+    /**
+     * Register the built-in Groq models and their prices.
+     */
     protected function define(): void
     {
         $this->model('openai/gpt-oss-120b', fn ($m) => $m

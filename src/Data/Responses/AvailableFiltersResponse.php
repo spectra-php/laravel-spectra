@@ -13,6 +13,8 @@ use Spectra\Data\DataTransferObject;
 readonly class AvailableFiltersResponse extends DataTransferObject
 {
     /**
+     * Create a new available filters response instance.
+     *
      * @param  array<int, string>  $tags
      * @param  array<int, string>  $finish_reasons
      * @param  array<int, string>  $reasoning_efforts

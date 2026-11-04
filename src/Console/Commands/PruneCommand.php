@@ -29,6 +29,9 @@ class PruneCommand extends Command
 
     protected $description = 'Prune stale entries from the Spectra database';
 
+    /**
+     * Delete requests, spans and their media older than the cutoff, and old daily stats when asked.
+     */
     public function handle(): int
     {
         $cutoff = now()->subHours(max(0, (int) $this->option('hours')));
@@ -69,6 +72,9 @@ class PruneCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Delete spans started before the cutoff in chunks and return how many were deleted.
+     */
     protected function pruneSpans(CarbonInterface $cutoff, int $chunk): int
     {
         $count = 0;
@@ -94,6 +100,8 @@ class PruneCommand extends Command
     }
 
     /**
+     * Delete the stored media files of pruned requests and return how many were deleted.
+     *
      * @param  array<int, mixed>  $paths  media_storage_path values (lists of disk paths)
      */
     protected function deleteMedia(array $paths): int

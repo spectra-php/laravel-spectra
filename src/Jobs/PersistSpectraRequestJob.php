@@ -19,6 +19,8 @@ class PersistSpectraRequestJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
+     * Create a new persist request job instance.
+     *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
      */
@@ -27,6 +29,9 @@ class PersistSpectraRequestJob implements ShouldQueue
         public readonly array $tags,
     ) {}
 
+    /**
+     * Write the tracked request and its tags through the request writer.
+     */
     public function handle(RequestWriter $writer): void
     {
         $writer->write($this->attributes, $this->tags);

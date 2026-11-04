@@ -43,6 +43,9 @@ class StreamEventParser
 
     protected string $object = '';
 
+    /**
+     * Create a new stream event parser, taking the format from the Content-Type when it names one.
+     */
     public function __construct(?string $contentType = null)
     {
         $this->format = match (true) {
@@ -109,11 +112,17 @@ class StreamEventParser
         return $events;
     }
 
+    /**
+     * Get the stream format: SSE, NDJSON, a JSON array, or null until it is known.
+     */
     public function format(): ?string
     {
         return $this->format;
     }
 
+    /**
+     * Guess the stream format from its first bytes when the Content-Type did not name one.
+     */
     protected function sniff(string $buffer): ?string
     {
         $trimmed = ltrim($buffer);
@@ -133,6 +142,8 @@ class StreamEventParser
     }
 
     /**
+     * Buffer the bytes and parse every complete line into events.
+     *
      * @return list<array<string, mixed>>
      */
     protected function splitLines(string $bytes): array
@@ -151,6 +162,8 @@ class StreamEventParser
     }
 
     /**
+     * Parse one NDJSON or server-sent events line into the events it completes.
+     *
      * @return list<array<string, mixed>>
      */
     protected function line(string $line): array
@@ -183,6 +196,8 @@ class StreamEventParser
     }
 
     /**
+     * Decode the buffered server-sent event, skipping empty and [DONE] events.
+     *
      * @return list<array<string, mixed>>
      */
     protected function dispatchSseEvent(): array
@@ -270,6 +285,8 @@ class StreamEventParser
     }
 
     /**
+     * Decode a JSON event, or return null when it is not a JSON object or array.
+     *
      * @return array<string, mixed>|null
      */
     protected function decode(string $json): ?array

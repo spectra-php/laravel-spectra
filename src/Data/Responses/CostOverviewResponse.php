@@ -12,6 +12,9 @@ use Spectra\Data\DataTransferObject;
  */
 readonly class CostOverviewResponse extends DataTransferObject
 {
+    /**
+     * Create a new cost overview response instance.
+     */
     public function __construct(
         public float $today,
         public float $this_week,

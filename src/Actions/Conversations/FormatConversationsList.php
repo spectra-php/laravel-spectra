@@ -24,11 +24,16 @@ class FormatConversationsList
     /** ISO 8601 with milliseconds, as the screen reads it. */
     private const ISO_MILLISECONDS = 'Y-m-d\\TH:i:s.vP';
 
+    /**
+     * Create a new format conversations list action instance.
+     */
     public function __construct(
         private readonly ResolveTrackableMetadata $resolveTrackableMetadata,
     ) {}
 
     /**
+     * Get the page of conversation totals as rows, with their models and sole trackable.
+     *
      * @param  LengthAwarePaginator<int, SpectraRequest>  $paginated
      * @return array<int, array<string, mixed>>
      */
@@ -79,6 +84,8 @@ class FormatConversationsList
     }
 
     /**
+     * Get the conversation's trackable when all its calls belong to one, or null.
+     *
      * @param  Collection<int, SpectraRequest>  $calls
      * @param  array<string, array<string, mixed>>  $metadata
      * @return array<string, mixed>|null
@@ -105,6 +112,9 @@ class FormatConversationsList
         ];
     }
 
+    /**
+     * Format a stored timestamp as ISO 8601 with milliseconds, or null when blank.
+     */
     private function format(mixed $value): ?string
     {
         return blank($value) ? null : Date::parse((string) $value)->format(self::ISO_MILLISECONDS);

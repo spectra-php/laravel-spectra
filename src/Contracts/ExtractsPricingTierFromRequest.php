@@ -11,6 +11,10 @@ namespace Spectra\Contracts;
  */
 interface ExtractsPricingTierFromRequest
 {
-    /** @param  array<string, mixed>  $requestData */
+    /**
+     * Get the pricing tier the request asks for, or null when it names none.
+     *
+     * @param  array<string, mixed>  $requestData
+     */
     public function extractPricingTierFromRequest(array $requestData): ?string;
 }

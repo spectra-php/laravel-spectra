@@ -14,6 +14,9 @@ use Spectra\Models\SpectraRequest;
  */
 readonly class CostByModelType extends DataTransferObject
 {
+    /**
+     * Create a new cost by model type instance.
+     */
     public function __construct(
         public string $model_type,
         public string $label,
@@ -27,6 +30,8 @@ readonly class CostByModelType extends DataTransferObject
     ) {}
 
     /**
+     * Build one row per model type, with its label, from the per-type aggregate rows.
+     *
      * @param  Collection<int, SpectraRequest>  $items
      * @return Collection<int, self>
      */

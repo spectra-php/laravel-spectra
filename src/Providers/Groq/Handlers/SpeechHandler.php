@@ -23,17 +23,25 @@ class SpeechHandler implements Handler, HasMedia, ReturnsBinaryResponse
 {
     use MatchesEndpoints;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Tts;
     }
 
+    /**
+     * Get the speech endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/openai/v1/audio/speech'];
     }
 
     /**
+     * Get the input characters of the speech request.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -46,13 +54,19 @@ class SpeechHandler implements Handler, HasMedia, ReturnsBinaryResponse
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get a placeholder text for the audio response.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return '[audio]';
     }
 
     /**
+     * Store the audio body in the requested format and return its path.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */

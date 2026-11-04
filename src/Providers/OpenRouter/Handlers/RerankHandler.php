@@ -27,17 +27,25 @@ class RerankHandler implements ExtractsModelFromResponse, Handler, MatchesRespon
     use MatchesEndpoints;
     use ReadsReportedCost;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get the rerank endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/api/v1/rerank'];
     }
 
     /**
+     * Get the tokens, search units and reported cost of a rerank response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -53,7 +61,11 @@ class RerankHandler implements ExtractsModelFromResponse, Handler, MatchesRespon
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get a placeholder text naming the number of rerank results.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $results = $response['results'] ?? null;
@@ -65,7 +77,11 @@ class RerankHandler implements ExtractsModelFromResponse, Handler, MatchesRespon
         return '[rerank: '.count($results).' results]';
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a rerank result list.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return isset($data['results'][0]['relevance_score']);

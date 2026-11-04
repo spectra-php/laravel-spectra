@@ -17,6 +17,8 @@ use Spectra\Support\ProviderRegistry;
 class StreamDetector
 {
     /**
+     * Determine if a provider response is a stream, from its endpoint, headers and request options.
+     *
      * @param  array<string, mixed>  $requestData
      */
     public static function isStreamingResponse(

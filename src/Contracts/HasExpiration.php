@@ -13,6 +13,10 @@ use Carbon\CarbonInterface;
  */
 interface HasExpiration
 {
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Get when the provider's copy of the result stops being downloadable.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function extractExpiresAt(array $responseData): ?CarbonInterface;
 }

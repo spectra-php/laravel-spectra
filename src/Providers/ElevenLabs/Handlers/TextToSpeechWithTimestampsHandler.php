@@ -18,6 +18,9 @@ use Spectra\Support\MediaPersister;
  */
 class TextToSpeechWithTimestampsHandler extends TextToSpeechHandler
 {
+    /**
+     * Get the ElevenLabs text to speech with timestamps endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -26,18 +29,27 @@ class TextToSpeechWithTimestampsHandler extends TextToSpeechHandler
         ];
     }
 
+    /**
+     * Determine if the path is a text to speech with timestamps call for a voice.
+     */
     public function matchesEndpoint(string $endpoint): bool
     {
         return (bool) preg_match('#^/v1/text-to-speech/[^/]+(/stream)?/with-timestamps$#', $endpoint);
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the placeholder recorded in place of the timed speech.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return '[audio with timestamps]';
     }
 
     /**
+     * Store the base64 audio of every JSON chunk as one mp3 file.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -45,10 +57,9 @@ class TextToSpeechWithTimestampsHandler extends TextToSpeechHandler
     {
         $body = trim((string) $rawBody);
         $whole = json_decode($body, true);
-        $chunks = is_array($whole) ? [$whole] : array_map(
-            fn (string $line) => json_decode($line, true),
-            preg_split('/\r?\n/', $body) ?: [],
-        );
+        $chunks = is_array($whole) ? [$whole] : collect(preg_split('/\r?\n/', $body) ?: [])
+            ->map(fn (string $line) => json_decode($line, true))
+            ->all();
 
         $audio = '';
 

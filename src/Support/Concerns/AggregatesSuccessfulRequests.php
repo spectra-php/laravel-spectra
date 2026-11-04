@@ -12,6 +12,8 @@ namespace Spectra\Support\Concerns;
 trait AggregatesSuccessfulRequests
 {
     /**
+     * Build a select that sums the cost of 2xx requests only, under the given alias.
+     *
      * @param  literal-string  $alias
      * @return literal-string
      */
@@ -21,6 +23,8 @@ trait AggregatesSuccessfulRequests
     }
 
     /**
+     * Build a select that averages the latency of 2xx requests only, under the given alias.
+     *
      * @param  literal-string  $alias
      * @return literal-string
      */
@@ -29,7 +33,11 @@ trait AggregatesSuccessfulRequests
         return "{$this->successfulLatencyExpression()} as {$alias}";
     }
 
-    /** @return literal-string */
+    /**
+     * Get the SQL that sums the cost of 2xx requests, so failures never count as spend.
+     *
+     * @return literal-string
+     */
     protected function successfulCostExpression(): string
     {
         return 'COALESCE(SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END), 0)';

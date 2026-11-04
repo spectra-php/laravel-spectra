@@ -21,13 +21,19 @@ class ImageStreaming extends StreamHandler
     /** Events that close an image stream. */
     public const COMPLETED_EVENTS = ['image_generation.completed', 'image_edit.completed'];
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the text of an image stream event, which never has any.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function text(array $data): ?string
     {
         return null;
     }
 
     /**
+     * Merge the usage of a completed image event into the usage so far.
+     *
      * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $currentUsage
      * @return array<string, mixed>
@@ -41,13 +47,19 @@ class ImageStreaming extends StreamHandler
         return array_merge($currentUsage, OpenAiUsage::fromImages($data['usage'])->toUsageArray());
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get `completed` as the finish reason of a completed image event.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function finishReason(array $data): ?string
     {
         return in_array($data['type'] ?? null, self::COMPLETED_EVENTS, true) ? 'completed' : null;
     }
 
     /**
+     * Get the model and response id, which image stream events never carry.
+     *
      * @param  array<string, mixed>  $data
      * @return array{model?: string|null, id?: string|null}|null
      */

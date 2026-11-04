@@ -13,6 +13,9 @@ use Spectra\Models\SpectraTag;
  */
 readonly class Tag extends DataTransferObject
 {
+    /**
+     * Create a new tag instance.
+     */
     public function __construct(
         public string $id,
         public string $name,
@@ -21,6 +24,8 @@ readonly class Tag extends DataTransferObject
     ) {}
 
     /**
+     * Build one row per tag, with its request count, from the tag models.
+     *
      * @param  Collection<int, SpectraTag>  $tags
      * @return Collection<int, self>
      */

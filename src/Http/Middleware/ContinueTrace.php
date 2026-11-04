@@ -20,10 +20,16 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ContinueTrace
 {
+    /**
+     * Create a new continue trace middleware instance.
+     */
     public function __construct(
         protected Spectra $spectra
     ) {}
 
+    /**
+     * Join the caller's trace and tags from the incoming baggage header.
+     */
     public function handle(Request $request, Closure $next): Response
     {
         if (! config('spectra.enabled')) {

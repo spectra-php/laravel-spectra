@@ -13,6 +13,9 @@ use Spectra\Support\Tracking\GuzzleMiddleware;
  */
 class WithoutTrackingMacro
 {
+    /**
+     * Register the Http::withoutAITracking() macro that keeps a request out of tracking.
+     */
     public static function register(): void
     {
         Http::macro('withoutAITracking', function () {

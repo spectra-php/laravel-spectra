@@ -22,11 +22,17 @@ use Spectra\Providers\XAi\Handlers\VideoHandler;
  */
 class XAi extends Provider implements ExtractsPricingTierFromRequest, ExtractsPricingTierFromResponse
 {
+    /**
+     * Get the slug xAI requests are recorded under.
+     */
     public function getProvider(): string
     {
         return 'xai';
     }
 
+    /**
+     * Get the global and US regional hosts of the xAI API.
+     */
     public function getHosts(): array
     {
         return ['api.x.ai', 'us.api.x.ai'];
@@ -88,6 +94,9 @@ class XAi extends Provider implements ExtractsPricingTierFromRequest, ExtractsPr
         return null;
     }
 
+    /**
+     * Map an xAI `service_tier` value to a Spectra pricing tier.
+     */
     protected function tierFromServiceTier(mixed $serviceTier): ?string
     {
         return match ($serviceTier) {

@@ -18,11 +18,17 @@ use Spectra\Support\Pricing\PricingLookup;
  */
 class Replicate extends Provider implements ExtractsPricingTierFromResponse
 {
+    /**
+     * Get the slug Replicate requests are recorded under.
+     */
     public function getProvider(): string
     {
         return 'replicate';
     }
 
+    /**
+     * Get the hosts the Replicate API is served from.
+     */
     public function getHosts(): array
     {
         return ['api.replicate.com'];

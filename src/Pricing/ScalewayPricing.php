@@ -22,21 +22,33 @@ namespace Spectra\Pricing;
  */
 class ScalewayPricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the Scaleway prices are recorded under.
+     */
     public function provider(): string
     {
         return 'scaleway';
     }
 
+    /**
+     * Get the Scaleway pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://www.scaleway.com/en/pricing/model-as-a-service/'];
     }
 
+    /**
+     * Get the currency Scaleway's prices are written in, which is euros.
+     */
     public function currency(): string
     {
         return 'EUR';
     }
 
+    /**
+     * Register the built-in Scaleway Generative APIs models and their prices.
+     */
     protected function define(): void
     {
         $this->model('glm-5.3', fn ($m) => $m

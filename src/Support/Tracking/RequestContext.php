@@ -234,6 +234,8 @@ class RequestContext implements Arrayable
     protected ?CarbonInterface $completedAt = null;
 
     /**
+     * Create a new request context instance, filling its properties from snake_case attributes.
+     *
      * @param  array<string, mixed>  $attributes
      */
     public function __construct(array $attributes = [])
@@ -260,6 +262,9 @@ class RequestContext implements Arrayable
         $this->captureContext();
     }
 
+    /**
+     * Capture the request id, IP, user agent, source and origin of the work making the call.
+     */
     protected function captureContext(): void
     {
         if (config('spectra.tracking.capture_request_id') && app()->has('request')) {
@@ -302,6 +307,8 @@ class RequestContext implements Arrayable
     }
 
     /**
+     * Complete the request with its response and usage, then calculate its cost.
+     *
      * @param  TokenMetrics|array<string, mixed>  $usage
      */
     public function complete(mixed $response, TokenMetrics|array $usage = []): self
@@ -319,6 +326,9 @@ class RequestContext implements Arrayable
         return $this;
     }
 
+    /**
+     * Mark the request as failed with the exception and HTTP status.
+     */
     public function fail(\Throwable $exception, ?int $httpStatus = null): self
     {
         $this->completedAt = now();
@@ -332,6 +342,8 @@ class RequestContext implements Arrayable
     }
 
     /**
+     * Set the token usage and derive the reasoning flag and streaming tokens per second.
+     *
      * @param  TokenMetrics|array<string, mixed>  $usage
      */
     public function setUsage(TokenMetrics|array $usage): self
@@ -362,6 +374,9 @@ class RequestContext implements Arrayable
         return $this;
     }
 
+    /**
+     * Calculate the request's prompt, completion and total cost when costs are enabled.
+     */
     protected function calculateCost(): void
     {
         if (! config('spectra.costs.enabled', true)) {
@@ -381,6 +396,9 @@ class RequestContext implements Arrayable
         $this->currency = config('spectra.costs.currency', 'USD');
     }
 
+    /**
+     * Set how long the stream took to deliver its first token.
+     */
     public function setTimeToFirstToken(int $milliseconds): self
     {
         $this->timeToFirstTokenMs = $milliseconds;
@@ -388,6 +406,9 @@ class RequestContext implements Arrayable
         return $this;
     }
 
+    /**
+     * Count one more retry of the request.
+     */
     public function incrementRetry(): self
     {
         $this->retryCount++;
@@ -395,6 +416,9 @@ class RequestContext implements Arrayable
         return $this;
     }
 
+    /**
+     * Add a tag to the request.
+     */
     public function addTag(string $tag): self
     {
         $this->tags[] = $tag;
@@ -402,6 +426,9 @@ class RequestContext implements Arrayable
         return $this;
     }
 
+    /**
+     * Add a metadata value to the request.
+     */
     public function addMetadata(string $key, mixed $value): self
     {
         $this->metadata[$key] = $value;
@@ -409,6 +436,9 @@ class RequestContext implements Arrayable
         return $this;
     }
 
+    /**
+     * Attribute the request's usage to a model, such as the user making it.
+     */
     public function forTrackable(mixed $trackable): self
     {
         if (is_object($trackable) && ($trackable instanceof Model || method_exists($trackable, 'getKey'))) {
@@ -453,6 +483,9 @@ class RequestContext implements Arrayable
         );
     }
 
+    /**
+     * Place the request in a conversation, optionally at a given turn.
+     */
     public function inConversation(string $conversationId, ?int $turn = null): self
     {
         $this->conversationId = $conversationId;
@@ -462,6 +495,8 @@ class RequestContext implements Arrayable
     }
 
     /**
+     * Set the pricing tier the request is billed at.
+     *
      * @param  string|PricingTier  $tier  The pricing tier (batch, flex, standard, priority)
      */
     public function withPricingTier(string|PricingTier $tier): self
@@ -471,17 +506,25 @@ class RequestContext implements Arrayable
         return $this;
     }
 
+    /**
+     * Get when the request started.
+     */
     public function getStartedAt(): CarbonInterface
     {
         return $this->startedAt;
     }
 
+    /**
+     * Get when the request completed, or null while it is still running.
+     */
     public function getCompletedAt(): ?CarbonInterface
     {
         return $this->completedAt;
     }
 
     /**
+     * Get the request's columns for storage, leaving out payloads the storage config excludes.
+     *
      * @return array<string, mixed>
      */
     public function toArray(): array

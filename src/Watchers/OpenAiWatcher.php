@@ -26,12 +26,18 @@ class OpenAiWatcher implements Watcher
 
     private const OPENAI_FACADE = 'OpenAI\Laravel\Facades\OpenAI';
 
+    /**
+     * Determine if the OpenAI Laravel package and client are installed.
+     */
     public static function isAvailable(): bool
     {
         return class_exists(self::OPENAI_SERVICE_PROVIDER)
             && class_exists(self::OPENAI_CLIENT);
     }
 
+    /**
+     * Swap in a tracked OpenAI client when the package is installed.
+     */
     public function register(): void
     {
         if (! static::isAvailable()) {
@@ -41,6 +47,9 @@ class OpenAiWatcher implements Watcher
         $this->replaceOpenAiClient();
     }
 
+    /**
+     * Rebind the OpenAI client to one whose Guzzle stack runs the tracking middleware.
+     */
     protected function replaceOpenAiClient(): void
     {
         $resolver = app(ApiKeyResolver::class);

@@ -137,6 +137,9 @@ class SpectraRequest extends Model
 
     public $timestamps = false;
 
+    /**
+     * Create a new factory instance for the model.
+     */
     protected static function newFactory(): SpectraRequestFactory
     {
         return SpectraRequestFactory::new();
@@ -155,6 +158,9 @@ class SpectraRequest extends Model
 
     protected $appends = ['provider_display_name', 'total_tokens', 'formatted_created_at', 'created_at_human'];
 
+    /**
+     * Get the attributes that should be cast.
+     */
     protected function casts(): array
     {
         return [
@@ -193,12 +199,17 @@ class SpectraRequest extends Model
         ];
     }
 
+    /**
+     * Get the database connection Spectra's tables live on.
+     */
     public function getConnectionName(): ?string
     {
         return config('spectra.storage.connection');
     }
 
     /**
+     * Get the model that made this request.
+     *
      * @return MorphTo<Model, $this>
      */
     public function trackable(): MorphTo
@@ -207,6 +218,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Get the tags attached to this request.
+     *
      * @return BelongsToMany<SpectraTag, $this>
      */
     public function tags(): BelongsToMany
@@ -220,6 +233,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Scope the query to requests carrying the given tag.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -231,6 +246,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Scope the query to requests carrying at least one of the given tags.
+     *
      * @param  Builder<static>  $query
      * @param  array<int, string>  $tags
      * @return Builder<static>
@@ -261,6 +278,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Scope the query to one provider's requests.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -270,6 +289,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Scope the query to one model's requests.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -279,6 +300,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Scope the query to requests with a 2xx status code.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -288,6 +311,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Scope the query to requests with a non-2xx status code or none at all.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -318,6 +343,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Scope the query to one model type's requests.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -327,6 +354,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Scope the query to requests that stopped for the given reason.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -336,6 +365,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Scope the query to requests in which the model called a tool.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -345,6 +376,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Scope the query to the requests one trackable model made.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -355,6 +388,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Get the prompt text kept in the stored response.
+     *
      * @return Attribute<string|null, never>
      */
     protected function prompt(): Attribute
@@ -363,6 +398,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Get the generated text kept in the stored response.
+     *
      * @return Attribute<string|null, never>
      */
     protected function responseText(): Attribute
@@ -371,6 +408,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Get the request's input and output tokens added together.
+     *
      * @return Attribute<int, never>
      */
     protected function totalTokens(): Attribute
@@ -379,6 +418,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Get when the request was made, in the dashboard's date format.
+     *
      * @return Attribute<string|null, never>
      */
     protected function formattedCreatedAt(): Attribute
@@ -387,6 +428,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Get when the provider's copy of the result expires, in the dashboard's date format.
+     *
      * @return Attribute<string|null, never>
      */
     protected function formattedExpiresAt(): Attribute
@@ -395,6 +438,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Get how long ago the request was made, in words.
+     *
      * @return Attribute<string|null, never>
      */
     protected function createdAtHuman(): Attribute
@@ -403,6 +448,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Get the display name of the request's provider.
+     *
      * @return Attribute<string|null, never>
      */
     protected function providerDisplayName(): Attribute
@@ -417,6 +464,8 @@ class SpectraRequest extends Model
     }
 
     /**
+     * Get the request's cost in dollars.
+     *
      * @return Attribute<float, never>
      */
     protected function totalCostInDollars(): Attribute
@@ -424,6 +473,9 @@ class SpectraRequest extends Model
         return Attribute::get(fn () => $this->total_cost_in_cents / 100);
     }
 
+    /**
+     * Determine if the request got a 2xx status code.
+     */
     public function isSuccessful(): bool
     {
         return $this->status_code !== null && $this->status_code >= 200 && $this->status_code < 300;

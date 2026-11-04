@@ -28,11 +28,17 @@ class GenerateContentHandler implements ExtractsModelFromRequest, ExtractsModelF
     use ExtractsModelFromGoogleEndpoint;
     use MatchesParametricEndpoints;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get the generateContent and streamGenerateContent endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -56,13 +62,21 @@ class GenerateContentHandler implements ExtractsModelFromRequest, ExtractsModelF
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the model from the response's `modelVersion`.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractModelFromResponse(array $response): ?string
     {
         return $response['modelVersion'] ?? null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the answer text of the first candidate, leaving out thought summaries.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         if (! isset($response['candidates'][0]['content']['parts']) || ! is_array($response['candidates'][0]['content']['parts'])) {
@@ -85,18 +99,29 @@ class GenerateContentHandler implements ExtractsModelFromRequest, ExtractsModelF
         return count($texts) === 1 ? $texts[0] : implode("\n", $texts);
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the first candidate's finish reason.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return $response['candidates'][0]['finishReason'] ?? null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a generateContent response.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return isset($data['candidates']) || isset($data['usageMetadata']);
     }
 
+    /**
+     * Get the stream handler for a streamed generateContent response.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new GenerateContentStreaming;

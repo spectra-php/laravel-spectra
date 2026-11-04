@@ -14,6 +14,9 @@ use Spectra\Support\Query\RequestAggregateQuery;
  */
 class GetOverviewStats
 {
+    /**
+     * Get the overview's request, usage, cost and latency totals for the date range.
+     */
     public function __invoke(DateRange $dateRange, string $layout): OverviewStatsResponse
     {
         $stats = RequestAggregateQuery::make($dateRange)

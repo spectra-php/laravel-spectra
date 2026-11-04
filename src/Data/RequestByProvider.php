@@ -13,12 +13,17 @@ use Spectra\Models\SpectraRequest;
  */
 readonly class RequestByProvider extends DataTransferObject
 {
+    /**
+     * Create a new request by provider instance.
+     */
     public function __construct(
         public ?string $provider,
         public int $count,
     ) {}
 
     /**
+     * Build one row per provider from the per-provider request count rows.
+     *
      * @param  Collection<int, SpectraRequest>  $items
      * @return Collection<int, self>
      */

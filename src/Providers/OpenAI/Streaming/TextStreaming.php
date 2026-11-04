@@ -160,6 +160,8 @@ class TextStreaming extends StreamHandler
     }
 
     /**
+     * Add the pricing tier a service tier maps to, when it maps to one.
+     *
      * @param  array<string, mixed>  $usage
      * @return array<string, mixed>
      */

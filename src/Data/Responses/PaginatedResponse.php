@@ -15,6 +15,8 @@ use Spectra\Data\DataTransferObject;
 readonly class PaginatedResponse extends DataTransferObject
 {
     /**
+     * Create a new paginated response instance.
+     *
      * @param  array<int, mixed>  $data
      */
     public function __construct(

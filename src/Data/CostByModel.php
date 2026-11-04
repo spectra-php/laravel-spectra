@@ -11,6 +11,9 @@ namespace Spectra\Data;
  */
 readonly class CostByModel extends DataTransferObject
 {
+    /**
+     * Create a new cost by model instance.
+     */
     public function __construct(
         public string $model,
         public ?string $provider,

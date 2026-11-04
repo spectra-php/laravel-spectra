@@ -24,16 +24,25 @@ namespace Spectra\Pricing;
  */
 class OpenAIPricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the OpenAI prices are recorded under.
+     */
     public function provider(): string
     {
         return 'openai';
     }
 
+    /**
+     * Get the OpenAI pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://developers.openai.com/api/docs/pricing'];
     }
 
+    /**
+     * Register the built-in OpenAI models and their prices.
+     */
     protected function define(): void
     {
         $this->defineFlagshipModels();

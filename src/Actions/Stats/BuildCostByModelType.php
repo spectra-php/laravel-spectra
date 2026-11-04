@@ -15,6 +15,8 @@ use Spectra\Data\ModelTypeStat;
 class BuildCostByModelType
 {
     /**
+     * Get the cost per model type, with every known type present.
+     *
      * @param  Collection<int, ModelTypeStat>  $modelTypeStats
      * @return array<string, float>
      */

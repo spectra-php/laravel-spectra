@@ -17,11 +17,18 @@ class ResponsesStreaming extends StreamHandler
 {
     protected const TERMINAL_EVENTS = ['response.completed', 'response.incomplete', 'response.failed'];
 
+    /**
+     * Create a new Groq Responses stream handler instance.
+     */
     public function __construct(
         protected ResponsesHandler $handler,
     ) {}
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the text delta of a `response.output_text.delta` event.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function text(array $data): ?string
     {
         if (($data['type'] ?? null) !== 'response.output_text.delta') {
@@ -32,6 +39,8 @@ class ResponsesStreaming extends StreamHandler
     }
 
     /**
+     * Merge the terminal event's usage into the usage so far.
+     *
      * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $currentUsage
      * @return array<string, mixed>
@@ -47,7 +56,11 @@ class ResponsesStreaming extends StreamHandler
         return array_merge($currentUsage, $this->handler->tokensFromUsage($usage)->toUsageArray());
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the terminal event's status as the finish reason.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function finishReason(array $data): ?string
     {
         $status = $this->terminalResponse($data)['status'] ?? null;
@@ -56,6 +69,8 @@ class ResponsesStreaming extends StreamHandler
     }
 
     /**
+     * Get the model and response id an event's response carries.
+     *
      * @param  array<string, mixed>  $data
      * @return array{model?: string|null, id?: string|null}|null
      */
@@ -72,6 +87,8 @@ class ResponsesStreaming extends StreamHandler
     }
 
     /**
+     * Get the response of a terminal event, or an empty array for other events.
+     *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */

@@ -17,7 +17,11 @@ use Spectra\Support\Tracking\StreamHandler;
  */
 class TranscriptionStreaming extends StreamHandler
 {
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the text delta of a `transcript.text.delta` event.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function text(array $data): ?string
     {
         if (($data['type'] ?? null) !== 'transcript.text.delta') {
@@ -28,6 +32,8 @@ class TranscriptionStreaming extends StreamHandler
     }
 
     /**
+     * Merge the usage of the `transcript.text.done` event into the usage so far.
+     *
      * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $currentUsage
      * @return array<string, mixed>
@@ -41,13 +47,19 @@ class TranscriptionStreaming extends StreamHandler
         return array_merge($currentUsage, OpenAiUsage::fromTranscription($data['usage'])->toUsageArray());
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get `completed` as the finish reason of the `transcript.text.done` event.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function finishReason(array $data): ?string
     {
         return ($data['type'] ?? null) === 'transcript.text.done' ? 'completed' : null;
     }
 
     /**
+     * Get the model and response id, which transcription stream events never carry.
+     *
      * @param  array<string, mixed>  $data
      * @return array{model?: string|null, id?: string|null}|null
      */

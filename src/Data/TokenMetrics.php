@@ -19,6 +19,9 @@ namespace Spectra\Data;
  */
 readonly class TokenMetrics extends DataTransferObject
 {
+    /**
+     * Create a new token metrics instance.
+     */
     public function __construct(
         public int $promptTokens = 0,
         public int $completionTokens = 0,
@@ -87,6 +90,9 @@ readonly class TokenMetrics extends DataTransferObject
         ];
     }
 
+    /**
+     * Get the input and output tokens added together.
+     */
     public function totalTokens(): int
     {
         return $this->promptTokens + $this->completionTokens;

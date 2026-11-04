@@ -18,6 +18,9 @@ use Spectra\Support\DateRange;
  */
 class TracesController extends BaseApiController
 {
+    /**
+     * Get a filtered, sorted page of traces with their summary and filter options.
+     */
     public function __invoke(
         Request $request,
         GetFilteredTraces $getFilteredTraces,

@@ -11,6 +11,10 @@ namespace Spectra\Contracts;
  */
 interface HasFinishReason
 {
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the reason the provider gives for why generation stopped.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string;
 }

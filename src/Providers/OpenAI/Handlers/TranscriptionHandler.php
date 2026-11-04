@@ -30,11 +30,17 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler, Stream
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Stt;
     }
 
+    /**
+     * Get the transcription and translation endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -44,6 +50,8 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler, Stream
     }
 
     /**
+     * Get the token usage and billed audio seconds of a transcription.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -63,12 +71,19 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler, Stream
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the transcribed text.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return $response['text'] ?? null;
     }
 
+    /**
+     * Get the stream handler for a streamed transcription.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new TranscriptionStreaming;

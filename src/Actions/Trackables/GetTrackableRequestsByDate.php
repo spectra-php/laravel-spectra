@@ -15,6 +15,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetTrackableRequestsByDate
 {
     /**
+     * Get the trackable's request count per day in the date range.
+     *
      * @return Collection<int, RequestByDate>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection

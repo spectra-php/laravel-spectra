@@ -10,6 +10,9 @@ namespace Spectra\Data;
  */
 readonly class MediaContent extends DataTransferObject
 {
+    /**
+     * Create a new media content instance.
+     */
     public function __construct(
         public string $content,
         public string $mime_type,

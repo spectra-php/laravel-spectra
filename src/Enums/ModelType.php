@@ -23,6 +23,9 @@ enum ModelType: string
     case Tts = 'tts';
     case Stt = 'stt';
 
+    /**
+     * Get the model type's name as the dashboard shows it.
+     */
     public function label(): string
     {
         return match ($this) {

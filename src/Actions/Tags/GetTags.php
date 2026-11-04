@@ -13,6 +13,9 @@ use Spectra\Models\SpectraTag;
  */
 class GetTags
 {
+    /**
+     * Get every tag with its request count, most used first.
+     */
     public function __invoke(): TagsResponse
     {
         return new TagsResponse(

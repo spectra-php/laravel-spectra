@@ -14,6 +14,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class BuildModelBreakdown
 {
     /**
+     * Get the calls, cost and tokens per model for the group of calls, most expensive first.
+     *
      * @param  RequestAggregateQuery  $calls  scoped to the group, nothing selected yet
      * @return array<int, array<string, mixed>>
      */

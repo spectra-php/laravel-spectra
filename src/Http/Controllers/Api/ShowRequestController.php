@@ -12,6 +12,9 @@ use Spectra\Data\Responses\RequestDetailsResponse;
  */
 class ShowRequestController extends BaseApiController
 {
+    /**
+     * Get the request detail screen's data for one request.
+     */
     public function __invoke(string $id, GetRequestDetails $action): RequestDetailsResponse
     {
         return $action($id);

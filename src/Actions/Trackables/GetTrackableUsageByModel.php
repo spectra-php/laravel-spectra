@@ -16,6 +16,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetTrackableUsageByModel
 {
     /**
+     * Get the trackable's requests, tokens and cost per model, most used first.
+     *
      * @return Collection<int, UsageByModel>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection

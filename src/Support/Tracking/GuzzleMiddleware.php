@@ -52,6 +52,8 @@ class GuzzleMiddleware
     public const MANUAL_TRACKING_HEADER = 'X-Spectra-Manual-Tracking';
 
     /**
+     * Create a new tracking middleware instance.
+     *
      * @param  string  $provider  A provider slug, or 'auto' to detect it from the host.
      * @param  array<string, mixed>  $options  Passed to Spectra::startRequest() (tags, metadata, pricing_tier, ...).
      * @param  bool  $manual  True for the `withAITracking()` macro: tracks any endpoint of the given provider.
@@ -64,6 +66,8 @@ class GuzzleMiddleware
     ) {}
 
     /**
+     * Create the Guzzle middleware callable for a provider, or 'auto' to detect it from the host.
+     *
      * @param  array<string, mixed>  $options
      */
     public static function create(
@@ -86,6 +90,8 @@ class GuzzleMiddleware
     }
 
     /**
+     * Track the AI request through the handler, never letting a tracking failure reach the app.
+     *
      * @param  array<string, mixed>  $options
      */
     public function __invoke(callable $handler, RequestInterface $request, array $options): PromiseInterface
@@ -116,6 +122,8 @@ class GuzzleMiddleware
     }
 
     /**
+     * Start tracking a request to a trackable provider endpoint, or return null to skip it.
+     *
      * @param  array<string, mixed>  $options
      */
     protected function start(RequestInterface $request, array $options): ?RequestContext
@@ -167,6 +175,9 @@ class GuzzleMiddleware
         return $context;
     }
 
+    /**
+     * Record the provider's response, wrapping streamed bodies so they are tracked as they are read.
+     */
     protected function onResponse(RequestContext $context, ResponseInterface $response): ResponseInterface
     {
         $context->httpStatus = $response->getStatusCode();
@@ -182,6 +193,9 @@ class GuzzleMiddleware
         return $this->withBody($response, fn (string $body) => $this->recordBody($context, $body));
     }
 
+    /**
+     * Record a request that threw, with the HTTP status when the exception carries a response.
+     */
     protected function onException(RequestContext $context, Throwable $exception): void
     {
         $httpStatus = null;
@@ -224,6 +238,9 @@ class GuzzleMiddleware
         ));
     }
 
+    /**
+     * Wrap a streamed response body so each chunk feeds the streaming tracker as the app reads it.
+     */
     protected function trackStream(RequestContext $context, ResponseInterface $response): ResponseInterface
     {
         $manager = app(Spectra::class);
@@ -259,6 +276,9 @@ class GuzzleMiddleware
         ));
     }
 
+    /**
+     * Record a decoded response body, remembering or restoring async job details first.
+     */
     protected function recordBody(RequestContext $context, string $rawBody): void
     {
         $providerInstance = app(ProviderRegistry::class)->provider($context->provider);
@@ -395,11 +415,17 @@ class GuzzleMiddleware
         return $data;
     }
 
+    /**
+     * Get the cache key that remembers an async job's model and request between submit and poll.
+     */
     protected function jobModelKey(string $provider, string $jobId): string
     {
         return 'spectra:job-model:'.$provider.':'.sha1($jobId);
     }
 
+    /**
+     * Record a provider error response as a failed request.
+     */
     protected function recordHttpError(RequestContext $context, int $status, string $body): void
     {
         app(Spectra::class)->recordFailure($context, new ProviderErrorException(self::errorMessage($body, $status), $status), $status);
@@ -441,6 +467,9 @@ class GuzzleMiddleware
         return filled($message) ? $message : null;
     }
 
+    /**
+     * Resolve the provider slug, detecting it from the request host when the middleware is 'auto'.
+     */
     protected function resolveProvider(RequestInterface $request, ProviderRegistry $registry): ?string
     {
         if ($this->provider !== 'auto') {

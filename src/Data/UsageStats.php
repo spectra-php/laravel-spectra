@@ -12,6 +12,9 @@ namespace Spectra\Data;
  */
 readonly class UsageStats extends DataTransferObject
 {
+    /**
+     * Create a new usage stats instance.
+     */
     public function __construct(
         public int $requestCount = 0,
         public int $successfulCount = 0,

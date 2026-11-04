@@ -13,6 +13,9 @@ use Illuminate\Support\Collection;
  */
 readonly class ModelTypeLatency extends DataTransferObject
 {
+    /**
+     * Create a new model type latency instance.
+     */
     public function __construct(
         public string $model_type,
         public string $label,
@@ -21,6 +24,8 @@ readonly class ModelTypeLatency extends DataTransferObject
     ) {}
 
     /**
+     * Build the count and average latency rows from the per-model-type stats.
+     *
      * @param  Collection<int, ModelTypeStat>  $stats
      * @return Collection<int, self>
      */

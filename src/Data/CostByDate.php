@@ -12,12 +12,17 @@ use Spectra\Models\SpectraRequest;
  */
 readonly class CostByDate extends DataTransferObject
 {
+    /**
+     * Create a new cost by date instance.
+     */
     public function __construct(
         public string $date,
         public float $cost,
     ) {}
 
     /**
+     * Build one row per day from the cost-per-day aggregate rows.
+     *
      * @param  Collection<int, SpectraRequest>  $items
      * @return Collection<int, self>
      */

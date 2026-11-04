@@ -23,16 +23,25 @@ namespace Spectra\Pricing;
  */
 class MistralPricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the Mistral prices are recorded under.
+     */
     public function provider(): string
     {
         return 'mistral';
     }
 
+    /**
+     * Get the Mistral pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://docs.mistral.ai/inference/pricing'];
     }
 
+    /**
+     * Register the built-in Mistral AI models and their prices.
+     */
     protected function define(): void
     {
         // Mistral Large 4 is in public preview. Its launch sale ($0.68 / $2.09,

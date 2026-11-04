@@ -15,6 +15,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetCostsByDate
 {
     /**
+     * Get the cost per day of successful requests in the date range.
+     *
      * @return Collection<int, CostByDate>
      */
     public function __invoke(DateRange $dateRange): Collection

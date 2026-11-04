@@ -24,6 +24,9 @@ class InstallCommand extends Command
 
     protected $description = 'Install all of the Spectra resources (safe to run again after upgrading)';
 
+    /**
+     * Publish the config and new migrations, then offer to run the migrations.
+     */
     public function handle(): int
     {
         $this->comment('Publishing Spectra Configuration...');
@@ -85,6 +88,9 @@ class InstallCommand extends Command
         return $published;
     }
 
+    /**
+     * Strip the `Y_m_d_His_` date prefix from a migration file name.
+     */
     protected function withoutDatePrefix(string $filename): string
     {
         return (string) preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', $filename);

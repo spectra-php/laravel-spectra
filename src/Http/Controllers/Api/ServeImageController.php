@@ -13,6 +13,9 @@ use Spectra\Actions\Media\ResolveImage;
  */
 class ServeImageController extends BaseApiController
 {
+    /**
+     * Serve one generated image of the request, cached privately by the browser.
+     */
     public function __invoke(string $id, int $index, ResolveImage $action): Response
     {
         $media = $action($id, $index);

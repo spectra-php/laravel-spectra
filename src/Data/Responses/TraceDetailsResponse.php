@@ -15,6 +15,8 @@ use Spectra\Data\DataTransferObject;
 readonly class TraceDetailsResponse extends DataTransferObject
 {
     /**
+     * Create a new trace details response instance.
+     *
      * @param  array<int, array<string, mixed>>  $requests
      * @param  array<int, array<string, mixed>>  $spans
      * @param  array<int, array<string, mixed>>  $models

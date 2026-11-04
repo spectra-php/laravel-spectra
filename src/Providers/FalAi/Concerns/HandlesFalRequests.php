@@ -96,7 +96,11 @@ trait HandlesFalRequests
         return is_array($data['payload'] ?? null) ? $data['payload'] : $data;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the queue status of a fal.ai result as its finish reason.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return is_string($response['status'] ?? null) ? $response['status'] : null;

@@ -27,11 +27,17 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type Cohere embed requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Embedding;
     }
 
+    /**
+     * Get the Cohere v1 and v2 embed endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -41,6 +47,8 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     }
 
     /**
+     * Build the billed text and image input tokens of a Cohere embed response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -62,7 +70,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Describe the first embedding of a Cohere embed response by its dimensions.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         // v2: embeddings.float[][] — v1: embeddings[][]
@@ -79,7 +91,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
         return "[embedding: {$dimensions} dimensions]";
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Cohere embed response with embeddings.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return is_array($data['embeddings'] ?? null);

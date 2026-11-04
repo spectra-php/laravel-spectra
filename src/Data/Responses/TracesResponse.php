@@ -14,6 +14,8 @@ use Spectra\Data\TracesSummary;
 readonly class TracesResponse extends PaginatedResponse
 {
     /**
+     * Create a new traces response instance.
+     *
      * @param  array<int, mixed>  $data
      * @param  array<int, string>  $available_tags
      * @param  array<int, string>  $available_finish_reasons

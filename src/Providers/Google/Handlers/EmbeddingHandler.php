@@ -24,15 +24,24 @@ class EmbeddingHandler implements ExtractsModelFromRequest, Handler, MatchesResp
     use ExtractsModelFromGoogleEndpoint;
     use MatchesParametricEndpoints;
 
+    /**
+     * Create a new Gemini embedding handler instance.
+     */
     public function __construct(
         protected GoogleTokenCounter $tokenCounter
     ) {}
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Embedding;
     }
 
+    /**
+     * Get the single and batch embedding endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -42,6 +51,8 @@ class EmbeddingHandler implements ExtractsModelFromRequest, Handler, MatchesResp
     }
 
     /**
+     * Get the prompt tokens of an embedding, from usage or the countTokens API.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -68,8 +79,9 @@ class EmbeddingHandler implements ExtractsModelFromRequest, Handler, MatchesResp
      * The model name is injected into requestData by the Google provider
      * (as `_spectra_model`) since the embedContent request body doesn't
      * include it — it's only in the URL path.
+     *
+     * @param  array<string, mixed>  $requestData
      */
-    /** @param  array<string, mixed>  $requestData */
     protected function countTokensViaApi(array $requestData): ?int
     {
         $model = $requestData['_spectra_model'] ?? null;
@@ -96,7 +108,11 @@ class EmbeddingHandler implements ExtractsModelFromRequest, Handler, MatchesResp
         return null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get a placeholder text naming the embedding's dimensions or batch size.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         if (isset($response['embedding']['values'])) {
@@ -114,7 +130,11 @@ class EmbeddingHandler implements ExtractsModelFromRequest, Handler, MatchesResp
         return null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a single or batch embedding response.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return isset($data['embedding']['values']) || isset($data['embeddings']);

@@ -16,6 +16,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetTrackableUsageByProvider
 {
     /**
+     * Get the trackable's requests, usage and cost per provider, most expensive first.
+     *
      * @return Collection<int, UsageByProvider>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection

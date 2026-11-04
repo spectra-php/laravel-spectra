@@ -12,6 +12,9 @@ use RuntimeException;
  */
 class ProviderErrorException extends RuntimeException
 {
+    /**
+     * Create a new provider error exception with the response's HTTP status.
+     */
     public function __construct(string $message, public readonly int $status)
     {
         parent::__construct($message, $status);

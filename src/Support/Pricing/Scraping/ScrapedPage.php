@@ -11,6 +11,8 @@ namespace Spectra\Support\Pricing\Scraping;
 final class ScrapedPage
 {
     /**
+     * Create a new scraped page with its extracted rows and markdown.
+     *
      * @param  list<array<string, mixed>>  $rows
      */
     public function __construct(

@@ -22,6 +22,9 @@ class MessageTextExtractor
     /** Part types that carry text in a message's content list. */
     protected const TEXT_PART_TYPES = ['text', 'input_text', 'output_text'];
 
+    /**
+     * Create a new message text extractor instance.
+     */
     public function __construct(
         protected ProviderRegistry $providers,
     ) {}

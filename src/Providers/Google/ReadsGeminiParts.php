@@ -17,6 +17,8 @@ use Illuminate\Support\Str;
 trait ReadsGeminiParts
 {
     /**
+     * Get the parts of the first candidate's content.
+     *
      * @param  array<string, mixed>  $data
      * @return array<int, array<mixed>>
      */
@@ -31,7 +33,11 @@ trait ReadsGeminiParts
         return collect($parts)->filter(fn (mixed $part) => is_array($part))->values()->all();
     }
 
-    /** @param  array<mixed>  $part */
+    /**
+     * Get the mime type of an inline part.
+     *
+     * @param  array<mixed>  $part
+     */
     protected function inlineMimeType(array $part): ?string
     {
         $mimeType = data_get($part, 'inlineData.mimeType');
@@ -39,7 +45,11 @@ trait ReadsGeminiParts
         return is_string($mimeType) ? $mimeType : null;
     }
 
-    /** @param  array<mixed>  $part */
+    /**
+     * Determine if a part is inline data whose mime type starts with the prefix.
+     *
+     * @param  array<mixed>  $part
+     */
     protected function isInlinePart(array $part, string $mimePrefix): bool
     {
         return Str::startsWith($this->inlineMimeType($part) ?? '', $mimePrefix);

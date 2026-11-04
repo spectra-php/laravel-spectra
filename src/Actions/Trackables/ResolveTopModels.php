@@ -14,6 +14,8 @@ use Spectra\Models\SpectraRequest;
 class ResolveTopModels
 {
     /**
+     * Get the most used model of each trackable on the page, keyed by type and id.
+     *
      * @param  Collection<int, SpectraRequest>  $pageItems
      * @return array<string, string>
      */
@@ -49,9 +51,7 @@ class ResolveTopModels
         $topModels = [];
         foreach ($modelCounts as $row) {
             $key = $row->trackable_type.':'.$row->trackable_id;
-            if (! array_key_exists($key, $topModels)) {
-                $topModels[$key] = $row->model;
-            }
+            $topModels[$key] ??= $row->model;
         }
 
         return $topModels;

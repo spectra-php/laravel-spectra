@@ -14,6 +14,8 @@ use Spectra\Data\DataTransferObject;
 readonly class TrackableDetailsResponse extends DataTransferObject
 {
     /**
+     * Create a new trackable details response instance.
+     *
      * @param  array<string, mixed>  $trackable
      * @param  Collection<int, mixed>  $requests
      */

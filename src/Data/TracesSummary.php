@@ -10,6 +10,9 @@ namespace Spectra\Data;
  */
 readonly class TracesSummary extends DataTransferObject
 {
+    /**
+     * Create a new traces summary instance.
+     */
     public function __construct(
         public int $trace_count,
         public int $failed_trace_count,

@@ -12,6 +12,9 @@ namespace Spectra\Concerns;
  */
 trait MatchesParametricEndpoints
 {
+    /**
+     * Determine if the request path fits one of the handler's endpoint patterns.
+     */
     public function matchesEndpoint(string $endpoint): bool
     {
         foreach ($this->endpoints() as $pattern) {

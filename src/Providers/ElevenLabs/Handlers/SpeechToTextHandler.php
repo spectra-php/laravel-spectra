@@ -25,23 +25,35 @@ class SpeechToTextHandler implements ExtractsModelFromRequest, Handler, SkipsRes
 {
     use MatchesEndpoints;
 
+    /**
+     * Get the model type ElevenLabs transcriptions are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Stt;
     }
 
+    /**
+     * Get the ElevenLabs speech to text endpoint path.
+     */
     public function endpoints(): array
     {
         return ['/v1/speech-to-text'];
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Determine if the body is a webhook receipt rather than a transcript.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function shouldSkipResponse(array $responseData): bool
     {
         return ! isset($responseData['text']) && ! isset($responseData['transcripts']);
     }
 
     /**
+     * Build the audio usage from the transcribed audio length.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -52,7 +64,11 @@ class SpeechToTextHandler implements ExtractsModelFromRequest, Handler, SkipsRes
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the transcript text, joining one transcript per channel for multichannel audio.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         if (is_string($response['text'] ?? null)) {
@@ -60,15 +76,19 @@ class SpeechToTextHandler implements ExtractsModelFromRequest, Handler, SkipsRes
         }
 
         // Multichannel audio: one transcript per channel.
-        $texts = array_filter(array_map(
-            fn ($transcript) => is_array($transcript) && is_string($transcript['text'] ?? null) ? $transcript['text'] : null,
-            is_array($response['transcripts'] ?? null) ? $response['transcripts'] : [],
-        ));
+        $texts = collect(is_array($response['transcripts'] ?? null) ? $response['transcripts'] : [])
+            ->map(fn (mixed $transcript) => is_array($transcript) && is_string($transcript['text'] ?? null) ? $transcript['text'] : null)
+            ->filter()
+            ->all();
 
         return $texts !== [] ? implode("\n", $texts) : null;
     }
 
-    /** @param  array<string, mixed>  $requestData */
+    /**
+     * Get the Scribe model named by the request's `model_id`.
+     *
+     * @param  array<string, mixed>  $requestData
+     */
     public function extractModelFromRequest(array $requestData, string $endpoint): ?string
     {
         $model = $requestData['model_id'] ?? null;
@@ -76,7 +96,11 @@ class SpeechToTextHandler implements ExtractsModelFromRequest, Handler, SkipsRes
         return filled($model) ? $model : null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the audio length in seconds, or the end of the last transcribed word.
+     *
+     * @param  array<string, mixed>  $response
+     */
     protected function durationSeconds(array $response): ?float
     {
         if (is_numeric($response['audio_duration_secs'] ?? null)) {

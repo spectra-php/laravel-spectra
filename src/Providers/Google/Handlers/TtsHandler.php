@@ -27,11 +27,17 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
     use MatchesParametricEndpoints;
     use ReadsGeminiParts;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Tts;
     }
 
+    /**
+     * Get the generateContent endpoint paths used for speech.
+     */
     public function endpoints(): array
     {
         return [
@@ -41,6 +47,8 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
     }
 
     /**
+     * Get the token usage and input characters of a speech response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -65,19 +73,31 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the model from the response's `modelVersion`.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractModelFromResponse(array $response): ?string
     {
         return filled($response['modelVersion'] ?? null) ? $response['modelVersion'] : null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get a placeholder text for a speech response.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return $this->matchesResponse($response) ? '[audio]' : null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the first candidate holds inline audio data.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         foreach ($this->firstCandidateParts($data) as $part) {
@@ -90,6 +110,8 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
     }
 
     /**
+     * Store the generated audio as a WAV file and return its path.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -113,6 +135,9 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
         return [];
     }
 
+    /**
+     * Get the sample rate from the audio mime type, defaulting to 24 kHz.
+     */
     private function parseSampleRate(string $mimeType): int
     {
         if (preg_match('/rate=(\d+)/', $mimeType, $matches)) {
@@ -122,6 +147,9 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
         return 24000;
     }
 
+    /**
+     * Wrap raw PCM audio in a WAV header.
+     */
     private function pcmToWav(string $pcm, int $sampleRate, int $channels = 1, int $bitsPerSample = 16): string
     {
         $dataSize = strlen($pcm);

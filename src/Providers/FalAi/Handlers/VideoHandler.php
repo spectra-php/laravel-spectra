@@ -37,12 +37,17 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
     /** Seconds to wait for a generated video to download. */
     protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 60;
 
+    /**
+     * Get the model type fal.ai video requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Video;
     }
 
     /**
+     * Build the video count and requested length of a fal.ai result.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -56,24 +61,34 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the URLs of the generated videos, one per line.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
-        $urls = array_filter(array_map(
-            fn (array $video) => is_string($video['url'] ?? null) ? $video['url'] : null,
-            $this->videos($response),
-        ));
+        $urls = collect($this->videos($response))
+            ->map(fn (array $video) => is_string($video['url'] ?? null) ? $video['url'] : null)
+            ->filter()
+            ->all();
 
         return $urls !== [] ? implode("\n", $urls) : null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the fal.ai result holds a video.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return $this->videos($data) !== [];
     }
 
     /**
+     * Download and store every generated video, skipping any that fail.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -117,8 +132,10 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
     }
 
     /**
+     * Get the video files of a result (`video`, or `videos[]`) that have a URL.
+     *
      * @param  array<string, mixed>  $data
-     * @return list<array<string, mixed>>
+     * @return array<int, array<mixed>>
      */
     protected function videos(array $data): array
     {
@@ -130,10 +147,16 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
 
         $videos = $output['videos'] ?? [];
 
-        return is_array($videos) ? array_values(array_filter($videos, fn ($video) => is_array($video) && isset($video['url']))) : [];
+        return is_array($videos)
+            ? collect($videos)->filter(fn (mixed $video) => is_array($video) && isset($video['url']))->values()->all()
+            : [];
     }
 
-    /** @param  array<string, mixed>  $requestData */
+    /**
+     * Get the billed seconds from the request's `duration` or `num_frames`.
+     *
+     * @param  array<string, mixed>  $requestData
+     */
     protected function durationSeconds(array $requestData): ?float
     {
         $duration = $requestData['duration'] ?? null;

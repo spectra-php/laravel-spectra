@@ -56,6 +56,9 @@ class RequestWriter
     /** Whether the missing trace columns were already reported (the writer is a singleton). */
     protected bool $hasWarnedAboutTraceColumns = false;
 
+    /**
+     * Create a new request writer instance.
+     */
     public function __construct(
         protected StatsAggregator $statsAggregator,
         protected RequestTransformer $transformer,
@@ -63,6 +66,8 @@ class RequestWriter
     ) {}
 
     /**
+     * Save a tracked request, then update its tags, daily stats, budgets and integrations.
+     *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
      * @param  bool  $export  Whether to export to integrations synchronously (the
@@ -95,6 +100,9 @@ class RequestWriter
         return $request;
     }
 
+    /**
+     * Dispatch the RequestTracked event and export the request to OpenTelemetry when enabled.
+     */
     public function export(SpectraRequest $request): void
     {
         $data = $this->transformer->transform($request);
@@ -194,6 +202,8 @@ class RequestWriter
     }
 
     /**
+     * Find the row an earlier write saved, by provider response id or by row id.
+     *
      * @param  array<string, mixed>  $attributes
      */
     protected function findExisting(array $attributes): ?SpectraRequest
@@ -217,6 +227,9 @@ class RequestWriter
         return SpectraRequest::query()->whereKey($id)->first();
     }
 
+    /**
+     * Determine if an update changed any metric the stats, budgets or exports report.
+     */
     protected function hasChanged(SpectraRequest $request, SpectraRequest $previous): bool
     {
         foreach (self::TRACKED_METRICS as $field) {

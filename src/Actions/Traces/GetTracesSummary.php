@@ -15,10 +15,16 @@ use Spectra\Support\DateRange;
  */
 class GetTracesSummary
 {
+    /**
+     * Create a new get traces summary action instance.
+     */
     public function __construct(
         private readonly BuildTraceQuery $buildTraceQuery,
     ) {}
 
+    /**
+     * Get the trace count, failed count and average cost, calls and duration for the filters.
+     */
     public function __invoke(Request $request, DateRange $dateRange): TracesSummary
     {
         $traces = ($this->buildTraceQuery)($request, $dateRange)->toQuery()->toBase();

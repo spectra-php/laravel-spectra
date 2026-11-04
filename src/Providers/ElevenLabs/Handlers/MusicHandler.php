@@ -10,6 +10,9 @@ namespace Spectra\Providers\ElevenLabs\Handlers;
  */
 class MusicHandler extends GeneratedAudioHandler
 {
+    /**
+     * Get the ElevenLabs music endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -18,12 +21,19 @@ class MusicHandler extends GeneratedAudioHandler
         ];
     }
 
+    /**
+     * Get the music model ElevenLabs uses when the request names none.
+     */
     protected function defaultModel(): string
     {
         return 'music_v1';
     }
 
-    /** @param  array<string, mixed>  $requestData */
+    /**
+     * Get the requested `music_length_ms` in seconds, or null when unset.
+     *
+     * @param  array<string, mixed>  $requestData
+     */
     protected function requestedSeconds(array $requestData): ?float
     {
         $milliseconds = $requestData['music_length_ms'] ?? null;

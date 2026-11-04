@@ -17,11 +17,16 @@ use Spectra\Support\Query\RequestAggregateQuery;
  */
 class GetCostsByUser
 {
+    /**
+     * Create a new get costs by user action instance.
+     */
     public function __construct(
         private readonly ResolveTrackableMetadata $resolveMetadata,
     ) {}
 
     /**
+     * Get the trackables that spent the most in the date range, with their names.
+     *
      * @return Collection<int, CostByUser>
      */
     public function __invoke(DateRange $dateRange, int $limit = 10): Collection

@@ -18,6 +18,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetFilteredTrackables
 {
     /**
+     * Get the sorted page of per-trackable usage, cost and latency for the filters.
+     *
      * @return LengthAwarePaginator<int, SpectraRequest>
      */
     public function __invoke(Request $request, DateRange $dateRange): LengthAwarePaginator

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Illuminate\Support\Arr;
+
 /**
  * Removes system prompts and tool definitions from a raw request body before
  * it is stored, for the `store_system_prompts` and `store_tools` switches.
@@ -28,6 +30,8 @@ class RequestDataFilter
     protected const TOOL_KEYS = ['tools', 'functions'];
 
     /**
+     * Remove system prompts from a request body, at the top level and in its messages or input.
+     *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
@@ -50,6 +54,8 @@ class RequestDataFilter
     }
 
     /**
+     * Remove tool and function definitions from a request body.
+     *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
@@ -59,24 +65,28 @@ class RequestDataFilter
     }
 
     /**
+     * Remove the system and developer messages from a message list.
+     *
      * @param  array<int, mixed>  $messages
      * @return array<int, mixed>
      */
     protected function withoutSystemMessages(array $messages): array
     {
-        return array_values(array_filter(
-            $messages,
-            fn (mixed $message) => ! (is_array($message) && in_array($message['role'] ?? null, self::SYSTEM_ROLES, true)),
-        ));
+        return collect($messages)
+            ->filter(fn (mixed $message) => ! (is_array($message) && in_array($message['role'] ?? null, self::SYSTEM_ROLES, true)))
+            ->values()
+            ->all();
     }
 
     /**
+     * Remove the given keys from an array.
+     *
      * @param  array<array-key, mixed>  $data
      * @param  array<int, string>  $keys
      * @return array<array-key, mixed>
      */
     protected function withoutKeys(array $data, array $keys): array
     {
-        return array_diff_key($data, array_flip($keys));
+        return Arr::except($data, $keys);
     }
 }

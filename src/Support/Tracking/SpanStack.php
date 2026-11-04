@@ -51,6 +51,9 @@ class SpanStack
     /** Counts openings, so the span opened last (a span or a unit) is the current one. */
     protected int $opened = 0;
 
+    /**
+     * Create a new span stack instance.
+     */
     public function __construct(
         protected SpanWriter $writer,
     ) {}
@@ -118,6 +121,9 @@ class SpanStack
         $this->commandName = $command;
     }
 
+    /**
+     * Close the user's Artisan command span when that command, not one it called, ends.
+     */
     public function finishCommand(?string $command): void
     {
         if ($command !== null && $command === $this->commandName) {
@@ -205,6 +211,9 @@ class SpanStack
         return $this->currentSpanId($traceId, $upstreamParentSpanId, markUsed: false) ?? $upstreamParentSpanId;
     }
 
+    /**
+     * Get the innermost open span id in this trace, giving the current unit its root span on first use.
+     */
     protected function currentSpanId(?string $traceId, ?string $upstreamParentSpanId, bool $markUsed): ?string
     {
         if ($traceId === null) {
@@ -292,6 +301,9 @@ class SpanStack
         return self::HTTP_UNIT;
     }
 
+    /**
+     * Get when the HTTP request started, or now when the server time is missing or stale.
+     */
     protected function requestStartedAt(): CarbonInterface
     {
         $startedAt = request()->server('REQUEST_TIME_FLOAT');
@@ -310,12 +322,17 @@ class SpanStack
         return config('spectra.tracking.capture_origin', true) ? app(TraceOrigin::class)->current() : null;
     }
 
+    /**
+     * Generate a random 16-hex-character span id, as W3C trace context uses.
+     */
     protected function newSpanId(): string
     {
         return bin2hex(random_bytes(8));
     }
 
     /**
+     * Build the span row's attributes, timed from its start until now.
+     *
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
      */

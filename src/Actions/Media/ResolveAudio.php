@@ -14,6 +14,9 @@ use Spectra\Models\SpectraRequest;
  */
 class ResolveAudio
 {
+    /**
+     * Get the stored text-to-speech audio of the request with its mime type and file name.
+     */
     public function __invoke(string $id): MediaContent
     {
         $request = SpectraRequest::query()->findOrFail($id);
@@ -38,6 +41,9 @@ class ResolveAudio
         );
     }
 
+    /**
+     * Get the audio mime type for the stored file's extension.
+     */
     private function mimeType(string $path): string
     {
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
@@ -54,6 +60,9 @@ class ResolveAudio
         };
     }
 
+    /**
+     * Get the stored file's extension, defaulting to mp3.
+     */
     private function extension(string $path): string
     {
         return strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'mp3';

@@ -24,11 +24,16 @@ class FormatTracesList
     /** ISO 8601 with milliseconds, as the trace screen reads it. */
     private const ISO_MILLISECONDS = 'Y-m-d\\TH:i:s.vP';
 
+    /**
+     * Create a new format traces list action instance.
+     */
     public function __construct(
         private readonly ResolveTrackableMetadata $resolveTrackableMetadata,
     ) {}
 
     /**
+     * Get the page of trace totals as rows, with their origin, models and sole trackable.
+     *
      * @param  LengthAwarePaginator<int, SpectraRequest>  $paginated
      * @return array<int, array<string, mixed>>
      */

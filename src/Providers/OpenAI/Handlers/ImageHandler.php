@@ -31,11 +31,17 @@ class ImageHandler implements ExtractsModelFromResponse, Handler, HasMedia, Stre
     use MatchesEndpoints;
     use StoresOpenAiImageMedia;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Image;
     }
 
+    /**
+     * Get the Images API endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -46,6 +52,8 @@ class ImageHandler implements ExtractsModelFromResponse, Handler, HasMedia, Stre
     }
 
     /**
+     * Get the token usage and image count of an Images API response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -62,6 +70,9 @@ class ImageHandler implements ExtractsModelFromResponse, Handler, HasMedia, Stre
         );
     }
 
+    /**
+     * Get the stream handler for a streamed image request.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new ImageStreaming;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Str;
 use Throwable;
@@ -116,7 +117,9 @@ class TraceContext
             return [];
         }
 
-        return is_array($tags) ? array_values(array_filter($tags, 'is_string')) : [];
+        return is_array($tags)
+            ? collect($tags)->filter(fn (mixed $tag): bool => is_string($tag))->values()->all()
+            : [];
     }
 
     /**
@@ -134,6 +137,9 @@ class TraceContext
         }
     }
 
+    /**
+     * Stop inheriting tags for the rest of this unit of work.
+     */
     public static function forgetTags(): void
     {
         try {
@@ -183,7 +189,7 @@ class TraceContext
                 continue;
             }
 
-            [$key, $value] = array_map('trim', explode('=', $pair, 2));
+            [$key, $value] = Arr::map(explode('=', $pair, 2), fn (string $part): string => trim($part));
             $value = rawurldecode($value);
 
             if ($key === self::BAGGAGE_TRACE_ID && Str::isUuid($value)) {
@@ -197,15 +203,20 @@ class TraceContext
     }
 
     /**
+     * Trim the tags, drop empty, too long and duplicate ones, and cap how many are kept.
+     *
      * @param  array<int, mixed>  $tags
      * @return array<int, string>
      */
     protected static function sanitizeTags(array $tags): array
     {
-        $tags = array_map(fn (mixed $tag): string => is_string($tag) ? trim($tag) : '', $tags);
-        $tags = array_filter($tags, fn (string $tag): bool => filled($tag) && mb_strlen($tag) <= self::MAX_TAG_LENGTH);
-
-        return array_slice(array_values(array_unique($tags)), 0, self::MAX_TAGS);
+        return collect($tags)
+            ->map(fn (mixed $tag): string => is_string($tag) ? trim($tag) : '')
+            ->filter(fn (string $tag): bool => filled($tag) && mb_strlen($tag) <= self::MAX_TAG_LENGTH)
+            ->uniqueStrict()
+            ->values()
+            ->take(self::MAX_TAGS)
+            ->all();
     }
 
     /**

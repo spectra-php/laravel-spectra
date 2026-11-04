@@ -16,6 +16,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetCostsByProvider
 {
     /**
+     * Get the cost per provider for the date range, most expensive first.
+     *
      * @return Collection<int, CostByProvider>
      */
     public function __invoke(DateRange $dateRange): Collection

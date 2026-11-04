@@ -31,6 +31,8 @@ class TrackedStream implements StreamInterface
     protected bool $ended = false;
 
     /**
+     * Create a new tracked stream around a provider response body.
+     *
      * @param  Closure(string): void  $onRead
      * @param  Closure(): void  $onEnd
      */
@@ -46,6 +48,9 @@ class TrackedStream implements StreamInterface
         }
     }
 
+    /**
+     * Read bytes from the stream, feeding them to the tracker and finishing it at the end.
+     */
     public function read(int $length): string
     {
         $bytes = $this->stream->read($length);
@@ -58,6 +63,9 @@ class TrackedStream implements StreamInterface
         return $bytes;
     }
 
+    /**
+     * Read the rest of the stream through read(), so every byte is tracked.
+     */
     public function getContents(): string
     {
         $contents = '';
@@ -77,6 +85,9 @@ class TrackedStream implements StreamInterface
         return $contents;
     }
 
+    /**
+     * Read the whole stream from the start, returning an empty string on failure.
+     */
     public function __toString(): string
     {
         try {
@@ -90,12 +101,18 @@ class TrackedStream implements StreamInterface
         }
     }
 
+    /**
+     * Finish tracking and close the stream.
+     */
     public function close(): void
     {
         $this->end();
         $this->stream->close();
     }
 
+    /**
+     * Finish tracking and detach the underlying resource.
+     */
     public function detach()
     {
         $this->end();
@@ -103,26 +120,41 @@ class TrackedStream implements StreamInterface
         return $this->stream->detach();
     }
 
+    /**
+     * Get the size of the stream, if known.
+     */
     public function getSize(): ?int
     {
         return $this->stream->getSize();
     }
 
+    /**
+     * Get the position of the read pointer.
+     */
     public function tell(): int
     {
         return $this->stream->tell();
     }
 
+    /**
+     * Determine if the stream is at its end.
+     */
     public function eof(): bool
     {
         return $this->stream->eof();
     }
 
+    /**
+     * Determine if the stream is seekable.
+     */
     public function isSeekable(): bool
     {
         return $this->stream->isSeekable();
     }
 
+    /**
+     * Seek the stream, keeping the read position so re-read bytes are not tracked twice.
+     */
     public function seek(int $offset, int $whence = SEEK_SET): void
     {
         $this->stream->seek($offset, $whence);
@@ -134,31 +166,49 @@ class TrackedStream implements StreamInterface
         }
     }
 
+    /**
+     * Seek to the start of the stream.
+     */
     public function rewind(): void
     {
         $this->seek(0);
     }
 
+    /**
+     * Determine if the stream is writable.
+     */
     public function isWritable(): bool
     {
         return $this->stream->isWritable();
     }
 
+    /**
+     * Write to the underlying stream.
+     */
     public function write(string $string): int
     {
         return $this->stream->write($string);
     }
 
+    /**
+     * Determine if the stream is readable.
+     */
     public function isReadable(): bool
     {
         return $this->stream->isReadable();
     }
 
+    /**
+     * Get the underlying stream's metadata.
+     */
     public function getMetadata(?string $key = null)
     {
         return $this->stream->getMetadata($key);
     }
 
+    /**
+     * Finish tracking when the stream is released without being read to the end.
+     */
     public function __destruct()
     {
         $this->end();
@@ -182,6 +232,9 @@ class TrackedStream implements StreamInterface
         $this->safely($this->onRead, $fresh);
     }
 
+    /**
+     * Run the end callback once, however the stream ends.
+     */
     protected function end(): void
     {
         if ($this->ended) {
@@ -193,6 +246,9 @@ class TrackedStream implements StreamInterface
         $this->safely($this->onEnd);
     }
 
+    /**
+     * Run a tracking callback, reporting its failure instead of throwing into the app.
+     */
     protected function safely(Closure $callback, mixed ...$arguments): void
     {
         try {

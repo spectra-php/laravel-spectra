@@ -6,6 +6,7 @@ namespace Spectra\Actions\Traces;
 
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use Spectra\Actions\Requests\BuildModelBreakdown;
 use Spectra\Actions\Trackables\ResolveSoleTrackable;
@@ -33,11 +34,17 @@ class GetTraceDetails
     /** ISO 8601 with milliseconds: calls of one trace are often under a second apart. */
     private const ISO_MILLISECONDS = 'Y-m-d\\TH:i:s.vP';
 
+    /**
+     * Create a new get trace details action instance.
+     */
     public function __construct(
         private readonly BuildModelBreakdown $buildModelBreakdown,
         private readonly ResolveSoleTrackable $resolveSoleTrackable,
     ) {}
 
+    /**
+     * Get the trace's totals, calls, spans, models and tags, or null when it has no calls.
+     */
     public function __invoke(string $traceId, ?string $currentRequestId = null, int $limit = 100): ?TraceDetailsResponse
     {
         $totals = RequestAggregateQuery::make()->forTrace($traceId)->callTotals()->first();
@@ -157,6 +164,8 @@ class GetTraceDetails
     }
 
     /**
+     * Get the names of the tags on the trace's calls, alphabetically.
+     *
      * @return array<int, string>
      */
     private function tags(string $traceId): array
@@ -192,7 +201,7 @@ class GetTraceDetails
      */
     private function upstreamParentSpanId(array $requests, array $spans): ?string
     {
-        $own = array_filter([...array_column($spans, 'span_id'), ...array_column($requests, 'span_id')]);
+        $own = collect([...$spans, ...$requests])->pluck('span_id')->filter()->all();
 
         foreach ([...$spans, ...$requests] as $node) {
             if (filled($node['parent_span_id']) && ! in_array($node['parent_span_id'], $own, true)) {
@@ -214,18 +223,24 @@ class GetTraceDetails
     {
         $ends = [
             0,
-            ...array_map(fn (array $call) => ($call['offset_ms'] ?? 0) + ($call['latency_ms'] ?? 0), $requests),
-            ...array_map(fn (array $span) => ($span['offset_ms'] ?? 0) + $span['duration_ms'], $spans),
+            ...Arr::map($requests, fn (array $call) => ($call['offset_ms'] ?? 0) + ($call['latency_ms'] ?? 0)),
+            ...Arr::map($spans, fn (array $span) => ($span['offset_ms'] ?? 0) + $span['duration_ms']),
         ];
 
         return max($ends);
     }
 
+    /**
+     * Get when the call started, falling back to when it was recorded.
+     */
     private function startOf(SpectraRequest $call): ?CarbonInterface
     {
         return $call->started_at ?? $call->created_at;
     }
 
+    /**
+     * Parse a stored timestamp, or null when blank.
+     */
     private function parseDate(mixed $value): ?CarbonInterface
     {
         return blank($value) ? null : Date::parse((string) $value);

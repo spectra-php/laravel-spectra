@@ -36,15 +36,24 @@ abstract class OpenAiCompatibleChatHandler implements ExtractsModelFromResponse,
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
-    /** @return array<string> */
+    /**
+     * Get the provider's chat completion endpoint paths.
+     *
+     * @return array<string>
+     */
     abstract public function endpoints(): array;
 
     /**
+     * Get the token usage and reported cost of a chat completion.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -144,18 +153,29 @@ abstract class OpenAiCompatibleChatHandler implements ExtractsModelFromResponse,
         return $texts->isNotEmpty() ? $texts->implode("\n") : null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the first choice's finish reason.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return data_get($response, 'choices.0.finish_reason');
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a chat completion.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return ($data['object'] ?? null) === 'chat.completion';
     }
 
+    /**
+     * Get the stream handler for a streamed chat completion.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new OpenAiCompatibleStreaming($this);

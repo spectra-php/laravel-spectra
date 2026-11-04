@@ -43,6 +43,9 @@ class SpectraSpan extends Model
 
     protected $guarded = [];
 
+    /**
+     * Get the attributes that should be cast.
+     */
     protected function casts(): array
     {
         return [
@@ -55,11 +58,17 @@ class SpectraSpan extends Model
         ];
     }
 
+    /**
+     * Get the database connection Spectra's tables live on.
+     */
     public function getConnectionName(): ?string
     {
         return config('spectra.storage.connection');
     }
 
+    /**
+     * Determine if the span ended with an error.
+     */
     public function isFailed(): bool
     {
         return $this->status === SpanStatus::Error;

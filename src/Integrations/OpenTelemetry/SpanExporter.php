@@ -29,6 +29,8 @@ class SpanExporter
     protected SpanBuilder $spanBuilder;
 
     /**
+     * Create a new span exporter instance for the given service.
+     *
      * @param  array<string, scalar>  $resourceAttributes
      */
     public function __construct(
@@ -111,6 +113,9 @@ class SpanExporter
         };
     }
 
+    /**
+     * Convert a timestamp to Unix nanoseconds as OTLP expects, or '0' when it is missing.
+     */
     protected function toNano(mixed $timestamp): string
     {
         return $timestamp instanceof CarbonInterface
@@ -147,6 +152,8 @@ class SpanExporter
     }
 
     /**
+     * Build the OTLP resource attributes that describe the service and environment.
+     *
      * @return array<int, array<string, mixed>>
      */
     protected function buildResourceAttributes(): array
@@ -169,6 +176,9 @@ class SpanExporter
         return $attributes;
     }
 
+    /**
+     * Get the installed Spectra version for the telemetry SDK attribute.
+     */
     protected function getSpectraVersion(): string
     {
         if (class_exists(InstalledVersions::class)) {

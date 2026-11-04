@@ -13,6 +13,9 @@ use Spectra\Support\ApiKeyResolver;
  */
 class GoogleTokenCounter
 {
+    /**
+     * Create a new Gemini token counter instance.
+     */
     public function __construct(
         protected ApiKeyResolver $apiKeyResolver
     ) {}

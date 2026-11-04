@@ -27,6 +27,9 @@ class BudgetExceeded
 {
     use Dispatchable, SerializesModels;
 
+    /**
+     * Create a new budget exceeded event instance.
+     */
     public function __construct(
         public readonly Model $budgetable,
         public readonly SpectraBudget $budget,
@@ -36,16 +39,25 @@ class BudgetExceeded
         public readonly bool $wasBlocked
     ) {}
 
+    /**
+     * Get how far the usage went over the limit, in cents or units of the limit type.
+     */
     public function getOverageAmount(): int
     {
         return max(0, $this->currentUsage - $this->limit);
     }
 
+    /**
+     * Get the overage in dollars, for limits measured in cents.
+     */
     public function getOverageAmountInDollars(): float
     {
         return round($this->getOverageAmount() / 100, 4);
     }
 
+    /**
+     * Get how far the usage went over the limit, as a percentage of the limit.
+     */
     public function getOveragePercentage(): float
     {
         if ($this->limit === 0) {

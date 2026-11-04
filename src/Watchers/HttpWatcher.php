@@ -29,11 +29,17 @@ class HttpWatcher implements Watcher
      */
     protected static ?WeakMap $registered = null;
 
+    /**
+     * Determine if Laravel's Http client is installed.
+     */
     public static function isAvailable(): bool
     {
         return class_exists(Factory::class);
     }
 
+    /**
+     * Attach the tracking middleware to the Http factory, now or once it is resolved.
+     */
     public function register(): void
     {
         $app = app();
@@ -47,6 +53,9 @@ class HttpWatcher implements Watcher
         $app->afterResolving(Factory::class, fn (Factory $factory) => $this->attach($factory));
     }
 
+    /**
+     * Add the tracking middleware to a factory's global middleware, once per factory.
+     */
     protected function attach(Factory $factory): void
     {
         static::$registered ??= new WeakMap;

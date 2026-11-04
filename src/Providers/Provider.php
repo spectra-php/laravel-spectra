@@ -26,9 +26,14 @@ abstract class Provider
     /** @var Handler[]|null */
     private ?array $cachedHandlers = null;
 
+    /**
+     * Get the provider's slug, as stored on tracked requests.
+     */
     abstract public function getProvider(): string;
 
     /**
+     * Get the hosts this provider's API is served from.
+     *
      * @return array<string>
      */
     abstract public function getHosts(): array;
@@ -58,6 +63,8 @@ abstract class Provider
     }
 
     /**
+     * Get the provider's handlers, built once per instance.
+     *
      * @return Handler[]
      */
     protected function resolvedHandlers(): array
@@ -81,7 +88,11 @@ abstract class Provider
         return $endpoints;
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Resolve the handler for an endpoint, using the response shape when several or none match.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function resolveHandler(string $endpoint, array $responseData = []): ?Handler
     {
         $matches = [];
@@ -141,7 +152,11 @@ abstract class Provider
         return null;
     }
 
-    /** @param  array<string, mixed>  $requestData */
+    /**
+     * Get the usage metrics of a response from the handler that owns it.
+     *
+     * @param  array<string, mixed>  $requestData
+     */
     public function extractMetrics(mixed $response, string $endpoint = '', array $requestData = []): Metrics
     {
         $handler = $this->resolveHandlerFor($endpoint, $response);
@@ -153,6 +168,9 @@ abstract class Provider
         return $handler->extractMetrics($requestData, $this->toArray($response));
     }
 
+    /**
+     * Get the response text from its handler, or the JSON-encoded body as a fallback.
+     */
     public function extractResponse(mixed $response, string $endpoint = ''): ?string
     {
         $handler = $this->resolveHandlerFor($endpoint, $response);
@@ -176,6 +194,9 @@ abstract class Provider
         return is_string($encoded) ? $encoded : null;
     }
 
+    /**
+     * Get the model named in the response, when its handler reads one.
+     */
     public function extractModel(mixed $response, string $endpoint = ''): ?string
     {
         $handler = $this->resolveHandlerFor($endpoint, $response);
@@ -187,6 +208,9 @@ abstract class Provider
         return null;
     }
 
+    /**
+     * Get the response's finish reason, when its handler reads one.
+     */
     public function extractFinishReason(mixed $response, string $endpoint = ''): ?string
     {
         $handler = $this->resolveHandlerFor($endpoint, $response);
@@ -198,6 +222,9 @@ abstract class Provider
         return null;
     }
 
+    /**
+     * Get the response id from the body's `id` key.
+     */
     public function extractResponseId(mixed $response, string $endpoint = ''): ?string
     {
         $id = $this->toArray($response)['id'] ?? null;
@@ -225,6 +252,8 @@ abstract class Provider
     }
 
     /**
+     * Resolve the model type of the handler that owns the endpoint.
+     *
      * @param  array<string, mixed>  $requestData
      */
     public function resolveModelType(string $endpoint, array $requestData = []): ?ModelType
@@ -232,7 +261,11 @@ abstract class Provider
         return $this->resolveHandler($endpoint)?->modelType();
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Convert a response (array, SDK object or other object) to an array.
+     *
+     * @return array<string, mixed>
+     */
     protected function toArray(mixed $response): array
     {
         if (is_array($response)) {

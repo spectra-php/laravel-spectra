@@ -31,11 +31,17 @@ class VideoHandler implements Handler, HasFinishReason, ReportsJobFailure, Skips
     /** Job states after which nothing changes any more. */
     protected const TERMINAL_STATES = ['completed', 'failed', 'cancelled', 'expired'];
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Video;
     }
 
+    /**
+     * Get the video submit and poll endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -44,13 +50,19 @@ class VideoHandler implements Handler, HasFinishReason, ReportsJobFailure, Skips
         ];
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Determine if the video job is still running and the response should not be recorded yet.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function shouldSkipResponse(array $responseData): bool
     {
         return ! in_array($responseData['status'] ?? null, self::TERMINAL_STATES, true);
     }
 
     /**
+     * Get the video count, requested duration and reported cost of a finished job.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -68,7 +80,11 @@ class VideoHandler implements Handler, HasFinishReason, ReportsJobFailure, Skips
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the job's video URLs, or its error.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $urls = $this->outputUrls($response);
@@ -99,13 +115,19 @@ class VideoHandler implements Handler, HasFinishReason, ReportsJobFailure, Skips
         return filled($message) ? $message : "Video job {$status}";
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the job's status as the finish reason.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return is_string($response['status'] ?? null) ? $response['status'] : null;
     }
 
     /**
+     * Get the job's output video URLs.
+     *
      * @param  array<string, mixed>  $response
      * @return list<string>
      */

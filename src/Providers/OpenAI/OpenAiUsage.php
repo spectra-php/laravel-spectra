@@ -141,6 +141,8 @@ final class OpenAiUsage
     }
 
     /**
+     * Get a nested usage details object, or an empty array.
+     *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */

@@ -17,6 +17,8 @@ use Spectra\Models\SpectraRequest;
 trait FiltersTrackables
 {
     /**
+     * Apply the trackables list filters from the dashboard query string.
+     *
      * @param  Builder<SpectraRequest>  $query
      */
     protected function applyTrackableFilters(Builder $query, Request $request): void

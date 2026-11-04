@@ -42,6 +42,8 @@ class ProviderRegistry
     protected ?array $endpointPatterns = null;
 
     /**
+     * Create a new provider registry instance from the providers config.
+     *
      * @param  array<string, string>  $config  Raw providers config from spectra.php (slug => class)
      * @param  ApiKeyResolver|null  $apiKeyResolver  Resolver for discovering custom endpoint URLs
      */
@@ -63,6 +65,8 @@ class ProviderRegistry
      * @return array<string, array{class: string, name: string, hosts: array<string>, endpoints: array<string>}>
      */
     /**
+     * Normalize the providers config into each provider's class, name, hosts and endpoints.
+     *
      * @param  array<string, mixed>  $config
      * @return array<string, array{class: string, name: string, hosts: array<string>, endpoints: array<string>}>
      */
@@ -148,6 +152,9 @@ class ProviderRegistry
         return false;
     }
 
+    /**
+     * Get the provider instance bound in the container for a slug.
+     */
     public function provider(string $provider): ?Provider
     {
         $key = "spectra.provider.{$provider}";
@@ -159,11 +166,17 @@ class ProviderRegistry
         return null;
     }
 
+    /**
+     * Get a provider's display name, falling back to its capitalized slug.
+     */
     public function displayName(string $provider): string
     {
         return $this->providers[$provider]['name'] ?? ucfirst($provider);
     }
 
+    /**
+     * Get the slug a provider class is registered under.
+     */
     public function slugForProvider(string $providerClass): ?string
     {
         foreach ($this->providers as $slug => $config) {
@@ -176,6 +189,8 @@ class ProviderRegistry
     }
 
     /**
+     * Get every registered provider with its class, name, hosts and endpoints.
+     *
      * @return array<string, array{class: string, name: string, hosts: array<string>, endpoints: array<string>}>
      */
     public function all(): array
@@ -183,13 +198,21 @@ class ProviderRegistry
         return $this->providers;
     }
 
-    /** @return array<string> */
+    /**
+     * Get the slugs of every registered provider.
+     *
+     * @return array<string>
+     */
     public function slugs(): array
     {
         return array_keys($this->providers);
     }
 
-    /** @return array<string, array<string>> */
+    /**
+     * Get each provider's host patterns as regexes, compiled once per registry.
+     *
+     * @return array<string, array<string>>
+     */
     protected function getHostPatterns(): array
     {
         if ($this->hostPatterns === null) {
@@ -207,7 +230,11 @@ class ProviderRegistry
         return $this->hostPatterns;
     }
 
-    /** @return array<string, array<string>> */
+    /**
+     * Get each provider's endpoint patterns as regexes, compiled once per registry.
+     *
+     * @return array<string, array<string>>
+     */
     protected function getEndpointPatterns(): array
     {
         if ($this->endpointPatterns === null) {

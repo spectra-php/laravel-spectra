@@ -20,6 +20,9 @@ use Spectra\Support\DateRange;
  */
 class CostsController extends BaseApiController
 {
+    /**
+     * Get the costs screen's totals and breakdowns for the selected period.
+     */
     public function __invoke(
         Request $request,
         GetTotalCost $getTotalCost,

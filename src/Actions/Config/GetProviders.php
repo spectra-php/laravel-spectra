@@ -14,10 +14,16 @@ use Spectra\Support\ProviderRegistry;
  */
 class GetProviders
 {
+    /**
+     * Create a new get providers action instance.
+     */
     public function __construct(
         private readonly ProviderRegistry $providerRegistry,
     ) {}
 
+    /**
+     * Get every registered provider with its display name.
+     */
     public function __invoke(): ProvidersResponse
     {
         $providers = collect($this->providerRegistry->slugs())

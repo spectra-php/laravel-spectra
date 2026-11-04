@@ -12,6 +12,9 @@ namespace Spectra\Concerns;
  */
 trait MatchesEndpoints
 {
+    /**
+     * Determine if the request path is one of the handler's endpoints.
+     */
     public function matchesEndpoint(string $endpoint): bool
     {
         return in_array($endpoint, $this->endpoints(), true);

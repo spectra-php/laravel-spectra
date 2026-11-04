@@ -20,28 +20,43 @@ use Spectra\Enums\ModelType;
  */
 class QueueStatusHandler implements Handler, ReturnsBinaryResponse, SkipsResponse
 {
+    /**
+     * Get the model type fal.ai queue calls would be recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Image;
     }
 
+    /**
+     * Get no registry patterns, since queue paths are matched by matchesEndpoint().
+     */
     public function endpoints(): array
     {
         return [];
     }
 
+    /**
+     * Determine if the path is a fal.ai queue status, status stream or cancel call.
+     */
     public function matchesEndpoint(string $endpoint): bool
     {
         return (bool) preg_match('#^/[^/]+/[^/]+(/[^/]+)*/requests/[^/]+/(status(/stream)?|cancel)$#', $endpoint);
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Determine if the response is skipped, which queue bookkeeping always is.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function shouldSkipResponse(array $responseData): bool
     {
         return true;
     }
 
     /**
+     * Build empty usage, since queue bookkeeping costs nothing.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -50,7 +65,11 @@ class QueueStatusHandler implements Handler, ReturnsBinaryResponse, SkipsRespons
         return new Metrics;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get no response text for queue bookkeeping.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return null;

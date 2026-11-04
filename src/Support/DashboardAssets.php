@@ -26,6 +26,9 @@ class DashboardAssets
      */
     public static bool $useDarkTheme = false;
 
+    /**
+     * Get the dashboard favicon link tags, with each icon inlined as a data URI.
+     */
     public static function favicons(): HtmlString
     {
         $distPath = __DIR__.'/../../resources/images/favicons';
@@ -55,6 +58,9 @@ class DashboardAssets
         return new HtmlString(implode("\n", $tags));
     }
 
+    /**
+     * Get the compiled dashboard CSS as an inline style tag.
+     */
     public static function css(): HtmlString
     {
         $cssPath = __DIR__.'/../../dist/app.css';
@@ -72,6 +78,9 @@ class DashboardAssets
         return new HtmlString('');
     }
 
+    /**
+     * Get the compiled dashboard JavaScript as an inline module script, with its config.
+     */
     public static function js(): HtmlString
     {
         $jsPath = __DIR__.'/../../dist/app.js';
@@ -94,6 +103,8 @@ class DashboardAssets
     }
 
     /**
+     * Get the config the dashboard's JavaScript reads from window.Spectra.
+     *
      * @return array<string, mixed>
      */
     public static function scriptVariables(): array
@@ -107,6 +118,9 @@ class DashboardAssets
         ];
     }
 
+    /**
+     * Get the installed Spectra version shown in the dashboard.
+     */
     public static function version(): string
     {
         if (class_exists(InstalledVersions::class)) {
@@ -120,6 +134,9 @@ class DashboardAssets
         return '1.0.0';
     }
 
+    /**
+     * Render the dashboard with the dark theme.
+     */
     public static function useDarkTheme(): void
     {
         static::$useDarkTheme = true;

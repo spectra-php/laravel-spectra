@@ -10,6 +10,8 @@ namespace Spectra\Support\Pricing\Scraping;
 final class ScrapedPrices
 {
     /**
+     * Create a new result of mapping a provider's scraped rows onto its catalog.
+     *
      * @param  array<string, array<string, mixed>>  $models  Model id => scraped prices file entry, for changed and new models only.
      * @param  list<PriceChange>  $changes
      * @param  list<string>  $newModels

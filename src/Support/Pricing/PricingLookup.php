@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Support\Pricing;
 
 use Carbon\CarbonInterface;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Spectra\Enums\PricingTier;
 use Spectra\Pricing\ProviderPricing;
@@ -79,6 +80,8 @@ class PricingLookup
     protected bool $resolved = false;
 
     /**
+     * Create a new pricing lookup over the given provider catalogs.
+     *
      * @param  ProviderPricing[]  $pricingClasses
      */
     public function __construct(
@@ -342,6 +345,8 @@ class PricingLookup
     }
 
     /**
+     * Get the ids of every catalog model whose capability flag is set.
+     *
      * @return string[]
      */
     protected function modelsWithCapability(string $field): array
@@ -356,7 +361,7 @@ class PricingLookup
             }
         }
 
-        return array_values(array_unique($result));
+        return collect($result)->uniqueStrict()->values()->all();
     }
 
     /**
@@ -368,7 +373,7 @@ class PricingLookup
      */
     protected function selectEntry(array $entries, int $promptTokens, string $date): ?array
     {
-        $candidates = array_filter($entries, fn (array $entry) => ($entry['since'] === null || $entry['since'] <= $date)
+        $candidates = Arr::where($entries, fn (array $entry) => ($entry['since'] === null || $entry['since'] <= $date)
             && ($entry['above_input_tokens'] === null || $promptTokens > $entry['above_input_tokens']));
 
         if ($candidates === []) {
@@ -448,6 +453,9 @@ class PricingLookup
         $this->resolved = true;
     }
 
+    /**
+     * Normalize a catalog price to an int when it is whole, else a float.
+     */
     protected function normalizePrice(mixed $price): int|float
     {
         $floatValue = (float) $price;
@@ -459,11 +467,17 @@ class PricingLookup
         return $floatValue;
     }
 
+    /**
+     * Normalize an optional catalog price, keeping null for a rate the catalog leaves empty.
+     */
     protected function normalizeNullablePrice(mixed $price): int|float|null
     {
         return $price !== null ? $this->normalizePrice($price) : null;
     }
 
+    /**
+     * Build the "provider|model" key the index stores models and aliases under.
+     */
     protected function buildKey(string $provider, string $model): string
     {
         return "{$provider}|{$model}";
@@ -499,6 +513,8 @@ class PricingLookup
     }
 
     /**
+     * Get the ids to try for a model: as given, without routing suffixes, then without snapshot dates.
+     *
      * @return list<string>
      */
     protected function candidateIds(string $model): array
@@ -519,6 +535,6 @@ class PricingLookup
             }
         }
 
-        return array_values(array_unique($candidates));
+        return array_values(collect($candidates)->uniqueStrict()->all());
     }
 }

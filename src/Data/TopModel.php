@@ -13,6 +13,9 @@ use Spectra\Models\SpectraRequest;
  */
 readonly class TopModel extends DataTransferObject
 {
+    /**
+     * Create a new top model instance.
+     */
     public function __construct(
         public string $model,
         public ?string $provider,
@@ -21,6 +24,8 @@ readonly class TopModel extends DataTransferObject
     ) {}
 
     /**
+     * Build one row per model from the most-used-models aggregate rows.
+     *
      * @param  Collection<int, SpectraRequest>  $items
      * @return Collection<int, self>
      */

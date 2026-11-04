@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Storage;
  */
 class MediaPersister
 {
+    /**
+     * Store a generated media file on the configured disk and return its path.
+     */
     public function store(string $requestId, int $index, string $content, string $extension): string
     {
         $disk = config('spectra.storage.media.disk', 'local');

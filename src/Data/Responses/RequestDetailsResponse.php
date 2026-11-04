@@ -14,6 +14,8 @@ use Spectra\Data\DataTransferObject;
 readonly class RequestDetailsResponse extends DataTransferObject
 {
     /**
+     * Create a new request details response instance.
+     *
      * @param  array<string, mixed>  $data
      */
     public function __construct(
@@ -21,6 +23,8 @@ readonly class RequestDetailsResponse extends DataTransferObject
     ) {}
 
     /**
+     * Get the assembled request details array unchanged.
+     *
      * @return array<string, mixed>
      */
     public function toArray(): array

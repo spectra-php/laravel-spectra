@@ -62,6 +62,9 @@ class AudioDurationExtractor
         return self::resolveGetId3Class() !== null;
     }
 
+    /**
+     * Resolve the getID3 class name from either the namespaced or the legacy package.
+     */
     protected static function resolveGetId3Class(): ?string
     {
         if (class_exists(\JamesHeinrich\GetID3\GetID3::class)) {

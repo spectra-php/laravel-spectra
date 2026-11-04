@@ -14,6 +14,8 @@ use Spectra\Data\Provider;
 readonly class ProvidersResponse extends DataTransferObject
 {
     /**
+     * Create a new providers response instance.
+     *
      * @param  Collection<int, Provider>  $providers
      */
     public function __construct(

@@ -26,10 +26,16 @@ class BuildTraceQuery
 {
     use FiltersRequests;
 
+    /**
+     * Create a new build trace query action instance.
+     */
     public function __construct(
         private readonly PricingLookup $pricingLookup,
     ) {}
 
+    /**
+     * Get the per-trace totals query for the filters and date range.
+     */
     public function __invoke(Request $request, DateRange $dateRange): RequestAggregateQuery
     {
         $query = RequestAggregateQuery::make($dateRange)->withTrace();
@@ -42,6 +48,8 @@ class BuildTraceQuery
     }
 
     /**
+     * Build the subquery of trace ids that hold a call matching the filters, origin or id.
+     *
      * @return Builder<SpectraRequest>
      */
     private function matchingTraceIds(Request $request, DateRange $dateRange): Builder

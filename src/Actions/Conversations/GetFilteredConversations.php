@@ -25,11 +25,16 @@ class GetFilteredConversations
         'failed' => 'failed_count',
     ];
 
+    /**
+     * Create a new get filtered conversations action instance.
+     */
     public function __construct(
         private readonly BuildConversationQuery $buildConversationQuery,
     ) {}
 
     /**
+     * Get the sorted page of conversation totals for the filters and date range.
+     *
      * @return LengthAwarePaginator<int, SpectraRequest>
      */
     public function __invoke(Request $request, DateRange $dateRange): LengthAwarePaginator

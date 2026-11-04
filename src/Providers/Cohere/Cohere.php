@@ -16,16 +16,25 @@ use Spectra\Providers\Provider;
  */
 class Cohere extends Provider
 {
+    /**
+     * Get the slug Cohere requests are recorded under.
+     */
     public function getProvider(): string
     {
         return 'cohere';
     }
 
+    /**
+     * Get the hosts the Cohere API is served from.
+     */
     public function getHosts(): array
     {
         return ['api.cohere.com', 'api.cohere.ai'];
     }
 
+    /**
+     * Get the handlers for Cohere's chat, embed, rerank and parse endpoints.
+     */
     public function handlers(): array
     {
         return [

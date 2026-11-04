@@ -15,6 +15,9 @@ use Spectra\Support\Query\RequestAggregateQuery;
  */
 class GetCostOverview
 {
+    /**
+     * Get the cost of today, this week, last week, this month and this year.
+     */
     public function __invoke(): CostOverviewResponse
     {
         $startOfThisWeek = now()->startOfWeek();
@@ -30,6 +33,9 @@ class GetCostOverview
         );
     }
 
+    /**
+     * Get the cost of successful requests between the two moments.
+     */
     protected function costSince(CarbonInterface $from, ?CarbonInterface $to = null): float
     {
         return RequestAggregateQuery::make(new DateRange($from, $to))

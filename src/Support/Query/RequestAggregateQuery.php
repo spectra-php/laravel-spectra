@@ -36,11 +36,17 @@ class RequestAggregateQuery
     /** @var Builder<SpectraRequest> */
     protected Builder $query;
 
+    /**
+     * Create a new aggregate query over all tracked requests.
+     */
     private function __construct()
     {
         $this->query = SpectraRequest::query();
     }
 
+    /**
+     * Start an aggregate query, limited to the date range when one is given.
+     */
     public static function make(?DateRange $dateRange = null): self
     {
         $instance = new self;
@@ -203,6 +209,9 @@ class RequestAggregateQuery
             ->aggregate('COUNT(DISTINCT conversation_turn) + COALESCE(SUM(CASE WHEN conversation_turn IS NULL THEN 1 ELSE 0 END), 0)', 'turn_count', 'integer');
     }
 
+    /**
+     * Apply the dashboard's trackable filters from the request.
+     */
     public function filteredBy(Request $request): self
     {
         $this->applyTrackableFilters($this->query, $request);
@@ -313,6 +322,8 @@ class RequestAggregateQuery
     }
 
     /**
+     * Add a raw select expression to the query.
+     *
      * @param  literal-string  $expression
      */
     public function selectRaw(string $expression): self
@@ -322,6 +333,9 @@ class RequestAggregateQuery
         return $this;
     }
 
+    /**
+     * Order the results by the column, highest first.
+     */
     public function orderByDesc(string $column): self
     {
         $this->query->orderByDesc($column);
@@ -330,6 +344,8 @@ class RequestAggregateQuery
     }
 
     /**
+     * Order the results by the column in the given direction.
+     *
      * @param  'asc'|'desc'  $direction
      */
     public function orderBy(string $column, string $direction = 'asc'): self
@@ -339,6 +355,9 @@ class RequestAggregateQuery
         return $this;
     }
 
+    /**
+     * Limit the number of rows returned.
+     */
     public function limit(int $limit): self
     {
         $this->query->limit($limit);
@@ -373,18 +392,29 @@ class RequestAggregateQuery
         return $this->query;
     }
 
-    /** @return Collection<int, SpectraRequest> */
+    /**
+     * Get the aggregated rows.
+     *
+     * @return Collection<int, SpectraRequest>
+     */
     public function get(): Collection
     {
         return $this->query->get();
     }
 
+    /**
+     * Get the first aggregated row.
+     */
     public function first(): ?SpectraRequest
     {
         return $this->query->first();
     }
 
-    /** @return LengthAwarePaginator<int, SpectraRequest> */
+    /**
+     * Get the aggregated rows a page at a time.
+     *
+     * @return LengthAwarePaginator<int, SpectraRequest>
+     */
     public function paginate(int $perPage): LengthAwarePaginator
     {
         return $this->query->paginate($perPage);
@@ -401,6 +431,9 @@ class RequestAggregateQuery
         return $this->query->select($columns)->groupBy($columns)->toBase()->getCountForPagination();
     }
 
+    /**
+     * Get the summed cost of the matching requests, in cents.
+     */
     public function sumCost(): float
     {
         return (float) $this->query->sum('total_cost_in_cents');

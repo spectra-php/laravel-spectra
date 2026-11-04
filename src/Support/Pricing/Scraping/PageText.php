@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Pricing\Scraping;
 
+use Illuminate\Support\Arr;
+
 /**
  * The scraped pages as text, to check extracted prices against.
  *
@@ -30,6 +32,9 @@ final class PageText
     /** @var list<string> Lowercased lines. */
     protected array $lines = [];
 
+    /**
+     * Create the page text from markdown, lowercased line by line with prose lines blanked.
+     */
     public function __construct(string $markdown)
     {
         foreach (preg_split('/\R/', $markdown) ?: [] as $line) {
@@ -74,7 +79,7 @@ final class PageText
     public function find(array $names, float $amount): ?string
     {
         $patterns = [];
-        foreach (array_unique(array_filter(array_map(fn (string $name) => strtolower(trim($name)), $names))) as $name) {
+        foreach (collect($names)->map(fn (string $name) => strtolower(trim($name)))->filter()->uniqueStrict() as $name) {
             if (strlen($name) >= 2) {
                 $patterns[] = '/(?<![\w.\/-])'.preg_quote($name, '/').'(?![\w-]|\.\d)/';
             }
@@ -142,23 +147,30 @@ final class PageText
         return null;
     }
 
+    /**
+     * Determine if a line is a markdown table row, not a header separator.
+     */
     protected function isTableRow(string $line): bool
     {
         return str_starts_with($line, '|') && ! preg_match('/^\|[\s:|-]+\|?$/', $line);
     }
 
     /**
-     * @return list<float>
+     * Get the numbers printed on a line, with thousands separators removed.
+     *
+     * @return array<int, float>
      */
     protected function numbers(string $line): array
     {
         preg_match_all('/(?<![\w.])\d[\d,]*(?:\.\d+)?/', $line, $matches);
 
-        return array_map(fn (string $number) => (float) str_replace(',', '', $number), $matches[0]);
+        return Arr::map($matches[0], fn (string $number) => (float) str_replace(',', '', $number));
     }
 
     /**
-     * @param  list<float>  $numbers
+     * Determine if one of the numbers equals the amount, allowing for float noise.
+     *
+     * @param  array<int, float>  $numbers
      */
     protected function contains(array $numbers, float $amount): bool
     {

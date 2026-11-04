@@ -18,6 +18,8 @@ use Spectra\Providers\XAi\XAiUsage;
 class ChatStreaming extends OpenAiCompatibleStreaming
 {
     /**
+     * Get the chunk's usage, adding xAI's server-side tool counts.
+     *
      * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $currentUsage
      * @return array<string, mixed>

@@ -21,6 +21,9 @@ use Spectra\Support\Tracking\StreamHandler;
  */
 class ChatHandler extends OpenAiCompatibleChatHandler
 {
+    /**
+     * Get the Mistral chat, FIM and agent completion endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/v1/chat/completions', '/v1/fim/completions', '/v1/agents/completions'];
@@ -53,7 +56,11 @@ class ChatHandler extends OpenAiCompatibleChatHandler
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the answer text of a Mistral completion, leaving out thinking chunks.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $content = $response['choices'][0]['message']['content'] ?? $response['choices'][0]['text'] ?? null;
@@ -86,6 +93,9 @@ class ChatHandler extends OpenAiCompatibleChatHandler
         return $texts !== [] ? implode('', $texts) : null;
     }
 
+    /**
+     * Create the stream handler for Mistral chat streams.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new ChatStreaming($this);

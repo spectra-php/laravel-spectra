@@ -15,10 +15,16 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ResolveVideo
 {
+    /**
+     * Create a new resolve video action instance.
+     */
     public function __construct(
         private readonly StreamOpenAiVideo $streamOpenAiVideo,
     ) {}
 
+    /**
+     * Get a download stream of the request's generated video.
+     */
     public function __invoke(string $id): StreamedResponse
     {
         $request = SpectraRequest::query()->findOrFail($id);
@@ -47,6 +53,9 @@ class ResolveVideo
         abort(404, 'Video not available.');
     }
 
+    /**
+     * Stream a persisted video from the media disk with the mime type of its extension.
+     */
     private function streamFromStorage(string $path, string $requestId): StreamedResponse
     {
         $disk = config('spectra.storage.media.disk', 'local');

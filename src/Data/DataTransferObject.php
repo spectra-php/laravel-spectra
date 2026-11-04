@@ -23,6 +23,9 @@ use ReflectionProperty;
  */
 abstract readonly class DataTransferObject implements Arrayable, ArrayAccess, Jsonable, JsonSerializable
 {
+    /**
+     * Get the public properties as an array, with nested DTOs and collections as arrays.
+     */
     public function toArray(): array
     {
         $properties = (new ReflectionClass($this))
@@ -43,12 +46,17 @@ abstract readonly class DataTransferObject implements Arrayable, ArrayAccess, Js
         return $array;
     }
 
+    /**
+     * Get the DTO as a JSON string.
+     */
     public function toJson($options = 0): string
     {
         return json_encode($this->jsonSerialize(), $options) ?: '';
     }
 
     /**
+     * Get the data to serialise to JSON.
+     *
      * @return array<array-key, mixed>
      */
     public function jsonSerialize(): array
@@ -56,21 +64,33 @@ abstract readonly class DataTransferObject implements Arrayable, ArrayAccess, Js
         return $this->toArray();
     }
 
+    /**
+     * Determine if the DTO has a property with the given name.
+     */
     public function offsetExists(mixed $offset): bool
     {
         return array_key_exists($offset, $this->toArray());
     }
 
+    /**
+     * Get the value of the property with the given name, or null.
+     */
     public function offsetGet(mixed $offset): mixed
     {
         return $this->toArray()[$offset] ?? null;
     }
 
+    /**
+     * Ignore the write, because DTOs are readonly.
+     */
     public function offsetSet(mixed $offset, mixed $value): void
     {
         // DTOs are readonly
     }
 
+    /**
+     * Ignore the unset, because DTOs are readonly.
+     */
     public function offsetUnset(mixed $offset): void
     {
         // DTOs are readonly

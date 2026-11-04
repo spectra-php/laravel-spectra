@@ -338,6 +338,8 @@ class ResponseProcessor
      * - functionCall: Google Gemini function calls
      */
     /**
+     * Count the tool calls in a response body by type, for the per-call tool surcharge.
+     *
      * @param  array<string, mixed>  $body
      * @return array<string, int>
      */
@@ -445,6 +447,8 @@ class ResponseProcessor
      * even when reasoning_tokens is reported as 0 in usage.
      */
     /**
+     * Determine if a response body holds reasoning or thinking output.
+     *
      * @param  array<string, mixed>  $body
      */
     protected function hasReasoningOutput(array $body): bool
@@ -487,6 +491,8 @@ class ResponseProcessor
      * - Mistral: prompt_mode ("reasoning")
      */
     /**
+     * Extract the reasoning effort or thinking budget a request asked for, in each provider's format.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -542,6 +548,8 @@ class ResponseProcessor
     }
 
     /**
+     * Extract token usage from common usage keys when no handler reads the body.
+     *
      * @param  array<string, mixed>  $body
      * @return array<string, int|null>
      */
@@ -567,6 +575,8 @@ class ResponseProcessor
     }
 
     /**
+     * Convert a response from an array, an SDK object or a plain object to an array.
+     *
      * @return array<string, mixed>
      */
     protected function toArray(mixed $response): array
@@ -588,6 +598,9 @@ class ResponseProcessor
         return [];
     }
 
+    /**
+     * Resolve the model type from the provider's handler, then from the pricing catalog.
+     */
     protected function resolveModelType(
         ?Provider $providerInstance,
         RequestContext $context
@@ -617,6 +630,8 @@ class ResponseProcessor
     }
 
     /**
+     * Resolve whether an audio model is text-to-speech or speech-to-text from its capabilities.
+     *
      * @param  array{can_generate_audio: bool, can_generate_text: bool}  $modelData
      */
     protected function resolveAudioModelType(array $modelData, string $modelSlug): ModelType
@@ -646,6 +661,8 @@ class ResponseProcessor
      * the HasMedia contract when media storage is enabled.
      */
     /**
+     * Replace base64 images and audio in a response body before it is stored.
+     *
      * @param  array<string, mixed>  $body
      * @return array<string, mixed>
      */

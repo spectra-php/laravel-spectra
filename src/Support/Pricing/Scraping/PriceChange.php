@@ -9,6 +9,9 @@ namespace Spectra\Support\Pricing\Scraping;
  */
 final class PriceChange
 {
+    /**
+     * Create a new price change for one model, tier and price field.
+     */
     public function __construct(
         public readonly string $model,
         public readonly string $tier,

@@ -16,7 +16,11 @@ use Throwable;
  */
 trait MeasuresJobLatency
 {
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Get the job's generation time in milliseconds, from its own timestamps.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function extractProviderLatency(array $responseData): ?int
     {
         $start = $this->timestampMs($responseData['created_at'] ?? null);

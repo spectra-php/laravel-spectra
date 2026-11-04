@@ -26,17 +26,25 @@ class SpeechHandler implements ExtractsModelFromResponse, Handler, HasMedia
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type Mistral speech requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Tts;
     }
 
+    /**
+     * Get the Mistral speech endpoint path.
+     */
     public function endpoints(): array
     {
         return ['/v1/audio/speech'];
     }
 
     /**
+     * Build the audio usage from the characters of the request's `input`.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -49,7 +57,11 @@ class SpeechHandler implements ExtractsModelFromResponse, Handler, HasMedia
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the placeholder recorded in place of the generated speech.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return '[audio]';

@@ -28,12 +28,18 @@ use Spectra\Support\Tracking\GuzzleMiddleware;
  */
 class GuzzleWatcher implements Watcher
 {
+    /**
+     * Determine if Guzzle is installed.
+     */
     public static function isAvailable(): bool
     {
         return class_exists(Client::class)
             && class_exists(HandlerStack::class);
     }
 
+    /**
+     * Bind tracked Guzzle handler stacks, one per provider slug plus one that detects the provider.
+     */
     public function register(): void
     {
         $registry = app(ProviderRegistry::class);

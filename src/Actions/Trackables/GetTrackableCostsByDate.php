@@ -15,6 +15,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetTrackableCostsByDate
 {
     /**
+     * Get the trackable's cost per day of successful requests in the date range.
+     *
      * @return Collection<int, CostByDate>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection

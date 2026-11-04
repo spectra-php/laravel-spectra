@@ -21,11 +21,17 @@ namespace Spectra\Pricing;
  */
 class OpenRouterPricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the OpenRouter prices are recorded under.
+     */
     public function provider(): string
     {
         return 'openrouter';
     }
 
+    /**
+     * Register the built-in OpenRouter models and their prices.
+     */
     protected function define(): void
     {
         // Anthropic

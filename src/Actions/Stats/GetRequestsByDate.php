@@ -15,6 +15,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetRequestsByDate
 {
     /**
+     * Get the request count per day for the date range and layout.
+     *
      * @return Collection<int, RequestByDate>
      */
     public function __invoke(DateRange $dateRange, string $layout): Collection

@@ -19,6 +19,9 @@ use Spectra\Support\DateRange;
  */
 class GetTrackableDetails
 {
+    /**
+     * Create a new get trackable details action instance.
+     */
     public function __construct(
         private readonly GetTrackableStats $getStats,
         private readonly GetTrackableCostsByDate $getCostsByDate,
@@ -27,6 +30,9 @@ class GetTrackableDetails
         private readonly GetTrackableLatencyByModelType $getLatencyByModelType,
     ) {}
 
+    /**
+     * Get the trackable's stats, breakdowns, name and latest requests.
+     */
     public function __invoke(Request $request, string $id): TrackableDetailsResponse
     {
         $type = $request->input('type');

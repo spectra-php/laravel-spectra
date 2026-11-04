@@ -18,6 +18,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetTrackablesLatencyByModelType
 {
     /**
+     * Get the latency per model type over the trackables the filters keep.
+     *
      * @return Collection<int, ModelTypeLatency>
      */
     public function __invoke(Request $request, DateRange $dateRange): Collection

@@ -29,11 +29,17 @@ enum PricingTier: string
     case Ultrafast = 'ultrafast';
     case Hd = 'hd';
 
+    /**
+     * Get the tier a request is billed at when nothing names one.
+     */
     public static function default(): self
     {
         return self::Standard;
     }
 
+    /**
+     * Get the tier's name as the dashboard shows it.
+     */
     public function label(): string
     {
         return match ($this) {
@@ -47,6 +53,9 @@ enum PricingTier: string
         };
     }
 
+    /**
+     * Get the one-sentence explanation of the tier shown on the dashboard.
+     */
     public function description(): string
     {
         return match ($this) {

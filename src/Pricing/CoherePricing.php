@@ -17,16 +17,25 @@ namespace Spectra\Pricing;
  */
 class CoherePricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the Cohere prices are recorded under.
+     */
     public function provider(): string
     {
         return 'cohere';
     }
 
+    /**
+     * Get the Cohere pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://cohere.com/pricing'];
     }
 
+    /**
+     * Register the built-in Cohere models and their prices.
+     */
     protected function define(): void
     {
         $this->model('command-a-03-2025', fn ($m) => $m

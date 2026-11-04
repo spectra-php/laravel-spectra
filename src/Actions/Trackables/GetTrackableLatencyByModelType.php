@@ -16,6 +16,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetTrackableLatencyByModelType
 {
     /**
+     * Get the trackable's request count, cost and latency per model type.
+     *
      * @return Collection<int, ModelTypeStat>
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection

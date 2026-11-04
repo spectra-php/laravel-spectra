@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Data;
 
+use Illuminate\Support\Arr;
 use Spectra\Models\SpectraBudget;
 
 /**
@@ -13,6 +14,9 @@ use Spectra\Models\SpectraBudget;
  */
 readonly class BudgetStatus extends DataTransferObject
 {
+    /**
+     * Create a new budget status instance.
+     */
     public function __construct(
         public bool $allowed,
         public ?SpectraBudget $budget,
@@ -24,13 +28,15 @@ readonly class BudgetStatus extends DataTransferObject
     ) {}
 
     /**
+     * Get the status for JSON, with the usage and limits DTOs turned into arrays.
+     *
      * @return array<string, mixed>
      */
     public function jsonSerialize(): array
     {
-        return array_map(
-            fn ($value) => $value instanceof DataTransferObject ? $value->toArray() : $value,
+        return Arr::map(
             $this->toArray(),
+            fn (mixed $value) => $value instanceof DataTransferObject ? $value->toArray() : $value,
         );
     }
 }

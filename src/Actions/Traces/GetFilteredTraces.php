@@ -25,11 +25,16 @@ class GetFilteredTraces
         'tokens' => 'tokens',
     ];
 
+    /**
+     * Create a new get filtered traces action instance.
+     */
     public function __construct(
         private readonly BuildTraceQuery $buildTraceQuery,
     ) {}
 
     /**
+     * Get the sorted page of trace totals for the filters and date range.
+     *
      * @return LengthAwarePaginator<int, SpectraRequest>
      */
     public function __invoke(Request $request, DateRange $dateRange): LengthAwarePaginator

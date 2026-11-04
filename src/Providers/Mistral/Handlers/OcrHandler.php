@@ -25,17 +25,25 @@ class OcrHandler implements ExtractsModelFromResponse, Handler, MatchesResponseS
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type Mistral OCR requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get the Mistral OCR endpoint path.
+     */
     public function endpoints(): array
     {
         return ['/v1/ocr'];
     }
 
     /**
+     * Build the processed page count of a Mistral OCR response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -49,22 +57,30 @@ class OcrHandler implements ExtractsModelFromResponse, Handler, MatchesResponseS
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the markdown of every OCR page, joined by blank lines.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         if (! is_array($response['pages'] ?? null)) {
             return null;
         }
 
-        $markdown = array_filter(array_map(
-            fn ($page) => is_array($page) && is_string($page['markdown'] ?? null) ? $page['markdown'] : null,
-            $response['pages'],
-        ));
+        $markdown = collect($response['pages'])
+            ->map(fn (mixed $page) => is_array($page) && is_string($page['markdown'] ?? null) ? $page['markdown'] : null)
+            ->filter()
+            ->all();
 
         return $markdown !== [] ? implode("\n\n", $markdown) : null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Mistral OCR response with pages and usage info.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return isset($data['pages'], $data['usage_info']);

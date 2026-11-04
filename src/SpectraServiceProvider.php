@@ -17,6 +17,7 @@ use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
@@ -57,6 +58,9 @@ class SpectraServiceProvider extends ServiceProvider
     /** @var array<string, mixed>|null */
     protected ?array $packageConfig = null;
 
+    /**
+     * Register Spectra's config and container bindings.
+     */
     public function register(): void
     {
         $this->mergeConfigFrom(
@@ -162,6 +166,9 @@ class SpectraServiceProvider extends ServiceProvider
         $this->registerProviders();
     }
 
+    /**
+     * Boot the commands, publishing and middleware, then the tracking when it is enabled.
+     */
     public function boot(): void
     {
         $this->registerCommands();
@@ -181,6 +188,9 @@ class SpectraServiceProvider extends ServiceProvider
         $this->registerOriginTracking();
     }
 
+    /**
+     * Define the viewSpectra gate as local-only, unless the app defined its own.
+     */
     protected function registerAuthorization(): void
     {
         $this->callAfterResolving(Gate::class, function (Gate $gate, Application $app) {
@@ -190,6 +200,9 @@ class SpectraServiceProvider extends ServiceProvider
         });
     }
 
+    /**
+     * Register the configured watchers that are available, skipping invalid entries.
+     */
     protected function registerWatchers(): void
     {
         if (! config('spectra.watcher.enabled')) {
@@ -216,6 +229,9 @@ class SpectraServiceProvider extends ServiceProvider
         }
     }
 
+    /**
+     * Report a watcher entry that is not a class implementing the Watcher contract.
+     */
     protected function reportInvalidWatcher(mixed $watcherClass): void
     {
         $name = is_string($watcherClass) ? $watcherClass : get_debug_type($watcherClass);
@@ -300,6 +316,9 @@ class SpectraServiceProvider extends ServiceProvider
         $this->app->terminating(fn () => rescue(fn () => $spans()->finishRequest()));
     }
 
+    /**
+     * Register the provider registry and a singleton for each enabled provider class.
+     */
     protected function registerProviders(): void
     {
         $this->app->singleton(ProviderRegistry::class, function ($app) {
@@ -325,6 +344,9 @@ class SpectraServiceProvider extends ServiceProvider
         });
     }
 
+    /**
+     * Register the dashboard routes under the configured path, domain and middleware.
+     */
     protected function registerRoutes(): void
     {
         $this->callAfterResolving('router', function (Router $router, Application $app) {
@@ -344,11 +366,17 @@ class SpectraServiceProvider extends ServiceProvider
         });
     }
 
+    /**
+     * Register the dashboard views.
+     */
     protected function registerResources(): void
     {
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'spectra');
     }
 
+    /**
+     * Register the config, views and migrations users can publish.
+     */
     protected function registerPublishing(): void
     {
         if ($this->app->runningInConsole()) {
@@ -392,6 +420,9 @@ class SpectraServiceProvider extends ServiceProvider
         'costs.pricing',
     ];
 
+    /**
+     * Fill in nested config keys missing from an older published config.
+     */
     protected function mergeNestedConfigDefaults(): void
     {
         if ($this->configurationIsCached()) {
@@ -399,7 +430,7 @@ class SpectraServiceProvider extends ServiceProvider
         }
 
         $config = $this->app->make('config');
-        $missing = array_filter(self::NESTED_CONFIG_DEFAULTS, fn (string $key) => ! $config->has("spectra.{$key}"));
+        $missing = Arr::where(self::NESTED_CONFIG_DEFAULTS, fn (string $key) => ! $config->has("spectra.{$key}"));
 
         if ($missing === []) {
             return;
@@ -412,6 +443,9 @@ class SpectraServiceProvider extends ServiceProvider
         }
     }
 
+    /**
+     * Keep the built-in providers and pricing classes under the user's published entries.
+     */
     protected function mergeBuiltInMaps(): void
     {
         if ($this->configurationIsCached()) {
@@ -449,6 +483,9 @@ class SpectraServiceProvider extends ServiceProvider
         return $this->app instanceof CachesConfiguration && $this->app->configurationIsCached();
     }
 
+    /**
+     * Register the artisan commands and Spectra's section of the about command.
+     */
     protected function registerCommands(): void
     {
         if ($this->app->runningInConsole()) {
@@ -469,11 +506,17 @@ class SpectraServiceProvider extends ServiceProvider
         }
     }
 
+    /**
+     * Get the installed version of the package.
+     */
     protected function getVersion(): ?string
     {
         return InstalledVersions::getPrettyVersion('spectra-php/laravel-spectra');
     }
 
+    /**
+     * Register the spectra.budget and spectra.trace middleware aliases.
+     */
     protected function registerMiddleware(): void
     {
         $this->callAfterResolving('router', function (Router $router) {
@@ -482,6 +525,9 @@ class SpectraServiceProvider extends ServiceProvider
         });
     }
 
+    /**
+     * Register the Http::withAITracking() and withoutAITracking() macros.
+     */
     protected function registerHttpMacros(): void
     {
         HttpMacros::register();

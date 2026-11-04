@@ -24,11 +24,17 @@ class RerankHandler implements ExtractsModelFromResponse, Handler
     use ExtractsModelField;
     use MatchesParametricEndpoints;
 
+    /**
+     * Get the model type Scaleway rerank requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get the Scaleway rerank paths, with or without a project id.
+     */
     public function endpoints(): array
     {
         return [
@@ -38,6 +44,8 @@ class RerankHandler implements ExtractsModelFromResponse, Handler
     }
 
     /**
+     * Build the billed embedding tokens and one search of a Scaleway rerank.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -52,7 +60,11 @@ class RerankHandler implements ExtractsModelFromResponse, Handler
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Describe a Scaleway rerank response by its number of results.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $results = $response['data'] ?? $response['results'] ?? null;

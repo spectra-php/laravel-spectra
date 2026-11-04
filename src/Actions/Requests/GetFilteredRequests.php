@@ -21,11 +21,16 @@ class GetFilteredRequests
 {
     use FiltersRequests;
 
+    /**
+     * Create a new get filtered requests action instance.
+     */
     public function __construct(
         private readonly PricingLookup $pricingLookup,
     ) {}
 
     /**
+     * Get the sorted page of requests for the filters, search and date range.
+     *
      * @return LengthAwarePaginator<int, SpectraRequest>
      */
     public function __invoke(Request $request, DateRange $dateRange): LengthAwarePaginator
@@ -65,6 +70,8 @@ class GetFilteredRequests
     }
 
     /**
+     * Apply the model and id search and the request filters to the query.
+     *
      * @param  Builder<SpectraRequest>  $query
      */
     private function applyFilters($query, Request $request): void

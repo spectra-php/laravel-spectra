@@ -14,6 +14,8 @@ use Spectra\Data\DataTransferObject;
 readonly class CostsResponse extends DataTransferObject
 {
     /**
+     * Create a new costs response instance.
+     *
      * @param  Collection<int, mixed>  $costs_by_provider
      * @param  Collection<int, mixed>  $costs_by_model
      * @param  Collection<int, mixed>  $costs_by_model_type

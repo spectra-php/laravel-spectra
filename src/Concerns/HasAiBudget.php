@@ -22,11 +22,17 @@ use Spectra\Support\Budget\BudgetEnforcer;
  */
 trait HasAiBudget
 {
+    /**
+     * Start a fluent builder for this model's AI budget.
+     */
     public function configureAiBudget(): BudgetBuilder
     {
         return new BudgetBuilder($this);
     }
 
+    /**
+     * Create or update this model's AI budget with the given attributes.
+     */
     public function setAiBudget(array $attributes): SpectraBudget
     {
         return $this->aiBudget()->updateOrCreate(
@@ -35,6 +41,9 @@ trait HasAiBudget
         );
     }
 
+    /**
+     * Determine if a call to the given provider and model would exceed this model's budget.
+     */
     public function hasExceededBudget(string $provider, string $model): bool
     {
         $enforcer = app(BudgetEnforcer::class);
@@ -43,6 +52,9 @@ trait HasAiBudget
         return ! $result->allowed;
     }
 
+    /**
+     * Get the budget check result for a provider and model, using the configured defaults.
+     */
     public function getBudgetStatus(?string $provider = null, ?string $model = null): BudgetStatus
     {
         $enforcer = app(BudgetEnforcer::class);
@@ -54,6 +66,9 @@ trait HasAiBudget
         );
     }
 
+    /**
+     * Get the spend left under each limit of this model's active budget.
+     */
     public function getRemainingBudget(): RemainingBudget
     {
         $budget = $this->activeAiBudget()->first();
@@ -73,16 +88,25 @@ trait HasAiBudget
         );
     }
 
+    /**
+     * Turn off enforcement of this model's AI budget.
+     */
     public function disableAiBudget(): bool
     {
         return (bool) $this->aiBudget()->update(['is_active' => false]);
     }
 
+    /**
+     * Turn on enforcement of this model's AI budget.
+     */
     public function enableAiBudget(): bool
     {
         return (bool) $this->aiBudget()->update(['is_active' => true]);
     }
 
+    /**
+     * Delete this model's AI budget.
+     */
     public function removeAiBudget(): bool
     {
         return (bool) $this->aiBudget()->delete();

@@ -18,11 +18,16 @@ use Spectra\Support\Query\RequestAggregateQuery;
  */
 class GetCostsByModel
 {
+    /**
+     * Create a new get costs by model action instance.
+     */
     public function __construct(
         private readonly PricingLookup $pricingLookup,
     ) {}
 
     /**
+     * Get the requests, usage, cost and capabilities of the most expensive models.
+     *
      * @return Collection<int, CostByModel>
      */
     public function __invoke(DateRange $dateRange, int $limit = 10): Collection

@@ -108,6 +108,8 @@ class MessageStreaming extends StreamHandler
     }
 
     /**
+     * Build the stream usage from the raw usage seen so far, with tool calls, tier and multiplier.
+     *
      * @param  array<string, mixed>  $currentUsage
      * @return array<string, mixed>
      */

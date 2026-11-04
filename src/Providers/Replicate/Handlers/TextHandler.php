@@ -29,12 +29,17 @@ class TextHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse
 {
     use HandlesPredictions;
 
+    /**
+     * Get the model type Replicate language model predictions are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
     /**
+     * Build the token usage from the prediction's input and output token counts.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -48,7 +53,11 @@ class TextHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the prediction output as one string, joining streamed text pieces.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $output = $response['output'] ?? null;
@@ -59,13 +68,17 @@ class TextHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse
 
         // Language models stream their answer as a list of text pieces.
         if (is_array($output) && $output !== [] && is_string($output[0] ?? null)) {
-            return implode('', array_filter($output, 'is_string'));
+            return collect($output)->filter(fn (mixed $piece) => is_string($piece))->implode('');
         }
 
         return null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the prediction came from a language model.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return $this->predictionKind($data) === 'text';

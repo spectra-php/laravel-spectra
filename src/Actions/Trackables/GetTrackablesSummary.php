@@ -15,6 +15,9 @@ use Spectra\Support\Query\RequestAggregateQuery;
  */
 class GetTrackablesSummary
 {
+    /**
+     * Get the trackable count and combined usage, cost and latency for the filters.
+     */
     public function __invoke(Request $request, DateRange $dateRange): TrackablesSummaryResponse
     {
         $summary = RequestAggregateQuery::make($dateRange)

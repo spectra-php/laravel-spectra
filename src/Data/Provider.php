@@ -10,6 +10,9 @@ namespace Spectra\Data;
  */
 readonly class Provider extends DataTransferObject
 {
+    /**
+     * Create a new provider instance.
+     */
     public function __construct(
         public string $internal_name,
         public string $display_name,

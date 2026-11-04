@@ -15,6 +15,9 @@ class ShowConversationController extends BaseApiController
     /** Calls the transcript shows; the requests list has the rest. */
     private const CALL_LIMIT = 200;
 
+    /**
+     * Get the conversation transcript, or a 404 when it has no calls.
+     */
     public function __invoke(string $conversationId, GetConversationDetails $getConversationDetails): ConversationDetailsResponse
     {
         return $getConversationDetails($conversationId, self::CALL_LIMIT) ?? abort(404);

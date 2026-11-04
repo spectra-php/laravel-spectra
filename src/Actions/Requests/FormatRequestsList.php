@@ -14,6 +14,8 @@ use Spectra\Models\SpectraRequest;
 class FormatRequestsList
 {
     /**
+     * Get the page of requests as rows, with tag names in place of tag models.
+     *
      * @param  LengthAwarePaginator<int, SpectraRequest>  $paginated
      * @return array<int, array<string, mixed>>
      */

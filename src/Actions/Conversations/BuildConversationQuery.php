@@ -23,10 +23,16 @@ class BuildConversationQuery
 {
     use FiltersRequests;
 
+    /**
+     * Create a new build conversation query action instance.
+     */
     public function __construct(
         private readonly PricingLookup $pricingLookup,
     ) {}
 
+    /**
+     * Get the per-conversation totals query for the filters and date range.
+     */
     public function __invoke(Request $request, DateRange $dateRange): RequestAggregateQuery
     {
         $query = RequestAggregateQuery::make($dateRange)->withConversation();
@@ -39,6 +45,8 @@ class BuildConversationQuery
     }
 
     /**
+     * Build the subquery of conversation ids that hold a call matching the filters or search.
+     *
      * @return Builder<SpectraRequest>
      */
     private function matchingConversationIds(Request $request, DateRange $dateRange): Builder

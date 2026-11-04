@@ -30,17 +30,27 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Image;
     }
 
+    /**
+     * Get the Responses API endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/v1/responses'];
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Responses API answer with an `image_generation` call.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         if (($data['object'] ?? null) !== 'response') {
@@ -51,6 +61,8 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
     }
 
     /**
+     * Get the mainline model's token usage and the number of generated images.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -66,7 +78,11 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the message text, with a placeholder or revised prompt for each image.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $parts = [];
@@ -90,13 +106,19 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
         return filled($parts) ? implode("\n", $parts) : null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the response's status as the finish reason.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return $response['status'] ?? null;
     }
 
     /**
+     * Store the base64 images of the `image_generation` calls and return their paths.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -128,13 +150,21 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
         return $stored;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the response's output has an `image_generation` call.
+     *
+     * @param  array<string, mixed>  $data
+     */
     private function hasImageGenerationOutput(array $data): bool
     {
         return $this->countImageGenerationCalls($data) > 0;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Count the `image_generation` calls in the response's output.
+     *
+     * @param  array<string, mixed>  $data
+     */
     private function countImageGenerationCalls(array $data): int
     {
         return collect($this->outputItems($data))
@@ -143,6 +173,8 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
     }
 
     /**
+     * Get the response's output items.
+     *
      * @param  array<string, mixed>  $data
      * @return array<int, array<mixed>>
      */

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Pricing\Scraping;
 
+use Illuminate\Support\Arr;
 use Spectra\Enums\PricingTier;
 use Spectra\Pricing\ProviderPricing;
 use Spectra\Pricing\ScrapedPricing;
@@ -39,7 +40,9 @@ final class CatalogShape
     ];
 
     /**
-     * @param  list<string>  $tiers
+     * Create a new catalog shape from the tiers and price fields a catalog uses.
+     *
+     * @param  array<int, string>  $tiers
      * @param  list<string>  $fields  Tier fields (input_price, ...).
      */
     public function __construct(
@@ -68,12 +71,12 @@ final class CatalogShape
         }
 
         if ($tiers === []) {
-            return new self(array_column(PricingTier::cases(), 'value'), array_values(self::FIELDS));
+            return new self(Arr::pluck(PricingTier::cases(), 'value'), array_values(self::FIELDS));
         }
 
         return new self(
-            array_values(array_filter(array_column(PricingTier::cases(), 'value'), fn (string $tier) => isset($tiers[$tier]))),
-            array_values(array_filter(self::FIELDS, fn (string $field) => isset($fields[$field]))),
+            array_values(collect(PricingTier::cases())->pluck('value')->filter(fn (string $tier) => isset($tiers[$tier]))->all()),
+            array_values(Arr::where(self::FIELDS, fn (string $field) => isset($fields[$field]))),
         );
     }
 
@@ -99,12 +102,15 @@ final class CatalogShape
      */
     public function tierLabels(): array
     {
-        return array_values(array_filter(
-            array_column(PricingTier::cases(), 'value'),
-            fn (string $tier) => $this->resolveTier($tier) !== null,
-        ));
+        return array_values(collect(PricingTier::cases())
+            ->pluck('value')
+            ->filter(fn (string $tier) => $this->resolveTier($tier) !== null)
+            ->all());
     }
 
+    /**
+     * Determine if the catalog uses this tier price field, so a scraped value for it counts.
+     */
     public function allowsField(string $field): bool
     {
         return in_array($field, $this->fields, true);

@@ -10,6 +10,9 @@ namespace Spectra\Data;
  */
 readonly class RemainingBudget extends DataTransferObject
 {
+    /**
+     * Create a new remaining budget instance.
+     */
     public function __construct(
         public ?int $daily = null,
         public ?int $weekly = null,

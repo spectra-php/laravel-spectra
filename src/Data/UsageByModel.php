@@ -13,6 +13,9 @@ use Spectra\Models\SpectraRequest;
  */
 readonly class UsageByModel extends DataTransferObject
 {
+    /**
+     * Create a new usage by model instance.
+     */
     public function __construct(
         public string $model,
         public int $requests,
@@ -21,6 +24,8 @@ readonly class UsageByModel extends DataTransferObject
     ) {}
 
     /**
+     * Build one row per model from a trackable's per-model aggregate rows.
+     *
      * @param  Collection<int, SpectraRequest>  $items
      * @return Collection<int, self>
      */

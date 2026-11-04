@@ -14,6 +14,8 @@ use Spectra\Data\Tag;
 readonly class TagsResponse extends DataTransferObject
 {
     /**
+     * Create a new tags response instance.
+     *
      * @param  Collection<int, Tag>  $tags
      */
     public function __construct(

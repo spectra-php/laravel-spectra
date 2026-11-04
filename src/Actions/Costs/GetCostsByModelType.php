@@ -16,6 +16,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetCostsByModelType
 {
     /**
+     * Get the requests, usage and cost per model type for the date range.
+     *
      * @return Collection<int, CostByModelType>
      */
     public function __invoke(DateRange $dateRange): Collection

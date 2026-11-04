@@ -23,10 +23,16 @@ use Throwable;
  */
 class EnforceBudgetLimit
 {
+    /**
+     * Create a new enforce budget limit middleware instance.
+     */
     public function __construct(
         protected BudgetEnforcer $enforcer
     ) {}
 
+    /**
+     * Block the request when the signed-in user's budget for the provider and model is used up.
+     */
     public function handle(Request $request, Closure $next, ?string $provider = null, ?string $model = null): Response
     {
         if (! config('spectra.budget.enabled')) {
@@ -54,6 +60,9 @@ class EnforceBudgetLimit
         return $next($request);
     }
 
+    /**
+     * Respond with a 429, as JSON with the limit details when the client expects JSON.
+     */
     protected function handleBudgetExceeded(Request $request, BudgetExceededException $e): Response
     {
         if ($request->expectsJson()) {

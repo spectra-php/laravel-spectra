@@ -11,6 +11,8 @@ namespace Spectra\Data\Responses;
 readonly class RequestsResponse extends PaginatedResponse
 {
     /**
+     * Create a new requests response instance.
+     *
      * @param  array<int, mixed>  $data
      * @param  array<int, string>  $available_tags
      * @param  array<int, string>  $available_finish_reasons

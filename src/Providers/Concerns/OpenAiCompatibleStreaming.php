@@ -15,11 +15,18 @@ use Spectra\Support\Tracking\StreamHandler;
  */
 class OpenAiCompatibleStreaming extends StreamHandler
 {
+    /**
+     * Create a new OpenAI-compatible stream handler instance.
+     */
     public function __construct(
         protected OpenAiCompatibleChatHandler $handler,
     ) {}
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the text delta of a stream chunk.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function text(array $data): ?string
     {
         $text = $data['choices'][0]['delta']['content'] ?? null;
@@ -28,6 +35,8 @@ class OpenAiCompatibleStreaming extends StreamHandler
     }
 
     /**
+     * Merge a chunk's usage, normalised by the owning handler, into the usage so far.
+     *
      * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $currentUsage
      * @return array<string, mixed>
@@ -50,7 +59,11 @@ class OpenAiCompatibleStreaming extends StreamHandler
         return array_merge($currentUsage, $normalised);
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the finish reason of a stream chunk.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function finishReason(array $data): ?string
     {
         $reason = $data['choices'][0]['finish_reason'] ?? null;
@@ -59,6 +72,8 @@ class OpenAiCompatibleStreaming extends StreamHandler
     }
 
     /**
+     * Get the model and response id a stream chunk carries.
+     *
      * @param  array<string, mixed>  $data
      * @return array{model?: string|null, id?: string|null}|null
      */

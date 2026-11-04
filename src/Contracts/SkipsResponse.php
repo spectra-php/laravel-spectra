@@ -11,6 +11,10 @@ namespace Spectra\Contracts;
  */
 interface SkipsResponse
 {
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Determine if the response is a job submit or poll that must not be recorded.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function shouldSkipResponse(array $responseData): bool;
 }

@@ -13,6 +13,9 @@ use Spectra\Support\Macros\WithTrackingMacro;
  */
 class HttpMacros
 {
+    /**
+     * Register the withAITracking and withoutAITracking macros on the Http client.
+     */
     public static function register(): void
     {
         WithTrackingMacro::register();

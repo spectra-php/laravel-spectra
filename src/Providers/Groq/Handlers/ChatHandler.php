@@ -15,6 +15,9 @@ use Spectra\Providers\Concerns\OpenAiCompatibleChatHandler;
  */
 class ChatHandler extends OpenAiCompatibleChatHandler
 {
+    /**
+     * Get the chat completion endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/openai/v1/chat/completions'];

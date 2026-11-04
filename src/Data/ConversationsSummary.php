@@ -10,6 +10,9 @@ namespace Spectra\Data;
  */
 readonly class ConversationsSummary extends DataTransferObject
 {
+    /**
+     * Create a new conversations summary instance.
+     */
     public function __construct(
         public int $conversation_count,
         public int $failed_conversation_count,

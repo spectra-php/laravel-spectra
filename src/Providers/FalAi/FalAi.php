@@ -16,11 +16,17 @@ use Spectra\Providers\Provider;
  */
 class FalAi extends Provider implements ExtractsCostMultiplierForModel
 {
+    /**
+     * Get the slug fal.ai requests are recorded under.
+     */
     public function getProvider(): string
     {
         return 'falai';
     }
 
+    /**
+     * Get the fal.ai hosts for direct and queued calls.
+     */
     public function getHosts(): array
     {
         return ['fal.run', 'queue.fal.run'];

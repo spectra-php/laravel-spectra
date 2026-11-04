@@ -24,6 +24,8 @@ class PreciseDateTime implements CastsAttributes
     protected const FORMAT = 'Y-m-d H:i:s.v';
 
     /**
+     * Cast the stored value to a date instance that keeps its microseconds.
+     *
      * @param  array<string, mixed>  $attributes
      */
     public function get(Model $model, string $key, mixed $value, array $attributes): ?CarbonInterface
@@ -36,6 +38,8 @@ class PreciseDateTime implements CastsAttributes
     }
 
     /**
+     * Prepare the date for storage in the microsecond-precision format.
+     *
      * @param  array<string, mixed>  $attributes
      */
     public function set(Model $model, string $key, mixed $value, array $attributes): ?string

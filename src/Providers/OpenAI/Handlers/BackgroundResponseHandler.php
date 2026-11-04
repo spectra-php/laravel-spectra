@@ -30,6 +30,9 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
     /** Sub-paths of /v1/responses that are not response ids. */
     protected const RESERVED_PATHS = ['compact'];
 
+    /**
+     * Get the background response poll and cancel endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -38,6 +41,9 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
         ];
     }
 
+    /**
+     * Determine if the endpoint is a response id poll or cancel, not a reserved sub-path.
+     */
     public function matchesEndpoint(string $endpoint): bool
     {
         if (! preg_match('#^/v1/responses/([^/]+)(?:/cancel)?$#', $endpoint, $matches)) {
@@ -47,7 +53,11 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
         return ! in_array($matches[1], self::RESERVED_PATHS, true);
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Determine if the poll should not be recorded: not a background response, or still pending.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function shouldSkipResponse(array $responseData): bool
     {
         if (! self::isResponsesApi($responseData) || ($responseData['background'] ?? false) !== true) {
@@ -59,6 +69,8 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
     }
 
     /**
+     * Get the metrics of a finished background response, image output included.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */

@@ -9,6 +9,9 @@ namespace Spectra\Data;
  */
 readonly class DocumentMetrics extends DataTransferObject
 {
+    /**
+     * Create a new document metrics instance.
+     */
     public function __construct(
         public int $pages = 0,
     ) {}

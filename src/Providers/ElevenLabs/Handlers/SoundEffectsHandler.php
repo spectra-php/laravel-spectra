@@ -10,17 +10,27 @@ namespace Spectra\Providers\ElevenLabs\Handlers;
  */
 class SoundEffectsHandler extends GeneratedAudioHandler
 {
+    /**
+     * Get the ElevenLabs sound generation endpoint path.
+     */
     public function endpoints(): array
     {
         return ['/v1/sound-generation'];
     }
 
+    /**
+     * Get the sound effects model ElevenLabs uses when the request names none.
+     */
     protected function defaultModel(): string
     {
         return 'eleven_text_to_sound_v2';
     }
 
-    /** @param  array<string, mixed>  $requestData */
+    /**
+     * Get the requested `duration_seconds`, or null when unset.
+     *
+     * @param  array<string, mixed>  $requestData
+     */
     protected function requestedSeconds(array $requestData): ?float
     {
         $seconds = $requestData['duration_seconds'] ?? null;

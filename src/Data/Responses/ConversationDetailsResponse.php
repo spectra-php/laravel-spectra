@@ -14,6 +14,8 @@ use Spectra\Data\DataTransferObject;
 readonly class ConversationDetailsResponse extends DataTransferObject
 {
     /**
+     * Create a new conversation details response instance.
+     *
      * @param  array<int, array<string, mixed>>  $turns
      * @param  array<int, array<string, mixed>>  $models
      * @param  array<int, string>  $tags

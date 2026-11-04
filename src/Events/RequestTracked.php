@@ -26,6 +26,8 @@ class RequestTracked
     use Dispatchable;
 
     /**
+     * Create a new request tracked event instance.
+     *
      * @param  array<string, mixed>  $request  Transformed request data from RequestTransformer
      */
     public function __construct(

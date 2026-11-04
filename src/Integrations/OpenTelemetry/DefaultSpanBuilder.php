@@ -21,6 +21,8 @@ use Spectra\Support\Payload;
 class DefaultSpanBuilder implements SpanBuilder
 {
     /**
+     * Build the OTLP client span for a tracked AI request.
+     *
      * @param  array<string, mixed>  $data
      */
     public function build(array $data): array
@@ -206,6 +208,8 @@ class DefaultSpanBuilder implements SpanBuilder
     }
 
     /**
+     * Build an OTLP string attribute.
+     *
      * @return array{key: string, value: array{stringValue: string}}
      */
     protected function string(string $key, string $value): array
@@ -214,6 +218,8 @@ class DefaultSpanBuilder implements SpanBuilder
     }
 
     /**
+     * Build an OTLP integer attribute.
+     *
      * @return array{key: string, value: array{intValue: int}}
      */
     protected function int(string $key, int $value): array
@@ -222,6 +228,8 @@ class DefaultSpanBuilder implements SpanBuilder
     }
 
     /**
+     * Build an OTLP double attribute.
+     *
      * @return array{key: string, value: array{doubleValue: float}}
      */
     protected function double(string $key, float $value): array

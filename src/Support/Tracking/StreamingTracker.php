@@ -131,6 +131,9 @@ class StreamingTracker
         return $tracker;
     }
 
+    /**
+     * Start the stream's request context once, taking over the middleware's pending one if any.
+     */
     protected function initializeContext(): void
     {
         if ($this->contextInitialized) {
@@ -277,6 +280,8 @@ class StreamingTracker
     }
 
     /**
+     * Parse a raw stream body into its events.
+     *
      * @return Generator<array<string, mixed>>
      */
     protected function parseRawStream(string $body): Generator
@@ -287,6 +292,9 @@ class StreamingTracker
         yield from $parser->finish();
     }
 
+    /**
+     * Detect the provider from an SDK stream's class name.
+     */
     protected function detectProvider(mixed $stream): string
     {
         if (is_object($stream)) {
@@ -334,6 +342,9 @@ class StreamingTracker
         }
     }
 
+    /**
+     * Read the text, usage, finish reason, model and errors from one stream chunk.
+     */
     protected function processChunk(mixed $chunk): ?string
     {
         $data = $this->normalizeChunk($chunk);
@@ -363,6 +374,8 @@ class StreamingTracker
     }
 
     /**
+     * Convert a stream chunk, array or SDK object, into raw stream event fields.
+     *
      * @return array<string, mixed>
      */
     protected function normalizeChunk(mixed $chunk): array
@@ -399,6 +412,8 @@ class StreamingTracker
     }
 
     /**
+     * Capture the error message of a stream error event or a failed OpenAI response.
+     *
      * @param  array<string, mixed>  $data
      */
     protected function captureStreamError(array $data): void
@@ -427,6 +442,8 @@ class StreamingTracker
     }
 
     /**
+     * Keep the full Responses API response when its output holds media or tool calls.
+     *
      * @param  array<string, mixed>  $data
      */
     protected function captureCompletedResponse(array $data): void
@@ -446,6 +463,8 @@ class StreamingTracker
     }
 
     /**
+     * Extract the text delta of a chunk through the provider's stream handler.
+     *
      * @param  array<string, mixed>  $data
      */
     protected function extractText(array $data): ?string
@@ -458,6 +477,8 @@ class StreamingTracker
     }
 
     /**
+     * Extract the text delta of a chunk from the common chunk shapes when no handler is known.
+     *
      * @param  array<string, mixed>  $data
      */
     protected function extractGenericText(array $data): ?string
@@ -506,6 +527,8 @@ class StreamingTracker
     }
 
     /**
+     * Extract the finish reason of a chunk, keeping the last one the stream sent.
+     *
      * @param  array<string, mixed>  $data
      */
     protected function extractFinishReason(array $data): void
@@ -527,6 +550,8 @@ class StreamingTracker
     }
 
     /**
+     * Extract the model and response id from the first chunk that names them.
+     *
      * @param  array<string, mixed>  $data
      */
     protected function extractModel(array $data): void
@@ -575,6 +600,9 @@ class StreamingTracker
         return $this->result !== null;
     }
 
+    /**
+     * Record the finished stream as a request, skipping streams that produced nothing.
+     */
     protected function record(): SpectraRequest
     {
         $manager = app(SpectraManager::class);
@@ -708,7 +736,7 @@ class StreamingTracker
         $options = $this->options;
 
         if (filled($options['tags'] ?? null) && is_array($options['tags'])) {
-            $context->tags = array_values(array_unique([...$context->tags, ...$options['tags']]));
+            $context->tags = collect([...$context->tags, ...$options['tags']])->uniqueStrict()->values()->all();
         }
 
         if (filled($options['metadata'] ?? null) && is_array($options['metadata'])) {
@@ -769,12 +797,17 @@ class StreamingTracker
         }
     }
 
+    /**
+     * Get the text streamed so far.
+     */
     public function getContent(): string
     {
         return $this->content;
     }
 
     /**
+     * Get the token usage the stream reported.
+     *
      * @return array<string, mixed>
      */
     public function getUsage(): array
@@ -782,6 +815,9 @@ class StreamingTracker
         return $this->usage;
     }
 
+    /**
+     * Get the stream's request context, starting it when needed.
+     */
     public function getContext(): RequestContext
     {
         if (! $this->contextInitialized) {
@@ -793,6 +829,9 @@ class StreamingTracker
         return $this->context;
     }
 
+    /**
+     * Get the time to first token in milliseconds, or null before any text arrived.
+     */
     public function getTimeToFirstToken(): ?int
     {
         if ($this->firstTokenTime === null) {

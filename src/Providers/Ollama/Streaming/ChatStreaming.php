@@ -15,7 +15,11 @@ use Spectra\Support\Tracking\StreamHandler;
  */
 class ChatStreaming extends StreamHandler
 {
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the text of an Ollama chat or generate stream chunk.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function text(array $data): ?string
     {
         // /api/chat streams message.content; /api/generate streams response.
@@ -23,6 +27,8 @@ class ChatStreaming extends StreamHandler
     }
 
     /**
+     * Get the token usage from the final `done` chunk of an Ollama stream.
+     *
      * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $currentUsage
      * @return array<string, mixed>
@@ -42,7 +48,11 @@ class ChatStreaming extends StreamHandler
         ];
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the finish reason of the final `done` chunk, defaulting to stop.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function finishReason(array $data): ?string
     {
         if (($data['done'] ?? false) === true) {
@@ -53,6 +63,8 @@ class ChatStreaming extends StreamHandler
     }
 
     /**
+     * Get the model named in an Ollama stream chunk.
+     *
      * @param  array<string, mixed>  $data
      * @return array{model?: string|null, id?: string|null}|null
      */

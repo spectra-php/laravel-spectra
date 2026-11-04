@@ -35,11 +35,17 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
     /** Seconds to wait for a generated video to download. */
     protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 60;
 
+    /**
+     * Get the model type xAI video requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Video;
     }
 
+    /**
+     * Get the xAI video generation, edit, extension and poll endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -62,6 +68,8 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
     }
 
     /**
+     * Build the video length, prompt-rewriting tokens and reported cost of a finished xAI video.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -80,7 +88,11 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the URL of the generated xAI video.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $url = $response['video']['url'] ?? null;
@@ -89,6 +101,8 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
     }
 
     /**
+     * Download and store the generated xAI video as an mp4 file.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */

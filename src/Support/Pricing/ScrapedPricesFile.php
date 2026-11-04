@@ -36,15 +36,24 @@ use Spectra\Pricing\ScrapedPricing;
  */
 class ScrapedPricesFile
 {
+    /**
+     * Create a new scraped prices file instance for the given path.
+     */
     public function __construct(
         protected string $path,
     ) {}
 
+    /**
+     * Get the path of the scraped prices file.
+     */
     public function path(): string
     {
         return $this->path;
     }
 
+    /**
+     * Determine if the scraped prices file has been written yet.
+     */
     public function exists(): bool
     {
         return File::exists($this->path);
@@ -77,6 +86,8 @@ class ScrapedPricesFile
     }
 
     /**
+     * Write the scraped prices as pretty-printed JSON, creating the folder if needed.
+     *
      * @param  array<string, mixed>  $data
      */
     public function write(array $data): void

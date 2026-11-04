@@ -31,11 +31,17 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
     /** Groq's minimum billed length per request, in seconds. */
     public const MINIMUM_BILLED_SECONDS = 10.0;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Stt;
     }
 
+    /**
+     * Get the transcription and translation endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -45,6 +51,8 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
     }
 
     /**
+     * Get the token usage and billed audio seconds of a transcription.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -63,7 +71,11 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the transcribed text.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return $response['text'] ?? null;

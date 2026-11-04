@@ -18,6 +18,8 @@ use Psr\Http\Message\StreamInterface;
 trait ParsesRequestData
 {
     /**
+     * Get the JSON, form or multipart fields of an outgoing PSR-7 request.
+     *
      * @return array<string, mixed>
      */
     protected static function parsePsrRequestData(RequestInterface $request): array
@@ -93,6 +95,8 @@ trait ParsesRequestData
     }
 
     /**
+     * Get the text fields from a chunk of a multipart body, skipping file parts.
+     *
      * @return array<string, string>
      */
     protected static function multipartTextFields(string $body, string $boundary): array
@@ -121,6 +125,8 @@ trait ParsesRequestData
     }
 
     /**
+     * Get the JSON or multipart fields of an outgoing Laravel HTTP client request.
+     *
      * @param  Request  $request
      * @return array<string, mixed>
      */
@@ -143,6 +149,8 @@ trait ParsesRequestData
     }
 
     /**
+     * Get the text fields of a Laravel multipart request, from its data or its raw body.
+     *
      * @param  Request  $request
      * @return array<string, mixed>
      */
@@ -204,7 +212,11 @@ trait ParsesRequestData
         }
     }
 
-    /** @param  array<int|string, mixed>  $data */
+    /**
+     * Determine if the data is a Guzzle multipart list of name and contents parts.
+     *
+     * @param  array<int|string, mixed>  $data
+     */
     protected static function isGuzzleMultipartFormat(array $data): bool
     {
         if (! isset($data[0]) || ! is_array($data[0])) {
@@ -215,6 +227,8 @@ trait ParsesRequestData
     }
 
     /**
+     * Get the text parts of a Guzzle multipart list as a name to contents map.
+     *
      * @param  array<int|string, mixed>  $data
      * @return array<string, mixed>
      */

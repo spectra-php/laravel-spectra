@@ -16,6 +16,9 @@ use Spectra\Models\SpectraRequest;
  */
 readonly class CostByUser extends DataTransferObject
 {
+    /**
+     * Create a new cost by user instance.
+     */
     public function __construct(
         public string $user_id,
         public int $requests,
@@ -25,6 +28,8 @@ readonly class CostByUser extends DataTransferObject
     ) {}
 
     /**
+     * Build one row per trackable from the aggregate rows, adding each trackable's name.
+     *
      * @param  Collection<int, SpectraRequest>  $items
      * @param  array<string, array<string, mixed>>  $metadata  "{trackable_type}:{trackable_id}" => ['name' => ..., 'email' => ...]
      * @return Collection<int, self>

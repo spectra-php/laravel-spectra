@@ -24,6 +24,9 @@ use Throwable;
  */
 class RequestPersister
 {
+    /**
+     * Create a new request persister instance.
+     */
     public function __construct(
         protected RequestCostCalculator $costCalculator,
         protected RequestWriter $writer,
@@ -31,6 +34,9 @@ class RequestPersister
         protected RequestTransformer $transformer
     ) {}
 
+    /**
+     * Persist a tracked request, reporting any failure and returning an unsaved model instead.
+     */
     public function persist(RequestContext $context): SpectraRequest
     {
         if (! config('spectra.enabled', true)) {
@@ -46,6 +52,9 @@ class RequestPersister
         }
     }
 
+    /**
+     * Store the request now, after the response or on the queue, as the config says.
+     */
     protected function store(RequestContext $context): SpectraRequest
     {
         $attributes = $this->buildAttributes($context);
@@ -77,6 +86,8 @@ class RequestPersister
     }
 
     /**
+     * Build the request row's attributes from the context, with its cost and display name.
+     *
      * @return array<string, mixed>
      */
     public function buildAttributes(RequestContext $context): array
@@ -92,8 +103,8 @@ class RequestPersister
 
         // Raw payloads are only present in toArray() when the matching storage
         // switch allows it; never fall back to the context, which always has them.
-        $requestData = array_key_exists('request_data', $data) ? $data['request_data'] : null;
-        $response = array_key_exists('response', $data) ? $data['response'] : null;
+        $requestData = $data['request_data'] ?? null;
+        $response = $data['response'] ?? null;
 
         return [
             'batch_id' => $data['batch_id'] ?? null,
@@ -158,12 +169,17 @@ class RequestPersister
         ];
     }
 
+    /**
+     * Get the catalog display name for a model, or the model id when it is not priced.
+     */
     protected function resolveDisplayName(string $provider, string $model): string
     {
         return app(PricingLookup::class)->getDisplayName($provider, $model) ?? $model;
     }
 
     /**
+     * Write the request to the database now.
+     *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
      */
@@ -173,6 +189,8 @@ class RequestPersister
     }
 
     /**
+     * Queue the request's write on the configured connection, queue and delay.
+     *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
      */
@@ -198,6 +216,8 @@ class RequestPersister
     }
 
     /**
+     * Write the request once the response has been sent.
+     *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
      */
@@ -280,6 +300,9 @@ class RequestPersister
         ];
     }
 
+    /**
+     * Cut a string to the column's length, leaving null alone.
+     */
     protected function truncate(?string $value, int $length): ?string
     {
         return $value !== null && mb_strlen($value) > $length ? mb_substr($value, 0, $length) : $value;

@@ -21,11 +21,17 @@ use Spectra\Models\SpectraRequest;
  */
 readonly class DateRange
 {
+    /**
+     * Create a new date range instance; a null start means all time.
+     */
     public function __construct(
         public ?CarbonInterface $start,
         public ?CarbonInterface $end,
     ) {}
 
+    /**
+     * Create a date range from the dashboard's period or custom start and end dates.
+     */
     public static function fromRequest(Request $request, string $period = 'month'): self
     {
         $period = $request->input('period', $period);
@@ -81,6 +87,8 @@ readonly class DateRange
     }
 
     /**
+     * Limit the query to rows whose date column falls in the range.
+     *
      * @param  Builder<SpectraRequest>  $query
      */
     public function apply(Builder $query, string $column = 'created_at'): void

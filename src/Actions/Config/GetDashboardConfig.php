@@ -13,6 +13,9 @@ use Spectra\Enums\ModelType;
  */
 class GetDashboardConfig
 {
+    /**
+     * Get the dashboard layout and the model types the screens can filter by.
+     */
     public function __invoke(): DashboardConfigResponse
     {
         $layout = config('spectra.dashboard.layout', 'full');

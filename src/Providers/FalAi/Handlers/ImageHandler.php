@@ -35,12 +35,17 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
     /** Seconds to wait for a generated image to download. */
     protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 30;
 
+    /**
+     * Get the model type fal.ai image requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Image;
     }
 
     /**
+     * Build the image count and billed megapixels of a fal.ai result.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -56,24 +61,34 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the URLs of the generated images, one per line.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
-        $urls = array_filter(array_map(
-            fn (array $image) => is_string($image['url'] ?? null) ? $image['url'] : null,
-            $this->resolveImages($response),
-        ));
+        $urls = collect($this->resolveImages($response))
+            ->map(fn (array $image) => is_string($image['url'] ?? null) ? $image['url'] : null)
+            ->filter()
+            ->all();
 
         return filled($urls) ? implode("\n", $urls) : null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the fal.ai result holds images.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return $this->resolveImages($data) !== [];
     }
 
     /**
+     * Download and store every generated image, skipping any that fail.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -115,20 +130,20 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
      * models), unwrapping webhook `payload`s.
      *
      * @param  array<string, mixed>  $data
-     * @return list<array<string, mixed>>
+     * @return array<int, array<mixed>>
      */
     protected function resolveImages(array $data): array
     {
         $output = $this->output($data);
         $images = $output['images'] ?? (is_array($output['image'] ?? null) ? [$output['image']] : []);
 
-        return is_array($images) ? array_values(array_filter($images, 'is_array')) : [];
+        return is_array($images) ? collect($images)->filter(fn (mixed $image) => is_array($image))->values()->all() : [];
     }
 
     /**
      * Billed megapixels, or null when an image has no size.
      *
-     * @param  list<array<string, mixed>>  $images
+     * @param  array<int, array<mixed>>  $images
      */
     protected function megapixels(array $images): ?float
     {
@@ -152,6 +167,9 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
         return (float) $total;
     }
 
+    /**
+     * Get the file extension for an image content type, defaulting to png.
+     */
     private function resolveExtension(?string $contentType): string
     {
         if (filled($contentType)) {

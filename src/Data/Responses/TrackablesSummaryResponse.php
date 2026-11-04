@@ -12,6 +12,9 @@ use Spectra\Data\DataTransferObject;
  */
 readonly class TrackablesSummaryResponse extends DataTransferObject
 {
+    /**
+     * Create a new trackables summary response instance.
+     */
     public function __construct(
         public int $total_trackables,
         public int $total_requests,

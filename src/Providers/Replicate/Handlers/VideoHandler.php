@@ -35,12 +35,17 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     /** Seconds to wait for a generated video to download. */
     protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 60;
 
+    /**
+     * Get the model type Replicate video predictions are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Video;
     }
 
     /**
+     * Build the video count and requested length of a succeeded prediction.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -56,7 +61,11 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the output URLs of a Replicate prediction, one per line.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $urls = $this->outputUrls($response);
@@ -64,13 +73,19 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         return $urls !== [] ? implode("\n", $urls) : null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the prediction produced a video.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return $this->predictionKind($data) === 'video';
     }
 
     /**
+     * Download and store every output video, skipping any that fail.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -130,6 +145,9 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         return null;
     }
 
+    /**
+     * Get the file extension for a video content type, defaulting to mp4.
+     */
     private function resolveExtensionFromContentType(?string $contentType): string
     {
         if (filled($contentType)) {

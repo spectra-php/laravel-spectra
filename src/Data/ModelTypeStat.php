@@ -15,6 +15,9 @@ use Spectra\Models\SpectraRequest;
  */
 readonly class ModelTypeStat extends DataTransferObject
 {
+    /**
+     * Create a new model type stat instance.
+     */
     public function __construct(
         public string $model_type,
         public string $label,
@@ -24,6 +27,8 @@ readonly class ModelTypeStat extends DataTransferObject
     ) {}
 
     /**
+     * Build one stat per model type, with its label, from the per-type aggregate rows.
+     *
      * @param  Collection<int, SpectraRequest>  $items
      * @return Collection<int, self>
      */

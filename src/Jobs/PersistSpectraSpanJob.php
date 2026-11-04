@@ -19,12 +19,17 @@ class PersistSpectraSpanJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
+     * Create a new persist span job instance.
+     *
      * @param  array<string, mixed>  $attributes
      */
     public function __construct(
         public readonly array $attributes,
     ) {}
 
+    /**
+     * Save the span through the span writer.
+     */
     public function handle(SpanWriter $writer): void
     {
         $writer->save($this->attributes);

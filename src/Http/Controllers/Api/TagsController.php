@@ -12,6 +12,9 @@ use Spectra\Data\Responses\TagsResponse;
  */
 class TagsController extends BaseApiController
 {
+    /**
+     * Get every tag with its request count.
+     */
     public function __invoke(GetTags $action): TagsResponse
     {
         return $action();

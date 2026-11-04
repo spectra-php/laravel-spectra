@@ -22,16 +22,25 @@ use Spectra\Providers\Provider;
  */
 class Mistral extends Provider implements ExtractsPricingTierFromRequest, ExtractsPricingTierFromResponse
 {
+    /**
+     * Get the slug Mistral requests are recorded under.
+     */
     public function getProvider(): string
     {
         return 'mistral';
     }
 
+    /**
+     * Get the hosts the Mistral and Codestral APIs are served from.
+     */
     public function getHosts(): array
     {
         return ['api.mistral.ai', 'codestral.mistral.ai'];
     }
 
+    /**
+     * Get the handlers for Mistral embeddings, chat, transcription, speech and OCR.
+     */
     public function handlers(): array
     {
         return [
@@ -43,18 +52,29 @@ class Mistral extends Provider implements ExtractsPricingTierFromRequest, Extrac
         ];
     }
 
-    /** @param  array<string, mixed>  $requestData */
+    /**
+     * Get the pricing tier the request's `service_tier` asked for.
+     *
+     * @param  array<string, mixed>  $requestData
+     */
     public function extractPricingTierFromRequest(array $requestData): ?string
     {
         return $this->tier($requestData['service_tier'] ?? null);
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Get the pricing tier the response reports in `usage.service_tier`.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function extractPricingTierFromResponse(array $responseData): ?string
     {
         return $this->tier($responseData['usage']['service_tier'] ?? $responseData['service_tier'] ?? null);
     }
 
+    /**
+     * Map a Mistral `service_tier` value to a Spectra pricing tier.
+     */
     protected function tier(mixed $serviceTier): ?string
     {
         return match ($serviceTier) {

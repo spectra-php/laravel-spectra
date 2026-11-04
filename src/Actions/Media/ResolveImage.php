@@ -14,6 +14,9 @@ use Spectra\Models\SpectraRequest;
  */
 class ResolveImage
 {
+    /**
+     * Get one generated image of the request from the media disk or the stored response.
+     */
     public function __invoke(string $id, int $index): MediaContent
     {
         $request = SpectraRequest::query()->findOrFail($id);
@@ -51,6 +54,8 @@ class ResolveImage
     }
 
     /**
+     * Extract the image's base64 from a Responses API or DALL-E response body.
+     *
      * @param  array<string, mixed>  $response
      */
     private function extractBase64(array $response, int $index): ?string
@@ -74,6 +79,9 @@ class ResolveImage
         return $value !== '[stripped]' ? $value : null;
     }
 
+    /**
+     * Get the image mime type for the stored file's extension.
+     */
     private function mimeType(string $path): string
     {
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
@@ -86,6 +94,9 @@ class ResolveImage
         };
     }
 
+    /**
+     * Get the stored file's extension, defaulting to png.
+     */
     private function extension(string $path): string
     {
         return strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'png';

@@ -14,6 +14,8 @@ use Spectra\Data\ModelTypeLatency;
 readonly class TrackablesResponse extends PaginatedResponse
 {
     /**
+     * Create a new trackables response instance.
+     *
      * @param  array<int, mixed>  $data
      * @param  array<int, string>  $types
      * @param  array<int, string>  $available_tags

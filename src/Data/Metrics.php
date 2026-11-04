@@ -10,6 +10,8 @@ namespace Spectra\Data;
 readonly class Metrics extends DataTransferObject
 {
     /**
+     * Create a new metrics instance.
+     *
      * @param  array<string, int>  $toolCalls  Billable server-side tool usage keyed by the
      *                                         provider's tool-pricing key (e.g. ['web_search' => 3]).
      */
@@ -29,14 +31,14 @@ readonly class Metrics extends DataTransferObject
         public ?float $reportedCostInCents = null,
     ) {}
 
+    /**
+     * Get the usage parts the handler set as arrays, leaving out empty ones.
+     */
     public function toArray(): array
     {
-        return array_filter(
-            array_map(
-                fn ($value) => $value instanceof DataTransferObject ? $value->toArray() : $value,
-                parent::toArray(),
-            ),
-            fn ($value) => $value !== null && $value !== [],
-        );
+        return collect(parent::toArray())
+            ->map(fn (mixed $value) => $value instanceof DataTransferObject ? $value->toArray() : $value)
+            ->filter(fn (mixed $value) => $value !== null && $value !== [])
+            ->all();
     }
 }

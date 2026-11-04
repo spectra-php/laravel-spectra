@@ -16,7 +16,11 @@ trait StoresOpenAiImageMedia
     /** Seconds to wait for a generated image to download. */
     protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 30;
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the image URLs of the response, with a placeholder for base64 images.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         if (! isset($response['data']) || ! is_array($response['data'])) {
@@ -38,6 +42,8 @@ trait StoresOpenAiImageMedia
     }
 
     /**
+     * Store the base64 or downloaded images and return their paths.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -92,6 +98,9 @@ trait StoresOpenAiImageMedia
         return $stored;
     }
 
+    /**
+     * Resolve an image's file extension from its content type, then its URL, defaulting to png.
+     */
     private function resolveImageExtension(string $url, ?string $contentType): string
     {
         $mime = $this->normalizeContentType($contentType);
@@ -123,6 +132,9 @@ trait StoresOpenAiImageMedia
         return 'png';
     }
 
+    /**
+     * Get the lower-cased mime type of a Content-Type header, without parameters.
+     */
     private function normalizeContentType(?string $contentType): ?string
     {
         if (blank($contentType)) {

@@ -16,16 +16,25 @@ namespace Spectra\Pricing;
  */
 class ReplicatePricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the Replicate prices are recorded under.
+     */
     public function provider(): string
     {
         return 'replicate';
     }
 
+    /**
+     * Get the Replicate pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://replicate.com/pricing'];
     }
 
+    /**
+     * Register the built-in Replicate models and their prices.
+     */
     protected function define(): void
     {
         $this->model('anthropic/claude-sonnet-5', fn ($m) => $m

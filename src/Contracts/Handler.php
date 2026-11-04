@@ -19,19 +19,35 @@ use Spectra\Enums\ModelType;
  */
 interface Handler
 {
+    /**
+     * Get the model type this handler's requests are recorded as.
+     */
     public function modelType(): ModelType;
 
-    /** @return array<string> */
+    /**
+     * Get the endpoint paths this handler handles.
+     *
+     * @return array<string>
+     */
     public function endpoints(): array;
 
+    /**
+     * Determine if the request path belongs to this handler.
+     */
     public function matchesEndpoint(string $endpoint): bool;
 
     /**
+     * Build the token, image, audio, video or search usage of a response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
     public function extractMetrics(array $requestData, array $responseData): Metrics;
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the generated text of a response, or null when it has none.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string;
 }

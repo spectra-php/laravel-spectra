@@ -15,7 +15,11 @@ use Spectra\Providers\Concerns\OpenAiCompatibleStreaming;
  */
 class ScalewayStreaming extends OpenAiCompatibleStreaming
 {
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the text of a Responses `output_text` delta or a chat completions chunk.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function text(array $data): ?string
     {
         if (($data['type'] ?? null) === 'response.output_text.delta') {
@@ -25,7 +29,11 @@ class ScalewayStreaming extends OpenAiCompatibleStreaming
         return parent::text($data);
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the status of a terminal Responses event, or a chat chunk's finish reason.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function finishReason(array $data): ?string
     {
         if (in_array($data['type'] ?? null, ['response.completed', 'response.incomplete', 'response.failed'], true)) {
@@ -38,6 +46,8 @@ class ScalewayStreaming extends OpenAiCompatibleStreaming
     }
 
     /**
+     * Get the model and id of a Responses event's response or a chat chunk.
+     *
      * @param  array<string, mixed>  $data
      * @return array{model?: string|null, id?: string|null}|null
      */

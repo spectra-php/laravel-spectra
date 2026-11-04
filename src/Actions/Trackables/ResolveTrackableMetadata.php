@@ -21,6 +21,8 @@ use Spectra\Models\SpectraRequest;
 class ResolveTrackableMetadata
 {
     /**
+     * Get the name and email of each trackable on the page, keyed by type and id.
+     *
      * @param  Collection<int, SpectraRequest>  $pageItems
      * @return array<string, array<string, mixed>>
      */

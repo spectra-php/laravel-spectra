@@ -29,11 +29,17 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     use MatchesParametricEndpoints;
     use ReadsGeminiParts;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Image;
     }
 
+    /**
+     * Get the Gemini and Imagen image generation endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -44,6 +50,8 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     }
 
     /**
+     * Get the token usage, image count and grounding calls of an image response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -79,13 +87,21 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the model from the response's `modelVersion`.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractModelFromResponse(array $response): ?string
     {
         return filled($response['modelVersion'] ?? null) ? $response['modelVersion'] : null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the response text, with a placeholder for each generated image.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $parts = [];
@@ -107,7 +123,11 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         return filled($parts) ? implode("\n", $parts) : null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body holds inline image data or Imagen images.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         // Gemini image response: candidates with inline image data
@@ -126,6 +146,8 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     }
 
     /**
+     * Store the generated inline and Imagen images and return their paths.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */

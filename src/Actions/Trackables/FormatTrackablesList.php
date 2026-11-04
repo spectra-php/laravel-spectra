@@ -14,6 +14,8 @@ use Spectra\Models\SpectraRequest;
 class FormatTrackablesList
 {
     /**
+     * Get the page of trackable totals as rows, with each one's top model and name.
+     *
      * @param  Collection<int, SpectraRequest>  $pageItems
      * @param  array<string, string>  $topModels
      * @param  array<string, array<string, mixed>>  $metadata

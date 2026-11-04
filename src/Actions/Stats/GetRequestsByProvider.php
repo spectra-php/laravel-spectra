@@ -15,6 +15,8 @@ use Spectra\Support\Query\RequestAggregateQuery;
 class GetRequestsByProvider
 {
     /**
+     * Get the request count per provider for the date range and layout.
+     *
      * @return Collection<int, RequestByProvider>
      */
     public function __invoke(DateRange $dateRange, string $layout): Collection

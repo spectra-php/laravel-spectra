@@ -22,12 +22,17 @@ class ChatHandler extends OpenAiCompatibleChatHandler
 {
     use ReadsReportedCost;
 
+    /**
+     * Get the chat completion endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/api/v1/chat/completions'];
     }
 
     /**
+     * Get the chat metrics, with the web searches OpenRouter ran counted as tool calls.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -87,6 +92,8 @@ class ChatHandler extends OpenAiCompatibleChatHandler
     }
 
     /**
+     * Get the cost OpenRouter reports in `usage.cost`, in US cents.
+     *
      * @param  array<string, mixed>  $usage
      * @param  array<string, mixed>  $responseData
      */

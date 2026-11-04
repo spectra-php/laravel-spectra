@@ -36,11 +36,17 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     /** Responses API statuses that mean the response is still being generated. */
     public const PENDING_STATUSES = ['queued', 'in_progress'];
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get the Chat Completions, Completions, Responses and compaction endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -52,6 +58,8 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     }
 
     /**
+     * Get the token usage of a text response, read in its API's usage shape.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -70,14 +78,22 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
         );
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Determine if the body is a Responses API answer that is still being generated.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function shouldSkipResponse(array $responseData): bool
     {
         return self::isResponsesApi($responseData)
             && in_array($responseData['status'] ?? null, self::PENDING_STATUSES, true);
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the text of the choices or of the Responses API output items.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         // Chat completions: choices[*].message.content
@@ -111,6 +127,8 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     }
 
     /**
+     * Get a Responses API body's incomplete reason, or otherwise its status.
+     *
      * @param  array<string, mixed>  $response
      */
     public static function responseFinishReason(array $response): ?string
@@ -125,19 +143,31 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
         return is_string($status) ? $status : null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Responses, Completions or compaction result.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return self::isResponsesApi($data) || self::isCompletionsApi($data) || self::isCompaction($data);
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Responses API response.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public static function isResponsesApi(array $data): bool
     {
         return ($data['object'] ?? null) === 'response';
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a chat or legacy text completion.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public static function isCompletionsApi(array $data): bool
     {
         return in_array($data['object'] ?? null, ['chat.completion', 'text_completion'], true);
@@ -153,7 +183,11 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
         return ($data['object'] ?? null) === 'response.compaction';
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Batch API result line.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public static function isBatch(array $data): bool
     {
         return isset($data['custom_id'], $data['response']['body']);
@@ -174,6 +208,9 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
         return $data;
     }
 
+    /**
+     * Get the stream handler for a streamed text response.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new TextStreaming;

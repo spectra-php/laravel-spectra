@@ -21,11 +21,17 @@ namespace Spectra\Pricing;
  */
 class AnthropicPricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the Anthropic prices are recorded under.
+     */
     public function provider(): string
     {
         return 'anthropic';
     }
 
+    /**
+     * Get the Anthropic pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://platform.claude.com/docs/en/about-claude/pricing'];
@@ -45,6 +51,9 @@ class AnthropicPricing extends ProviderPricing
         ];
     }
 
+    /**
+     * Register the built-in Claude API models and their prices.
+     */
     protected function define(): void
     {
         $this->model('claude-fable-5-1', fn ($m) => $m

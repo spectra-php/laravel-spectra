@@ -12,6 +12,9 @@ use Spectra\Data\Responses\DashboardConfigResponse;
  */
 class ConfigController extends BaseApiController
 {
+    /**
+     * Get the dashboard layout and model types the SPA loads first.
+     */
     public function __invoke(GetDashboardConfig $action): DashboardConfigResponse
     {
         return $action();

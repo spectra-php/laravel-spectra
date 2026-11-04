@@ -17,7 +17,11 @@ use Spectra\Support\Tracking\StreamHandler;
  */
 class ChatStreaming extends StreamHandler
 {
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the answer text of a Cohere `content-delta` event.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function text(array $data): ?string
     {
         if (($data['type'] ?? null) !== 'content-delta') {
@@ -30,6 +34,8 @@ class ChatStreaming extends StreamHandler
     }
 
     /**
+     * Merge the billed tokens of a Cohere `message-end` event into the usage.
+     *
      * @param  array<string, mixed>  $data
      * @param  array<string, mixed>  $currentUsage
      * @return array<string, mixed>
@@ -45,7 +51,11 @@ class ChatStreaming extends StreamHandler
         return array_merge($currentUsage, ChatHandler::tokensFromUsage($usage)->toUsageArray());
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the finish reason of a Cohere `message-end` event.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function finishReason(array $data): ?string
     {
         if (($data['type'] ?? null) !== 'message-end') {
@@ -58,6 +68,8 @@ class ChatStreaming extends StreamHandler
     }
 
     /**
+     * Get the response id of a Cohere `message-start` event.
+     *
      * @param  array<string, mixed>  $data
      * @return array{model?: string|null, id?: string|null}|null
      */

@@ -10,6 +10,9 @@ namespace Spectra\Data;
  */
 readonly class TrackableStats extends DataTransferObject
 {
+    /**
+     * Create a new trackable stats instance.
+     */
     public function __construct(
         public int $total_requests,
         public int $total_tokens,

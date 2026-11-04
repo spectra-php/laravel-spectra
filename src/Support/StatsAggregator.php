@@ -16,6 +16,9 @@ use Spectra\Models\SpectraRequest;
  */
 class StatsAggregator
 {
+    /**
+     * Add a tracked request to its day's stats, overall and for its trackable.
+     */
     public function recordRequest(SpectraRequest $request): void
     {
         $this->apply($request, $this->amounts($request), $request->latency_ms);
@@ -51,6 +54,8 @@ class StatsAggregator
     }
 
     /**
+     * Get the counts, tokens, units and cost one request adds to the daily stats.
+     *
      * @return array<string, int|float>
      */
     protected function amounts(SpectraRequest $request): array
@@ -80,6 +85,8 @@ class StatsAggregator
     }
 
     /**
+     * Add the amounts to the request's daily stat rows, overall and for its trackable.
+     *
      * @param  array<string, int|float>  $amounts
      */
     protected function apply(SpectraRequest $request, array $amounts, ?int $latencyMs): void
@@ -142,6 +149,9 @@ class StatsAggregator
         return $count;
     }
 
+    /**
+     * Rebuild the daily stats of one day from the stored requests.
+     */
     public function rebuildForDate(CarbonInterface|string $date): int
     {
         $date = $date instanceof CarbonInterface ? $date : Carbon::parse($date);

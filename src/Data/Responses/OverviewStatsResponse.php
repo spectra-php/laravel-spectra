@@ -12,6 +12,9 @@ use Spectra\Data\DataTransferObject;
  */
 readonly class OverviewStatsResponse extends DataTransferObject
 {
+    /**
+     * Create a new overview stats response instance.
+     */
     public function __construct(
         public int $total_requests,
         public int $total_tokens,

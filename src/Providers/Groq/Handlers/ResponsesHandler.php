@@ -31,17 +31,25 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get the Responses API endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/openai/v1/responses'];
     }
 
     /**
+     * Get the token usage of a Responses API body.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -53,6 +61,8 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
     }
 
     /**
+     * Normalise a Responses API usage object to TokenMetrics.
+     *
      * @param  array<string, mixed>  $usage
      */
     public function tokensFromUsage(array $usage): TokenMetrics
@@ -65,7 +75,11 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the output text of the response's message items.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $texts = [];
@@ -81,18 +95,29 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
         return $texts !== [] ? implode("\n", $texts) : null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the response's status as the finish reason.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return is_string($response['status'] ?? null) ? $response['status'] : null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Responses API response.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return ($data['object'] ?? null) === 'response';
     }
 
+    /**
+     * Get the stream handler for a streamed response.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new ResponsesStreaming($this);

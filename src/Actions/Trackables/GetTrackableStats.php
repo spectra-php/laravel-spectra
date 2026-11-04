@@ -14,6 +14,9 @@ use Spectra\Support\Query\RequestAggregateQuery;
  */
 class GetTrackableStats
 {
+    /**
+     * Get the trackable's request, usage, cost and latency totals for the date range.
+     */
     public function __invoke(string $type, string $id, DateRange $dateRange): TrackableStatsDto
     {
         $stats = RequestAggregateQuery::make($dateRange)

@@ -16,6 +16,8 @@ use Spectra\Data\ModelTypeLatency;
 readonly class StatsResponse extends DataTransferObject
 {
     /**
+     * Create a new stats response instance.
+     *
      * @param  array<string, float>  $cost_by_model_type
      * @param  Collection<int, mixed>  $top_models
      * @param  Collection<int, mixed>  $recent_requests

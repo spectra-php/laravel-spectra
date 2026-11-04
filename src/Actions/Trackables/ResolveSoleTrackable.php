@@ -14,11 +14,16 @@ use Spectra\Support\Query\RequestAggregateQuery;
  */
 class ResolveSoleTrackable
 {
+    /**
+     * Create a new resolve sole trackable action instance.
+     */
     public function __construct(
         private readonly ResolveTrackableMetadata $resolveTrackableMetadata,
     ) {}
 
     /**
+     * Get the one trackable all the group's calls belong to, or null.
+     *
      * @param  RequestAggregateQuery  $calls  scoped to the group, nothing selected yet
      * @return array<string, mixed>|null
      */

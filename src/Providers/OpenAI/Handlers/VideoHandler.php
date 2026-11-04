@@ -39,11 +39,17 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
     /** Seconds to wait for a generated video to download. */
     protected const MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 60;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Video;
     }
 
+    /**
+     * Get the video submit and poll endpoint paths.
+     */
     public function endpoints(): array
     {
         return [
@@ -52,13 +58,19 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
         ];
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Determine if the video job has not completed and should not be recorded yet.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function shouldSkipResponse(array $responseData): bool
     {
         return ($responseData['status'] ?? null) !== 'completed';
     }
 
     /**
+     * Get the video count and length of a completed job.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -72,13 +84,21 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the job's prompt as the response text.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return $response['prompt'] ?? null;
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Get when the generated video expires, from `expires_at`.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function extractExpiresAt(array $responseData): ?CarbonInterface
     {
         $expiresAt = $responseData['expires_at'] ?? null;
@@ -87,6 +107,8 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
     }
 
     /**
+     * Download and store the generated video and return its path.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */

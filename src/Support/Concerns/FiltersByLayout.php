@@ -17,6 +17,8 @@ use Spectra\Models\SpectraRequest;
 trait FiltersByLayout
 {
     /**
+     * Limit the query to the model types the dashboard layout shows.
+     *
      * @param  Builder<SpectraRequest>  $query
      */
     protected function applyLayoutFilter(Builder $query, string $layout): void

@@ -13,6 +13,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ServeAudioController extends BaseApiController
 {
+    /**
+     * Serve the request's text-to-speech audio inline, or as a download when asked.
+     */
     public function __invoke(string $id, ?string $action, ResolveAudio $resolveAudio): Response
     {
         $media = $resolveAudio($id);

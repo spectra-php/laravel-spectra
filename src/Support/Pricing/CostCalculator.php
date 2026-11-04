@@ -28,6 +28,8 @@ class CostCalculator
     protected array $warnedCurrencies = [];
 
     /**
+     * Calculate the cost of plain prompt, completion and cached token counts.
+     *
      * @return array{prompt_cost: float, completion_cost: float, total_cost_in_cents: float}
      */
     public function calculate(
@@ -47,6 +49,8 @@ class CostCalculator
     }
 
     /**
+     * Calculate the prompt and completion cost of token usage, billing each token kind at its own rate.
+     *
      * @return array{prompt_cost: float, completion_cost: float, total_cost_in_cents: float}
      */
     public function forTokens(
@@ -147,12 +151,17 @@ class CostCalculator
         return $pricing;
     }
 
+    /**
+     * Determine if the catalog has a price for the model on the given tier.
+     */
     public function hasPricing(string $provider, string $model, string|PricingTier|null $pricingTier = null): bool
     {
         return app(PricingLookup::class)->has($provider, $model, $pricingTier);
     }
 
     /**
+     * Estimate the cost of a request from expected prompt and completion token counts.
+     *
      * @return array{prompt_cost: float, completion_cost: float, total_cost_in_cents: float}
      */
     public function estimate(
@@ -173,6 +182,8 @@ class CostCalculator
     }
 
     /**
+     * Get the input, output and cached input price of a single token, in cents.
+     *
      * @return array{input_per_token: float, output_per_token: float, cached_input_per_token: float}|null
      */
     public function getCostPerToken(string $provider, string $model, string|PricingTier|null $pricingTier = null): ?array
@@ -206,6 +217,8 @@ class CostCalculator
     }
 
     /**
+     * Calculate the cost for second-billed models (e.g. video generation) from a duration.
+     *
      * @return array{total_cost_in_cents: float}
      */
     public function calculateByDurationSeconds(
@@ -235,6 +248,8 @@ class CostCalculator
     }
 
     /**
+     * Calculate the cost for image-billed models from the number of images generated.
+     *
      * @return array{total_cost_in_cents: float}
      */
     public function calculateByImages(
@@ -248,6 +263,8 @@ class CostCalculator
     }
 
     /**
+     * Calculate the cost for megapixel-billed image models from the megapixels generated.
+     *
      * @return array{total_cost_in_cents: float}
      */
     public function calculateByMegapixels(
@@ -261,6 +278,8 @@ class CostCalculator
     }
 
     /**
+     * Calculate the cost for video-billed models from the number of videos generated.
+     *
      * @return array{total_cost_in_cents: float}
      */
     public function calculateByVideos(
@@ -318,6 +337,9 @@ class CostCalculator
         return $this->perUnit($provider, $model, $requests, $pricingTier, $at);
     }
 
+    /**
+     * Get the unit the model is billed in, defaulting to tokens for an unknown model.
+     */
     public function getPricingUnit(string $provider, string $model): string
     {
         return app(PricingLookup::class)->getUnit($provider, $model) ?? PricingUnit::Tokens->value;
@@ -363,6 +385,8 @@ class CostCalculator
     }
 
     /**
+     * Multiply a quantity by the model's unit price, or bill nothing when it has none.
+     *
      * @return array{total_cost_in_cents: float}
      */
     protected function perUnit(string $provider, string $model, float $quantity, string|PricingTier|null $pricingTier, ?CarbonInterface $at): array
@@ -376,6 +400,9 @@ class CostCalculator
         return ['total_cost_in_cents' => (float) (max(0, $quantity) * $pricing['price_per_unit'])];
     }
 
+    /**
+     * Get the tier a provider's requests bill at when none was detected.
+     */
     protected function getDefaultTier(string $provider): PricingTier|string
     {
         return app(PricingLookup::class)->defaultTier($provider);

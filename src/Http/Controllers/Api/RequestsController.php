@@ -17,6 +17,9 @@ use Spectra\Support\DateRange;
  */
 class RequestsController extends BaseApiController
 {
+    /**
+     * Get a filtered, sorted page of requests with the filter options.
+     */
     public function __invoke(
         Request $request,
         GetFilteredRequests $getFilteredRequests,

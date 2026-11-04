@@ -14,6 +14,8 @@ use Spectra\Data\DataTransferObject;
 readonly class DashboardConfigResponse extends DataTransferObject
 {
     /**
+     * Create a new dashboard config response instance.
+     *
      * @param  Collection<int, array{value: string, label: string}>  $model_types
      */
     public function __construct(

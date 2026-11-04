@@ -13,6 +13,9 @@ use Spectra\Data\Responses\TrackableDetailsResponse;
  */
 class ShowTrackableController extends BaseApiController
 {
+    /**
+     * Get the trackable detail screen's data for one trackable.
+     */
     public function __invoke(
         Request $request,
         string $id,

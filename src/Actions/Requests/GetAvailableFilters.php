@@ -14,6 +14,9 @@ use Spectra\Models\SpectraTag;
  */
 class GetAvailableFilters
 {
+    /**
+     * Get every tag and the stored finish reasons and reasoning efforts.
+     */
     public function __invoke(): AvailableFiltersResponse
     {
         $filters = SpectraRequest::query()

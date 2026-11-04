@@ -18,6 +18,9 @@ use Spectra\Support\DateRange;
  */
 class ConversationsController extends BaseApiController
 {
+    /**
+     * Get a filtered, sorted page of conversations with their summary and filter options.
+     */
     public function __invoke(
         Request $request,
         GetFilteredConversations $getFilteredConversations,

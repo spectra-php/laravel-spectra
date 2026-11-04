@@ -71,11 +71,17 @@ class PricingCatalog
         return [...$configured, ...static::scrapedPricesFile()->catalogs($builtIn)];
     }
 
+    /**
+     * Determine if the scraped prices file should replace built-in models.
+     */
     public static function usesScrapedPrices(): bool
     {
         return (bool) config('spectra.costs.use_scraped_prices', false);
     }
 
+    /**
+     * Get the scraped prices file at the configured path, or the default resource path.
+     */
     public static function scrapedPricesFile(): ScrapedPricesFile
     {
         return new ScrapedPricesFile((string) (config('spectra.costs.scraped_prices_path') ?: resource_path('spectra/scraped-prices.json')));

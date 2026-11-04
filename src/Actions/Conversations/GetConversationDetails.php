@@ -29,12 +29,18 @@ class GetConversationDetails
     /** ISO 8601 with milliseconds, as the screen reads it. */
     private const ISO_MILLISECONDS = 'Y-m-d\\TH:i:s.vP';
 
+    /**
+     * Create a new get conversation details action instance.
+     */
     public function __construct(
         private readonly MessageTextExtractor $messageTextExtractor,
         private readonly BuildModelBreakdown $buildModelBreakdown,
         private readonly ResolveSoleTrackable $resolveSoleTrackable,
     ) {}
 
+    /**
+     * Get the conversation's totals, turns, models and tags, or null when it has no calls.
+     */
     public function __invoke(string $conversationId, int $limit = 200): ?ConversationDetailsResponse
     {
         $totals = RequestAggregateQuery::make()->forConversation($conversationId)->conversationTotals()->first();
@@ -79,6 +85,8 @@ class GetConversationDetails
     }
 
     /**
+     * Group the calls into turns with their prompt, reply, cost and running cost.
+     *
      * @param  Collection<int, SpectraRequest>  $calls
      * @return array<int, array<string, mixed>>
      */
@@ -166,11 +174,17 @@ class GetConversationDetails
         return max(0, (int) round($end - $start->getPreciseTimestamp(3)));
     }
 
+    /**
+     * Get when the call started, falling back to when it was recorded.
+     */
     private function startOf(SpectraRequest $call): CarbonInterface
     {
         return $call->started_at ?? $call->created_at ?? Date::now();
     }
 
+    /**
+     * Format a stored timestamp as ISO 8601 with milliseconds, or null when blank.
+     */
     private function format(mixed $value): ?string
     {
         return blank($value) ? null : Date::parse((string) $value)->format(self::ISO_MILLISECONDS);

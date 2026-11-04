@@ -29,17 +29,25 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     use ExtractsModelField;
     use MatchesEndpoints;
 
+    /**
+     * Get the model type Cohere chat requests are recorded as.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Text;
     }
 
+    /**
+     * Get the Cohere v2 chat endpoint path.
+     */
     public function endpoints(): array
     {
         return ['/v2/chat'];
     }
 
     /**
+     * Build the billed token usage of a Cohere chat response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -69,7 +77,11 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the joined text blocks of a Cohere chat message.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         if (! isset($response['message']['content']) || ! is_array($response['message']['content'])) {
@@ -87,18 +99,29 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
         return filled($texts) ? implode("\n", $texts) : null;
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the finish reason of a Cohere chat response.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractFinishReason(array $response): ?string
     {
         return $response['finish_reason'] ?? null;
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is a Cohere chat response with a message and finish reason.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return isset($data['message'], $data['finish_reason']);
     }
 
+    /**
+     * Create the stream handler for Cohere chat streams.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new ChatStreaming;

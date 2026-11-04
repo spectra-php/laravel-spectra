@@ -10,7 +10,13 @@ namespace Spectra\Contracts;
  */
 interface Watcher
 {
+    /**
+     * Determine if the client library this watcher hooks into is installed.
+     */
     public static function isAvailable(): bool;
 
+    /**
+     * Hook tracking into the client so its AI requests are recorded.
+     */
     public function register(): void;
 }

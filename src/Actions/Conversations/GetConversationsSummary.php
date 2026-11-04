@@ -15,10 +15,16 @@ use Spectra\Support\DateRange;
  */
 class GetConversationsSummary
 {
+    /**
+     * Create a new get conversations summary action instance.
+     */
     public function __construct(
         private readonly BuildConversationQuery $buildConversationQuery,
     ) {}
 
+    /**
+     * Get the conversation count, failed count and average cost and turns for the filters.
+     */
     public function __invoke(Request $request, DateRange $dateRange): ConversationsSummary
     {
         $conversations = ($this->buildConversationQuery)($request, $dateRange)->toQuery()->toBase();

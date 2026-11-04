@@ -16,6 +16,8 @@ namespace Spectra\Providers\OpenRouter\Concerns;
 trait ReadsReportedCost
 {
     /**
+     * Get the reported cost in US cents, adding the upstream cost for BYOK requests.
+     *
      * @param  array<string, mixed>  $usage
      */
     protected function costFromUsage(array $usage): ?float

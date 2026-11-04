@@ -19,10 +19,16 @@ class StreamOpenAiVideo
 {
     private const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
+    /**
+     * Create a new stream OpenAI video action instance.
+     */
     public function __construct(
         private readonly ApiKeyResolver $apiKeyResolver,
     ) {}
 
+    /**
+     * Get a download stream of the Sora video's content from the OpenAI API.
+     */
     public function __invoke(string $videoId): StreamedResponse
     {
         $apiKey = $this->apiKeyResolver->resolve('openai');

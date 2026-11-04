@@ -49,6 +49,9 @@ class ApiKeyResolver
         'openai' => ['spectra.endpoint_urls.azure', 'ai.providers.azure.url'],
     ];
 
+    /**
+     * Resolve a provider's API key from the first filled config key in its lookup chain.
+     */
     public function resolve(string $provider): ?string
     {
         $chain = $this->lookupChains[$provider] ?? ["spectra.api_keys.{$provider}", "ai.providers.{$provider}.key"];
@@ -120,6 +123,9 @@ class ApiKeyResolver
         return $hosts;
     }
 
+    /**
+     * Get the host, with its port when one is set, from a configured base URL.
+     */
     protected function hostFromUrl(mixed $url): ?string
     {
         if (blank($url)) {

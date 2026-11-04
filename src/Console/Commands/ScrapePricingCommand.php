@@ -6,6 +6,7 @@ namespace Spectra\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Arr;
 use RuntimeException;
 use Spectra\Enums\PricingUnit;
 use Spectra\Models\SpectraRequest;
@@ -38,6 +39,9 @@ class ScrapePricingCommand extends Command
 
     protected $description = 'Read the providers\' pricing pages with Firecrawl and save the prices that differ from the built-in catalog to the scraped prices file';
 
+    /**
+     * Scrape each provider's pricing pages and save the prices that differ from the catalog.
+     */
     public function handle(ScrapedPriceMapper $mapper): int
     {
         if (! config('spectra.costs.firecrawl.api_key')) {
@@ -63,7 +67,7 @@ class ScrapePricingCommand extends Command
         }
 
         $scraper = FirecrawlPriceScraper::fromConfig();
-        $urls = array_values(array_filter($this->option('url')));
+        $urls = collect($this->option('url'))->filter()->values()->all();
         $scraped = 0;
 
         foreach ($catalogs as $provider => $pricing) {
@@ -141,7 +145,7 @@ class ScrapePricingCommand extends Command
     protected function catalogsToScrape(): ?array
     {
         $builtIn = PricingCatalog::builtIn();
-        $requested = array_values(array_filter($this->argument('provider')));
+        $requested = array_values(collect($this->argument('provider'))->filter()->all());
 
         if ($this->option('url') && count($requested) !== 1) {
             $this->components->error('--url needs exactly one provider, e.g. `spectra:pricing-scrape openai --url=https://...`.');
@@ -153,13 +157,13 @@ class ScrapePricingCommand extends Command
             return $this->resolveCatalogs($builtIn, $requested);
         }
 
-        $scrapable = array_filter($builtIn, fn (ProviderPricing $pricing) => $pricing->sources() !== []);
+        $scrapable = Arr::where($builtIn, fn (ProviderPricing $pricing) => $pricing->sources() !== []);
 
         if ($this->option('all')) {
             return $scrapable;
         }
 
-        $configured = array_values(array_filter((array) config('spectra.costs.firecrawl.providers', [])));
+        $configured = array_values(collect((array) config('spectra.costs.firecrawl.providers', []))->filter()->all());
 
         if ($configured !== []) {
             $this->components->info('Scraping the providers in SPECTRA_SCRAPE_PROVIDERS: '.implode(', ', $configured).'.');
@@ -168,7 +172,7 @@ class ScrapePricingCommand extends Command
         }
 
         $tracked = $this->trackedProviders();
-        $catalogs = array_intersect_key($scrapable, array_flip($tracked));
+        $catalogs = Arr::only($scrapable, $tracked);
 
         if ($catalogs === []) {
             $this->components->error('Spectra has not tracked requests for a provider with pricing pages yet. Name the providers to scrape (`spectra:pricing-scrape openai`), set SPECTRA_SCRAPE_PROVIDERS, or pass --all.');
@@ -182,6 +186,8 @@ class ScrapePricingCommand extends Command
     }
 
     /**
+     * Get the pricing catalogs for the named providers, or null after reporting an unknown one.
+     *
      * @param  array<string, ProviderPricing>  $builtIn
      * @param  list<string>  $providers
      * @return array<string, ProviderPricing>|null
@@ -218,14 +224,17 @@ class ScrapePricingCommand extends Command
     protected function trackedProviders(): array
     {
         try {
-            $providers = SpectraRequest::query()->distinct()->orderBy('provider')->pluck('provider')->all();
+            $providers = SpectraRequest::query()->distinct()->orderBy('provider')->pluck('provider');
         } catch (QueryException) {
             return [];
         }
 
-        return array_values(array_filter(array_map(fn ($provider) => (string) $provider, $providers)));
+        return array_values($providers->map(fn (mixed $provider) => (string) $provider)->filter()->all());
     }
 
+    /**
+     * Print the rows found, the price changes and the skipped rows for one provider.
+     */
     protected function report(ScrapedPriceMapper $mapper, ScrapedPrices $result, int $rows): void
     {
         $this->components->twoColumnDetail(
@@ -236,13 +245,13 @@ class ScrapePricingCommand extends Command
         if ($result->changes !== []) {
             $this->table(
                 ['Model', 'Tier', 'Price', 'Ours', 'Scraped'],
-                array_map(fn (PriceChange $change) => [
+                collect($result->changes)->map(fn (PriceChange $change) => [
                     $change->model.(in_array($change->model, $result->newModels, true) ? ' <fg=green>(new)</>' : ''),
                     $change->tier.($change->aboveInputTokens !== null ? ' > '.number_format($change->aboveInputTokens) : ''),
                     $mapper->label($change->field),
                     $this->money($change->old, $change),
                     $this->money($change->new, $change),
-                ], $result->changes),
+                ])->all(),
             );
         }
 
@@ -251,6 +260,9 @@ class ScrapePricingCommand extends Command
         }
     }
 
+    /**
+     * Format a price in cents as a currency amount per 1M tokens, per 1M characters or per unit.
+     */
     protected function money(?float $cents, PriceChange $change): string
     {
         if ($cents === null) {

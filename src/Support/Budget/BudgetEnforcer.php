@@ -29,10 +29,16 @@ use Spectra\Models\SpectraRequest;
  */
 class BudgetEnforcer
 {
+    /**
+     * Create a new budget enforcer instance.
+     */
     public function __construct(
         protected Dispatcher $events
     ) {}
 
+    /**
+     * Check a request against the model's budget before it is sent, throwing when it is blocked.
+     */
     public function enforce(Model $budgetable, string $provider, string $model): void
     {
         $budget = $this->getBudget($budgetable);
@@ -54,6 +60,9 @@ class BudgetEnforcer
         $this->checkRequestLimits($budgetable, $budget);
     }
 
+    /**
+     * Get the model's budget status for a request without blocking or firing events.
+     */
     public function check(Model $budgetable, string $provider, string $model): BudgetStatus
     {
         $budget = $this->getBudget($budgetable);
@@ -91,6 +100,9 @@ class BudgetEnforcer
         );
     }
 
+    /**
+     * Get the model's cost, token and request usage for each budget period.
+     */
     public function getUsage(Model $budgetable): BudgetUsage
     {
         return new BudgetUsage(
@@ -108,6 +120,9 @@ class BudgetEnforcer
         );
     }
 
+    /**
+     * Get the active budget of the model, if it has one.
+     */
     public function getBudget(Model $budgetable): ?SpectraBudget
     {
         return SpectraBudget::query()
@@ -117,6 +132,9 @@ class BudgetEnforcer
             ->first();
     }
 
+    /**
+     * Fire the threshold and exceeded events for the model's recorded spend.
+     */
     public function recordUsage(Model $budgetable, int $cost, int $tokens): void
     {
         $budget = $this->getBudget($budgetable);
@@ -170,6 +188,9 @@ class BudgetEnforcer
         );
     }
 
+    /**
+     * Find the trackable model of a recorded request from its morph type and id.
+     */
     protected function resolveBudgetable(string $morphType, string $id): ?Model
     {
         $class = Relation::getMorphedModel($morphType) ?? $morphType;
@@ -207,6 +228,9 @@ class BudgetEnforcer
         }
     }
 
+    /**
+     * Fire threshold events for each cost limit and block once a hard limit is reached.
+     */
     protected function checkCostLimits(Model $budgetable, SpectraBudget $budget): void
     {
         if ($budget->daily_limit !== null && $budget->daily_limit > 0) {
@@ -250,6 +274,9 @@ class BudgetEnforcer
         }
     }
 
+    /**
+     * Block the request once a hard token limit is reached.
+     */
     protected function checkTokenLimits(Model $budgetable, SpectraBudget $budget): void
     {
         $periods = [
@@ -274,6 +301,9 @@ class BudgetEnforcer
         }
     }
 
+    /**
+     * Block the request once a hard request-count limit is reached.
+     */
     protected function checkRequestLimits(Model $budgetable, SpectraBudget $budget): void
     {
         $periods = [
@@ -295,6 +325,9 @@ class BudgetEnforcer
         }
     }
 
+    /**
+     * Fire the warning or critical event once per period when usage crosses its threshold.
+     */
     protected function checkAndDispatchThreshold(
         Model $budgetable,
         SpectraBudget $budget,
@@ -358,6 +391,9 @@ class BudgetEnforcer
         throw $exception;
     }
 
+    /**
+     * Dispatch the BudgetExceeded event for a limit.
+     */
     protected function dispatchExceeded(
         Model $budgetable,
         SpectraBudget $budget,
@@ -376,6 +412,9 @@ class BudgetEnforcer
         ));
     }
 
+    /**
+     * Fire threshold events for each cost limit the budget sets.
+     */
     protected function checkThresholds(Model $budgetable, SpectraBudget $budget, BudgetUsage $usage): void
     {
         $checks = [
@@ -398,6 +437,9 @@ class BudgetEnforcer
         }
     }
 
+    /**
+     * Get the model's spend since the start of the day, week or month, in whole cents.
+     */
     protected function getCostForPeriod(Model $budgetable, string $period): int
     {
         $start = match ($period) {
@@ -416,6 +458,9 @@ class BudgetEnforcer
         return $this->toWholeCents($cost);
     }
 
+    /**
+     * Get the model's spend across all requests, in whole cents.
+     */
     protected function getTotalCost(Model $budgetable): int
     {
         $cost = (float) SpectraRequest::query()
@@ -426,6 +471,9 @@ class BudgetEnforcer
         return $this->toWholeCents($cost);
     }
 
+    /**
+     * Get the prompt and completion tokens the model used since the start of the period.
+     */
     protected function getTokensForPeriod(Model $budgetable, string $period): int
     {
         $start = match ($period) {
@@ -443,6 +491,9 @@ class BudgetEnforcer
             ->value('total');
     }
 
+    /**
+     * Get the prompt and completion tokens the model used across all requests.
+     */
     protected function getTotalTokens(Model $budgetable): int
     {
         return (int) SpectraRequest::query()
@@ -452,6 +503,9 @@ class BudgetEnforcer
             ->value('total');
     }
 
+    /**
+     * Get the number of requests the model made since the start of the period.
+     */
     protected function getRequestsForPeriod(Model $budgetable, string $period): int
     {
         $start = match ($period) {
@@ -468,6 +522,9 @@ class BudgetEnforcer
             ->count();
     }
 
+    /**
+     * Get the cost, token and request limits the budget sets.
+     */
     protected function getLimits(SpectraBudget $budget): BudgetLimits
     {
         return new BudgetLimits(
@@ -485,6 +542,9 @@ class BudgetEnforcer
         );
     }
 
+    /**
+     * Get the highest share of any set limit the usage has reached, as a percentage.
+     */
     protected function calculateMaxPercentage(BudgetUsage $usage, BudgetLimits $limits): float
     {
         $percentages = [];
@@ -526,6 +586,8 @@ class BudgetEnforcer
     }
 
     /**
+     * Get the cache key part and expiry for the current period of a limit type.
+     *
      * @return array{0: string, 1: CarbonInterface}
      */
     protected function period(string $limitType): array

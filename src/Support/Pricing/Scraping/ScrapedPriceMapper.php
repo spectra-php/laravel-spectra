@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Pricing\Scraping;
 
+use Illuminate\Support\Arr;
 use Spectra\Enums\PricingTier;
 use Spectra\Enums\PricingUnit;
 use Spectra\Pricing\ProviderPricing;
@@ -46,6 +47,8 @@ class ScrapedPriceMapper
     protected ?PageText $page = null;
 
     /**
+     * Map scraped rows onto the catalog, keeping only changed and new models.
+     *
      * @param  list<array<string, mixed>>  $rows  Rows from FirecrawlPriceScraper.
      * @param  string|null  $today  Y-m-d; picks the dated row in effect (default: today).
      * @param  PageText|null  $page  The pages' text; prices it doesn't confirm are ignored.
@@ -148,7 +151,7 @@ class ScrapedPriceMapper
                 ? (int) $row['above_input_tokens']
                 : null;
 
-            $names = array_values(array_filter([$rawId, $id, $displayNames[$id] ?? null, $displayName]));
+            $names = array_values(collect([$rawId, $id, $displayNames[$id] ?? null, $displayName])->filter()->all());
             $unit = is_string($row['unit'] ?? null) ? PricingUnit::tryFrom($row['unit'])?->value : null;
             $catalogUnit = isset($definitions[$id]) ? $definitions[$id]->toModelArray()['pricing_unit'] : null;
             $pricedPer = is_numeric($row['priced_per'] ?? null) && $row['priced_per'] > 0 ? (float) $row['priced_per'] : null;
@@ -168,7 +171,7 @@ class ScrapedPriceMapper
 
             $grouped[$id] ??= ['display_name' => $displayName, 'unit' => $unit, 'names' => [], 'rows' => []];
             $grouped[$id]['unit'] ??= $unit;
-            $grouped[$id]['names'] = array_values(array_unique([...$grouped[$id]['names'], ...$names]));
+            $grouped[$id]['names'] = array_values(collect([...$grouped[$id]['names'], ...$names])->uniqueStrict()->all());
 
             $key = $catalogTier.'|'.$above;
             $grouped[$id]['rows'][$key] ??= ['tier' => $catalogTier, 'above' => $above, 'prices' => [], 'scales' => []];
@@ -314,12 +317,17 @@ class ScrapedPriceMapper
         return implode(' ', $words);
     }
 
+    /**
+     * Get the readable name of a tier price field, as reports show it.
+     */
     public function label(string $field): string
     {
         return $field === 'price_per_unit' ? 'per unit' : str_replace('_', ' ', substr($field, 0, -strlen('_price')));
     }
 
     /**
+     * Apply a model's scraped prices to its catalog rows, skipping rows that look mistaken.
+     *
      * @param  ScrapedModel  $scraped
      * @return array<string, mixed>|null The model's JSON entry, or null when nothing changed.
      */
@@ -418,12 +426,14 @@ class ScrapedPriceMapper
         }
 
         $entry = ScrapedPricing::definitionToArray($definition);
-        $entry['tiers'] = array_map(ScrapedPricing::tierToArray(...), $tiers);
+        $entry['tiers'] = Arr::map($tiers, ScrapedPricing::tierToArray(...));
 
         return $entry;
     }
 
     /**
+     * Build the file entry for a model the catalog doesn't have, if it has a plausible standard price.
+     *
      * @param  ScrapedModel  $scraped
      * @return array<string, mixed>|null
      */
@@ -453,7 +463,7 @@ class ScrapedPriceMapper
             $tiers[$key] = $tierRow;
         }
 
-        if (! in_array(PricingTier::Standard->value, array_column($tiers, 'tier'), true)) {
+        if (! in_array(PricingTier::Standard->value, Arr::pluck($tiers, 'tier'), true)) {
             $this->skipped[] = "{$id}: new model without a standard price, not added.";
 
             return null;
@@ -464,7 +474,7 @@ class ScrapedPriceMapper
             $this->recordNewRow($id, $scrapedRow, $this->pricesForUnit($scrapedRow['prices'], $unit), $unit);
         }
 
-        $tiers = array_map(ScrapedPricing::tierToArray(...), array_values($tiers));
+        $tiers = collect($tiers)->values()->map(ScrapedPricing::tierToArray(...))->all();
 
         [$type, $capabilities] = match (PricingUnit::tryFrom($unit) ?? PricingUnit::Tokens) {
             PricingUnit::Tokens => ['text', ['text']],
@@ -475,13 +485,13 @@ class ScrapedPriceMapper
             PricingUnit::Search, PricingUnit::Page, PricingUnit::Request => ['text', []],
         };
 
-        return array_filter([
+        return Arr::where([
             'display_name' => $scraped['display_name'],
             'type' => $type,
             'pricing_unit' => $unit,
             'capabilities' => $capabilities,
             'tiers' => $tiers,
-        ], fn ($value) => $value !== null && $value !== []);
+        ], fn (mixed $value) => $value !== null && $value !== []);
     }
 
     /**
@@ -496,7 +506,7 @@ class ScrapedPriceMapper
     {
         $required = $unit === PricingUnit::Tokens->value ? ['input_price', 'output_price'] : ['price_per_unit'];
 
-        if (array_diff($required, array_keys($prices)) !== []) {
+        if (! Arr::has($prices, $required)) {
             $this->skipped[] = "{$id}: {$this->describeRow($row['tier'], $row['above'])} is missing ".implode(' or ', $required).', not added.';
 
             return null;
@@ -517,6 +527,8 @@ class ScrapedPriceMapper
     }
 
     /**
+     * Record every price of a newly added tier row as a change from nothing.
+     *
      * @param  ScrapedRow  $row
      * @param  array<string, float>  $prices
      */
@@ -600,7 +612,7 @@ class ScrapedPriceMapper
     {
         $perUnit = $unit !== PricingUnit::Tokens->value;
 
-        return array_filter($prices, fn (string $field) => ($field === 'price_per_unit') === $perUnit, ARRAY_FILTER_USE_KEY);
+        return Arr::where($prices, fn (float $price, string $field) => ($field === 'price_per_unit') === $perUnit);
     }
 
     /**
@@ -629,6 +641,9 @@ class ScrapedPriceMapper
         return $match;
     }
 
+    /**
+     * Describe a tier row for a report, with its long-context threshold when it has one.
+     */
     protected function describeRow(string $tier, ?int $above): string
     {
         return $above !== null ? "{$tier} (> ".number_format($above).' tokens)' : $tier;

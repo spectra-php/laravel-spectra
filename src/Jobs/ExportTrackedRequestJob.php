@@ -21,12 +21,17 @@ class ExportTrackedRequestJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
+     * Create a new export job instance.
+     *
      * @param  array<string, mixed>  $data  Transformed request data from RequestTransformer
      */
     public function __construct(
         public readonly array $data,
     ) {}
 
+    /**
+     * Send the tracked request to the configured exporter.
+     */
     public function handle(RequestExporter $exporter): void
     {
         $exporter->export($this->data);

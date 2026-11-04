@@ -23,16 +23,25 @@ use Spectra\Support\Pricing\ModelDefinition;
  */
 class GooglePricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the Google prices are recorded under.
+     */
     public function provider(): string
     {
         return 'google';
     }
 
+    /**
+     * Get the Google pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://ai.google.dev/gemini-api/docs/pricing'];
     }
 
+    /**
+     * Register the built-in Gemini Developer API models and their prices.
+     */
     protected function define(): void
     {
         // Prices double on 2026-12-01.

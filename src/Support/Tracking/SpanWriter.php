@@ -27,11 +27,16 @@ class SpanWriter
     /** Whether the missing spans table was already reported (the writer is a singleton). */
     protected bool $hasWarnedAboutMissingTable = false;
 
+    /**
+     * Create a new span writer instance.
+     */
     public function __construct(
         protected RequestExporter $exporter,
     ) {}
 
     /**
+     * Record a span now, after the response or on the queue, as the config says.
+     *
      * @param  array<string, mixed>  $attributes
      * @param  bool  $deferrable  Whether after_response may delay it; a span that
      *                            ends while the app terminates is written now.
@@ -60,6 +65,8 @@ class SpanWriter
     }
 
     /**
+     * Save a span to the database and export it to OpenTelemetry when enabled.
+     *
      * @param  array<string, mixed>  $attributes
      */
     public function save(array $attributes): void
@@ -110,6 +117,9 @@ class SpanWriter
         ];
     }
 
+    /**
+     * Dispatch the span job on the configured connection, queue and delay.
+     */
     protected function dispatch(PersistSpectraSpanJob $job): void
     {
         if ($connection = config('spectra.queue.connection')) {
@@ -139,6 +149,9 @@ class SpanWriter
             || ($e instanceof QueryException && str_contains((string) ($e->errorInfo[2] ?? ''), 'no such table'));
     }
 
+    /**
+     * Log once per writer that the spans table is missing.
+     */
     protected function warnAboutMissingTable(): void
     {
         if ($this->hasWarnedAboutMissingTable) {

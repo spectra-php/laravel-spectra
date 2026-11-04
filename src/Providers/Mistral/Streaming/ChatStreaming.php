@@ -17,7 +17,11 @@ use Spectra\Providers\Mistral\Handlers\ChatHandler;
  */
 class ChatStreaming extends OpenAiCompatibleStreaming
 {
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Get the answer text of a Mistral stream chunk, leaving out thinking chunks.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function text(array $data): ?string
     {
         return ChatHandler::answerText($data['choices'][0]['delta']['content'] ?? null);

@@ -10,6 +10,9 @@ namespace Spectra\Data;
  */
 readonly class CostBreakdown extends DataTransferObject
 {
+    /**
+     * Create a new cost breakdown instance.
+     */
     public function __construct(
         public int $requestCount = 0,
         public float $promptCostInCents = 0,

@@ -14,6 +14,8 @@ use Spectra\Data\ConversationsSummary;
 readonly class ConversationsResponse extends PaginatedResponse
 {
     /**
+     * Create a new conversations response instance.
+     *
      * @param  array<int, mixed>  $data
      * @param  array<int, string>  $available_tags
      * @param  array<int, string>  $available_finish_reasons

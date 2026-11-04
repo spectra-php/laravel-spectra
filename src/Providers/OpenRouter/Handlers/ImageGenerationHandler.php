@@ -27,21 +27,32 @@ class ImageGenerationHandler implements Handler, HasMedia, StreamsResponse
 {
     use MatchesEndpoints;
 
+    /**
+     * Create a new OpenRouter image generation handler instance.
+     */
     public function __construct(
         protected ChatHandler $chat,
     ) {}
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Image;
     }
 
+    /**
+     * Get the image API endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/api/v1/images'];
     }
 
     /**
+     * Get the token usage, image count and reported cost of an image response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -56,7 +67,11 @@ class ImageGenerationHandler implements Handler, HasMedia, StreamsResponse
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get a placeholder text naming how many images were generated.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $count = count($this->images($response));
@@ -64,12 +79,17 @@ class ImageGenerationHandler implements Handler, HasMedia, StreamsResponse
         return $count > 0 ? "[{$count} generated image(s)]" : null;
     }
 
+    /**
+     * Get the stream handler for a streamed image request.
+     */
     public function streamingHandler(): StreamHandler
     {
         return new OpenAiCompatibleStreaming($this->chat);
     }
 
     /**
+     * Store the generated base64 images and return their paths.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */
@@ -92,6 +112,8 @@ class ImageGenerationHandler implements Handler, HasMedia, StreamsResponse
     }
 
     /**
+     * Get the image entries of the response's `data` list.
+     *
      * @param  array<string, mixed>  $data
      * @return list<array<string, mixed>>
      */
@@ -102,6 +124,9 @@ class ImageGenerationHandler implements Handler, HasMedia, StreamsResponse
         return is_array($images) ? array_values(array_filter($images, 'is_array')) : [];
     }
 
+    /**
+     * Get the file extension for an image's media type, defaulting to png.
+     */
     protected function extension(mixed $mediaType): string
     {
         return match (is_string($mediaType) ? strtolower($mediaType) : null) {

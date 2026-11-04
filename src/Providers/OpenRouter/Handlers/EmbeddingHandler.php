@@ -25,17 +25,25 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     use MatchesEndpoints;
     use ReadsReportedCost;
 
+    /**
+     * Get the model type this handler records.
+     */
     public function modelType(): ModelType
     {
         return ModelType::Embedding;
     }
 
+    /**
+     * Get the embedding endpoint paths.
+     */
     public function endpoints(): array
     {
         return ['/api/v1/embeddings'];
     }
 
     /**
+     * Get the input tokens and reported cost of an embedding response.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -52,7 +60,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get a placeholder text naming the embedding count and dimensions.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         $data = $response['data'] ?? null;
@@ -69,7 +81,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
             : '[embeddings: '.count($data).' × '.$dimensions.' dimensions]';
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * Determine if the body is an embedding list.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function matchesResponse(array $data): bool
     {
         return ($data['object'] ?? null) === 'list' && isset($data['data'][0]['embedding']);

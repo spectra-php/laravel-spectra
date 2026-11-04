@@ -15,6 +15,9 @@ use Illuminate\View\View;
  */
 class DashboardController extends Controller
 {
+    /**
+     * Create a new controller instance that denies anyone the viewSpectra gate refuses.
+     */
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
@@ -26,6 +29,9 @@ class DashboardController extends Controller
         });
     }
 
+    /**
+     * Render the dashboard SPA shell.
+     */
     public function __invoke(): View
     {
         return view('spectra::layout');

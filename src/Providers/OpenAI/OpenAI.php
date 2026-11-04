@@ -26,6 +26,9 @@ use Spectra\Providers\Provider;
  */
 class OpenAI extends Provider implements ExtractsPricingTierFromRequest, ExtractsPricingTierFromResponse
 {
+    /**
+     * Get the provider's slug.
+     */
     public function getProvider(): string
     {
         return 'openai';
@@ -119,7 +122,11 @@ class OpenAI extends Provider implements ExtractsPricingTierFromRequest, Extract
         return null;
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Get the pricing tier from the response's `service_tier`.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function extractPricingTierFromResponse(array $responseData): ?string
     {
         return self::pricingTierFor($responseData['service_tier'] ?? null);

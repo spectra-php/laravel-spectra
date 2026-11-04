@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Gate;
  */
 abstract class BaseApiController extends Controller
 {
+    /**
+     * Create a new controller instance that denies anyone the viewSpectra gate refuses.
+     */
     public function __construct()
     {
         $this->middleware(function ($request, $next) {

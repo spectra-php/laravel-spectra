@@ -23,6 +23,9 @@ use Spectra\Support\DateRange;
  */
 class StatsController extends BaseApiController
 {
+    /**
+     * Get the overview screen's totals, charts and breakdowns for the selected period.
+     */
     public function __invoke(
         Request $request,
         GetOverviewStats $getOverviewStats,

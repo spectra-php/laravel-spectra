@@ -37,16 +37,25 @@ class TraceOrigin
     /** The command the user ran; commands it calls in turn don't replace it. */
     protected ?string $command = null;
 
+    /**
+     * Record that a queued job started, so its AI calls name the job.
+     */
     public function startJob(object $job, string $name): void
     {
         $this->jobs[spl_object_id($job)] = $name;
     }
 
+    /**
+     * Forget a queued job once it has finished.
+     */
     public function finishJob(object $job): void
     {
         unset($this->jobs[spl_object_id($job)]);
     }
 
+    /**
+     * Record the Artisan command the user ran, unless one is already running.
+     */
     public function startCommand(?string $name): void
     {
         if ($this->command === null && filled($name)) {
@@ -54,6 +63,9 @@ class TraceOrigin
         }
     }
 
+    /**
+     * Forget the Artisan command once it has finished.
+     */
     public function finishCommand(?string $name): void
     {
         if ($this->command === "artisan {$name}") {
@@ -75,6 +87,9 @@ class TraceOrigin
         return $origin === null ? null : mb_substr($origin, 0, self::MAX_LENGTH);
     }
 
+    /**
+     * Get the HTTP request's method and route pattern, or null before routing.
+     */
     protected function fromRequest(): ?string
     {
         try {

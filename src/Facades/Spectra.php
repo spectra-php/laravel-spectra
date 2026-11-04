@@ -68,12 +68,17 @@ use Spectra\Testing\SpectraFake;
  */
 class Spectra extends Facade
 {
+    /**
+     * Get the container binding the facade resolves.
+     */
     protected static function getFacadeAccessor(): string
     {
         return \Spectra\Spectra::class;
     }
 
     /**
+     * Swap Spectra for a fake that records tracked calls instead of storing them.
+     *
      * @param  array<string, mixed>  $responses
      */
     public static function fake(array $responses = []): SpectraFake

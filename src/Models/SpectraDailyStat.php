@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use RuntimeException;
 
@@ -68,6 +69,9 @@ class SpectraDailyStat extends Model
 
     protected $guarded = [];
 
+    /**
+     * Get the attributes that should be cast.
+     */
     protected function casts(): array
     {
         return [
@@ -93,12 +97,17 @@ class SpectraDailyStat extends Model
         ];
     }
 
+    /**
+     * Get the database connection Spectra's tables live on.
+     */
     public function getConnectionName(): ?string
     {
         return config('spectra.storage.connection');
     }
 
     /**
+     * Get the model these stats belong to, or null for the global row.
+     *
      * @return MorphTo<Model, $this>
      */
     public function trackable(): MorphTo
@@ -106,6 +115,9 @@ class SpectraDailyStat extends Model
         return $this->morphTo();
     }
 
+    /**
+     * Get the day's average latency per request, or null when there were none.
+     */
     public function getAvgLatencyMsAttribute(): ?float
     {
         if ($this->request_count === 0) {
@@ -115,6 +127,9 @@ class SpectraDailyStat extends Model
         return round($this->total_latency_ms / $this->request_count, 2);
     }
 
+    /**
+     * Get the percentage of the day's requests that succeeded.
+     */
     public function getSuccessRateAttribute(): float
     {
         if ($this->request_count === 0) {
@@ -134,6 +149,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
+     * Scope the query to the days between two dates, both included.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -147,6 +164,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
+     * Scope the query to one provider's stats.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -156,6 +175,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
+     * Scope the query to one model's stats.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -165,6 +186,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
+     * Scope the query to the stats of one trackable model.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -175,6 +198,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
+     * Scope the query to the rows not tied to a trackable.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -184,6 +209,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
+     * Scope the query to one model type's stats.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -264,7 +291,7 @@ class SpectraDailyStat extends Model
         array $increments,
         ?int $latencyMs = null,
     ): void {
-        $increments = array_filter($increments, fn (int|float $value) => $value != 0);
+        $increments = Arr::where($increments, fn (int|float $value) => $value != 0);
 
         if ($increments === [] && $latencyMs === null) {
             return;
@@ -328,6 +355,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
+     * Get the summed usage, cost and latency over a date range, optionally filtered.
+     *
      * @return array<string, mixed>
      */
     public static function getAggregatedStats(
@@ -411,6 +440,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
+     * Get the requests, tokens and cost for each day in a date range.
+     *
      * @return array<int, array<string, mixed>>
      */
     public static function getDailyBreakdown(
@@ -450,6 +481,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
+     * Get the requests, tokens and cost per provider in a date range.
+     *
      * @return array<int, array<string, mixed>>
      */
     public static function getStatsByProvider(
@@ -480,6 +513,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
+     * Get the requests, tokens and cost per provider and model in a date range.
+     *
      * @return array<int, array<string, mixed>>
      */
     public static function getStatsByModel(

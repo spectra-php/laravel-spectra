@@ -12,6 +12,9 @@ use Illuminate\Support\Collection;
  */
 readonly class ModelTypeCost extends DataTransferObject
 {
+    /**
+     * Create a new model type cost instance.
+     */
     public function __construct(
         public string $model_type,
         public string $label,
@@ -20,6 +23,8 @@ readonly class ModelTypeCost extends DataTransferObject
     ) {}
 
     /**
+     * Build the count and cost rows from the per-model-type stats.
+     *
      * @param  Collection<int, ModelTypeStat>  $stats
      * @return Collection<int, self>
      */

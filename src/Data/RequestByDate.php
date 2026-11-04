@@ -12,12 +12,17 @@ use Spectra\Models\SpectraRequest;
  */
 readonly class RequestByDate extends DataTransferObject
 {
+    /**
+     * Create a new request by date instance.
+     */
     public function __construct(
         public string $date,
         public int $count,
     ) {}
 
     /**
+     * Build one row per day from the requests-per-day aggregate rows.
+     *
      * @param  Collection<int, SpectraRequest>  $items
      * @return Collection<int, self>
      */

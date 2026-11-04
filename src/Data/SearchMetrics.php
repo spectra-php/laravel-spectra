@@ -10,6 +10,9 @@ namespace Spectra\Data;
  */
 readonly class SearchMetrics extends DataTransferObject
 {
+    /**
+     * Create a new search metrics instance.
+     */
     public function __construct(
         public int $count = 0,
     ) {}

@@ -12,6 +12,8 @@ namespace Spectra\Contracts;
 interface ExportsSpans
 {
     /**
+     * Send a span that is not an AI call to the exporter's backend.
+     *
      * @param  array<string, mixed>  $span  A stored span's columns (trace_id, span_id, parent_span_id, name, kind, started_at, ended_at, status, ...)
      */
     public function exportSpan(array $span): void;

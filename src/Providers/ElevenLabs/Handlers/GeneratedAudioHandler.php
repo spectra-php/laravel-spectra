@@ -44,6 +44,8 @@ abstract class GeneratedAudioHandler implements ExtractsModelFromRequest, Handle
     }
 
     /**
+     * Build the audio usage from the length the request asked for.
+     *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
      */
@@ -54,13 +56,21 @@ abstract class GeneratedAudioHandler implements ExtractsModelFromRequest, Handle
         );
     }
 
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the placeholder recorded in place of the generated audio.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractResponse(array $response): ?string
     {
         return '[audio]';
     }
 
-    /** @param  array<string, mixed>  $requestData */
+    /**
+     * Get the request's `model_id`, or the endpoint's default model.
+     *
+     * @param  array<string, mixed>  $requestData
+     */
     public function extractModelFromRequest(array $requestData, string $endpoint): ?string
     {
         $model = $requestData['model_id'] ?? null;
@@ -69,6 +79,8 @@ abstract class GeneratedAudioHandler implements ExtractsModelFromRequest, Handle
     }
 
     /**
+     * Store the generated audio body as an mp3 file.
+     *
      * @param  array<string, mixed>  $responseData
      * @return array<string>
      */

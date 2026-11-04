@@ -15,6 +15,8 @@ use Spectra\Data\RequestByDate;
 readonly class RequestsByDateResponse extends DataTransferObject
 {
     /**
+     * Create a new requests by date response instance.
+     *
      * @param  Collection<int, RequestByDate>  $requests_by_date
      */
     public function __construct(
@@ -22,6 +24,8 @@ readonly class RequestsByDateResponse extends DataTransferObject
     ) {}
 
     /**
+     * Get the bare list of per-day rows the chart reads.
+     *
      * @return array<int, mixed>
      */
     public function jsonSerialize(): array

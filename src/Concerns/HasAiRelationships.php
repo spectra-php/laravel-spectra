@@ -20,16 +20,25 @@ use Spectra\Models\SpectraRequest;
  */
 trait HasAiRelationships
 {
+    /**
+     * Get the AI requests this model made.
+     */
     public function aiRequests(): MorphMany
     {
         return $this->morphMany(SpectraRequest::class, 'trackable');
     }
 
+    /**
+     * Get this model's AI budget, active or not.
+     */
     public function aiBudget(): MorphOne
     {
         return $this->morphOne(SpectraBudget::class, 'budgetable');
     }
 
+    /**
+     * Get this model's AI budget when it is active.
+     */
     public function activeAiBudget(): MorphOne
     {
         return $this->aiBudget()->where('is_active', true);

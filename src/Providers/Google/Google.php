@@ -29,11 +29,17 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
 {
     use ExtractsModelFromGoogleEndpoint;
 
+    /**
+     * Get the provider's slug.
+     */
     public function getProvider(): string
     {
         return 'google';
     }
 
+    /**
+     * Get the hosts the Gemini API is served from.
+     */
     public function getHosts(): array
     {
         return ['generativelanguage.googleapis.com'];
@@ -78,12 +84,19 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
         return $handler->extractMetrics($requestData, $this->toArray($response));
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Resolve the handler for an endpoint, folding a streamed chunk list first.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function resolveHandler(string $endpoint, array $responseData = []): ?Handler
     {
         return parent::resolveHandler($endpoint, $this->normalise($responseData));
     }
 
+    /**
+     * Get the Veo operation name or `responseId` that identifies the response.
+     */
     public function extractResponseId(mixed $response, string $endpoint = ''): ?string
     {
         $data = $this->toArray($response);
@@ -126,7 +139,11 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
         return is_string($resolution) && strtolower($resolution) === '1080p' ? PricingTier::Hd->value : null;
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Get the pricing tier from the response's `usageMetadata.serviceTier`.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function extractPricingTierFromResponse(array $responseData): ?string
     {
         $data = $this->normalise($responseData);
@@ -134,13 +151,19 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
         return GeminiUsage::pricingTier($data['usageMetadata']['serviceTier'] ?? $data['serviceTier'] ?? null);
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Convert the response to an array, folding a streamed chunk list into one response.
+     *
+     * @return array<string, mixed>
+     */
     protected function toArray(mixed $response): array
     {
         return $this->normalise(parent::toArray($response));
     }
 
     /**
+     * Fold a streamed chunk list into one response, or return the body unchanged.
+     *
      * @param  array<mixed>  $data
      * @return array<string, mixed>
      */

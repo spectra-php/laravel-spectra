@@ -21,16 +21,25 @@ use Spectra\Providers\Provider;
  */
 class OpenRouter extends Provider
 {
+    /**
+     * Get the provider's slug.
+     */
     public function getProvider(): string
     {
         return 'openrouter';
     }
 
+    /**
+     * Get the hosts OpenRouter's API is served from.
+     */
     public function getHosts(): array
     {
         return ['openrouter.ai'];
     }
 
+    /**
+     * Get the handlers for OpenRouter's endpoints, specialists after the chat handler.
+     */
     public function handlers(): array
     {
         // ImageHandler must come after ChatHandler: both match the same

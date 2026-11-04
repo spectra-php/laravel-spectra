@@ -15,11 +15,17 @@ namespace Spectra\Support;
  */
 class Payload
 {
+    /**
+     * Get a payload value as an integer, or the default when it is not numeric.
+     */
     public static function int(mixed $value, int $default = 0): int
     {
         return is_numeric($value) ? (int) $value : $default;
     }
 
+    /**
+     * Get a payload value as a float, or the default when it is not numeric.
+     */
     public static function float(mixed $value, float $default = 0.0): float
     {
         return is_numeric($value) ? (float) $value : $default;

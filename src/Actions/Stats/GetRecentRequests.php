@@ -17,6 +17,8 @@ class GetRecentRequests
     use FiltersByLayout;
 
     /**
+     * Get the latest requests in the date range and layout.
+     *
      * @return Collection<int, SpectraRequest>
      */
     public function __invoke(DateRange $dateRange, string $layout, int $limit = 10): Collection

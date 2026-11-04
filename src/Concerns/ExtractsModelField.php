@@ -10,7 +10,11 @@ namespace Spectra\Concerns;
  */
 trait ExtractsModelField
 {
-    /** @param  array<string, mixed>  $response */
+    /**
+     * Get the model name from the response's top-level `model` field.
+     *
+     * @param  array<string, mixed>  $response
+     */
     public function extractModelFromResponse(array $response): ?string
     {
         return filled($response['model'] ?? null) ? $response['model'] : null;

@@ -119,6 +119,8 @@ abstract class ProviderPricing implements Arrayable
     }
 
     /**
+     * Get the catalog as an array of its models with their pricing tiers.
+     *
      * @return array{provider: string, currency: string, models: array<int, array{internal_name: string, model: array<string, mixed>, tiers: array<int, array<string, mixed>>}>}
      */
     public function toArray(): array
@@ -126,11 +128,11 @@ abstract class ProviderPricing implements Arrayable
         return [
             'provider' => $this->provider(),
             'currency' => $this->currency(),
-            'models' => array_map(fn (ModelDefinition $def) => [
+            'models' => collect($this->models())->map(fn (ModelDefinition $def) => [
                 'internal_name' => $def->getInternalName(),
                 'model' => $def->toModelArray(),
                 'tiers' => $def->toTiersArray(),
-            ], $this->models()),
+            ])->all(),
         ];
     }
 }

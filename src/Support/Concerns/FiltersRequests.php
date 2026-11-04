@@ -37,6 +37,8 @@ trait FiltersRequests
     }
 
     /**
+     * Apply the requests list filters from the dashboard query string.
+     *
      * @param  Builder<SpectraRequest>  $query
      */
     protected function applyRequestFilters(Builder $query, Request $request, PricingLookup $pricingLookup): void

@@ -23,16 +23,25 @@ use Spectra\Providers\Provider;
  */
 class Groq extends Provider implements ExtractsPricingTierFromRequest, ExtractsPricingTierFromResponse
 {
+    /**
+     * Get the provider's slug.
+     */
     public function getProvider(): string
     {
         return 'groq';
     }
 
+    /**
+     * Get the hosts Groq's API is served from.
+     */
     public function getHosts(): array
     {
         return ['api.groq.com'];
     }
 
+    /**
+     * Get the handlers for Groq's endpoints.
+     */
     public function handlers(): array
     {
         return [
@@ -43,6 +52,9 @@ class Groq extends Provider implements ExtractsPricingTierFromRequest, ExtractsP
         ];
     }
 
+    /**
+     * Get the response id from `id`, or from `x_groq.id` when the body has none.
+     */
     public function extractResponseId(mixed $response, string $endpoint = ''): ?string
     {
         $data = $this->toArray($response);
@@ -51,18 +63,29 @@ class Groq extends Provider implements ExtractsPricingTierFromRequest, ExtractsP
         return filled($id) ? $id : null;
     }
 
-    /** @param  array<string, mixed>  $requestData */
+    /**
+     * Get the pricing tier from the request's `service_tier`.
+     *
+     * @param  array<string, mixed>  $requestData
+     */
     public function extractPricingTierFromRequest(array $requestData): ?string
     {
         return $this->tier($requestData['service_tier'] ?? null);
     }
 
-    /** @param  array<string, mixed>  $responseData */
+    /**
+     * Get the pricing tier from the response's `service_tier`.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
     public function extractPricingTierFromResponse(array $responseData): ?string
     {
         return $this->tier($responseData['service_tier'] ?? null);
     }
 
+    /**
+     * Map a Groq service tier to a PricingTier value.
+     */
     protected function tier(mixed $serviceTier): ?string
     {
         return match ($serviceTier) {

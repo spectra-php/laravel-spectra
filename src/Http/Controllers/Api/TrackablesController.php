@@ -23,6 +23,9 @@ use Spectra\Support\DateRange;
  */
 class TrackablesController extends BaseApiController
 {
+    /**
+     * Get a filtered, sorted page of trackables with their summary and filter options.
+     */
     public function __invoke(
         Request $request,
         GetFilteredTrackables $getFilteredTrackables,

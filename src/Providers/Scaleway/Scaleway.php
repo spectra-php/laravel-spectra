@@ -18,16 +18,25 @@ use Spectra\Providers\Scaleway\Handlers\TranscriptionHandler;
  */
 class Scaleway extends Provider
 {
+    /**
+     * Get the slug Scaleway requests are recorded under.
+     */
     public function getProvider(): string
     {
         return 'scaleway';
     }
 
+    /**
+     * Get the host the Scaleway Generative APIs are served from.
+     */
     public function getHosts(): array
     {
         return ['api.scaleway.ai'];
     }
 
+    /**
+     * Get the handlers for Scaleway embeddings, transcription, rerank and chat.
+     */
     public function handlers(): array
     {
         return [

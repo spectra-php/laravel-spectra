@@ -58,6 +58,9 @@ class SpectraBudget extends Model
         'is_active' => true,
     ];
 
+    /**
+     * Get the attributes that should be cast.
+     */
     protected function casts(): array
     {
         return [
@@ -81,12 +84,17 @@ class SpectraBudget extends Model
         ];
     }
 
+    /**
+     * Get the database connection Spectra's tables live on.
+     */
     public function getConnectionName(): ?string
     {
         return config('spectra.storage.connection');
     }
 
     /**
+     * Get the model this budget belongs to.
+     *
      * @return MorphTo<Model, $this>
      */
     public function budgetable(): MorphTo
@@ -95,6 +103,8 @@ class SpectraBudget extends Model
     }
 
     /**
+     * Scope the query to budgets that are being enforced.
+     *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -103,26 +113,41 @@ class SpectraBudget extends Model
         return $query->where('is_active', true);
     }
 
+    /**
+     * Store the daily spend limit in whole cents, rounded up.
+     */
     public function setDailyLimitAttribute(mixed $value): void
     {
         $this->attributes['daily_limit'] = $this->normalizeCents($value);
     }
 
+    /**
+     * Store the weekly spend limit in whole cents, rounded up.
+     */
     public function setWeeklyLimitAttribute(mixed $value): void
     {
         $this->attributes['weekly_limit'] = $this->normalizeCents($value);
     }
 
+    /**
+     * Store the monthly spend limit in whole cents, rounded up.
+     */
     public function setMonthlyLimitAttribute(mixed $value): void
     {
         $this->attributes['monthly_limit'] = $this->normalizeCents($value);
     }
 
+    /**
+     * Store the lifetime spend limit in whole cents, rounded up.
+     */
     public function setTotalLimitAttribute(mixed $value): void
     {
         $this->attributes['total_limit'] = $this->normalizeCents($value);
     }
 
+    /**
+     * Determine if the budget lets calls go to the given provider.
+     */
     public function isProviderAllowed(string $provider): bool
     {
         if (blank($this->allowed_providers)) {
@@ -132,6 +157,9 @@ class SpectraBudget extends Model
         return in_array($provider, $this->allowed_providers, true);
     }
 
+    /**
+     * Determine if the budget lets calls use the given model.
+     */
     public function isModelAllowed(string $model): bool
     {
         if (blank($this->allowed_models)) {
@@ -141,26 +169,41 @@ class SpectraBudget extends Model
         return in_array($model, $this->allowed_models, true);
     }
 
+    /**
+     * Get the daily spend limit in dollars, or null when there is none.
+     */
     public function getDailyLimitInDollarsAttribute(): ?float
     {
         return $this->daily_limit ? round($this->daily_limit / 100, 4) : null;
     }
 
+    /**
+     * Get the weekly spend limit in dollars, or null when there is none.
+     */
     public function getWeeklyLimitInDollarsAttribute(): ?float
     {
         return $this->weekly_limit ? round($this->weekly_limit / 100, 4) : null;
     }
 
+    /**
+     * Get the monthly spend limit in dollars, or null when there is none.
+     */
     public function getMonthlyLimitInDollarsAttribute(): ?float
     {
         return $this->monthly_limit ? round($this->monthly_limit / 100, 4) : null;
     }
 
+    /**
+     * Get the lifetime spend limit in dollars, or null when there is none.
+     */
     public function getTotalLimitInDollarsAttribute(): ?float
     {
         return $this->total_limit ? round($this->total_limit / 100, 4) : null;
     }
 
+    /**
+     * Round a spend limit up to whole cents: null when blank, 0 when zero or negative.
+     */
     protected function normalizeCents(mixed $value): ?int
     {
         if (blank($value)) {

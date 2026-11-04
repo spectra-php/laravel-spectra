@@ -25,11 +25,17 @@ use Spectra\Support\Pricing\ModelDefinition;
  */
 class XAiPricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the xAI prices are recorded under.
+     */
     public function provider(): string
     {
         return 'xai';
     }
 
+    /**
+     * Get the xAI pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://docs.x.ai/developers/pricing'];
@@ -55,6 +61,9 @@ class XAiPricing extends ProviderPricing
         ];
     }
 
+    /**
+     * Register the built-in xAI models and their prices.
+     */
     protected function define(): void
     {
         $this->model('grok-4.7', fn ($m) => $m

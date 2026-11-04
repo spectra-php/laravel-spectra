@@ -17,16 +17,25 @@ namespace Spectra\Pricing;
  */
 class ElevenLabsPricing extends ProviderPricing
 {
+    /**
+     * Get the provider slug the ElevenLabs prices are recorded under.
+     */
     public function provider(): string
     {
         return 'elevenlabs';
     }
 
+    /**
+     * Get the ElevenLabs pricing pages `spectra:pricing-scrape` reads.
+     */
     public function sources(): array
     {
         return ['https://elevenlabs.io/pricing/api'];
     }
 
+    /**
+     * Register the built-in ElevenLabs models and their prices.
+     */
     protected function define(): void
     {
         // Text to speech
@@ -78,6 +87,8 @@ class ElevenLabsPricing extends ProviderPricing
     }
 
     /**
+     * Register a text-to-speech model billed per 1M characters.
+     *
      * @param  float  $centsPerMillionCharacters  e.g. 8000 for $0.08 per 1,000 characters
      */
     protected function textToSpeech(string $id, string $displayName, float $centsPerMillionCharacters): void

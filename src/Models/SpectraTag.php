@@ -32,12 +32,17 @@ class SpectraTag extends Model
 
     protected $fillable = ['name'];
 
+    /**
+     * Get the database connection Spectra's tables live on.
+     */
     public function getConnectionName(): ?string
     {
         return config('spectra.storage.connection');
     }
 
     /**
+     * Get the requests that carry this tag.
+     *
      * @return BelongsToMany<SpectraRequest, $this>
      */
     public function requests(): BelongsToMany
@@ -50,22 +55,33 @@ class SpectraTag extends Model
         );
     }
 
+    /**
+     * Get the tag with the given name, creating it when it doesn't exist.
+     */
     public static function findOrCreateByName(string $name): self
     {
         return static::query()->firstOrCreate(['name' => $name]);
     }
 
+    /**
+     * Get the URL-safe slug derived from the tag's name.
+     */
     public function getSlugAttribute(): string
     {
         return static::slugify($this->name);
     }
 
+    /**
+     * Get the URL-safe slug for a tag name.
+     */
     public static function slugify(string $name): string
     {
         return Str::slug($name);
     }
 
     /**
+     * Get the tags with the given names, creating any that don't exist.
+     *
      * @param  array<string>  $names
      * @return Collection<int, self>
      */
