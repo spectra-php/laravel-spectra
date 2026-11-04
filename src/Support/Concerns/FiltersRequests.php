@@ -21,7 +21,7 @@ trait FiltersRequests
     /** Every query parameter applyRequestFilters() reads. */
     protected const REQUEST_FILTER_KEYS = [
         'provider', 'model', 'status', 'model_type', 'capability', 'finish_reason', 'has_tool_calls',
-        'is_reasoning', 'reasoning_effort', 'trace_id', 'conversation_id', 'prompt_name', 'prompt_version', 'trackable_type', 'trackable_id', 'tag', 'tags',
+        'is_reasoning', 'reasoning_effort', 'trace_id', 'conversation_id', 'prompt_name', 'prompt_version', 'error_fingerprint', 'trackable_type', 'trackable_id', 'tag', 'tags',
     ];
 
     /** Whether the request sets any of the filters applyRequestFilters() reads. */
@@ -105,6 +105,10 @@ trait FiltersRequests
 
         if ($request->filled('prompt_version')) {
             $query->where('prompt_version', $request->input('prompt_version'));
+        }
+
+        if ($request->filled('error_fingerprint')) {
+            $query->where('error_fingerprint', $request->input('error_fingerprint'));
         }
 
         if ($request->filled('trackable_type')) {

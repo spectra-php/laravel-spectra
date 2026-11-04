@@ -10,6 +10,7 @@ use Spectra\Events\RequestTracked;
 use Spectra\Jobs\ExportTrackedRequestJob;
 use Spectra\Jobs\PersistSpectraRequestJob;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Errors\ErrorFingerprint;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Pricing\RequestCostCalculator;
 use Spectra\Support\Redaction\Redactor;
@@ -163,6 +164,7 @@ class RequestPersister
             'status_code' => $context->httpStatus,
             'error_type' => $context->errorType,
             'error_message' => $this->redact($this->truncate($context->errorMessage, 10_000)),
+            'error_fingerprint' => $this->isFailed($context) ? app(ErrorFingerprint::class)->for($context->provider, $context->httpStatus, $context->errorType, $context->errorMessage, [$context->model, $context->snapshot]) : null,
             'media_storage_path' => $context->mediaStoragePath ?: null,
             'metadata' => $context->metadata ?: null,
             'request_source' => $context->requestSource,
@@ -186,9 +188,15 @@ class RequestPersister
      */
     protected function keepsPayload(RequestContext $context): bool
     {
-        $failed = $context->errorType !== null || $context->httpStatus === null || $context->httpStatus < 200 || $context->httpStatus > 299;
+        return app(PayloadSampler::class)->keeps($context->traceId, $this->isFailed($context));
+    }
 
-        return app(PayloadSampler::class)->keeps($context->traceId, $failed);
+    /**
+     * Determine if the call failed: it threw, or the provider answered with no 2xx status.
+     */
+    protected function isFailed(RequestContext $context): bool
+    {
+        return $context->errorType !== null || $context->httpStatus === null || $context->httpStatus < 200 || $context->httpStatus > 299;
     }
 
     /**

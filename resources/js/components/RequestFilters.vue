@@ -90,6 +90,7 @@ const hasBadges = computed(() => activeExtraFilters.value.length
     || (props.showTraceBadge && filters.value.trace_id)
     || filters.value.conversation_id
     || filters.value.prompt_name
+    || filters.value.error_fingerprint
     || (props.showTrackableBadge && filters.value.trackable_type));
 
 const emit = defineEmits(['clear']);
@@ -349,6 +350,18 @@ onUnmounted(() => {
         >
             Prompt: <span class="font-mono">{{ filters.prompt_name }}</span><span v-if="filters.prompt_version" class="font-mono">{{ filters.prompt_version }}</span>
             <button @click="filters.prompt_name = ''; filters.prompt_version = ''" class="hover:text-primary-900 dark:hover:text-primary-100">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </span>
+
+        <span
+            v-if="filters.error_fingerprint"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+        >
+            Error group: <span class="font-mono">{{ filters.error_fingerprint }}</span>
+            <button @click="filters.error_fingerprint = ''" class="hover:text-red-900 dark:hover:text-red-100">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>

@@ -51,7 +51,7 @@ class RequestWriter
     ];
 
     /** Columns added after 2.0 that a table may not have until the app migrates. */
-    protected const OPTIONAL_COLUMNS = ['started_at', 'origin', 'span_id', 'prompt_name', 'prompt_version'];
+    protected const OPTIONAL_COLUMNS = ['started_at', 'origin', 'span_id', 'prompt_name', 'prompt_version', 'error_fingerprint'];
 
     /**
      * The optional columns this table turned out not to have, once an insert

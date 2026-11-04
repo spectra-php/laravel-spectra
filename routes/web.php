@@ -8,6 +8,7 @@ use Spectra\Http\Controllers\Api\ConfigController;
 use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\CostsController;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
+use Spectra\Http\Controllers\Api\ErrorsController;
 use Spectra\Http\Controllers\Api\Maintenance\ApplyPricingController;
 use Spectra\Http\Controllers\Api\Maintenance\CheckPricingController;
 use Spectra\Http\Controllers\Api\Maintenance\DismissPricingReviewController;
@@ -54,6 +55,7 @@ Route::prefix('api')->group(function () {
     Route::get('/costs', CostsController::class);
     Route::get('/scores', ScoresController::class);
     Route::get('/prompts', PromptsController::class);
+    Route::get('/errors', ErrorsController::class);
     Route::get('/tags', TagsController::class);
     Route::get('/trackables', TrackablesController::class);
     Route::get('/trackables/view/{id}', ShowTrackableController::class);

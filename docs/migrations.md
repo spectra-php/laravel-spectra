@@ -103,6 +103,18 @@ php artisan spectra:install
 
 Until it runs, Spectra keeps recording calls without the prompt and logs a warning once per process.
 
+<a name="error-fingerprint-migration"></a>
+## The Error Fingerprint Migration
+
+`add_error_fingerprint_to_spectra_requests_table` adds the `error_fingerprint` column to `spectra_requests`, which groups similar failures on the [Errors screen](/dashboard#errors). Run the installer to publish and run it, then group the failures saved before it:
+
+```shell
+php artisan spectra:install
+php artisan spectra:group-errors
+```
+
+Until it runs, Spectra keeps recording failed calls without a fingerprint and logs a warning once per process, and the Errors screen shows the failure count without groups.
+
 ### Custom Database Connection
 
 All Spectra migrations use the `spectra.storage.connection` config value. To store Spectra data in a separate database, set the connection in `config/spectra.php`:

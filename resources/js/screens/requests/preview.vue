@@ -194,6 +194,9 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                         </div>
                         <CodeBlock v-if="request.error_message" :content="request.error_message" variant="error" max-height="16rem" />
                         <div v-else class="card-body text-sm text-gray-600 dark:text-gray-400">The provider returned HTTP {{ request.status_code ?? '—' }} without a message.</div>
+                        <div v-if="request.error_fingerprint" class="border-t border-red-100 px-5 py-2.5 text-xs dark:border-red-900/60">
+                            <router-link :to="{ name: 'requests', query: { error_fingerprint: request.error_fingerprint, period: 'all' } }" class="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">View similar failures</router-link>
+                        </div>
                     </div>
 
                     <!-- Other AI calls of the same request, job, or command -->

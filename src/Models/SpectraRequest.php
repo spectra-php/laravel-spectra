@@ -46,6 +46,7 @@ use Spectra\Support\ProviderRegistry;
  * @property int|null $conversation_turn
  * @property string|null $prompt_name
  * @property string|null $prompt_version
+ * @property string|null $error_fingerprint
  * @property int $prompt_tokens
  * @property int $completion_tokens
  * @property int $cached_tokens

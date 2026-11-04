@@ -6,6 +6,7 @@ namespace Workbench\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Spectra\Enums\ScoreSource;
 use Spectra\Enums\SpanKind;
@@ -339,9 +340,7 @@ class DatabaseSeeder extends Seeder
         Carbon::setTestNow($at->copy()->addMilliseconds($latency));
 
         if (mt_rand(1, 100) <= 3) {
-            [$status, $message] = mt_rand(0, 1) === 0
-                ? [429, 'Rate limit reached for requests per minute. Please try again in 2s.']
-                : [500, 'The server had an error while processing your request.'];
+            [$status, $message] = $this->failureFor($provider, $model);
 
             Spectra::recordFailure($context, new ProviderErrorException($message, $status), $status);
 
@@ -395,6 +394,25 @@ class DatabaseSeeder extends Seeder
         ]);
 
         return $at->copy()->addMilliseconds($latency);
+    }
+
+    /**
+     * A provider failure, with the ids and numbers that change from one call
+     * to the next, so the Errors screen has real groups to show.
+     *
+     * @return array{0: int, 1: string}
+     */
+    protected function failureFor(string $provider, string $model): array
+    {
+        $roll = mt_rand(1, 100);
+
+        return match (true) {
+            $provider === 'anthropic' && $roll <= 40 => [529, 'Overloaded'],
+            $roll <= 45 => [429, sprintf('Rate limit reached for %s in organization org-%s on tokens per min (TPM): Limit 30000, Used %d, Requested %d. Please try again in %ss.', $model, bin2hex(random_bytes(6)), mt_rand(24_000, 29_900), mt_rand(800, 6_000), number_format(mt_rand(5, 300) / 10, 1))],
+            $roll <= 70 => [500, sprintf('The server had an error while processing your request. Sorry about that! You can retry your request, or contact us through our help center if the error persists. (Please include the request ID req_%s in your message.)', bin2hex(random_bytes(12)))],
+            $roll <= 90 => [400, sprintf("This model's maximum context length is 128000 tokens. However, your messages resulted in %d tokens. Please reduce the length of the messages.", mt_rand(128_100, 190_000))],
+            default => [401, sprintf('Incorrect API key provided: sk-proj-****%s. You can find your API key at https://platform.openai.com/account/api-keys.', Str::lower(Str::random(4)))],
+        };
     }
 
     /**

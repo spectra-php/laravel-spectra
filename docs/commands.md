@@ -171,6 +171,15 @@ Checks the [alert rules](/alerts) in `spectra.alerts.rules` against the stored c
 Schedule::command('spectra:check-alerts')->everyFiveMinutes();
 ```
 
+<a name="spectra-group-errors"></a>
+## `spectra:group-errors`
+
+Groups the failed calls saved before the [error fingerprint migration](/migrations#error-fingerprint-migration) ran, so the dashboard's [Errors screen](/dashboard#errors) shows them too. New failures are grouped as they are saved, so run it once after upgrading:
+
+```shell
+php artisan spectra:group-errors
+```
+
 ## Command Summary
 
 | Command | Purpose | Typical Usage |
@@ -181,3 +190,4 @@ Schedule::command('spectra:check-alerts')->everyFiveMinutes();
 | `spectra:pricing-scrape` | Save new provider prices to the scraped prices file | Before a release picks them up; review and commit the file |
 | `spectra:pause` / `spectra:resume` | Stop and restart storing requests | During load tests or incidents |
 | `spectra:check-alerts` | Check the alert rules and notify | Scheduled every few minutes |
+| `spectra:group-errors` | Group failed calls saved before the error fingerprint migration | Once after upgrading |

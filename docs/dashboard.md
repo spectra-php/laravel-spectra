@@ -82,6 +82,22 @@ Open a conversation to read it as a transcript. Each turn shows the user's messa
 
 The prompts screen compares the versions of each [prompt](/prompts) your calls were tagged with: their calls, error rate, average cost, tokens and latency, their top scores, and when each was last used. Click a version to see its calls. The screen lists the prompts once your app tags calls with `Spectra::withPrompt()`.
 
+<a name="errors"></a>
+## Errors
+
+The errors screen groups the period's failed calls by cause, so a rate limit that hit 400 times is one row, not 400. It shows how many calls failed and the error rate, then each group with the most failures first:
+
+- the provider, status code and error type, and the latest message;
+- how many calls failed this way, and their share of all failures;
+- failures per day over the last 14 days of the period;
+- the models it hit, and when it was first and last seen.
+
+Click a group to see its calls in the requests list, or its last-seen time to open the latest one. A failed call's page links to the calls that failed the same way.
+
+Two failures are in the same group when they have the same provider, status code and error type, and the same message once the parts that change from call to call are taken out: ids, numbers, URLs, emails, IP addresses, masked keys and the model's name. "Rate limit reached for gpt-4o … try again in 2s" and "Rate limit reached for gpt-4o-mini … try again in 14s" are one group. A call counts as failed when it got no 2xx status.
+
+Failures saved before the [error fingerprint migration](/migrations#error-fingerprint-migration) aren't grouped until you run [`spectra:group-errors`](/commands#spectra-group-errors); the screen says how many there are.
+
 <a name="costs"></a>
 ## Costs
 
