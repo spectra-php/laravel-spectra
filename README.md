@@ -22,7 +22,7 @@
 </div>
 
 
-Spectra is a comprehensive Laravel package for AI observability. It helps you track AI requests, measure usage, calculate costs across different pricing units, enforce budgets, and inspect AI operations through a unified dashboard and API. This lets you focus on shipping reliable AI features without getting buried in provider-specific operational complexity.
+Spectra is an AI observability package for Laravel, built to track AI requests, measure usage, calculate costs across different pricing units, enforce budgets, and inspect AI operations through a unified dashboard and API. This lets you focus on shipping reliable AI features without getting buried in provider-specific operational complexity.
 
 <p align="center">
   <picture>
@@ -31,66 +31,62 @@ Spectra is a comprehensive Laravel package for AI observability. It helps you tr
   </picture>
 </p>
 
-<p align="center">
-  <a href="https://mayahi.net/services"><img alt="Hire me — I'm available for consulting and development work" src="art/hire-me.svg" width="100%" /></a>
-</p>
-
-## Dashboard
-
-Spectra ships with a dashboard at `/spectra`. Every screen can be narrowed to a period or a date range, and the lists filter by type, provider, tag and more. Click a screenshot to see it at full size.
-
 <table>
   <tr>
-    <td width="50%" valign="top">
+    <td width="50%">
       <a href="docs/public/images/dashboard/requests.png"><img alt="The requests list" src="docs/public/images/dashboard/requests.png" /></a>
-      <p><strong>Requests</strong><br />Every AI call your app makes, with its model, tags, usage, cost, latency and status. Search by model or ID, and filter by type, provider, tag or finish reason.</p>
+      <p align="center"><strong>Requests</strong></p>
     </td>
-    <td width="50%" valign="top">
+    <td width="50%">
       <a href="docs/public/images/dashboard/request-detail.png"><img alt="A single request" src="docs/public/images/dashboard/request-detail.png" /></a>
-      <p><strong>Request details</strong><br />Cost split into input and output, latency and time to first token, and the tokens broken down into uncached, cache reads, cache writes and reasoning. Shows the trace the call belongs to and the raw request and response.</p>
+      <p align="center"><strong>Request details</strong></p>
     </td>
   </tr>
   <tr>
-    <td width="50%" valign="top">
+    <td width="50%">
       <a href="docs/public/images/dashboard/traces.png"><img alt="The traces list" src="docs/public/images/dashboard/traces.png" /></a>
-      <p><strong>Traces</strong><br />The AI calls of one HTTP request, queued job or Artisan command, grouped together. See where each trace came from, which models it used, how long it took and what it cost.</p>
+      <p align="center"><strong>Traces</strong></p>
     </td>
-    <td width="50%" valign="top">
+    <td width="50%">
       <a href="docs/public/images/dashboard/trace-detail.png"><img alt="A trace timeline" src="docs/public/images/dashboard/trace-detail.png" /></a>
-      <p><strong>Trace timeline</strong><br />Every call of a trace on one timeline, to the millisecond, nested under the spans you open with <code>Spectra::span()</code>. The side panel shows the cost and tokens per model.</p>
+      <p align="center"><strong>Trace timeline</strong></p>
     </td>
   </tr>
   <tr>
-    <td width="50%" valign="top">
+    <td width="50%">
       <a href="docs/public/images/dashboard/conversations.png"><img alt="The conversations list" src="docs/public/images/dashboard/conversations.png" /></a>
-      <p><strong>Conversations</strong><br />Multi-turn chats, one row per conversation, with their turns, models, user, cost and last activity.</p>
+      <p align="center"><strong>Conversations</strong></p>
     </td>
-    <td width="50%" valign="top">
+    <td width="50%">
       <a href="docs/public/images/dashboard/conversation-detail.png"><img alt="A conversation transcript" src="docs/public/images/dashboard/conversation-detail.png" /></a>
-      <p><strong>Conversation transcript</strong><br />Read a conversation turn by turn: the user's message, the model's reply, the calls each turn made, what the turn cost and what the conversation has cost so far.</p>
+      <p align="center"><strong>Conversation transcript</strong></p>
     </td>
   </tr>
   <tr>
-    <td width="50%" valign="top">
+    <td width="50%">
       <a href="docs/public/images/dashboard/costs.png"><img alt="The costs screen" src="docs/public/images/dashboard/costs.png" /></a>
-      <p><strong>Costs</strong><br />Where the money goes: daily spend, the share of each provider or model type, cost per model with its usage in tokens, images, videos or characters, and the users who spend the most.</p>
+      <p align="center"><strong>Costs</strong></p>
     </td>
-    <td width="50%" valign="top">
+    <td width="50%">
       <a href="docs/public/images/dashboard/trackables.png"><img alt="The trackables list" src="docs/public/images/dashboard/trackables.png" /></a>
-      <p><strong>Trackables</strong><br />Usage and spend per user, team or any Eloquent model you attribute requests to: requests, tokens, media, cost, latency and their most used model.</p>
+      <p align="center"><strong>Trackables</strong></p>
     </td>
   </tr>
   <tr>
-    <td width="50%" valign="top">
+    <td width="50%">
       <a href="docs/public/images/dashboard/trackable-detail.png"><img alt="One user's usage" src="docs/public/images/dashboard/trackable-detail.png" /></a>
-      <p><strong>Trackable details</strong><br />One user's spend over time, the providers and models they use, and their latest requests.</p>
+      <p align="center"><strong>Trackable details</strong></p>
     </td>
-    <td width="50%" valign="top">
+    <td width="50%">
       <a href="docs/public/images/dashboard/overview-dark.png"><img alt="The overview in dark mode" src="docs/public/images/dashboard/overview-dark.png" /></a>
-      <p><strong>Dark mode</strong><br />The dashboard follows your system theme, and the toggle in the top bar switches it.</p>
+      <p align="center"><strong>Dark mode</strong></p>
     </td>
   </tr>
 </table>
+
+<p align="center">
+  <a href="https://mayahi.net/services"><img alt="Hire me — I'm available for consulting and development work" src="art/hire-me.svg" width="100%" /></a>
+</p>
 
 ## Official Documentation
 
