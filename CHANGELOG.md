@@ -39,6 +39,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 #### Fixed
 
+- Usage API: `UsageQueryBuilder::byProvider()`, `byModel()` and `dailyUsage()`, and the `HasAiUsageStats` methods (`getAiUsageForPeriod()`, `getAiUsageByProvider()`, `getAiUsageByModel()` and the today/week/month shortcuts) always reported `total_tokens` as 0: the sum was read through the model's own `total_tokens` accessor
 - Tracking errors no longer reach your code. `Spectra::track()` returns your result when recording fails, a malformed stream chunk is skipped instead of ending your `foreach`, and a provider field of the wrong type drops only that field: the request is still recorded with its cost
 - A retried persist job no longer saves a duplicate row and counts the spend twice, and a failing stats update, budget report, export or `RequestTracked` listener no longer loses the row. A failed save after the response is reported and no longer stops the app's other terminating callbacks
 - Budgets: a database or cache error during the middleware's check is reported and the request goes through, instead of a 500

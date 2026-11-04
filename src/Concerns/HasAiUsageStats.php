@@ -48,7 +48,7 @@ trait HasAiUsageStats
                 COUNT(*) as request_count,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as successful_count,
                 SUM(CASE WHEN status_code IS NULL OR status_code NOT BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as failed_count,
-                SUM(prompt_tokens + completion_tokens) as total_tokens,
+                SUM(prompt_tokens + completion_tokens) as tokens_sum,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents,
                 AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms
             ')
@@ -61,7 +61,7 @@ trait HasAiUsageStats
             successRate: $stats->request_count > 0
                 ? round(($stats->successful_count / $stats->request_count) * 100, 2)
                 : 0,
-            totalTokens: (int) $stats->total_tokens,
+            totalTokens: (int) $stats->tokens_sum,
             totalCostInCents: (float) $stats->total_cost_in_cents,
             totalCost: round((float) $stats->total_cost_in_cents / 100, 4),
             avgLatencyMs: round((float) $stats->avg_latency_ms, 2),
@@ -78,7 +78,7 @@ trait HasAiUsageStats
             ->selectRaw('
                 provider,
                 COUNT(*) as request_count,
-                SUM(prompt_tokens + completion_tokens) as total_tokens,
+                SUM(prompt_tokens + completion_tokens) as tokens_sum,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents
             ')
             ->groupBy('provider')
@@ -86,7 +86,7 @@ trait HasAiUsageStats
             ->mapWithKeys(fn ($item) => [
                 $item->provider => [
                     'request_count' => (int) $item->request_count,
-                    'total_tokens' => (int) $item->total_tokens,
+                    'total_tokens' => (int) $item->tokens_sum,
                     'total_cost_in_cents' => (float) $item->total_cost_in_cents,
                     'total_cost' => round((float) $item->total_cost_in_cents / 100, 4),
                 ],
@@ -105,7 +105,7 @@ trait HasAiUsageStats
                 provider,
                 model,
                 COUNT(*) as request_count,
-                SUM(prompt_tokens + completion_tokens) as total_tokens,
+                SUM(prompt_tokens + completion_tokens) as tokens_sum,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents
             ')
             ->groupBy('provider', 'model')
@@ -114,7 +114,7 @@ trait HasAiUsageStats
                 'provider' => $item->provider,
                 'model' => $item->model,
                 'request_count' => (int) $item->request_count,
-                'total_tokens' => (int) $item->total_tokens,
+                'total_tokens' => (int) $item->tokens_sum,
                 'total_cost_in_cents' => (float) $item->total_cost_in_cents,
                 'total_cost' => round((float) $item->total_cost_in_cents / 100, 4),
             ])

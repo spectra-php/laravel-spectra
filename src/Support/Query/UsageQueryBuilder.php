@@ -183,7 +183,7 @@ class UsageQueryBuilder
                 SUM(CASE WHEN status_code IS NULL OR status_code NOT BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as failed_count,
                 SUM(prompt_tokens) as prompt_tokens,
                 SUM(completion_tokens) as completion_tokens,
-                SUM(prompt_tokens + completion_tokens) as total_tokens,
+                SUM(prompt_tokens + completion_tokens) as tokens_sum,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost,
                 AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms,
                 MIN(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as min_latency_ms,
@@ -208,7 +208,7 @@ class UsageQueryBuilder
             );
         }
 
-        /** @var object{request_count: mixed, successful_count: mixed, failed_count: mixed, prompt_tokens: mixed, completion_tokens: mixed, total_tokens: mixed, total_cost: mixed, avg_latency_ms: mixed, min_latency_ms: mixed, max_latency_ms: mixed} $result */
+        /** @var object{request_count: mixed, successful_count: mixed, failed_count: mixed, prompt_tokens: mixed, completion_tokens: mixed, tokens_sum: mixed, total_cost: mixed, avg_latency_ms: mixed, min_latency_ms: mixed, max_latency_ms: mixed} $result */
         return new UsageStats(
             requestCount: (int) $result->request_count,
             successfulCount: (int) $result->successful_count,
@@ -218,7 +218,7 @@ class UsageQueryBuilder
                 : 0,
             promptTokens: (int) $result->prompt_tokens,
             completionTokens: (int) $result->completion_tokens,
-            totalTokens: (int) $result->total_tokens,
+            totalTokens: (int) $result->tokens_sum,
             totalCostInCents: (float) $result->total_cost,
             totalCost: round((float) $result->total_cost / 100, 4),
             avgLatencyMs: round((float) $result->avg_latency_ms, 2),
@@ -236,7 +236,7 @@ class UsageQueryBuilder
             ->selectRaw('
                 provider,
                 COUNT(*) as request_count,
-                SUM(prompt_tokens + completion_tokens) as total_tokens,
+                SUM(prompt_tokens + completion_tokens) as tokens_sum,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost,
                 AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms
             ')
@@ -245,7 +245,7 @@ class UsageQueryBuilder
             ->map(fn (SpectraRequest $item) => [
                 'provider' => $item->provider,
                 'request_count' => (int) $item->request_count,
-                'total_tokens' => (int) $item->total_tokens,
+                'total_tokens' => (int) $item->tokens_sum,
                 'total_cost_in_cents' => (float) $item->total_cost,
                 'total_cost' => round((float) $item->total_cost / 100, 4),
                 'avg_latency_ms' => round((float) $item->avg_latency_ms, 2),
@@ -262,7 +262,7 @@ class UsageQueryBuilder
                 provider,
                 model,
                 COUNT(*) as request_count,
-                SUM(prompt_tokens + completion_tokens) as total_tokens,
+                SUM(prompt_tokens + completion_tokens) as tokens_sum,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost,
                 AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms
             ')
@@ -272,7 +272,7 @@ class UsageQueryBuilder
                 'provider' => $item->provider,
                 'model' => $item->model,
                 'request_count' => (int) $item->request_count,
-                'total_tokens' => (int) $item->total_tokens,
+                'total_tokens' => (int) $item->tokens_sum,
                 'total_cost_in_cents' => (float) $item->total_cost,
                 'total_cost' => round((float) $item->total_cost / 100, 4),
                 'avg_latency_ms' => round((float) $item->avg_latency_ms, 2),
@@ -289,7 +289,7 @@ class UsageQueryBuilder
             ->selectRaw('
                 DATE(created_at) as date,
                 COUNT(*) as request_count,
-                SUM(prompt_tokens + completion_tokens) as total_tokens,
+                SUM(prompt_tokens + completion_tokens) as tokens_sum,
                 SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost
             ')
             ->groupBy('date')
@@ -298,7 +298,7 @@ class UsageQueryBuilder
             ->map(fn (SpectraRequest $item) => [
                 'date' => $item->date,
                 'request_count' => (int) $item->request_count,
-                'total_tokens' => (int) $item->total_tokens,
+                'total_tokens' => (int) $item->tokens_sum,
                 'total_cost_in_cents' => (float) $item->total_cost,
                 'total_cost' => round((float) $item->total_cost / 100, 4),
             ]);
