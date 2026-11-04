@@ -553,7 +553,33 @@ class RequestContext implements Arrayable
         // their own switch; it falls back to store_prompts for installs that
         // disabled prompt storage before this key existed.
         if (config('spectra.storage.store_request_data') ?? config('spectra.storage.store_prompts', true)) {
-            $data['request_data'] = $this->requestData;
+            $data['request_data'] = $this->filteredRequestData();
+        }
+
+        return $data;
+    }
+
+    /**
+     * The raw body is where system prompts and tools are stored, so their
+     * switches are applied to it.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function filteredRequestData(): ?array
+    {
+        if ($this->requestData === null) {
+            return null;
+        }
+
+        $filter = new RequestDataFilter;
+        $data = $this->requestData;
+
+        if (! config('spectra.storage.store_system_prompts', true)) {
+            $data = $filter->withoutSystemPrompts($data);
+        }
+
+        if (! config('spectra.storage.store_tools', true)) {
+            $data = $filter->withoutTools($data);
         }
 
         return $data;

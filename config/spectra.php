@@ -44,6 +44,8 @@ return [
     | is useful for local development or when you want to temporarily disable
     | observability without removing the package.
     |
+    | Docs: https://spectraphp.com/configuration#master-switch
+    |
     */
 
     'enabled' => env('SPECTRA_ENABLED', true),
@@ -56,6 +58,8 @@ return [
     | Configure how AI request data is stored. You can use a separate database
     | connection for Spectra data, control what content is stored, and set
     | limits on content length to manage storage size.
+    |
+    | Docs: https://spectraphp.com/configuration#storage
     |
     */
 
@@ -71,6 +75,8 @@ return [
         | connection for high-volume applications to avoid impacting your main
         | database performance.
         |
+        | Docs: https://spectraphp.com/configuration#storage
+        |
         */
 
         'connection' => env('SPECTRA_DB_CONNECTION'),
@@ -85,6 +91,8 @@ return [
         | but will not be persisted to the database. Useful when you only want
         | real-time monitoring without historical data storage.
         |
+        | Docs: https://spectraphp.com/configuration#storage
+        |
         */
 
         'store_requests' => env('SPECTRA_STORE_REQUESTS', true),
@@ -97,6 +105,8 @@ return [
         | Whether to store the AI's response content. Disable this if you only
         | need usage metrics without storing the actual generated content.
         | Useful for privacy compliance or reducing storage costs.
+        |
+        | Docs: https://spectraphp.com/configuration#storage
         |
         */
 
@@ -112,6 +122,8 @@ return [
         | disabled, you'll still see token counts and costs, but not the actual
         | content sent to the AI.
         |
+        | Docs: https://spectraphp.com/configuration#storage
+        |
         */
 
         'store_prompts' => env('SPECTRA_STORE_PROMPTS', true),
@@ -121,9 +133,13 @@ return [
         | Store System Prompts
         |--------------------------------------------------------------------------
         |
-        | Whether to store system prompts separately. System prompts often contain
-        | sensitive business logic or instructions. Disable this if you want to
-        | keep your AI configuration private.
+        | Whether to keep system prompts in the stored request body. System
+        | prompts often contain business logic or instructions you'd rather keep
+        | private. When disabled, Spectra removes them before saving: system and
+        | developer messages, and the system, instructions or systemInstruction
+        | fields providers use.
+        |
+        | Docs: https://spectraphp.com/configuration#storage
         |
         */
 
@@ -134,9 +150,12 @@ return [
         | Store Tool Definitions
         |--------------------------------------------------------------------------
         |
-        | Whether to store function/tool definitions sent to the AI. Tool schemas
-        | can be large and may contain sensitive API documentation. Disable this
-        | to reduce storage or protect your tool implementations.
+        | Whether to keep function and tool definitions in the stored request
+        | body. Tool schemas can be large and may describe internal APIs. When
+        | disabled, Spectra removes the tools (and legacy functions) list before
+        | saving. Tool calls in responses are kept.
+        |
+        | Docs: https://spectraphp.com/configuration#storage
         |
         */
 
@@ -147,10 +166,13 @@ return [
         | Store Request Data
         |--------------------------------------------------------------------------
         |
-        | Whether to store the raw API request parameters (the full JSON body
-        | sent to the provider). This is broader than prompts alone — it also
-        | includes sampling settings, response formats, etc. When unset, it
-        | follows the store_prompts setting.
+        | Whether to store the raw API request body (the full JSON sent to the
+        | provider), which holds the prompts as well as sampling settings and
+        | response formats. When unset, it follows store_prompts. Set it to true
+        | to keep the body even with store_prompts off; prompts are then stored
+        | with it. store_system_prompts and store_tools still apply.
+        |
+        | Docs: https://spectraphp.com/configuration#storage
         |
         */
 
@@ -166,6 +188,8 @@ return [
         | the actual float-vector arrays can be very large. When disabled, the
         | vectors are replaced with [stripped] placeholders before storage.
         |
+        | Docs: https://spectraphp.com/configuration#storage
+        |
         */
 
         'store_embeddings' => env('SPECTRA_STORE_EMBEDDINGS', false),
@@ -179,6 +203,8 @@ return [
         | expire after ~1 hour, Sora videos have an expires_at timestamp). When
         | enabled, Spectra will download and persist generated media files to a
         | Laravel filesystem disk before the URLs expire.
+        |
+        | Docs: https://spectraphp.com/configuration#media-persistence
         |
         */
 
@@ -200,6 +226,8 @@ return [
     | If left null, Spectra auto-discovers keys from common config locations:
     | OpenAI SDK (openai.api_key), services.* config, and Prism providers.
     | Example; 'openai' => env('SPECTRA_OPENAI_API_KEY'),
+    |
+    | Docs: https://spectraphp.com/configuration#api-keys
     |
     */
 
@@ -224,6 +252,8 @@ return [
     |   'openai' => env('OPENAI_BASE_URL', 'https://api.openai.com'),
     |   'anthropic' => env('ANTHROPIC_BASE_URL', 'https://api.anthropic.com'),
     |
+    | Docs: https://spectraphp.com/configuration#endpoint-urls
+    |
     */
 
     'endpoint_urls' => [
@@ -239,6 +269,8 @@ return [
     | synchronously. This can improve response times for your application by
     | deferring database writes to a background worker.
     |
+    | Docs: https://spectraphp.com/configuration#queue
+    |
     */
 
     'queue' => [
@@ -251,6 +283,8 @@ return [
         | When enabled, AI request data will be dispatched to a queue job for
         | persistence instead of being saved synchronously. This requires a
         | running queue worker to process the jobs.
+        |
+        | Docs: https://spectraphp.com/configuration#queue
         |
         */
 
@@ -266,6 +300,8 @@ return [
         | a dedicated connection to separate AI observability work from your
         | application's main queue.
         |
+        | Docs: https://spectraphp.com/configuration#queue
+        |
         */
 
         'connection' => env('SPECTRA_QUEUE_CONNECTION'),
@@ -277,6 +313,8 @@ return [
         |
         | The queue name to dispatch persistence jobs to. Use a separate queue
         | to prioritize or isolate AI observability work from other jobs.
+        |
+        | Docs: https://spectraphp.com/configuration#queue
         |
         */
 
@@ -291,6 +329,8 @@ return [
         | This can be useful to batch writes or reduce load during peak times.
         | Leave null for no delay.
         |
+        | Docs: https://spectraphp.com/configuration#queue
+        |
         */
 
         'delay' => env('SPECTRA_QUEUE_DELAY'),
@@ -304,6 +344,8 @@ return [
         | after the HTTP response is sent to the client. This improves response
         | times without requiring a queue worker. Has no effect when queue is
         | enabled or when running in a non-HTTP context (e.g. console commands).
+        |
+        | Docs: https://spectraphp.com/configuration#persistence-modes
         |
         */
 
@@ -320,6 +362,8 @@ return [
     | automatically capture information about the request context to help
     | you understand how your AI features are being used.
     |
+    | Docs: https://spectraphp.com/configuration#tracking-context
+    |
     */
 
     'tracking' => [
@@ -332,6 +376,8 @@ return [
         | When enabled, Spectra will automatically associate AI requests with the
         | currently authenticated user. This allows you to see which users are
         | making requests and analyze per-user usage patterns.
+        |
+        | Docs: https://spectraphp.com/usage#user-attribution
         |
         */
 
@@ -346,6 +392,8 @@ return [
         | and geographic analysis. Disable this for privacy compliance (GDPR,
         | CCPA) or if you don't need location-based analytics.
         |
+        | Docs: https://spectraphp.com/configuration#tracking-context
+        |
         */
 
         'capture_ip' => true,
@@ -359,6 +407,8 @@ return [
         | understanding which browsers/devices are using your AI features.
         | Disable this for privacy compliance if needed.
         |
+        | Docs: https://spectraphp.com/configuration#tracking-context
+        |
         */
 
         'capture_user_agent' => true,
@@ -371,6 +421,8 @@ return [
         | Whether to capture or generate a request ID for correlation with your
         | application logs. This helps link AI requests to specific HTTP requests
         | in your logging system. Uses X-Request-ID header if available.
+        |
+        | Docs: https://spectraphp.com/configuration#tracking-context
         |
         */
 
@@ -387,6 +439,8 @@ return [
         | URL, so ids and query strings stay out of the database. Traces use
         | it as their name in the dashboard.
         |
+        | Docs: https://spectraphp.com/configuration#tracking-context
+        |
         */
 
         'capture_origin' => env('SPECTRA_CAPTURE_ORIGIN', true),
@@ -402,6 +456,12 @@ return [
         | the span that dispatched it, so a trace reads request, job, call. Only
         | units of work that made at least one AI call are stored.
         |
+        | Needs trace_per_request: with it off, each AI call is a trace of its
+        | own, so there is no shared trace to hold a root span and none is
+        | stored.
+        |
+        | Docs: https://spectraphp.com/usage#spans
+        |
         */
 
         'root_spans' => env('SPECTRA_ROOT_SPANS', true),
@@ -415,7 +475,10 @@ return [
         | job, or Artisan command shares one trace id. Queued jobs dispatched
         | during a request keep the trace of that request. The dashboard then
         | shows all calls of a trace as one chain. When disabled, each AI call
-        | gets its own trace id unless you set one with Spectra::withTraceId().
+        | gets its own trace id unless you set one with Spectra::withTraceId(),
+        | and root_spans has no effect.
+        |
+        | Docs: https://spectraphp.com/usage#traces
         |
         */
 
@@ -430,6 +493,8 @@ return [
         | an OpenTelemetry-aware proxy, gateway, or caller), Spectra uses its
         | trace id. Spectra's spans then join that distributed trace.
         |
+        | Docs: https://spectraphp.com/opentelemetry#trace-correlation
+        |
         */
 
         'use_traceparent' => env('SPECTRA_USE_TRACEPARENT', true),
@@ -442,6 +507,8 @@ return [
         | When enabled, a queued job inherits the tags of the request or job that
         | dispatched it: its global tags and the Spectra::withTags() tags around
         | the dispatch. The job's AI calls then carry them next to their own.
+        |
+        | Docs: https://spectraphp.com/tags#inherited-tags
         |
         */
 
@@ -456,6 +523,8 @@ return [
     |
     | Configure the Spectra dashboard. The dashboard provides a web interface
     | for viewing AI request history, usage statistics, and cost analytics.
+    |
+    | Docs: https://spectraphp.com/configuration#dashboard
     |
     */
 
@@ -472,6 +541,8 @@ return [
         |
         | Example: 'spectra' would make the dashboard available at spectra.yourdomain.com
         |
+        | Docs: https://spectraphp.com/configuration#dashboard
+        |
         */
 
         'domain' => env('SPECTRA_DOMAIN'),
@@ -485,6 +556,8 @@ return [
         | production if you prefer to access data through the API or if you're
         | using a separate monitoring solution.
         |
+        | Docs: https://spectraphp.com/configuration#dashboard
+        |
         */
 
         'enabled' => env('SPECTRA_DASHBOARD_ENABLED', true),
@@ -496,6 +569,8 @@ return [
         |
         | The URI path where the dashboard will be accessible. For example, if
         | set to 'spectra', the dashboard will be at https://yourdomain.com/spectra
+        |
+        | Docs: https://spectraphp.com/configuration#dashboard
         |
         */
 
@@ -511,6 +586,8 @@ return [
         | to restrict access to authorized users.
         |
         | Example: ['web', 'auth', 'verified']
+        |
+        | Docs: https://spectraphp.com/configuration#dashboard
         |
         */
 
@@ -529,6 +606,8 @@ return [
         | - 'image': Show only image generation metrics
         | - 'video': Show only video generation metrics
         | - 'audio': Show both TTS and STT metrics
+        |
+        | Docs: https://spectraphp.com/configuration#dashboard
         |
         */
 
@@ -549,6 +628,8 @@ return [
         | - 'd/m/Y H:i'         → 07/01/2026 15:45
         | - 'F j, Y g:i:s A'    → January 7, 2026 3:45:30 PM
         |
+        | Docs: https://spectraphp.com/configuration#dashboard
+        |
         */
 
         'date_format' => env('SPECTRA_DATE_FORMAT', 'M j, Y g:i:s A'),
@@ -564,6 +645,8 @@ return [
     | built-in pricing for popular models, but you can override these values
     | if you have negotiated custom rates or need to track internal costs.
     |
+    | Docs: https://spectraphp.com/configuration#costs
+    |
     */
 
     'costs' => [
@@ -575,6 +658,8 @@ return [
         |
         | Whether to calculate and store costs for AI requests. When enabled,
         | Spectra will calculate costs based on token usage and model pricing.
+        |
+        | Docs: https://spectraphp.com/configuration#costs
         |
         */
 
@@ -589,6 +674,8 @@ return [
         | currency). Catalog prices written in another currency (Scaleway
         | bills in EUR) and costs that providers report in USD are converted
         | with the exchange rates below.
+        |
+        | Docs: https://spectraphp.com/costs#currency-conversion
         |
         */
 
@@ -605,6 +692,8 @@ return [
         | and Spectra logs a warning once per process. Update the rates now
         | and then; Spectra does not fetch them.
         |
+        | Docs: https://spectraphp.com/costs#currency-conversion
+        |
         */
 
         'exchange_rates' => [
@@ -618,6 +707,8 @@ return [
         |
         | The symbol to display before cost values in the dashboard. Common
         | symbols: '$' (USD), '€' (EUR), '£' (GBP), '¥' (JPY/CNY).
+        |
+        | Docs: https://spectraphp.com/configuration#costs
         |
         */
 
@@ -636,6 +727,8 @@ return [
         | Spectra::withPricingTier(). Tiers: 'standard' (default), 'batch',
         | 'flex', 'priority' (OpenAI "Fast"), 'fast' (Anthropic fast mode),
         | 'ultrafast', 'hd'. Any provider slug may be listed here.
+        |
+        | Docs: https://spectraphp.com/costs#configuring-tiers
         |
         */
 
@@ -674,6 +767,8 @@ return [
         | you without republishing this file. Set an entry to false to turn a
         | built-in pricing class off, e.g. 'groq' => false.
         |
+        | Docs: https://spectraphp.com/pricing#customizing-pricing
+        |
         */
 
         'pricing' => [
@@ -705,6 +800,8 @@ return [
         |
         | Commit the file, so every environment bills the same prices.
         |
+        | Docs: https://spectraphp.com/pricing#scraped-prices
+        |
         */
 
         'use_scraped_prices' => (bool) env('SPECTRA_USE_SCRAPED_PRICES', false),
@@ -727,6 +824,8 @@ return [
         | scrapes the providers your app has tracked requests for, so you
         | don't spend Firecrawl credits on providers you don't use.
         |
+        | Docs: https://spectraphp.com/pricing#scraping-prices
+        |
         */
 
         'firecrawl' => [
@@ -747,6 +846,8 @@ return [
     | spending limits per user, team, or globally. You can enforce hard limits
     | that block requests or soft limits that only send warnings.
     |
+    | Docs: https://spectraphp.com/budgets#configuration
+    |
     */
 
     'budget' => [
@@ -758,6 +859,8 @@ return [
         |
         | Whether to enable budget checking and enforcement. When disabled,
         | budget limits will not be checked and all requests will be allowed.
+        |
+        | Docs: https://spectraphp.com/budgets#configuration
         |
         */
 
@@ -772,6 +875,8 @@ return [
         | (`spectra.budget` without arguments). It matters only for budgets
         | with an allowed-providers list.
         |
+        | Docs: https://spectraphp.com/budgets#middleware-enforcement
+        |
         */
 
         'default_provider' => 'openai',
@@ -784,6 +889,8 @@ return [
         | The model the budget middleware checks when the route gives none
         | (`spectra.budget:openai` or no arguments). It matters only for
         | budgets with an allowed-models list.
+        |
+        | Docs: https://spectraphp.com/budgets#middleware-enforcement
         |
         */
 
@@ -801,6 +908,8 @@ return [
     | outgoing HTTP requests and automatically tracks those going to known
     | AI providers.
     |
+    | Docs: https://spectraphp.com/configuration#watcher
+    |
     */
 
     'watcher' => [
@@ -813,6 +922,8 @@ return [
         | Whether to enable automatic request interception. When enabled,
         | all requests to known AI providers will be automatically tracked
         | without requiring manual Spectra::track() calls.
+        |
+        | Docs: https://spectraphp.com/configuration#watcher
         |
         */
 
@@ -831,6 +942,8 @@ return [
         | - GuzzleWatcher: Provides tracked Guzzle handler stacks for direct Guzzle usage
         |
         | Remove a watcher from this list to disable it.
+        |
+        | Docs: https://spectraphp.com/configuration#watcher
         |
         */
 
@@ -862,6 +975,8 @@ return [
     | you without republishing this file. Set an entry to false to stop
     | tracking a built-in provider, e.g. 'ollama' => false.
     |
+    | Docs: https://spectraphp.com/configuration#providers
+    |
     */
 
     'providers' => [
@@ -889,6 +1004,8 @@ return [
     | Spectra can export traces to OpenTelemetry-compatible backends for
     | enterprise observability.
     |
+    | Docs: https://spectraphp.com/configuration#integrations
+    |
     */
 
     'integrations' => [
@@ -903,6 +1020,8 @@ return [
         | or remove fields from the data that integrations receive.
         |
         | Override with your own class to add or remove fields.
+        |
+        | Docs: https://spectraphp.com/opentelemetry#request-transformer
         |
         */
 
@@ -921,6 +1040,8 @@ return [
         | - Datadog APM, New Relic, Splunk, Dynatrace
         | - Grafana Tempo, Honeycomb, Lightstep
         |
+        | Docs: https://spectraphp.com/opentelemetry#configuration-options
+        |
         */
 
         'opentelemetry' => [
@@ -928,6 +1049,8 @@ return [
             /*
             | Enable/disable OpenTelemetry export. When disabled, no traces
             | will be exported even if an endpoint is configured.
+            |
+            | Docs: https://spectraphp.com/opentelemetry#configuration-options
             */
             'enabled' => env('SPECTRA_OTEL_ENABLED', false),
 
@@ -940,6 +1063,8 @@ return [
             | - Grafana Tempo: http://tempo:4318/v1/traces
             |
             | For cloud providers, use their specific ingest endpoints.
+            |
+            | Docs: https://spectraphp.com/opentelemetry#configuration-options
             */
             'endpoint' => env('SPECTRA_OTEL_ENDPOINT', 'http://localhost:4318/v1/traces'),
 
@@ -951,12 +1076,16 @@ return [
             |     'Authorization' => 'Bearer ' . env('OTEL_AUTH_TOKEN'),
             |     'x-api-key' => env('OTEL_API_KEY'),
             | ],
+            |
+            | Docs: https://spectraphp.com/opentelemetry#authentication
             */
             'headers' => [],
 
             /*
             | Service version to include in trace metadata. Helps identify
             | which version of your application generated the trace.
+            |
+            | Docs: https://spectraphp.com/opentelemetry#configuration-options
             */
             'service_version' => env('SPECTRA_OTEL_SERVICE_VERSION', '1.0.0'),
 
@@ -968,11 +1097,15 @@ return [
             |     'deployment.region' => 'us-east-1',
             |     'k8s.namespace' => 'production',
             | ],
+            |
+            | Docs: https://spectraphp.com/opentelemetry#resource-attributes
             */
             'resource_attributes' => [],
 
             /*
             | Timeout in seconds for OTLP HTTP requests. Default: 10.
+            |
+            | Docs: https://spectraphp.com/opentelemetry#configuration-options
             */
             'timeout' => (int) env('SPECTRA_OTEL_TIMEOUT', 10),
 
@@ -982,9 +1115,11 @@ return [
             |
             | The default builder follows OpenTelemetry GenAI semantic conventions.
             | Extend DefaultSpanBuilder to customize span names, attributes, or
-            | status — or implement SpanBuilder from scratch for full control.
+            | status, or implement SpanBuilder from scratch for full control.
             |
             | Set to null to use the default span builder.
+            |
+            | Docs: https://spectraphp.com/opentelemetry#customizing-spans
             */
             'span_builder' => null,
 

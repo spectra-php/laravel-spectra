@@ -185,6 +185,20 @@ it('keeps raw request data out of storage when request storage is off', function
     expect(SpectraRequest::query()->value('request'))->toBeNull();
 });
 
+it('stores the request without its system prompt and tools when those switches are off', function () {
+    config(['spectra.storage.store_system_prompts' => false, 'spectra.storage.store_tools' => false]);
+    Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json'))]);
+
+    Http::post('https://api.openai.com/v1/chat/completions', [
+        'model' => 'gpt-4o',
+        'messages' => [['role' => 'system', 'content' => 'internal rules'], ['role' => 'user', 'content' => 'hi']],
+        'tools' => [['type' => 'function', 'function' => ['name' => 'lookup_order']]],
+    ]);
+
+    expect(SpectraRequest::query()->sole()->makeVisible('request')->request)
+        ->toBe(['model' => 'gpt-4o', 'messages' => [['role' => 'user', 'content' => 'hi']]]);
+});
+
 it('counts a polled job once and keeps its original start time', function () {
     $this->travelTo('2026-03-10 12:00:00');
     $writer = app(RequestWriter::class);

@@ -35,9 +35,9 @@ These settings control what Spectra saves to the database, and how. Use them to 
 | `store_requests` | `bool` | `true` | Save request records to the database. When `false`, nothing is saved: requests are still tracked in memory, and still sent to the `RequestTracked` event and to OpenTelemetry. |
 | `store_responses` | `bool` | `true` | Persist response payloads (the JSON returned by the provider). |
 | `store_prompts` | `bool` | `true` | Store user prompt text and chat messages. Disable for privacy compliance (GDPR, CCPA). |
-| `store_system_prompts` | `bool` | `true` | Store system prompts separately. These often contain proprietary business logic. |
-| `store_tools` | `bool` | `true` | Store function and tool definitions sent to the AI provider. These can be large for complex tool schemas. |
-| `store_request_data` | `bool\|null` | `null` | Store the raw request body sent to the provider (the full JSON body, including sampling settings) in the `request` column. When `null`, follows `store_prompts`. When it resolves to `false`, the raw body is not saved. |
+| `store_system_prompts` | `bool` | `true` | Keep system prompts in the stored request body. These often contain proprietary business logic. When `false`, Spectra removes them before saving: `system` and `developer` messages, and the `system`, `instructions`, `systemInstruction` and `system_prompt` fields providers use. |
+| `store_tools` | `bool` | `true` | Keep function and tool definitions in the stored request body. These can be large for complex tool schemas. When `false`, Spectra removes the `tools` and `functions` lists before saving. Tool calls in responses are kept. |
+| `store_request_data` | `bool\|null` | `null` | Store the raw request body sent to the provider (the full JSON body, including sampling settings) in the `request` column. When `null`, follows `store_prompts`. Set it to `true` to keep the body with `store_prompts` off; the prompts are then stored with it. When it resolves to `false`, the raw body is not saved. `store_system_prompts` and `store_tools` apply either way. |
 | `store_embeddings` | `bool` | `false` | Store embedding vector values in the response column. Embedding requests are always tracked (tokens, costs, latency), but the float-vector arrays can be very large. When disabled, vectors are replaced with `[stripped]`. |
 
 <a name="media-persistence"></a>
@@ -148,8 +148,8 @@ Choose what context Spectra captures automatically with each tracked request.
 | `capture_user_agent` | `bool` | `true` | Store the client's user agent string in the `user_agent` column. |
 | `capture_request_id` | `bool` | `true` | Store a request ID for correlation with your logs in the `laravel_request_id` column. Uses the `X-Request-ID` header if present, otherwise generates one. |
 | `capture_origin` | `bool` | `true` | Store where each call came from in the `origin` column: the queued job class, the Artisan command (`artisan reports:send`), or the route pattern of the HTTP request (`POST /chats/{chat}`). Only the pattern is stored, never the URL with its ids and query string. Env: `SPECTRA_CAPTURE_ORIGIN`. |
-| `root_spans` | `bool` | `true` | Give each HTTP request, queued job and Artisan command that makes AI calls a span of its own, with its calls and spans inside. Only units of work that made an AI call are stored. Env: `SPECTRA_ROOT_SPANS`. See [Spans](/usage#spans). |
-| `trace_per_request` | `bool` | `true` | Give every AI call of the same HTTP request, queued job, or Artisan command one trace id. Queued jobs dispatched during a request keep its trace. Env: `SPECTRA_TRACE_PER_REQUEST`. See [Traces](/usage#traces). |
+| `root_spans` | `bool` | `true` | Give each HTTP request, queued job and Artisan command that makes AI calls a span of its own, with its calls and spans inside. Only units of work that made an AI call are stored. Needs `trace_per_request`: with it off, each call is a trace of its own and no root span is stored. Env: `SPECTRA_ROOT_SPANS`. See [Spans](/usage#spans). |
+| `trace_per_request` | `bool` | `true` | Give every AI call of the same HTTP request, queued job, or Artisan command one trace id. Queued jobs dispatched during a request keep its trace. Turning it off also turns off `root_spans`. Env: `SPECTRA_TRACE_PER_REQUEST`. See [Traces](/usage#traces). |
 | `use_traceparent` | `bool` | `true` | When the incoming HTTP request has a W3C `traceparent` header, use its trace id, so Spectra's spans join that trace. Env: `SPECTRA_USE_TRACEPARENT`. |
 | `propagate_tags` | `bool` | `true` | A queued job inherits the tags of the request or job that dispatched it (global tags and the `withTags()` tags around the dispatch). Env: `SPECTRA_PROPAGATE_TAGS`. See [Inherited Tags](/tags#inherited-tags). |
 

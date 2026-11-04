@@ -55,6 +55,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Dashboard: Sora video downloads use the configured OpenAI base URL (Azure and custom base URLs got an error)
 - A misspelled watcher class in config is reported and skipped instead of breaking the app at boot
 - Both 2.x migrations are safe to run again on a Spectra database that kept its tables after `migrate:fresh`
+- Storage: `store_system_prompts` and `store_tools` set to `false` now keep system prompts and tool definitions out of the database. They were saved anyway inside the stored request body. Spectra now removes `system` / `developer` messages, the `system`, `instructions`, `systemInstruction` and `system_prompt` fields, and the `tools` / `functions` lists before saving
 
 #### Upgrading
 
@@ -65,6 +66,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - If you removed a built-in provider or pricing class from your published config to turn it off, set it to `false` instead: built-ins now stay active underneath your config
 - Routes that relied on the `spectra.budget` middleware reading `provider` / `model` from the request input must pass them as arguments: `spectra.budget:openai,gpt-4o`
 - `BudgetExceeded` listeners that treat `currentUsage` and `limit` as cents should check `limitType` first: token, request and allow-list blocks now fire it too
+- If you turned off `store_system_prompts` or `store_tools`, rows saved before this release still hold system prompts and tools in their `request` column. Prune or clear them if that matters to you
 - `SpectraRequest::failed()` now includes 3xx responses, and `UsageQueryBuilder` / `HasAiUsageStats` costs and latencies leave out failed requests, so `->failed()->totalCostCents()` is 0. Recheck reports built on the old numbers
 
 ## v2.6.0 - 2026-11-01
