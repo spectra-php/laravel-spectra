@@ -91,11 +91,21 @@ const rows = computed(() => {
     return out;
 });
 
-const indent = (depth) => ({ paddingLeft: `${depth * 14}px` });
+const INDENT_PX = 14;
+
+const indent = (depth) => ({ paddingLeft: `${depth * INDENT_PX}px` });
+
+// Every row shares one name column, widened by the deepest indent, so a nested
+// call keeps the same room for its name as a top-level one and the columns line up.
+const nameColumn = computed(() => {
+    const deepest = rows.value.reduce((max, row) => Math.max(max, row.depth || 0), 0);
+
+    return `calc(13rem + ${deepest * INDENT_PX}px)`;
+});
 </script>
 
 <template>
-    <ol class="divide-y divide-gray-100 dark:divide-gray-800/80">
+    <ol class="divide-y divide-gray-100 dark:divide-gray-800/80" :style="{ '--name-column': nameColumn }">
         <template v-for="row in rows" :key="row.key">
             <li v-if="row.startsLane" class="bg-gray-50/70 px-5 py-1.5 dark:bg-white/[0.02]">
                 <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400" :title="row.origin || 'No origin recorded'">{{ row.origin || 'No origin recorded' }}</span>
@@ -103,7 +113,7 @@ const indent = (depth) => ({ paddingLeft: `${depth * 14}px` });
 
             <!-- A span: a Spectra::span() block, or the request, job or command -->
             <li v-if="row.type === 'span'">
-                <div class="group relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 bg-gray-50/40 px-5 py-2 sm:grid-cols-[1.5rem_minmax(0,13rem)_minmax(0,1fr)_4.5rem_4.5rem] dark:bg-white/[0.015]">
+                <div class="group relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 bg-gray-50/40 px-5 py-2 sm:grid-cols-[1.5rem_minmax(0,var(--name-column))_minmax(0,1fr)_4.5rem_6rem] dark:bg-white/[0.015]">
                     <span class="col-start-1 row-start-1 text-gray-300 sm:col-start-auto sm:row-start-auto dark:text-gray-600" aria-hidden="true">
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h10.5m-10.5 5.25h6" /></svg>
                     </span>
@@ -137,7 +147,7 @@ const indent = (depth) => ({ paddingLeft: `${depth * 14}px` });
                 <router-link
                     :to="{ name: 'request-preview', params: { id: row.id } }"
                     :aria-current="row.is_current ? 'page' : undefined"
-                    class="group relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-5 py-2.5 transition-colors sm:grid-cols-[1.5rem_minmax(0,13rem)_minmax(0,1fr)_4.5rem_4.5rem]"
+                    class="group relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-5 py-2.5 transition-colors sm:grid-cols-[1.5rem_minmax(0,var(--name-column))_minmax(0,1fr)_4.5rem_6rem]"
                     :class="row.is_current
                         ? 'bg-primary-50/70 dark:bg-primary-500/[0.08]'
                         : 'hover:bg-gray-50 dark:hover:bg-white/[0.03]'"

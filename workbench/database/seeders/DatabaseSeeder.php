@@ -234,7 +234,7 @@ class DatabaseSeeder extends Seeder
         $context->requestData = $exchange !== null ? $this->chatRequest($endpoint, $exchange[0]) : match ($type) {
             'tts' => [$provider === 'elevenlabs' ? 'text' : 'input' => str_repeat('Thanks for calling, how can I help you today? ', mt_rand(2, 60))],
             'video' => ['instances' => [['prompt' => 'A drone shot over a coastline at sunset']], 'parameters' => ['durationSeconds' => [4, 6, 8][mt_rand(0, 2)]]],
-            default => null,
+            default => [],
         };
 
         if ($type === 'tts') {

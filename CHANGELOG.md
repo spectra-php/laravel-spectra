@@ -2,6 +2,12 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## Unreleased
+
+#### Fixed
+
+- Dashboard: the trace timeline keeps a sub-cent cost (`$0.0000054`) inside its column, and a call nested in a span shows its full model name
+
 ## v3.0.0 - 2026-11-04
 
 #### Added
