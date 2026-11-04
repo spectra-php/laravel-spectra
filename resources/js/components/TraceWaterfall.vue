@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import ProviderLogo from '@/components/ProviderLogo.vue';
+import Money from '@/components/Money.vue';
 
 const props = defineProps({
     // The trace's calls in the order they started, as the API sends them.
@@ -13,7 +14,7 @@ const props = defineProps({
     showOrigins: { type: Boolean, default: false },
 });
 
-const { formatCurrency, formatDuration } = useHelpers();
+const { formatDuration } = useHelpers();
 
 // Bars share one time scale: the whole trace, at least 1ms so nothing divides by zero.
 const span = computed(() => Math.max(1, props.durationMs || 0));
@@ -204,7 +205,7 @@ const nameColumn = computed(() => {
                     </span>
 
                     <span class="col-start-3 row-start-1 text-right text-xs tabular-nums text-gray-500 sm:col-start-auto sm:row-start-auto dark:text-gray-400">{{ formatDuration(row.latency_ms) }}</span>
-                    <span class="hidden text-right text-xs font-medium tabular-nums text-gray-700 sm:block dark:text-gray-200">{{ formatCurrency(row.total_cost_in_cents) }}</span>
+                    <span class="hidden text-right text-xs font-medium tabular-nums text-gray-700 sm:block dark:text-gray-200"><Money :cents="row.total_cost_in_cents" /></span>
                 </router-link>
             </li>
         </template>

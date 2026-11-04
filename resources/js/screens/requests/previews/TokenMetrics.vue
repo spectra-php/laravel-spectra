@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
+import Money from '@/components/Money.vue';
 
 /**
  * Token usage for one request. Input is split into uncached, cache-read and
@@ -14,7 +15,7 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle']);
 
-const { formatNumber, formatCurrency } = useHelpers();
+const { formatNumber } = useHelpers();
 
 const input = computed(() => {
     const total = Number(props.request.prompt_tokens || 0);
@@ -66,7 +67,7 @@ const width = (value, total) => (total > 0 ? (value / total) * 100 : 0) + '%';
                         <span class="text-sm font-medium text-gray-900 dark:text-white">{{ group.title }}</span>
                         <span class="text-sm tabular-nums text-gray-500 dark:text-gray-400">{{ formatNumber(group.data.total) }} tokens</span>
                     </div>
-                    <span v-if="group.cost" class="text-sm tabular-nums text-gray-500 dark:text-gray-400">{{ formatCurrency(group.cost) }}</span>
+                    <span v-if="group.cost" class="text-sm tabular-nums text-gray-500 dark:text-gray-400"><Money :cents="group.cost" /></span>
                 </div>
 
                 <div class="flex h-2 gap-0.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">

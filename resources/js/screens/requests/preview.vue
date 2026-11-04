@@ -16,9 +16,10 @@ import VideoMetrics from './previews/VideoMetrics.vue';
 import TraceTimeline from './previews/TraceTimeline.vue';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
+import Money from '@/components/Money.vue';
 
 const route = useRoute();
-const { spectra, formatNumber, formatCurrency, formatDuration, apiRequest } = useHelpers();
+const { spectra, formatNumber, formatDuration, apiRequest } = useHelpers();
 const loading = useLoading();
 
 const request = ref(null);
@@ -146,10 +147,10 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
             <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <div class="stat-card">
                     <div class="stat-label">Cost</div>
-                    <div class="stat-value !text-2xl">{{ formatCurrency(request.total_cost_in_cents) }}</div>
+                    <div class="stat-value !text-2xl"><Money :cents="request.total_cost_in_cents" /></div>
                     <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         <template v-if="request.prompt_cost || request.completion_cost">
-                            In {{ formatCurrency(request.prompt_cost) }} · Out {{ formatCurrency(request.completion_cost) }}
+                            In <Money :cents="request.prompt_cost" /> · Out <Money :cents="request.completion_cost" />
                         </template>
                         <template v-else>{{ request.currency || 'USD' }}<span v-if="request.pricing_tier"> · {{ request.pricing_tier }} tier</span></template>
                     </div>

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
+import Money from '@/components/Money.vue';
 
 const props = defineProps({
     request: { type: Object, required: true },
@@ -9,7 +10,7 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle']);
 
-const { formatNumber, formatCurrency } = useHelpers();
+const { formatNumber } = useHelpers();
 
 const hasDuration = computed(() => props.request.duration_seconds != null && props.request.duration_seconds > 0);
 const hasCharacters = computed(() => props.request.input_characters != null && props.request.input_characters > 0);
@@ -67,7 +68,7 @@ const columnCount = computed(() => {
                 <div class="text-center p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20">
                     <div class="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1">Cost</div>
                     <div class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">
-                        {{ formatCurrency(request.total_cost_in_cents) }}
+                        <Money :cents="request.total_cost_in_cents" />
                     </div>
                 </div>
             </div>

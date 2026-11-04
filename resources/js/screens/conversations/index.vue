@@ -10,10 +10,11 @@ import RequestFilters from '@/components/RequestFilters.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import StatCard from '@/components/StatCard.vue';
+import Money from '@/components/Money.vue';
 
 const router = useRouter();
 const route = useRoute();
-const { formatNumber, formatCurrency, formatDuration, apiRequest } = useHelpers();
+const { formatNumber, formatDuration, apiRequest } = useHelpers();
 const { providers, loadProviders } = useProviders();
 const loading = useLoading();
 
@@ -188,11 +189,11 @@ onUnmounted(() => {
                 </template>
             </StatCard>
             <StatCard label="Total cost" :loading="loading && !summary">
-                <div class="stat-value !text-2xl">{{ formatCurrency(summary?.total_cost_in_cents ?? 0) }}</div>
+                <div class="stat-value !text-2xl"><Money :cents="summary?.total_cost_in_cents ?? 0" /></div>
                 <template #footer><div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Successful calls only</div></template>
             </StatCard>
             <StatCard label="Cost per conversation" :loading="loading && !summary">
-                <div class="stat-value !text-2xl">{{ formatCurrency(summary?.avg_cost_in_cents ?? 0) }}</div>
+                <div class="stat-value !text-2xl"><Money :cents="summary?.avg_cost_in_cents ?? 0" /></div>
                 <template #footer><div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Across its turns</div></template>
             </StatCard>
             <StatCard label="Turns per conversation" :loading="loading && !summary">
@@ -285,7 +286,7 @@ onUnmounted(() => {
                                     {{ formatNumber(conversation.turn_count) }}
                                     <span v-if="conversation.failed_count" class="badge badge-danger ml-1 !px-1.5 !py-0 text-[11px]">{{ conversation.failed_count }} failed</span>
                                 </td>
-                                <td class="text-right font-medium tabular-nums">{{ formatCurrency(conversation.total_cost_in_cents) }}</td>
+                                <td class="text-right font-medium tabular-nums"><Money :cents="conversation.total_cost_in_cents" /></td>
                                 <td class="whitespace-nowrap text-right">
                                     <span class="transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400">{{ formatDateTime(conversation.last_activity_at) }}</span>
                                 </td>

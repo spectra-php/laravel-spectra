@@ -6,6 +6,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 #### Fixed
 
+- Dashboard: every price uses one format: two decimals from $1 (`$1,234.56`), four below (`$0.0579`, `$0.0007`), and `<$0.0001` for less, with the exact amount on hover. Tiny costs no longer show in e-notation (`$1.8e-8`), and the cost charts' axes and tooltips use the same format
 - Dashboard: the trace timeline keeps a sub-cent cost (`$0.0000054`) inside its column, and a call nested in a span shows its full model name
 
 ## v3.0.0 - 2026-11-04

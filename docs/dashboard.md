@@ -101,6 +101,11 @@ A trackable is the model a request is attributed to: the signed-in user by defau
 
 Open a trackable to see its spend and requests over time, the providers and models it uses, and its latest requests. This is the page to check when one user's spend looks off, or before you set them a [budget](/budgets).
 
+<a name="prices"></a>
+## Prices
+
+Every price on the dashboard uses the same format: two decimals from $1 (`$1,234.56`), four decimals below $1 (`$0.0579`, `$0.0007`), and `<$0.0001` for anything smaller. Hover a rounded price to see the exact amount (`$0.00000544`). Spectra stores costs with more precision than it shows; see [Costs](/costs).
+
 <a name="dark-mode"></a>
 ## Dark Mode
 

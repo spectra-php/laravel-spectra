@@ -12,10 +12,11 @@ import StatusCode from '@/components/StatusCode.vue';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
+import Money from '@/components/Money.vue';
 
 const route = useRoute();
 const router = useRouter();
-const { formatNumber, formatCompact, formatShortDate, formatCurrency, currencySymbol, formatDuration, formatDurationSeconds, truncate, providerChartColor, apiRequest } = useHelpers();
+const { formatNumber, formatCompact, formatShortDate, formatCurrency, formatDuration, formatDurationSeconds, truncate, providerChartColor, apiRequest } = useHelpers();
 // `type` tells the API which model the id belongs to, so it stays in the URL with the period.
 const { period, startDate, endDate, periodLabel, applyQueryState, syncQueryToRouter } = usePeriodQuery({
     filterKeys: ['type'],
@@ -155,8 +156,9 @@ const renderCostChart = () => {
     }, {
         label: 'Cost',
         yTicks: {
-            callback: (value) => currencySymbol + value.toFixed(2),
+            callback: (value) => formatCurrency(Number(value) * 100),
         },
+        tooltipLabel: (dollars) => formatCurrency(dollars * 100),
     });
 };
 
@@ -356,9 +358,9 @@ onUnmounted(() => {
                 <div class="stat-value">{{ formatNumber(trackable?.total_requests ?? 0) }}</div>
             </StatCard>
             <StatCard label="Spend" :loading="loading" skeleton-width="70%">
-                <div class="stat-value">{{ formatCurrency(trackable?.total_cost) }}</div>
+                <div class="stat-value"><Money :cents="trackable?.total_cost" /></div>
                 <template #footer>
-                    <div v-if="trackable?.total_requests" class="mt-3 text-xs text-gray-500 dark:text-gray-400">{{ formatCurrency((trackable.total_cost || 0) / trackable.total_requests) }} per request on average</div>
+                    <div v-if="trackable?.total_requests" class="mt-3 text-xs text-gray-500 dark:text-gray-400"><Money :cents="(trackable.total_cost || 0) / trackable.total_requests" /> per request on average</div>
                 </template>
             </StatCard>
             <StatCard v-if="showTokens" label="Tokens" :loading="loading" skeleton-width="50%">
@@ -523,7 +525,7 @@ onUnmounted(() => {
                                         </div>
                                     </td>
                                     <td class="text-right tabular-nums font-medium">{{ formatNumber(model.requests) }}</td>
-                                    <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white">{{ formatCurrency(model.cost) }}</td>
+                                    <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white"><Money :cents="model.cost" /></td>
                                 </tr>
                                 <tr v-if="!allModels.length">
                                     <td colspan="3" class="text-center py-8 text-gray-500">
@@ -741,7 +743,7 @@ onUnmounted(() => {
                                     </div>
                                 </td>
                                 <td class="text-right tabular-nums font-medium">{{ formatNumber(model.requests) }}</td>
-                                <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white">{{ formatCurrency(model.cost) }}</td>
+                                <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white"><Money :cents="model.cost" /></td>
                             </tr>
                             <tr v-if="!filteredModels.length">
                                 <td colspan="3" class="text-center py-8 text-gray-500 dark:text-gray-400">

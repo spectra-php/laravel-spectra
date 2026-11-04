@@ -129,6 +129,9 @@ const areaFill = (context) => {
 };
 
 export function useCharts() {
+    /** Tooltip callbacks for a chart whose option `tooltipLabel` formats each value. */
+    const labelCallbacks = (tooltipLabel) => (tooltipLabel ? { callbacks: { label: (context) => ' ' + tooltipLabel(context.raw) } } : {});
+
     /**
      * Line/area chart for one time series.
      */
@@ -158,7 +161,7 @@ export function useCharts() {
                 maintainAspectRatio: true,
                 animation: { duration: 500, easing: 'easeOutQuart' },
                 interaction: { intersect: false, mode: 'index' },
-                plugins: { legend: { display: false }, tooltip: tooltip() },
+                plugins: { legend: { display: false }, tooltip: { ...tooltip(), ...labelCallbacks(options.tooltipLabel) } },
                 scales: axes(options.yTicks),
                 ...options.chartOptions,
             },
@@ -201,7 +204,7 @@ export function useCharts() {
                 maintainAspectRatio: true,
                 animation: { duration: 500, easing: 'easeOutQuart' },
                 interaction: { intersect: false, mode: 'index' },
-                plugins: { legend: { display: false }, tooltip: tooltip() },
+                plugins: { legend: { display: false }, tooltip: { ...tooltip(), ...labelCallbacks(options.tooltipLabel) } },
                 scales: axes(options.yTicks),
                 ...options.chartOptions,
             },

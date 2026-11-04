@@ -11,10 +11,11 @@ import StatusCode from '@/components/StatusCode.vue';
 import RequestFilters from '@/components/RequestFilters.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
+import Money from '@/components/Money.vue';
 
 const router = useRouter();
 const route = useRoute();
-const { formatNumber, formatCurrency, formatDuration, providerClass, apiRequest } = useHelpers();
+const { formatNumber, formatDuration, providerClass, apiRequest } = useHelpers();
 const { providers, loadProviders } = useProviders();
 const loading = useLoading();
 
@@ -348,7 +349,7 @@ onUnmounted(() => {
                                     {{ formatUsage(request).value }}
                                     <span class="text-[11px] text-gray-400 dark:text-gray-500 ml-0.5">{{ formatUsage(request).label }}</span>
                                 </td>
-                                <td class="text-right tabular-nums font-medium">{{ formatCurrency(request.total_cost_in_cents) }}</td>
+                                <td class="text-right tabular-nums font-medium"><Money :cents="request.total_cost_in_cents" /></td>
                                 <td class="text-right tabular-nums">{{ formatDuration(request.latency_ms) }}</td>
                                 <td>
                                     <StatusCode :code="request.status_code" />

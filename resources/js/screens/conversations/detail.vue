@@ -6,9 +6,10 @@ import { useLoading } from '@/composables/useLoading';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Skeleton from '@/components/Skeleton.vue';
+import Money from '@/components/Money.vue';
 
 const route = useRoute();
-const { formatNumber, formatCurrency, formatDuration, apiRequest } = useHelpers();
+const { formatNumber, formatDuration, apiRequest } = useHelpers();
 const loading = useLoading();
 
 const conversation = ref(null);
@@ -111,7 +112,7 @@ const missingReply = computed(() => conversation.value?.stores_responses ? 'No r
             <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <div class="stat-card">
                     <div class="stat-label">Cost</div>
-                    <div class="stat-value !text-2xl">{{ formatCurrency(conversation.total_cost_in_cents) }}</div>
+                    <div class="stat-value !text-2xl"><Money :cents="conversation.total_cost_in_cents" /></div>
                     <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Successful calls only</div>
                 </div>
                 <div class="stat-card">
@@ -144,8 +145,8 @@ const missingReply = computed(() => conversation.value?.stores_responses ? 'No r
                                 <span v-if="turn.failed_count" class="badge badge-danger !px-1.5 !py-0 text-[11px]">{{ turn.failed_count }} failed</span>
                             </div>
                             <div class="shrink-0 text-right text-xs tabular-nums text-gray-500 dark:text-gray-400">
-                                <span class="font-medium text-gray-900 dark:text-white">{{ formatCurrency(turn.total_cost_in_cents) }}</span>
-                                <span class="ml-1">· {{ formatCurrency(turn.running_cost_in_cents) }} so far</span>
+                                <span class="font-medium text-gray-900 dark:text-white"><Money :cents="turn.total_cost_in_cents" /></span>
+                                <span class="ml-1">· <Money :cents="turn.running_cost_in_cents" /> so far</span>
                             </div>
                         </div>
 
@@ -219,7 +220,7 @@ const missingReply = computed(() => conversation.value?.stores_responses ? 'No r
                                         {{ formatNumber(model.request_count) }} {{ model.request_count === 1 ? 'call' : 'calls' }} · {{ formatNumber(model.total_tokens) }} tokens
                                     </div>
                                 </div>
-                                <div class="text-sm font-medium tabular-nums text-gray-700 dark:text-gray-200">{{ formatCurrency(model.total_cost_in_cents) }}</div>
+                                <div class="text-sm font-medium tabular-nums text-gray-700 dark:text-gray-200"><Money :cents="model.total_cost_in_cents" /></div>
                             </li>
                         </ul>
                     </div>

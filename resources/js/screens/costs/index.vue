@@ -9,8 +9,9 @@ import Skeleton from '@/components/Skeleton.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import StatCard from '@/components/StatCard.vue';
+import Money from '@/components/Money.vue';
 
-const { formatNumber, formatCompact, formatCurrency, formatShortDate, currencySymbol, providerChartColor, seriesColor, apiRequest } = useHelpers();
+const { formatNumber, formatCompact, formatCurrency, formatShortDate, providerChartColor, seriesColor, apiRequest } = useHelpers();
 const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery();
 const { providers, loadProviders, providerDisplayName } = useProviders();
 const { createLineChart, createDoughnutChart } = useCharts();
@@ -68,14 +69,11 @@ const renderCostChart = () => {
     }, {
         label: 'Cost',
         yTicks: {
-            callback: (value) => currencySymbol + Number(value).toFixed(2),
+            callback: (value) => formatCurrency(Number(value) * 100),
         },
+        tooltipLabel: (dollars) => formatCurrency(dollars * 100),
         chartOptions: {
             aspectRatio: 2.6,
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: (context) => ' ' + formatCurrency(context.raw * 100) } },
-            },
         },
     });
 };
@@ -208,9 +206,9 @@ onUnmounted(() => {
         <!-- Headline numbers -->
         <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total spend" :loading="loading" skeleton-width="70%">
-                <div class="stat-value">{{ formatCurrency(totalCost) }}</div>
+                <div class="stat-value"><Money :cents="totalCost" /></div>
                 <template #footer>
-                    <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">{{ formatCurrency(dailyAverage) }} per day on average</div>
+                    <div class="mt-3 text-xs text-gray-500 dark:text-gray-400"><Money :cents="dailyAverage" /> per day on average</div>
                 </template>
             </StatCard>
             <StatCard label="Top provider" :loading="loading">
@@ -224,7 +222,7 @@ onUnmounted(() => {
                 </div>
                 <template #footer>
                     <div v-if="topProvider" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                        {{ formatCurrency(topProvider.cost) }} · {{ totalCost ? ((Number(topProvider.cost) / totalCost) * 100).toFixed(0) : 0 }}% of spend
+                        <Money :cents="topProvider.cost" /> · {{ totalCost ? ((Number(topProvider.cost) / totalCost) * 100).toFixed(0) : 0 }}% of spend
                     </div>
                 </template>
             </StatCard>
@@ -232,7 +230,7 @@ onUnmounted(() => {
                 <div class="mt-1.5 truncate text-xl font-semibold tracking-tight text-gray-900 dark:text-white" :title="topModel?.model">{{ topModel?.model || '—' }}</div>
                 <template #footer>
                     <div v-if="topModel" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                        {{ formatCurrency(topModel.cost) }} across {{ formatNumber(topModel.requests) }} requests
+                        <Money :cents="topModel.cost" /> across {{ formatNumber(topModel.requests) }} requests
                     </div>
                 </template>
             </StatCard>
@@ -290,7 +288,7 @@ onUnmounted(() => {
                                 aria-hidden="true"
                             />
                             <span class="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">{{ row.label }}</span>
-                            <span class="tabular-nums text-gray-900 dark:text-white">{{ formatCurrency(row.cost) }}</span>
+                            <span class="tabular-nums text-gray-900 dark:text-white"><Money :cents="row.cost" /></span>
                             <span class="w-12 text-right tabular-nums text-xs text-gray-500 dark:text-gray-400">{{ row.share.toFixed(1) }}%</span>
                         </li>
                         <li v-if="!breakdownRows.length" class="py-6 text-center text-gray-500 dark:text-gray-400">No spend in this period</li>
@@ -345,7 +343,7 @@ onUnmounted(() => {
                                     </td>
                                     <td class="text-right tabular-nums">{{ formatNumber(model.requests) }}</td>
                                     <td class="whitespace-nowrap text-right tabular-nums text-gray-500 dark:text-gray-400">{{ formatUsage(model) }}</td>
-                                    <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white">{{ formatCurrency(model.cost) }}</td>
+                                    <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white"><Money :cents="model.cost" /></td>
                                 </tr>
                                 <tr v-if="!stats.costs_by_model?.length">
                                     <td colspan="4">
@@ -390,7 +388,7 @@ onUnmounted(() => {
                                         </div>
                                     </td>
                                     <td class="text-right tabular-nums">{{ formatNumber(user.requests) }}</td>
-                                    <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white">{{ formatCurrency(user.cost) }}</td>
+                                    <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white"><Money :cents="user.cost" /></td>
                                 </tr>
                                 <tr v-if="!stats.costs_by_user?.length">
                                     <td colspan="3">

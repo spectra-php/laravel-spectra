@@ -9,10 +9,11 @@ import { debounce } from 'lodash';
 import RequestFilters from '@/components/RequestFilters.vue';
 import StatCard from '@/components/StatCard.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
+import Money from '@/components/Money.vue';
 
 const router = useRouter();
 const route = useRoute();
-const { formatNumber, formatCompact, formatCurrency, formatDuration, formatDurationSeconds, apiRequest } = useHelpers();
+const { formatNumber, formatCompact, formatDuration, formatDurationSeconds, apiRequest } = useHelpers();
 const { providers, loadProviders } = useProviders();
 const loading = useLoading();
 
@@ -280,10 +281,10 @@ onUnmounted(() => {
                 </template>
             </StatCard>
             <StatCard label="Spend" :loading="loading" skeleton-width="70%">
-                <div class="stat-value">{{ formatCurrency(summary.total_cost) }}</div>
+                <div class="stat-value"><Money :cents="summary.total_cost" /></div>
                 <template #footer>
                     <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                        <template v-if="summary.total_trackables">{{ formatCurrency(summary.total_cost / summary.total_trackables) }} per trackable on average</template>
+                        <template v-if="summary.total_trackables"><Money :cents="summary.total_cost / summary.total_trackables" /> per trackable on average</template>
                         <template v-else>No spend in this period</template>
                     </div>
                 </template>
@@ -429,7 +430,7 @@ onUnmounted(() => {
                                         {{ seg.value }} <span class="text-xs text-gray-400 dark:text-gray-500">{{ seg.unit }}</span>
                                     </template>
                                 </td>
-                                <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white">{{ formatCurrency(trackable.cost) }}</td>
+                                <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white"><Money :cents="trackable.cost" /></td>
                                 <td class="text-right tabular-nums">{{ formatDuration(trackable.avg_latency) }}</td>
                                 <td>
                                     <span class="text-sm text-gray-600 dark:text-gray-400">{{ trackable.top_model || '—' }}</span>

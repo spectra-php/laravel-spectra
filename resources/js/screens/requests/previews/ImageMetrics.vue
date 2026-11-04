@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
+import Money from '@/components/Money.vue';
 
 const props = defineProps({
     request: { type: Object, required: true },
@@ -9,7 +10,7 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle']);
 
-const { formatNumber, formatCurrency } = useHelpers();
+const { formatNumber } = useHelpers();
 
 const hasTokens = computed(() => (props.request.prompt_tokens || 0) + (props.request.completion_tokens || 0) > 0);
 
@@ -74,7 +75,7 @@ const imagesExpanded = ref(false);
                     <div class="text-center p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20">
                         <div class="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1">Cost</div>
                         <div class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">
-                            {{ formatCurrency(request.total_cost_in_cents) }}
+                            <Money :cents="request.total_cost_in_cents" />
                         </div>
                     </div>
                 </div>
@@ -90,7 +91,7 @@ const imagesExpanded = ref(false);
                     <div class="text-center p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20">
                         <div class="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1">Cost Per Image</div>
                         <div class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">
-                            {{ formatCurrency(costPerImage) }}
+                            <Money :cents="costPerImage" />
                         </div>
                     </div>
                 </div>

@@ -12,9 +12,10 @@ import StatusCode from '@/components/StatusCode.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Sparkline from '@/components/Sparkline.vue';
+import Money from '@/components/Money.vue';
 
 const router = useRouter();
-const { formatNumber, formatCompact, formatShortDate, formatCurrency, formatDuration, formatDurationSeconds, truncate, providerChartColor, seriesColor, apiRequest } = useHelpers();
+const { formatNumber, formatCompact, formatShortDate, formatDuration, formatDurationSeconds, truncate, providerChartColor, seriesColor, apiRequest } = useHelpers();
 const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery();
 const { providers, loadProviders, providerDisplayName } = useProviders();
 const { createLineChart, createDoughnutChart } = useCharts();
@@ -262,11 +263,11 @@ onUnmounted(() => {
                 </template>
             </StatCard>
             <StatCard label="Spend" :loading="loading" skeleton-width="70%">
-                <div class="stat-value">{{ formatCurrency(stats.total_cost_in_cents) }}</div>
+                <div class="stat-value"><Money :cents="stats.total_cost_in_cents" /></div>
                 <template #footer>
                     <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
                         <template v-if="stats.total_requests">
-                            {{ formatCurrency(stats.total_cost_in_cents / stats.total_requests) }} per request on average
+                            <Money :cents="stats.total_cost_in_cents / stats.total_requests" /> per request on average
                         </template>
                         <template v-else>No spend in this period</template>
                     </div>
@@ -310,7 +311,7 @@ onUnmounted(() => {
                         <span class="text-xs text-gray-500 dark:text-gray-400">{{ card.unit }}</span>
                     </div>
                 </div>
-                <span class="text-sm font-medium tabular-nums text-gray-700 dark:text-gray-300">{{ formatCurrency(card.cost) }}</span>
+                <span class="text-sm font-medium tabular-nums text-gray-700 dark:text-gray-300"><Money :cents="card.cost" /></span>
             </div>
         </div>
 
@@ -411,7 +412,7 @@ onUnmounted(() => {
                                         </div>
                                     </td>
                                     <td class="text-right tabular-nums">{{ formatNumber(model.count) }}</td>
-                                    <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white">{{ formatCurrency(model.cost) }}</td>
+                                    <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white"><Money :cents="model.cost" /></td>
                                 </tr>
                                 <tr v-if="!stats.top_models?.length">
                                     <td colspan="3">

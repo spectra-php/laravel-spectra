@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import ExpiryCountdown from '@/components/ExpiryCountdown.vue';
+import Money from '@/components/Money.vue';
 
 const props = defineProps({
     request: { type: Object, required: true },
@@ -10,7 +11,7 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle']);
 
-const { spectra, formatNumber, formatCurrency } = useHelpers();
+const { spectra, formatNumber } = useHelpers();
 
 const hasExpired = ref(
     props.request.expires_at && new Date(props.request.expires_at) < new Date()
@@ -58,7 +59,7 @@ const onExpired = () => {
                 <div class="text-center p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20">
                     <div class="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1">Cost</div>
                     <div class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">
-                        {{ formatCurrency(request.total_cost_in_cents) }}
+                        <Money :cents="request.total_cost_in_cents" />
                     </div>
                 </div>
             </div>

@@ -11,13 +11,12 @@ export function useHelpers() {
     };
 
     /**
-     * Format a cost given in cents.
-     *
-     * Large amounts get two decimals and thousands separators; small
-     * amounts keep enough significant digits to stay meaningful
-     * ($0.00145 rather than $0.001450 or $0.00).
+     * Format a cost given in cents, the same way everywhere:
+     * $1 and up with two decimals ($1,234.56), below $1 with four ($0.0579,
+     * $0.0007), and anything under $0.0001 as "<$0.0001". The exact amount
+     * is in formatCurrencyExact(), which <Money> shows on hover.
      */
-    const formatCurrency = (cents, decimals = null) => {
+    const formatCurrency = (cents) => {
         const symbol = spectra.currencySymbol || '$';
         const value = Number(cents || 0) / 100;
         const sign = value < 0 ? '-' : '';
@@ -25,19 +24,23 @@ export function useHelpers() {
 
         if (abs === 0) return symbol + '0.00';
 
-        if (decimals !== null && abs >= 0.01) {
-            return sign + symbol + abs.toLocaleString('en-US', { minimumFractionDigits: Math.min(decimals, 2), maximumFractionDigits: decimals });
-        }
+        if (abs < 0.0001) return sign + '<' + symbol + '0.0001';
 
-        if (abs >= 1) {
-            return sign + symbol + abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
+        const decimals = Number(abs.toFixed(4)) >= 1 ? 2 : 4;
 
-        if (abs >= 0.01) {
-            return sign + symbol + abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
-        }
+        return sign + symbol + abs.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    };
 
-        return sign + symbol + Number(abs.toPrecision(3)).toString();
+    /**
+     * Format a cost given in cents with every significant digit and never in
+     * e-notation ($0.00000544), for tooltips.
+     */
+    const formatCurrencyExact = (cents) => {
+        const symbol = spectra.currencySymbol || '$';
+        const value = Number(cents || 0) / 100;
+        const sign = value < 0 ? '-' : '';
+
+        return sign + symbol + Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 10 });
     };
 
     /** "2026-10-01" → "Oct 1" (dates from the API are calendar days, read as UTC). */
@@ -155,6 +158,7 @@ export function useHelpers() {
         spectra,
         truncate,
         formatCurrency,
+        formatCurrencyExact,
         formatCompact,
         formatShortDate,
         seriesColor,
