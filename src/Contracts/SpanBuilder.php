@@ -24,6 +24,12 @@ interface SpanBuilder
     /**
      * Build an OTLP-compatible span array from the tracked request data.
      *
+     * The data always holds `started_at` and `completed_at` (CarbonInterface,
+     * never ending before the start) and `is_failed` (bool); the other keys
+     * are the stored request's columns, minus the fields the transformer
+     * excludes. A custom transformer may add or drop keys, so read each one
+     * with `?? null`.
+     *
      * @param  array<string, mixed>  $data  Transformed request data from RequestTransformer
      * @return array{traceId: string, spanId: string, parentSpanId: string, name: string, kind: int, startTimeUnixNano: string, endTimeUnixNano: string, attributes: array<int, array<string, mixed>>, status: array<string, mixed>, events: array<int, array<string, mixed>>, links: array<int, array<string, mixed>>}
      */

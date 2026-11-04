@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenAI\Handlers;
 
+use Illuminate\Support\Arr;
 use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
@@ -80,42 +81,21 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     public function extractResponse(array $response): ?string
     {
         // Chat completions: choices[*].message.content
-        if (is_array($response['choices'] ?? null)) {
-            $contents = [];
+        $contents = collect(is_array($response['choices'] ?? null) ? $response['choices'] : [])
+            ->map(fn (mixed $choice) => data_get($choice, 'message.content') ?? data_get($choice, 'text'))
+            ->filter(fn (mixed $content) => filled($content));
 
-            foreach ($response['choices'] as $choice) {
-                $content = data_get($choice, 'message.content') ?? data_get($choice, 'text');
-
-                if (filled($content)) {
-                    $contents[] = $content;
-                }
-            }
-
-            if (filled($contents)) {
-                return implode("\n", $contents);
-            }
+        if ($contents->isNotEmpty()) {
+            return $contents->implode("\n");
         }
 
         // Responses API: output[*].content[*].text
-        if (is_array($response['output'] ?? null)) {
-            $texts = [];
+        $texts = collect(is_array($response['output'] ?? null) ? $response['output'] : [])
+            ->flatMap(fn (mixed $outputItem) => Arr::wrap(data_get($outputItem, 'content')))
+            ->map(fn (mixed $contentItem) => is_array($contentItem) ? $contentItem['text'] ?? null : null)
+            ->filter(fn (mixed $text) => filled($text));
 
-            foreach ($response['output'] as $outputItem) {
-                $contentItems = data_get($outputItem, 'content');
-
-                foreach (is_array($contentItems) ? $contentItems : [] as $contentItem) {
-                    if (filled($contentItem['text'] ?? null)) {
-                        $texts[] = $contentItem['text'];
-                    }
-                }
-            }
-
-            if (filled($texts)) {
-                return implode("\n", $texts);
-            }
-        }
-
-        return null;
+        return $texts->isNotEmpty() ? $texts->implode("\n") : null;
     }
 
     /**

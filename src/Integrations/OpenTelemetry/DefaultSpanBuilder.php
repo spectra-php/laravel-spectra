@@ -90,15 +90,15 @@ class DefaultSpanBuilder implements SpanBuilder
             $this->int('http.response.status_code', (int) ($data['status_code'] ?? 0)),
         ];
 
-        if ($data['snapshot'] ?? null) {
+        if (filled($data['snapshot'] ?? null)) {
             $attributes[] = $this->string('gen_ai.response.model', (string) $data['snapshot']);
         }
 
-        if ($data['response_id'] ?? null) {
+        if (filled($data['response_id'] ?? null)) {
             $attributes[] = $this->string('gen_ai.response.id', (string) $data['response_id']);
         }
 
-        if ($data['finish_reason'] ?? null) {
+        if (filled($data['finish_reason'] ?? null)) {
             $attributes[] = [
                 'key' => 'gen_ai.response.finish_reasons',
                 'value' => ['arrayValue' => ['values' => [['stringValue' => (string) $data['finish_reason']]]]],
@@ -121,7 +121,7 @@ class DefaultSpanBuilder implements SpanBuilder
             $attributes[] = ['key' => 'gen_ai.request.stream', 'value' => ['boolValue' => true]];
         }
 
-        if ($data['conversation_id'] ?? null) {
+        if (filled($data['conversation_id'] ?? null)) {
             $attributes[] = $this->string('gen_ai.conversation.id', (string) $data['conversation_id']);
         }
 
@@ -129,28 +129,28 @@ class DefaultSpanBuilder implements SpanBuilder
             $attributes[] = $this->string('error.type', (string) ($data['error_type'] ?? ($data['status_code'] ?? '_OTHER')));
         }
 
-        if ($data['model_type'] ?? null) {
+        if (filled($data['model_type'] ?? null)) {
             $attributes[] = $this->string('spectra.model_type', (string) $data['model_type']);
         }
 
-        if ($data['endpoint'] ?? null) {
+        if (filled($data['endpoint'] ?? null)) {
             $attributes[] = $this->string('spectra.endpoint', (string) $data['endpoint']);
         }
 
-        if ($data['pricing_tier'] ?? null) {
+        if (filled($data['pricing_tier'] ?? null)) {
             $attributes[] = $this->string('spectra.pricing_tier', (string) $data['pricing_tier']);
         }
 
-        if ($data['currency'] ?? null) {
+        if (filled($data['currency'] ?? null)) {
             $attributes[] = $this->string('spectra.currency', (string) $data['currency']);
         }
 
-        if (($data['trackable_type'] ?? null) && ($data['trackable_id'] ?? null)) {
+        if (filled($data['trackable_type'] ?? null) && filled($data['trackable_id'] ?? null)) {
             $attributes[] = $this->string('spectra.trackable.type', (string) $data['trackable_type']);
             $attributes[] = $this->string('spectra.trackable.id', (string) $data['trackable_id']);
         }
 
-        if (($data['is_reasoning'] ?? false) && ($data['reasoning_effort'] ?? null)) {
+        if (($data['is_reasoning'] ?? false) && filled($data['reasoning_effort'] ?? null)) {
             $attributes[] = $this->string('spectra.reasoning_effort', (string) $data['reasoning_effort']);
         }
 

@@ -94,12 +94,11 @@ class StreamingTracker
     protected ?SpectraRequest $result = null;
 
     /**
-     * SDK stream classes and the provider they belong to. Never written at
-     * runtime, so it is safe as static state under Octane.
+     * SDK stream classes and the provider they belong to.
      *
      * @var array<string, string>
      */
-    protected static array $streamClassMap = [
+    protected const STREAM_CLASS_MAP = [
         'OpenAI\Responses\StreamResponse' => 'openai',
         'OpenAI\Responses\Streaming\StreamResponse' => 'openai',
     ];
@@ -293,8 +292,8 @@ class StreamingTracker
         if (is_object($stream)) {
             $className = get_class($stream);
 
-            if (isset(self::$streamClassMap[$className])) {
-                return self::$streamClassMap[$className];
+            if (isset(self::STREAM_CLASS_MAP[$className])) {
+                return self::STREAM_CLASS_MAP[$className];
             }
 
             // Partial match fallback

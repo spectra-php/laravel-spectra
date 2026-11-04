@@ -7,12 +7,14 @@ namespace Spectra\Support\Tracking;
 use Spectra\Contracts\ExtractsCostMultiplier;
 use Spectra\Contracts\ExtractsCostMultiplierForModel;
 use Spectra\Contracts\ExtractsPricingTierFromResponse;
+use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasExpiration;
 use Spectra\Contracts\HasMedia;
 use Spectra\Contracts\HasProviderLatency;
 use Spectra\Contracts\ReportsJobFailure;
 use Spectra\Contracts\ReturnsBinaryResponse;
 use Spectra\Contracts\SkipsResponse;
+use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Provider;
@@ -73,6 +75,44 @@ class ResponseProcessor
             return null;
         }
 
+        $this->resolveModel($context, $providerInstance, $body, $endpoint);
+        $this->resolvePricing($context, $providerInstance, $body);
+
+        $metrics = rescue(fn () => $providerInstance?->extractMetrics($body, $endpoint, $context->requestData ?? []));
+        $usage = $metrics->tokens ?? $this->extractUsageFallback($body);
+        $finishReason = rescue(fn () => $providerInstance?->extractFinishReason($body, $endpoint));
+
+        $context->finishReason = $finishReason ?? $context->finishReason;
+
+        $this->recordToolCalls($context, $body, $metrics, $finishReason);
+        $this->applyMetrics($context, $metrics);
+        $this->applyHandlerDetails($context, $handler, $body);
+        $this->storeMedia($context, $handler, $body);
+
+        $context->modelType ??= $handler?->modelType()->value
+            ?? rescue(fn () => $this->resolveModelType($providerInstance, $context)?->value);
+
+        $this->resolveResponseDetails($context, $providerInstance, $body, $endpoint);
+
+        $context->processed = true;
+
+        $body = rescue(fn () => $this->stripBinaryData($body), $body);
+
+        return [
+            array_merge($body, ['finish_reason' => $finishReason]),
+            $usage,
+        ];
+    }
+
+    /**
+     * Take the model from the response; when it differs from the requested
+     * one it is the snapshot. Binary responses (TTS) and Whisper name the
+     * model only in the request, so fall back to the request data.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    protected function resolveModel(RequestContext $context, ?Provider $providerInstance, array $body, string $endpoint): void
+    {
         rescue(function () use ($context, $providerInstance, $body, $endpoint) {
             $responseModel = $providerInstance?->extractModel($body, $endpoint) ?? data_get($body, 'model');
 
@@ -85,23 +125,31 @@ class ResponseProcessor
             }
         });
 
-        // Fallback: extract model from request data when response didn't contain it
-        // (e.g. binary responses like TTS, or Whisper where model is only in the request)
-        if ($context->model === 'unknown' && filled($context->requestData)) {
-            rescue(function () use ($context, $providerInstance, $endpoint) {
-                $requestModel = $providerInstance?->extractModelFromRequest($context->requestData ?? [], $endpoint)
-                    ?? $context->requestData['model']
-                    ?? null;
-
-                if (filled($requestModel)) {
-                    $context->model = $requestModel;
-                }
-            });
+        if ($context->model !== 'unknown' || blank($context->requestData)) {
+            return;
         }
 
-        // The tier the provider says it served wins over what the request
-        // asked for (a priority request can be downgraded, a project can
-        // default to flex); an explicitly set tier wins over both.
+        rescue(function () use ($context, $providerInstance, $endpoint) {
+            $requestModel = $providerInstance?->extractModelFromRequest($context->requestData ?? [], $endpoint)
+                ?? $context->requestData['model']
+                ?? null;
+
+            if (filled($requestModel)) {
+                $context->model = $requestModel;
+            }
+        });
+    }
+
+    /**
+     * Set the pricing tier and the provider's cost multiplier. The tier the
+     * provider says it served wins over what the request asked for (a
+     * priority request can be downgraded, a project can default to flex);
+     * an explicitly set tier wins over both.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    protected function resolvePricing(RequestContext $context, ?Provider $providerInstance, array $body): void
+    {
         if ($context->pricingTier === null) {
             rescue(function () use ($context, $providerInstance, $body) {
                 $responseTier = $providerInstance instanceof ExtractsPricingTierFromResponse
@@ -123,14 +171,19 @@ class ResponseProcessor
         if ($providerInstance instanceof ExtractsCostMultiplierForModel) {
             $context->costMultiplier = rescue(fn () => $providerInstance->extractCostMultiplierForModel($context->model, $body, $context->requestData ?? [])) ?? $context->costMultiplier;
         }
+    }
 
-        $metrics = rescue(fn () => $providerInstance?->extractMetrics($body, $endpoint, $context->requestData ?? []));
-        $usage = $metrics->tokens ?? $this->extractUsageFallback($body);
-        $finishReason = rescue(fn () => $providerInstance?->extractFinishReason($body, $endpoint));
-
-        $context->finishReason = $finishReason ?? $context->finishReason;
-
+    /**
+     * Count tool calls from the body and the handler's metrics (the higher
+     * count per type wins); without any, a tool-call finish reason still
+     * marks the request.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    protected function recordToolCalls(RequestContext $context, array $body, ?Metrics $metrics, ?string $finishReason): void
+    {
         $toolCallCounts = rescue(fn () => $this->countToolCalls($body), []);
+
         foreach ($metrics->toolCalls ?? [] as $type => $count) {
             if ($count > 0) {
                 $toolCallCounts[$type] = max($toolCallCounts[$type] ?? 0, $count);
@@ -143,32 +196,53 @@ class ResponseProcessor
         } elseif (! $context->hasToolCalls) {
             $context->hasToolCalls = $this->detectToolCallsFromFinishReason($finishReason);
         }
+    }
 
-        if ($metrics?->reportedCostInCents !== null) {
+    /** Copy the per-unit usage (images, pages, audio, video, searches) and any reported cost. */
+    protected function applyMetrics(RequestContext $context, ?Metrics $metrics): void
+    {
+        if ($metrics === null) {
+            return;
+        }
+
+        if ($metrics->reportedCostInCents !== null) {
             $context->reportedCostInCents = $metrics->reportedCostInCents;
         }
 
-        if ($metrics?->image !== null) {
+        if ($metrics->image !== null) {
             $context->imageCount = $metrics->image->count;
             $context->megapixels = $metrics->image->megapixels ?? $context->megapixels;
         }
-        if ($metrics?->document !== null) {
+
+        if ($metrics->document !== null) {
             $context->pageCount = $metrics->document->pages;
         }
-        if ($metrics?->audio !== null) {
+
+        if ($metrics->audio !== null) {
             $context->durationSeconds = $metrics->audio->durationSeconds ?? $context->durationSeconds;
             $context->inputCharacters = $metrics->audio->inputCharacters ?? $context->inputCharacters;
         }
-        if ($metrics?->video !== null) {
+
+        if ($metrics->video !== null) {
             $context->videoCount = $metrics->video->count;
             $context->durationSeconds = $metrics->video->durationSeconds ?? $context->durationSeconds;
         }
-        if ($metrics?->search !== null) {
+
+        if ($metrics->search !== null) {
             $context->searchCount = $metrics->search->count;
         }
+    }
 
-        // Extract audio duration from binary TTS responses using getID3 (if installed).
-        // Must happen before media storage clears rawResponseBody.
+    /**
+     * Read what the handler's optional contracts provide: a binary TTS
+     * response's duration (getID3, if installed), expiry, provider latency
+     * and an async job's failure.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    protected function applyHandlerDetails(RequestContext $context, ?Handler $handler, array $body): void
+    {
+        // Runs before media storage, which clears rawResponseBody.
         if ($handler instanceof ReturnsBinaryResponse
             && $context->durationSeconds === null
             && $context->rawResponseBody !== null
@@ -190,49 +264,55 @@ class ResponseProcessor
             $context->errorType = ProviderErrorException::class;
             $context->errorMessage = $failure;
         }
+    }
 
-        if ($handler instanceof HasMedia && config('spectra.storage.media.enabled')) {
-            $mediaBody = $body;
-            if (filled($context->requestData)) {
-                $mediaBody = array_merge($mediaBody, ['_request_data' => $context->requestData]);
-            }
-
-            $rawResponseBody = $context->rawResponseBody;
-            $media = rescue(fn () => $handler->storeMedia($context->id, $mediaBody, $rawResponseBody), []);
-            if (filled($media)) {
-                $context->mediaStoragePath = $media;
-            }
-
-            $context->rawResponseBody = null;
+    /**
+     * Store generated media when the config allows it, then drop the raw
+     * body so it is never persisted.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    protected function storeMedia(RequestContext $context, ?Handler $handler, array $body): void
+    {
+        if (! $handler instanceof HasMedia || ! config('spectra.storage.media.enabled')) {
+            return;
         }
 
-        $context->modelType ??= $handler?->modelType()->value
-            ?? rescue(fn () => $this->resolveModelType($providerInstance, $context)?->value);
+        $mediaBody = $body;
+        if (filled($context->requestData)) {
+            $mediaBody = array_merge($mediaBody, ['_request_data' => $context->requestData]);
+        }
 
+        $rawResponseBody = $context->rawResponseBody;
+        $media = rescue(fn () => $handler->storeMedia($context->id, $mediaBody, $rawResponseBody), []);
+        if (filled($media)) {
+            $context->mediaStoragePath = $media;
+        }
+
+        $context->rawResponseBody = null;
+    }
+
+    /**
+     * Fill the response id and reasoning effort when nothing set them, and
+     * mark reasoning from the effort or reasoning output blocks (even when
+     * reasoning_tokens is 0).
+     *
+     * @param  array<string, mixed>  $body
+     */
+    protected function resolveResponseDetails(RequestContext $context, ?Provider $providerInstance, array $body, string $endpoint): void
+    {
         if ($context->responseId === null) {
             rescue(function () use ($context, $providerInstance, $body, $endpoint) {
                 $context->responseId = $providerInstance?->extractResponseId($body, $endpoint);
             });
         }
 
-        if ($context->reasoningEffort === null) {
-            $context->reasoningEffort = rescue(fn () => $this->extractReasoningEffort($context->requestData ?? [], $body));
-        }
+        $context->reasoningEffort ??= rescue(fn () => $this->extractReasoningEffort($context->requestData ?? [], $body));
 
-        // Detect reasoning mode: effort setting, or reasoning output blocks (even when reasoning_tokens is 0)
         if (! $context->isReasoning) {
             $context->isReasoning = $context->reasoningEffort !== null
                 || rescue(fn () => $this->hasReasoningOutput($body), false);
         }
-
-        $context->processed = true;
-
-        $body = rescue(fn () => $this->stripBinaryData($body), $body);
-
-        return [
-            array_merge($body, ['finish_reason' => $finishReason]),
-            $usage,
-        ];
     }
 
     /**

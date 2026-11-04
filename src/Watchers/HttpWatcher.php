@@ -19,7 +19,14 @@ use WeakMap;
  */
 class HttpWatcher implements Watcher
 {
-    /** @var WeakMap<Factory, true>|null Factories that already carry the middleware. */
+    /**
+     * Factories that already carry the middleware. Static so a factory is
+     * never wrapped twice, and safe under Octane: the map holds each factory
+     * weakly, so an entry goes when its app instance does, and it stores no
+     * request data.
+     *
+     * @var WeakMap<Factory, true>|null
+     */
     protected static ?WeakMap $registered = null;
 
     public static function isAvailable(): bool

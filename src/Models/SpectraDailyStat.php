@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
+use RuntimeException;
 
 /**
  * One day's pre-aggregated usage for a provider, model and model type,
@@ -301,7 +302,7 @@ class SpectraDailyStat extends Model
                 ]);
             } catch (UniqueConstraintViolationException) {
                 // Another worker created the row between our read and insert.
-                $stat = $find() ?? throw new \RuntimeException('Spectra daily stat row disappeared during insert.');
+                $stat = $find() ?? throw new RuntimeException('Spectra daily stat row disappeared during insert.');
             }
         }
 

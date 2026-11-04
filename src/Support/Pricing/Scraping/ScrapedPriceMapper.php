@@ -104,24 +104,7 @@ class ScrapedPriceMapper
     {
         $lookup = new PricingLookup([$pricing]);
         $shape = CatalogShape::of($pricing);
-        $displayNames = [];
-        $byDisplayName = [];
-        $byWords = [];
-        foreach ($definitions as $id => $definition) {
-            $name = $definition->toModelArray()['display_name'];
-            $words = [$this->words($id)];
-
-            if (is_string($name)) {
-                $displayNames[$id] = $name;
-                $byDisplayName[strtolower($name)] ??= $id;
-                $words[] = $this->words($name);
-            }
-
-            foreach (array_unique($words) as $key) {
-                // Two models with the same words can't be told apart: match neither.
-                $byWords[$key] = isset($byWords[$key]) && $byWords[$key] !== $id ? false : $id;
-            }
-        }
+        [$displayNames, $byDisplayName, $byWords] = $this->indexNames($definitions);
 
         $grouped = [];
         $ignoredTiers = [];
@@ -169,47 +152,10 @@ class ScrapedPriceMapper
             $unit = is_string($row['unit'] ?? null) ? PricingUnit::tryFrom($row['unit'])?->value : null;
             $catalogUnit = isset($definitions[$id]) ? $definitions[$id]->toModelArray()['pricing_unit'] : null;
             $pricedPer = is_numeric($row['priced_per'] ?? null) && $row['priced_per'] > 0 ? (float) $row['priced_per'] : null;
-            $prices = [];
-            $scales = [];
-            $unconfirmed = [];
-            foreach (CatalogShape::FIELDS as $source => $field) {
-                $value = $row[$source] ?? null;
+            [$prices, $scales, $unconfirmed, $ignored] = $this->rowPrices($row, $id, $shape, $page, $names, $catalogUnit ?? $unit, $pricedPer);
 
-                if (! is_numeric($value) || $value < 0) {
-                    continue;
-                }
-
-                if (! $shape->allowsField($field)) {
-                    $ignoredFields[$field] = ($ignoredFields[$field] ?? 0) + 1;
-
-                    continue;
-                }
-
-                if ($field === 'price_per_unit' && ($catalogUnit ?? $unit) === PricingUnit::Characters->value && $pricedPer !== null && $pricedPer < 1000) {
-                    $this->skipped[] = "{$id}: a per-character price of {$value} per {$pricedPer} characters can't be right, ignored.";
-
-                    continue;
-                }
-
-                $line = $page?->find($names, (float) $value);
-
-                if ($page !== null && $line === null) {
-                    $unconfirmed[] = $this->label($field).' '.$value;
-
-                    continue;
-                }
-
-                $fieldUnit = $catalogUnit ?? $unit;
-                $perQuantity = $field !== 'price_per_unit' || $fieldUnit === PricingUnit::Characters->value;
-
-                if ($line !== null && $perQuantity && ! $this->quantityMatches($pricedPer, PageText::quantityOn($line))) {
-                    $this->skipped[] = "{$id}: {$this->label($field)} {$value} is priced per ".number_format($pricedPer ?? 1_000_000).', but the page line says otherwise, ignored.';
-
-                    continue;
-                }
-
-                $scales[$field] = $this->scale($field, $fieldUnit, $pricedPer);
-                $prices[$field] = round((float) $value * $scales[$field] * 100, 6);
+            foreach ($ignored as $field) {
+                $ignoredFields[$field] = ($ignoredFields[$field] ?? 0) + 1;
             }
 
             if ($unconfirmed !== []) {
@@ -239,6 +185,96 @@ class ScrapedPriceMapper
         }
 
         return $grouped;
+    }
+
+    /**
+     * Index the catalog's models by display name and by the words of their
+     * id and name, for rows that don't use the exact id.
+     *
+     * @param  array<string, ModelDefinition>  $definitions
+     * @return array{0: array<string, string>, 1: array<string, string>, 2: array<string, string|false>}
+     */
+    protected function indexNames(array $definitions): array
+    {
+        $displayNames = [];
+        $byDisplayName = [];
+        $byWords = [];
+
+        foreach ($definitions as $id => $definition) {
+            $name = $definition->toModelArray()['display_name'];
+            $words = [$this->words($id)];
+
+            if (is_string($name)) {
+                $displayNames[$id] = $name;
+                $byDisplayName[strtolower($name)] ??= $id;
+                $words[] = $this->words($name);
+            }
+
+            foreach (array_unique($words) as $key) {
+                // Two models with the same words can't be told apart: match neither.
+                $byWords[$key] = isset($byWords[$key]) && $byWords[$key] !== $id ? false : $id;
+            }
+        }
+
+        return [$displayNames, $byDisplayName, $byWords];
+    }
+
+    /**
+     * The row's prices in catalog cents, with the scale each was converted
+     * by. A price the page doesn't show next to the model is unconfirmed; a
+     * field the catalog doesn't use is ignored.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  list<string>  $names
+     * @return array{0: array<string, float>, 1: array<string, float>, 2: list<string>, 3: list<string>}
+     */
+    protected function rowPrices(array $row, string $id, CatalogShape $shape, ?PageText $page, array $names, ?string $unit, ?float $pricedPer): array
+    {
+        $prices = [];
+        $scales = [];
+        $unconfirmed = [];
+        $ignored = [];
+
+        foreach (CatalogShape::FIELDS as $source => $field) {
+            $value = $row[$source] ?? null;
+
+            if (! is_numeric($value) || $value < 0) {
+                continue;
+            }
+
+            if (! $shape->allowsField($field)) {
+                $ignored[] = $field;
+
+                continue;
+            }
+
+            if ($field === 'price_per_unit' && $unit === PricingUnit::Characters->value && $pricedPer !== null && $pricedPer < 1000) {
+                $this->skipped[] = "{$id}: a per-character price of {$value} per {$pricedPer} characters can't be right, ignored.";
+
+                continue;
+            }
+
+            $line = $page?->find($names, (float) $value);
+
+            if ($page !== null && $line === null) {
+                $unconfirmed[] = $this->label($field).' '.$value;
+
+                continue;
+            }
+
+            $perQuantity = $field !== 'price_per_unit' || $unit === PricingUnit::Characters->value;
+
+            if ($line !== null && $perQuantity && ! $this->quantityMatches($pricedPer, PageText::quantityOn($line))) {
+                $this->skipped[] = "{$id}: {$this->label($field)} {$value} is priced per ".number_format($pricedPer ?? 1_000_000).', but the page line says otherwise, ignored.';
+
+                continue;
+            }
+
+            $scales[$field] = $this->scale($field, $unit, $pricedPer);
+            $prices[$field] = round((float) $value * $scales[$field] * 100, 6);
+        }
+
+        return [$prices, $scales, $unconfirmed, $ignored];
     }
 
     /**
