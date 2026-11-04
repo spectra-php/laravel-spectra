@@ -88,3 +88,22 @@
     --vp-nav-logo-height: 24px;
   }
 }
+
+/* Dashboard screenshots */
+.vp-doc img.screenshot {
+  display: block;
+  width: 100%;
+  margin: 20px 0;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.dark .vp-doc img.screenshot {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+html:not(.dark) .vp-doc img.dark-only,
+.dark .vp-doc img.light-only {
+  display: none;
+}

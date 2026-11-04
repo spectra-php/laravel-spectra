@@ -2,6 +2,10 @@
 
 Spectra calculates the cost of every tracked AI request. It uses the [pricing catalog](/pricing) (or your [scraped prices](/pricing#scraped-prices), when you turn them on) and the metrics extracted from each response: tokens, image count, audio duration, page count, or character count, depending on the model type.
 
+The dashboard's **Costs** screen shows where the money goes: daily spend, the share of each provider, cost per model and the users who spend the most (see [Dashboard](/dashboard#costs)).
+
+<img class="screenshot" src="/images/dashboard/costs.png" alt="The costs screen in the dashboard" />
+
 All costs are stored in **cents** of your reporting currency (`spectra.costs.currency`, default `USD`) with decimal precision (for example, `0.004200` cents). This gives sub-cent accuracy for high-volume operations. Each request also stores its currency in the `currency` column.
 
 <a name="how-cost-calculation-works"></a>

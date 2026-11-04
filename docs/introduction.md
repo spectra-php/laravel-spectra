@@ -6,7 +6,10 @@
 
 Applications use AI APIs for text generation, image generation, embeddings, speech, and more. As usage grows, you need answers to questions like these: which models use the most tokens, how much each feature costs, which users spend the most, and where requests are slow or fail. Spectra answers them in one place, without you instrumenting each call by hand.
 
-<img src="/images/dashboard/home.png" alt="Spectra Dashboard" style="border-radius: 8px; margin-top: 16px;" />
+<img class="screenshot light-only" src="/images/dashboard/overview.png" alt="The Spectra dashboard" />
+<img class="screenshot dark-only" src="/images/dashboard/overview-dark.png" alt="The Spectra dashboard in dark mode" />
+
+See [Dashboard](/dashboard) for a tour of every screen.
 
 ## How It Works
 
@@ -26,7 +29,7 @@ You can add more providers by creating a custom provider class. See [Custom Prov
 - **Multimodal support.** Track text completions, embeddings, image generation, video generation, text-to-speech, and speech-to-text across all major providers.
 - **Cost calculation.** A built-in pricing catalog with token-based (including prompt-cache reads and writes, reasoning, audio, and image tokens), per-image, per-megapixel, per-video, per-minute, per-second, per-character, per-page, and per-request pricing. Each model can have several pricing tiers (standard, batch, flex, priority, fast, ultrafast), long-context prices and dated prices. Catalogs can also use other currencies.
 - **Budget enforcement.** Set cost, token, and request-count limits per user, team, or any Eloquent model. Enforce them with middleware that either blocks requests (hard limit) or only fires warning events (soft limit).
-- **Real-time dashboard.** A built-in dashboard for exploring requests, traces and conversations, analyzing costs, and viewing per-user analytics.
+- **Real-time dashboard.** A built-in [dashboard](/dashboard) for exploring requests, traces and conversations, analyzing costs, and viewing per-user analytics.
 - **Streaming support.** Streamed responses are tracked automatically as your code reads them, with time-to-first-token metrics and full token counts. This includes streamed image generation through OpenAI's Responses API.
 - **Media persistence.** Download generated images and videos to any Laravel filesystem disk before the provider URLs expire.
 - **Tags and metadata.** Attach labels and structured metadata to any request, then filter and group by them in the dashboard.

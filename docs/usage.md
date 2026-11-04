@@ -145,6 +145,8 @@ echo $result->choices[0]->message->content;
 
 When `tracking.auto_track_user` is enabled (the default), Spectra links each tracked request to the authenticated user. The user is stored in a polymorphic `trackable` relationship, so you can see usage and costs per user in the dashboard or through the API.
 
+<img class="screenshot" src="/images/dashboard/trackable-detail.png" alt="One user's usage and spend in the dashboard" />
+
 You can also assign a different trackable model, for example to attribute requests to a team, project, or organization instead of the logged-in user. A trackable you set yourself (with `forTrackable()`, `Spectra::forUser()`, or the `trackable_type` / `trackable_id` options) always wins over the signed-in user:
 
 ```php
@@ -180,7 +182,11 @@ Give every call of one user message the same turn number, including tool calls a
 
 The **Conversations** screen lists one row per conversation: its turns and failed calls, the models it used, its trackable, its cost and its last activity. Above the list are totals for every conversation you filter for. The filters are the same as on the requests list, and search matches part of a conversation id.
 
+<img class="screenshot" src="/images/dashboard/conversations.png" alt="The conversations list" />
+
 Open a conversation to read it as a transcript. Each turn shows the user's message and the model's reply, the calls it made, what it cost, and what the conversation has cost so far. The message comes from the turn's first text call and the reply from its last, so an agent's tool loop reads as one exchange. A call without a turn number is a turn of its own.
+
+<img class="screenshot" src="/images/dashboard/conversation-detail.png" alt="A conversation transcript" />
 
 The transcript reads the stored request and response, so it needs `store_prompts` and `store_responses` (both on by default). With either off, the turns still show their calls and costs, without the text. See [Storage](/configuration#storage).
 
@@ -394,10 +400,14 @@ stays in the list when one of its calls matches, and its totals still count
 all of its calls, so filtering by `gpt-4o` shows every trace that used it at
 its full cost. Search matches an exact trace id or part of an origin.
 
+<img class="screenshot" src="/images/dashboard/traces.png" alt="The traces list" />
+
 Open a trace to see its calls on one timeline, in the order they started, to
 the millisecond. A new lane starts when the origin changes, for example when a
 request dispatches a job. The trace page also shows the cost, calls and tokens
 per model, the tags, the trackable and the parent span from `traceparent`.
+
+<img class="screenshot" src="/images/dashboard/trace-detail.png" alt="A trace timeline with a span and five calls" />
 
 The request page shows a **Trace** card when a trace has more than one call,
 with an **Open trace** link. As everywhere in the dashboard, cost counts
@@ -428,7 +438,7 @@ $answer = Spectra::span('answer-question', function () use ($question) {
 
 **Root spans.** Each HTTP request, queued job and Artisan command that makes an AI call gets a span of its own, named by its origin, with its calls and spans inside. A job's span sits under the span that dispatched it, so a trace reads request, job, call. A request, job or command that makes no AI call stores nothing. Turn root spans off with `root_spans` (see [Configuration](/configuration#tracking-context)). They need `trace_per_request`, the default: with it off, each call is a trace of its own and no root span is stored.
 
-Spans are stored in the `spectra_spans` table. They are never billed or counted as requests, and `spectra:prune` deletes them with the requests. The trace page draws the tree: each span with its children indented under it.
+Spans are stored in the `spectra_spans` table. They are never billed or counted as requests, and `spectra:prune` deletes them with the requests. The trace page draws the tree: each span with its children indented under it. In the screenshot above, the embedding call sits inside the `retrieve-context` span, which sits inside the `POST /api/chat` request.
 
 ### Setting the Trace Yourself
 

@@ -88,7 +88,9 @@ Spectra::withTags(['chat-reply'], fn () => GenerateVideoJob::dispatch($prompt));
 <a name="filtering-by-tag"></a>
 ## Filtering by Tag
 
-You can filter by tag in the dashboard's request explorer, to narrow the list down to one feature, experiment, or environment. The `/api/tags` endpoint returns all known tag names, for use in filter UI components.
+You can filter by tag in the dashboard's request explorer, to narrow the list down to one feature, experiment, or environment. Each row shows its tags. The `/api/tags` endpoint returns all known tag names, for use in filter UI components.
+
+<img class="screenshot" src="/images/dashboard/requests.png" alt="The requests list with a tags column" />
 
 <a name="storage-structure"></a>
 ## Storage Structure
