@@ -14,6 +14,7 @@ use Spectra\Data\SearchMetrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\OpenRouter\Concerns\ReadsReportedCost;
+use Spectra\Support\Payload;
 
 /**
  * OpenRouter reranking (`/api/v1/rerank`). Cohere models bill search units
@@ -43,11 +44,11 @@ class RerankHandler implements ExtractsModelFromResponse, Handler, MatchesRespon
     public function extractMetrics(array $requestData, array $responseData): Metrics
     {
         $usage = is_array($responseData['usage'] ?? null) ? $responseData['usage'] : [];
-        $tokens = (int) ($usage['total_tokens'] ?? 0);
+        $tokens = Payload::int($usage['total_tokens'] ?? null);
 
         return new Metrics(
             tokens: $tokens > 0 ? new TokenMetrics(promptTokens: $tokens, completionTokens: 0) : null,
-            search: new SearchMetrics(count: max(1, (int) ($usage['search_units'] ?? 1))),
+            search: new SearchMetrics(count: max(1, Payload::int($usage['search_units'] ?? null, 1))),
             reportedCostInCents: $this->costFromUsage($usage),
         );
     }

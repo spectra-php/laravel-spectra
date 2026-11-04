@@ -15,6 +15,7 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Cohere\Streaming\ChatStreaming;
+use Spectra\Support\Payload;
 use Spectra\Support\Tracking\StreamHandler;
 
 /**
@@ -59,12 +60,12 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     public static function tokensFromUsage(array $usage): TokenMetrics
     {
         $billed = is_array($usage['billed_units'] ?? null) ? $usage['billed_units'] : [];
-        $prompt = (int) ($billed['input_tokens'] ?? 0);
+        $prompt = Payload::int($billed['input_tokens'] ?? null);
 
         return new TokenMetrics(
             promptTokens: $prompt,
-            completionTokens: (int) ($billed['output_tokens'] ?? 0),
-            cachedTokens: min($prompt, (int) ($usage['cached_tokens'] ?? 0)),
+            completionTokens: Payload::int($billed['output_tokens'] ?? null),
+            cachedTokens: min($prompt, Payload::int($usage['cached_tokens'] ?? null)),
         );
     }
 

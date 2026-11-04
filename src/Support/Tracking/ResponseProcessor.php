@@ -78,7 +78,7 @@ class ResponseProcessor
         $this->resolveModel($context, $providerInstance, $body, $endpoint);
         $this->resolvePricing($context, $providerInstance, $body);
 
-        $metrics = rescue(fn () => $providerInstance?->extractMetrics($body, $endpoint, $context->requestData ?? []));
+        $metrics = rescue(fn () => $providerInstance?->extractMetrics($body, $endpoint, $context->requestData));
         $usage = $metrics->tokens ?? $this->extractUsageFallback($body);
         $finishReason = rescue(fn () => $providerInstance?->extractFinishReason($body, $endpoint));
 
@@ -130,7 +130,7 @@ class ResponseProcessor
         }
 
         rescue(function () use ($context, $providerInstance, $endpoint) {
-            $requestModel = $providerInstance?->extractModelFromRequest($context->requestData ?? [], $endpoint)
+            $requestModel = $providerInstance?->extractModelFromRequest($context->requestData, $endpoint)
                 ?? $context->requestData['model']
                 ?? null;
 
@@ -165,11 +165,11 @@ class ResponseProcessor
         }
 
         if ($providerInstance instanceof ExtractsCostMultiplier) {
-            $context->costMultiplier = rescue(fn () => $providerInstance->extractCostMultiplier($body, $context->requestData ?? [])) ?? $context->costMultiplier;
+            $context->costMultiplier = rescue(fn () => $providerInstance->extractCostMultiplier($body, $context->requestData)) ?? $context->costMultiplier;
         }
 
         if ($providerInstance instanceof ExtractsCostMultiplierForModel) {
-            $context->costMultiplier = rescue(fn () => $providerInstance->extractCostMultiplierForModel($context->model, $body, $context->requestData ?? [])) ?? $context->costMultiplier;
+            $context->costMultiplier = rescue(fn () => $providerInstance->extractCostMultiplierForModel($context->model, $body, $context->requestData)) ?? $context->costMultiplier;
         }
     }
 
@@ -307,7 +307,7 @@ class ResponseProcessor
             });
         }
 
-        $context->reasoningEffort ??= rescue(fn () => $this->extractReasoningEffort($context->requestData ?? [], $body));
+        $context->reasoningEffort ??= rescue(fn () => $this->extractReasoningEffort($context->requestData, $body));
 
         if (! $context->isReasoning) {
             $context->isReasoning = $context->reasoningEffort !== null
@@ -594,7 +594,7 @@ class ResponseProcessor
     ): ?ModelType {
         $modelType = $providerInstance?->resolveModelType(
             $context->endpoint ?? '',
-            $context->requestData ?? []
+            $context->requestData
         );
 
         if ($modelType !== null) {

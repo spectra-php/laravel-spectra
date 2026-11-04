@@ -45,6 +45,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Tracking errors no longer reach your code. `Spectra::track()` returns your result when recording fails, a malformed stream chunk is skipped instead of ending your `foreach`, and a provider field of the wrong type drops only that field: the request is still recorded with its cost
 - A retried persist job no longer saves a duplicate row and counts the spend twice, and a failing stats update, budget report, export or `RequestTracked` listener no longer loses the row. A failed save after the response is reported and no longer stops the app's other terminating callbacks
 - Budgets: a database or cache error during the middleware's check is reported and the request goes through, instead of a 500
+- Tracking: a usage field of the wrong type (an array, a word) counts as 0 tokens instead of whatever a cast made of it (an array counted as 1)
 - Budgets: the spend recorded for a tracked request is rounded up to whole cents like every other budget total, so float noise can no longer add a cent
 - OpenTelemetry: exports no longer all fail when `SPECTRA_OTEL_TIMEOUT` is set
 - Google: Veo videos tracked over HTTP are billed from the submitted duration and resolution (they were recorded at $0)
@@ -70,6 +71,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Routes that relied on the `spectra.budget` middleware reading `provider` / `model` from the request input must pass them as arguments: `spectra.budget:openai,gpt-4o`
 - `BudgetExceeded` listeners that treat `currentUsage` and `limit` as cents should check `limitType` first: token, request and allow-list blocks now fire it too
 - If you turned off `store_system_prompts` or `store_tools`, rows saved before this release still hold system prompts and tools in their `request` column. Prune or clear them if that matters to you
+- `RequestContext`'s list properties (`messages`, `tools`, `requestParameters`, `requestData`, `toolCalls`, `toolCallCounts`, `mediaStoragePath`) are `array` and start as `[]` instead of `null`. Code that checks one with `=== null` should check `=== []` (or `blank()`), and code that assigns `null` should assign `[]`. Passing `null` for one to `new RequestContext([...])` still works and means empty. Empty lists are still stored as NULL
 - `SpectraRequest::failed()` now includes 3xx responses, and `UsageQueryBuilder` / `HasAiUsageStats` costs and latencies leave out failed requests, so `->failed()->totalCostCents()` is 0. Recheck reports built on the old numbers
 
 ## v2.6.0 - 2026-11-01

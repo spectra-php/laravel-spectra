@@ -6,6 +6,7 @@ namespace Spectra\Providers\Google;
 
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
+use Spectra\Support\Payload;
 
 /**
  * Reads the parts of a Gemini API response that decide its cost.
@@ -129,7 +130,7 @@ final class GeminiUsage
 
         foreach ($details as $detail) {
             if (is_array($detail) && strtoupper((string) ($detail['modality'] ?? '')) === $modality) {
-                $total += (int) ($detail['tokenCount'] ?? 0);
+                $total += Payload::int($detail['tokenCount'] ?? null);
             }
         }
 

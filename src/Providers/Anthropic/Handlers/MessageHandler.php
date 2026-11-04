@@ -15,6 +15,7 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Anthropic\Streaming\MessageStreaming;
+use Spectra\Support\Payload;
 use Spectra\Support\Tracking\StreamHandler;
 
 /**
@@ -63,28 +64,28 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
      */
     public static function tokensFromUsage(array $usage): TokenMetrics
     {
-        $cacheRead = (int) ($usage['cache_read_input_tokens'] ?? 0);
-        $cacheWrite = (int) ($usage['cache_creation_input_tokens'] ?? 0);
-        $cacheWrite1h = (int) ($usage['cache_creation']['ephemeral_1h_input_tokens'] ?? 0);
+        $cacheRead = Payload::int($usage['cache_read_input_tokens'] ?? null);
+        $cacheWrite = Payload::int($usage['cache_creation_input_tokens'] ?? null);
+        $cacheWrite1h = Payload::int($usage['cache_creation']['ephemeral_1h_input_tokens'] ?? null);
 
         // Already-normalised usage (e.g. from manual tracking) carries prompt_tokens as the total.
         $prompt = isset($usage['input_tokens'])
             ? (int) $usage['input_tokens'] + $cacheRead + $cacheWrite
-            : (int) ($usage['prompt_tokens'] ?? 0);
+            : Payload::int($usage['prompt_tokens'] ?? null);
 
-        $completion = (int) ($usage['output_tokens'] ?? $usage['completion_tokens'] ?? 0);
+        $completion = Payload::int($usage['output_tokens'] ?? $usage['completion_tokens'] ?? null);
 
         // With server-side compaction the top-level counts leave out the
         // compaction step, which is billed too: add those iterations back.
         foreach (self::compactionIterations($usage) as $iteration) {
-            $iterationRead = (int) ($iteration['cache_read_input_tokens'] ?? 0);
-            $iterationWrite = (int) ($iteration['cache_creation_input_tokens'] ?? 0);
+            $iterationRead = Payload::int($iteration['cache_read_input_tokens'] ?? null);
+            $iterationWrite = Payload::int($iteration['cache_creation_input_tokens'] ?? null);
 
-            $prompt += (int) ($iteration['input_tokens'] ?? 0) + $iterationRead + $iterationWrite;
-            $completion += (int) ($iteration['output_tokens'] ?? 0);
+            $prompt += Payload::int($iteration['input_tokens'] ?? null) + $iterationRead + $iterationWrite;
+            $completion += Payload::int($iteration['output_tokens'] ?? null);
             $cacheRead += $iterationRead;
             $cacheWrite += $iterationWrite;
-            $cacheWrite1h += (int) ($iteration['cache_creation']['ephemeral_1h_input_tokens'] ?? 0);
+            $cacheWrite1h += Payload::int($iteration['cache_creation']['ephemeral_1h_input_tokens'] ?? null);
         }
 
         return new TokenMetrics(
@@ -111,9 +112,9 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
         $serverToolUse = is_array($usage['server_tool_use'] ?? null) ? $usage['server_tool_use'] : [];
 
         return array_filter([
-            'web_search_requests' => (int) ($serverToolUse['web_search_requests'] ?? 0),
-            'web_fetch_requests' => (int) ($serverToolUse['web_fetch_requests'] ?? 0),
-            'code_execution_requests' => (int) ($serverToolUse['code_execution_requests'] ?? 0),
+            'web_search_requests' => Payload::int($serverToolUse['web_search_requests'] ?? null),
+            'web_fetch_requests' => Payload::int($serverToolUse['web_fetch_requests'] ?? null),
+            'code_execution_requests' => Payload::int($serverToolUse['code_execution_requests'] ?? null),
         ]);
     }
 

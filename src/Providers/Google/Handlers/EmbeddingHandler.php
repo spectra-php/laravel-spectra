@@ -13,6 +13,7 @@ use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Google\ExtractsModelFromGoogleEndpoint;
 use Spectra\Providers\Google\GoogleTokenCounter;
+use Spectra\Support\Payload;
 
 /**
  * Gemini embeddings (`embedContent`, `batchEmbedContents`). The response has
@@ -48,7 +49,7 @@ class EmbeddingHandler implements ExtractsModelFromRequest, Handler, MatchesResp
     {
         // The embedContent response does not include usageMetadata.
         // When available (future-proofing), use it; otherwise call countTokens API.
-        $promptTokens = (int) ($responseData['usageMetadata']['promptTokenCount'] ?? 0);
+        $promptTokens = Payload::int($responseData['usageMetadata']['promptTokenCount'] ?? null);
 
         if ($promptTokens === 0) {
             $promptTokens = $this->countTokensViaApi($requestData) ?? 0;

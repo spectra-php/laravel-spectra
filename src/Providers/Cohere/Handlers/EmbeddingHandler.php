@@ -12,6 +12,7 @@ use Spectra\Contracts\MatchesResponseShape;
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Cohere Embed (`/v2/embed`, `/v1/embed`), billed per input token.
@@ -50,11 +51,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
             ?? $responseData['usage']['billed_units']
             ?? [];
 
-        $imageTokens = (int) ($billed['image_tokens'] ?? 0);
+        $imageTokens = Payload::int($billed['image_tokens'] ?? null);
 
         return new Metrics(
             tokens: new TokenMetrics(
-                promptTokens: (int) ($billed['input_tokens'] ?? 0) + $imageTokens,
+                promptTokens: Payload::int($billed['input_tokens'] ?? null) + $imageTokens,
                 completionTokens: 0,
                 imageInputTokens: $imageTokens,
             ),

@@ -754,7 +754,7 @@ class StreamingTracker
         }
 
         if (is_array($usage['tool_calls'] ?? null)) {
-            $counts = $this->context->toolCallCounts ?? [];
+            $counts = $this->context->toolCallCounts;
 
             foreach ($usage['tool_calls'] as $type => $count) {
                 if (is_string($type) && is_numeric($count) && $count > 0) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\XAi;
 
 use Spectra\Data\TokenMetrics;
+use Spectra\Support\Payload;
 
 /**
  * Reads the parts of an xAI `usage` object that every xAI endpoint shares.
@@ -67,7 +68,7 @@ final class XAiUsage
         $counts = [];
 
         foreach (self::TOOL_KEYS as $field => $key) {
-            $count = (int) ($details[$field] ?? 0);
+            $count = Payload::int($details[$field] ?? null);
 
             if ($count > 0) {
                 $counts[$key] = $count;
@@ -92,12 +93,12 @@ final class XAiUsage
         $output = is_array($usage['output_tokens_details'] ?? null) ? $usage['output_tokens_details'] : [];
 
         return new TokenMetrics(
-            promptTokens: (int) ($usage['input_tokens'] ?? 0),
-            completionTokens: (int) ($usage['output_tokens'] ?? 0),
-            cachedTokens: (int) ($input['cached_tokens'] ?? 0),
-            reasoningTokens: (int) ($output['reasoning_tokens'] ?? 0),
-            imageInputTokens: (int) ($input['image_tokens'] ?? 0),
-            imageOutputTokens: (int) ($output['image_tokens'] ?? 0),
+            promptTokens: Payload::int($usage['input_tokens'] ?? null),
+            completionTokens: Payload::int($usage['output_tokens'] ?? null),
+            cachedTokens: Payload::int($input['cached_tokens'] ?? null),
+            reasoningTokens: Payload::int($output['reasoning_tokens'] ?? null),
+            imageInputTokens: Payload::int($input['image_tokens'] ?? null),
+            imageOutputTokens: Payload::int($output['image_tokens'] ?? null),
         );
     }
 }

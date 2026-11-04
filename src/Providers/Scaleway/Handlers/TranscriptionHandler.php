@@ -12,6 +12,7 @@ use Spectra\Data\AudioMetrics;
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Scaleway audio transcription (Whisper), billed per audio minute. The
@@ -43,8 +44,8 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
     {
         $usage = $responseData['usage'] ?? [];
 
-        $promptTokens = (int) ($usage['prompt_tokens'] ?? $usage['input_tokens'] ?? 0);
-        $completionTokens = (int) ($usage['completion_tokens'] ?? $usage['output_tokens'] ?? 0);
+        $promptTokens = Payload::int($usage['prompt_tokens'] ?? $usage['input_tokens'] ?? null);
+        $completionTokens = Payload::int($usage['completion_tokens'] ?? $usage['output_tokens'] ?? null);
 
         $duration = isset($responseData['duration'])
             ? (float) $responseData['duration']

@@ -15,6 +15,7 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Groq\Streaming\ResponsesStreaming;
+use Spectra\Support\Payload;
 use Spectra\Support\Tracking\StreamHandler;
 
 /**
@@ -57,10 +58,10 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
     public function tokensFromUsage(array $usage): TokenMetrics
     {
         return new TokenMetrics(
-            promptTokens: (int) ($usage['input_tokens'] ?? 0),
-            completionTokens: (int) ($usage['output_tokens'] ?? 0),
-            cachedTokens: (int) ($usage['input_tokens_details']['cached_tokens'] ?? 0),
-            reasoningTokens: (int) ($usage['output_tokens_details']['reasoning_tokens'] ?? 0),
+            promptTokens: Payload::int($usage['input_tokens'] ?? null),
+            completionTokens: Payload::int($usage['output_tokens'] ?? null),
+            cachedTokens: Payload::int($usage['input_tokens_details']['cached_tokens'] ?? null),
+            reasoningTokens: Payload::int($usage['output_tokens_details']['reasoning_tokens'] ?? null),
         );
     }
 

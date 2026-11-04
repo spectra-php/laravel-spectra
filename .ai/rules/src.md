@@ -20,13 +20,13 @@ Provider JSON is `mixed` and changes without notice. Read a string with `filled(
 Keep a type check only where a wrong type would give a wrong number or a broken loop: `is_numeric()` before a value goes into token or cost maths, `is_array()` before a `foreach`. Never assume a key exists: read with `?? null`, `Arr::get()` or `data_get()`.
 
 ## Cast once, where an untyped value enters
-Cast where a value first enters without a type: a provider payload number (`(int) ($usage['prompt_tokens'] ?? 0)`, needed under `strict_types`), a DB aggregate alias, config, a header, a JSON key. Never cast a value that already has its type: `composer analyse` runs phpstan-strict-rules' useless-cast check and fails on one. If the check is wrong because a docblock overstates the type (config a user writes, JSON object keys that decode as ints), fix the docblock and keep the cast. Never silence the check.
+Cast where a value first enters without a type: a DB aggregate alias, config, a header, a JSON key. A number from a provider payload goes through `Support\Payload` (`Payload::int($usage['prompt_tokens'] ?? null)`, `Payload::float(…, $default)`), never a bare `(int)`: under `strict_types` it must be cast, and a bare cast turns an array into 1. Never cast a value that already has its type: `composer analyse` runs phpstan-strict-rules' useless-cast check and fails on one. If the check is wrong because a docblock overstates the type (config a user writes, JSON object keys that decode as ints), fix the docblock and keep the cast. Never silence the check.
 
 ## Assign defaults with ??=
 Write `$x ??= $y`, never `$x = $x ?? $y` or `if ($x === null) { $x = $y; }`.
 
 ## Empty, not null, for lists
-A list or map that can be empty is `array $x = []`, not `?array $x = null`. Use null only when "absent" must be stored or reported differently from "empty". `RequestContext`'s nullable arrays are public API and stay as they are until a major release.
+A list or map that can be empty is `array $x = []`, not `?array $x = null`. Use null only when "absent" must be stored or reported differently from "empty".
 
 ## Choose boring code over clever code
 Prefer an early return, `if` or `match` to nested ternaries, and drop the `else` after a `return`. More lines for more clarity is a good trade. Reach for the framework helper first, as `.ai/rules/laravel-first.md` lists.

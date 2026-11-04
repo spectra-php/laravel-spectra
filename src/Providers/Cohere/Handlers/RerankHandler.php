@@ -12,6 +12,7 @@ use Spectra\Contracts\MatchesResponseShape;
 use Spectra\Data\Metrics;
 use Spectra\Data\SearchMetrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Cohere Rerank (`/v2/rerank`, `/v1/rerank`), billed per search unit: one
@@ -48,7 +49,7 @@ class RerankHandler implements ExtractsModelFromResponse, Handler, MatchesRespon
 
         return new Metrics(
             search: new SearchMetrics(
-                count: (int) ($billed['search_units'] ?? 1),
+                count: Payload::int($billed['search_units'] ?? null, 1),
             ),
         );
     }

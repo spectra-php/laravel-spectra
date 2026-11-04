@@ -12,6 +12,7 @@ use Spectra\Data\AudioMetrics;
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Groq Whisper transcriptions and translations, billed per minute of audio.
@@ -53,8 +54,8 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
 
         return new Metrics(
             tokens: new TokenMetrics(
-                promptTokens: (int) ($usage['prompt_tokens'] ?? $usage['input_tokens'] ?? 0),
-                completionTokens: (int) ($usage['completion_tokens'] ?? $usage['output_tokens'] ?? 0),
+                promptTokens: Payload::int($usage['prompt_tokens'] ?? $usage['input_tokens'] ?? null),
+                completionTokens: Payload::int($usage['completion_tokens'] ?? $usage['output_tokens'] ?? null),
             ),
             audio: new AudioMetrics(
                 durationSeconds: max(self::MINIMUM_BILLED_SECONDS, $this->audioSeconds($responseData, $usage) ?? 0.0),

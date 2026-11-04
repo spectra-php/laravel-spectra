@@ -14,6 +14,7 @@ use Spectra\Contracts\StreamsResponse;
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 use Spectra\Support\Tracking\StreamHandler;
 
 /**
@@ -67,21 +68,21 @@ abstract class OpenAiCompatibleChatHandler implements ExtractsModelFromResponse,
         $promptDetails = is_array($usage['prompt_tokens_details'] ?? null) ? $usage['prompt_tokens_details'] : [];
         $completionDetails = is_array($usage['completion_tokens_details'] ?? null) ? $usage['completion_tokens_details'] : [];
 
-        $reasoning = (int) ($completionDetails['reasoning_tokens'] ?? $usage['reasoning_tokens'] ?? 0);
-        $completion = (int) ($usage['completion_tokens'] ?? $usage['output_tokens'] ?? 0);
+        $reasoning = Payload::int($completionDetails['reasoning_tokens'] ?? $usage['reasoning_tokens'] ?? null);
+        $completion = Payload::int($usage['completion_tokens'] ?? $usage['output_tokens'] ?? null);
 
         if ($this->reasoningTokensAreSeparate()) {
             $completion += $reasoning;
         }
 
         return new TokenMetrics(
-            promptTokens: (int) ($usage['prompt_tokens'] ?? $usage['input_tokens'] ?? 0),
+            promptTokens: Payload::int($usage['prompt_tokens'] ?? $usage['input_tokens'] ?? null),
             completionTokens: $completion,
-            cachedTokens: (int) ($promptDetails['cached_tokens'] ?? 0),
+            cachedTokens: Payload::int($promptDetails['cached_tokens'] ?? null),
             reasoningTokens: $reasoning,
-            cacheWriteTokens: (int) ($promptDetails['cache_write_tokens'] ?? 0),
-            audioInputTokens: (int) ($promptDetails['audio_tokens'] ?? 0),
-            audioOutputTokens: (int) ($completionDetails['audio_tokens'] ?? 0),
+            cacheWriteTokens: Payload::int($promptDetails['cache_write_tokens'] ?? null),
+            audioInputTokens: Payload::int($promptDetails['audio_tokens'] ?? null),
+            audioOutputTokens: Payload::int($completionDetails['audio_tokens'] ?? null),
         );
     }
 

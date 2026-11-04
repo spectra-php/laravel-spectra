@@ -15,6 +15,7 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Ollama\Streaming\ChatStreaming;
+use Spectra\Support\Payload;
 use Spectra\Support\Tracking\StreamHandler;
 
 /**
@@ -47,8 +48,8 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     {
         return new Metrics(
             tokens: new TokenMetrics(
-                promptTokens: (int) ($responseData['prompt_eval_count'] ?? 0),
-                completionTokens: (int) ($responseData['eval_count'] ?? 0),
+                promptTokens: Payload::int($responseData['prompt_eval_count'] ?? null),
+                completionTokens: Payload::int($responseData['eval_count'] ?? null),
             ),
         );
     }

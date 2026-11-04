@@ -12,6 +12,7 @@ use Spectra\Contracts\MatchesResponseShape;
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Ollama's native `/api/embed` endpoint, which reports its input tokens as
@@ -40,7 +41,7 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     {
         return new Metrics(
             tokens: new TokenMetrics(
-                promptTokens: (int) ($responseData['prompt_eval_count'] ?? 0),
+                promptTokens: Payload::int($responseData['prompt_eval_count'] ?? null),
             ),
         );
     }

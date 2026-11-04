@@ -7,6 +7,7 @@ namespace Spectra\Providers\Mistral\Handlers;
 use Spectra\Data\TokenMetrics;
 use Spectra\Providers\Concerns\OpenAiCompatibleChatHandler;
 use Spectra\Providers\Mistral\Streaming\ChatStreaming;
+use Spectra\Support\Payload;
 use Spectra\Support\Tracking\StreamHandler;
 
 /**
@@ -39,7 +40,7 @@ class ChatHandler extends OpenAiCompatibleChatHandler
             return $tokens;
         }
 
-        $cached = (int) ($usage['prompt_token_details']['cached_tokens'] ?? $usage['num_cached_tokens'] ?? 0);
+        $cached = Payload::int($usage['prompt_token_details']['cached_tokens'] ?? $usage['num_cached_tokens'] ?? null);
 
         return new TokenMetrics(
             promptTokens: $tokens->promptTokens,

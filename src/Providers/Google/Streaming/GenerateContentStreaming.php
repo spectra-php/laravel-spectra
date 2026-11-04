@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\Google\Streaming;
 
 use Spectra\Providers\Google\GeminiUsage;
+use Spectra\Support\Payload;
 use Spectra\Support\Tracking\StreamHandler;
 
 /**
@@ -62,7 +63,7 @@ class GenerateContentStreaming extends StreamHandler
             $toolCalls = is_array($currentUsage['tool_calls'] ?? null) ? $currentUsage['tool_calls'] : [];
 
             foreach ($grounding as $type => $count) {
-                $toolCalls[$type] = max((int) ($toolCalls[$type] ?? 0), $count);
+                $toolCalls[$type] = max(Payload::int($toolCalls[$type] ?? null), $count);
             }
 
             $currentUsage['tool_calls'] = $toolCalls;

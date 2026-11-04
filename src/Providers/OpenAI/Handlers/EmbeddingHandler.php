@@ -12,6 +12,7 @@ use Spectra\Contracts\MatchesResponseShape;
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Embeddings (`/v1/embeddings`), billed on input tokens only.
@@ -41,8 +42,8 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     {
         return new Metrics(
             tokens: new TokenMetrics(
-                promptTokens: (int) ($responseData['usage']['prompt_tokens'] ?? 0),
-                completionTokens: max(0, (int) ($responseData['usage']['total_tokens'] ?? 0) - (int) ($responseData['usage']['prompt_tokens'] ?? 0)),
+                promptTokens: Payload::int($responseData['usage']['prompt_tokens'] ?? null),
+                completionTokens: max(0, Payload::int($responseData['usage']['total_tokens'] ?? null) - Payload::int($responseData['usage']['prompt_tokens'] ?? null)),
             ),
         );
     }

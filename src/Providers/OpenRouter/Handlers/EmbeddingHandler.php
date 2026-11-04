@@ -13,6 +13,7 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\OpenRouter\Concerns\ReadsReportedCost;
+use Spectra\Support\Payload;
 
 /**
  * OpenRouter embeddings (`/api/v1/embeddings`), billed on input tokens. The
@@ -44,7 +45,7 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
 
         return new Metrics(
             tokens: new TokenMetrics(
-                promptTokens: (int) ($usage['prompt_tokens'] ?? $usage['total_tokens'] ?? 0),
+                promptTokens: Payload::int($usage['prompt_tokens'] ?? $usage['total_tokens'] ?? null),
                 completionTokens: 0,
             ),
             reportedCostInCents: $this->costFromUsage($usage),

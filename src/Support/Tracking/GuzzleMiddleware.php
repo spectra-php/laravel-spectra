@@ -175,7 +175,7 @@ class GuzzleMiddleware
             return $this->withBody($response, fn (string $body) => $this->recordHttpError($context, $response->getStatusCode(), $body));
         }
 
-        if (StreamDetector::isStreamingResponse($response, $context->provider, $context->endpoint, $context->requestData ?? [])) {
+        if (StreamDetector::isStreamingResponse($response, $context->provider, $context->endpoint, $context->requestData)) {
             return $this->trackStream($context, $response);
         }
 
@@ -311,7 +311,7 @@ class GuzzleMiddleware
                 $job['model'] = $model;
             }
 
-            $request = $this->withoutInlineFiles($context->requestData ?? []);
+            $request = $this->withoutInlineFiles($context->requestData);
 
             if ($request !== []) {
                 $job['request'] = $request;
@@ -351,7 +351,7 @@ class GuzzleMiddleware
         }
 
         if (isset($job['request'])) {
-            $context->requestData = array_replace($job['request'], $context->requestData ?? []);
+            $context->requestData = array_replace($job['request'], $context->requestData);
 
             if ($context->requestedPricingTier === null && $providerInstance instanceof ExtractsPricingTierFromRequest) {
                 $context->requestedPricingTier = $providerInstance->extractPricingTierFromRequest($context->requestData);

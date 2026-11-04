@@ -22,6 +22,13 @@ use Spectra\Support\Pricing\RequestCostCalculator;
  */
 class RequestContext implements Arrayable
 {
+    /**
+     * List properties: empty when unset, and stored as NULL while empty.
+     *
+     * @var list<string>
+     */
+    protected const LIST_PROPERTIES = ['messages', 'tools', 'requestParameters', 'requestData', 'toolCalls', 'toolCallCounts', 'mediaStoragePath'];
+
     public readonly string $id;
 
     public readonly string $traceId;
@@ -53,22 +60,22 @@ class RequestContext implements Arrayable
 
     public ?string $systemPrompt = null;
 
-    /** @var array<array{role: string, content: string}>|null */
-    public ?array $messages = null;
+    /** @var array<array{role: string, content: string}> */
+    public array $messages = [];
 
-    /** @var array<int, string>|null */
-    public ?array $tools = null;
+    /** @var array<int, string> */
+    public array $tools = [];
 
-    /** @var array<string, mixed>|null */
-    public ?array $requestParameters = null;
+    /** @var array<string, mixed> */
+    public array $requestParameters = [];
 
-    /** @var array<string, mixed>|null */
-    public ?array $requestData = null;
+    /** @var array<string, mixed> */
+    public array $requestData = [];
 
     public mixed $response = null;
 
-    /** @var array<string, int>|null */
-    public ?array $toolCalls = null;
+    /** @var array<string, int> */
+    public array $toolCalls = [];
 
     /** Whether the response contains tool/function calls. */
     public bool $hasToolCalls = false;
@@ -76,9 +83,9 @@ class RequestContext implements Arrayable
     /**
      * Tool call counts by type (e.g. ['function_call' => 3, 'web_search_call' => 2]).
      *
-     * @var array<string, int>|null
+     * @var array<string, int>
      */
-    public ?array $toolCallCounts = null;
+    public array $toolCallCounts = [];
 
     public ?string $finishReason = null;
 
@@ -174,8 +181,8 @@ class RequestContext implements Arrayable
 
     public ?string $errorMessage = null;
 
-    /** @var array<string, mixed>|null */
-    public ?array $mediaStoragePath = null;
+    /** @var array<string, mixed> */
+    public array $mediaStoragePath = [];
 
     /** Raw response body for binary responses (e.g. TTS audio). Transient — not persisted. */
     public ?string $rawResponseBody = null;
@@ -238,9 +245,16 @@ class RequestContext implements Arrayable
 
         foreach ($attributes as $key => $value) {
             $property = Str::camel($key);
-            if (property_exists($this, $property) && ! in_array($property, ['id', 'traceId', 'spanId', 'startedAt'])) {
-                $this->{$property} = $value;
+            if (! property_exists($this, $property) || in_array($property, ['id', 'traceId', 'spanId', 'startedAt'])) {
+                continue;
             }
+
+            // A list passed as null (the type before these became arrays) is empty.
+            if ($value === null && in_array($property, self::LIST_PROPERTIES, true)) {
+                continue;
+            }
+
+            $this->{$property} = $value;
         }
 
         $this->captureContext();
@@ -486,7 +500,7 @@ class RequestContext implements Arrayable
             'trackable_type' => $this->trackableType,
             'trackable_id' => $this->trackableId,
             'api_key_identifier' => $this->apiKeyIdentifier,
-            'request_parameters' => $this->requestParameters,
+            'request_parameters' => $this->requestParameters ?: null,
             'response_id' => $this->responseId,
             'finish_reason' => $this->finishReason,
             'prompt_tokens' => $this->promptTokens,
@@ -497,7 +511,7 @@ class RequestContext implements Arrayable
             'is_reasoning' => $this->isReasoning,
             'reasoning_effort' => $this->reasoningEffort,
             'has_tool_calls' => $this->hasToolCalls,
-            'tool_call_counts' => $this->toolCallCounts,
+            'tool_call_counts' => $this->toolCallCounts ?: null,
             'duration_seconds' => $this->durationSeconds,
             'input_characters' => $this->inputCharacters,
             'image_count' => $this->imageCount,
@@ -515,7 +529,7 @@ class RequestContext implements Arrayable
             'status_code' => $this->httpStatus,
             'error_type' => $this->errorType,
             'error_message' => $this->errorMessage,
-            'media_storage_path' => $this->mediaStoragePath,
+            'media_storage_path' => $this->mediaStoragePath ?: null,
             'retry_count' => $this->retryCount,
             'request_source' => $this->requestSource,
             'origin' => $this->origin,
@@ -533,7 +547,7 @@ class RequestContext implements Arrayable
 
         if (config('spectra.storage.store_prompts', true)) {
             $data['prompt'] = $this->prompt;
-            $data['messages'] = $this->messages;
+            $data['messages'] = $this->messages ?: null;
         }
 
         if (config('spectra.storage.store_system_prompts', true)) {
@@ -542,11 +556,11 @@ class RequestContext implements Arrayable
 
         if (config('spectra.storage.store_responses', true)) {
             $data['response'] = $this->response;
-            $data['tool_calls'] = $this->toolCalls;
+            $data['tool_calls'] = $this->toolCalls ?: null;
         }
 
         if (config('spectra.storage.store_tools', true)) {
-            $data['tools'] = $this->tools;
+            $data['tools'] = $this->tools ?: null;
         }
 
         // Raw request parameters are broader than prompt content, so they get
@@ -567,7 +581,7 @@ class RequestContext implements Arrayable
      */
     protected function filteredRequestData(): ?array
     {
-        if ($this->requestData === null) {
+        if ($this->requestData === []) {
             return null;
         }
 

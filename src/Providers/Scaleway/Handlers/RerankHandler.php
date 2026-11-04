@@ -12,6 +12,7 @@ use Spectra\Data\Metrics;
 use Spectra\Data\SearchMetrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Scaleway reranking (`/v1/rerank`, optionally under a project id). Scaleway
@@ -44,7 +45,7 @@ class RerankHandler implements ExtractsModelFromResponse, Handler
     {
         return new Metrics(
             tokens: new TokenMetrics(
-                promptTokens: (int) ($responseData['usage']['prompt_tokens'] ?? $responseData['usage']['total_tokens'] ?? 0),
+                promptTokens: Payload::int($responseData['usage']['prompt_tokens'] ?? $responseData['usage']['total_tokens'] ?? null),
                 completionTokens: 0,
             ),
             search: new SearchMetrics(count: 1),

@@ -12,6 +12,7 @@ use Spectra\Data\AudioMetrics;
 use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Mistral (Voxtral) transcription, billed per minute of audio from
@@ -48,8 +49,8 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
 
         return new Metrics(
             tokens: new TokenMetrics(
-                promptTokens: (int) ($usage['prompt_tokens'] ?? 0),
-                completionTokens: (int) ($usage['completion_tokens'] ?? 0),
+                promptTokens: Payload::int($usage['prompt_tokens'] ?? null),
+                completionTokens: Payload::int($usage['completion_tokens'] ?? null),
             ),
             audio: new AudioMetrics(
                 durationSeconds: $duration,

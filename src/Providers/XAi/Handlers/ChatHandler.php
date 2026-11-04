@@ -11,6 +11,7 @@ use Spectra\Data\TokenMetrics;
 use Spectra\Providers\Concerns\OpenAiCompatibleChatHandler;
 use Spectra\Providers\XAi\Streaming\ChatStreaming;
 use Spectra\Providers\XAi\XAiUsage;
+use Spectra\Support\Payload;
 use Spectra\Support\Tracking\StreamHandler;
 
 /**
@@ -70,7 +71,7 @@ class ChatHandler extends OpenAiCompatibleChatHandler implements SkipsResponse
             reasoningTokens: $tokens->reasoningTokens,
             cacheWriteTokens: $tokens->cacheWriteTokens,
             audioInputTokens: $tokens->audioInputTokens,
-            imageInputTokens: (int) ($promptDetails['image_tokens'] ?? 0),
+            imageInputTokens: Payload::int($promptDetails['image_tokens'] ?? null),
             audioOutputTokens: $tokens->audioOutputTokens,
         );
     }

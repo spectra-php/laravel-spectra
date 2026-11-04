@@ -7,6 +7,7 @@ namespace Spectra\Integrations\OpenTelemetry;
 use Carbon\CarbonInterface;
 use Spectra\Contracts\SpanBuilder;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Default OpenTelemetry span builder.
@@ -78,16 +79,16 @@ class DefaultSpanBuilder implements SpanBuilder
             $this->string('gen_ai.operation.name', $this->operationName($data)),
             $this->string('gen_ai.provider.name', self::PROVIDER_NAMES[$data['provider']] ?? (string) $data['provider']),
             $this->string('gen_ai.request.model', $this->requestModel($data)),
-            $this->int('gen_ai.usage.input_tokens', (int) ($data['prompt_tokens'] ?? 0)),
-            $this->int('gen_ai.usage.output_tokens', (int) ($data['completion_tokens'] ?? 0)),
+            $this->int('gen_ai.usage.input_tokens', Payload::int($data['prompt_tokens'] ?? null)),
+            $this->int('gen_ai.usage.output_tokens', Payload::int($data['completion_tokens'] ?? null)),
 
             $this->string('spectra.trace_id', (string) ($data['trace_id'] ?? '')),
             $this->string('spectra.request_id', (string) $data['id']),
             $this->string('spectra.model', (string) $data['model']),
-            $this->double('spectra.cost_cents', (float) ($data['total_cost_in_cents'] ?? 0)),
-            $this->int('spectra.latency_ms', (int) ($data['latency_ms'] ?? 0)),
+            $this->double('spectra.cost_cents', Payload::float($data['total_cost_in_cents'] ?? null)),
+            $this->int('spectra.latency_ms', Payload::int($data['latency_ms'] ?? null)),
 
-            $this->int('http.response.status_code', (int) ($data['status_code'] ?? 0)),
+            $this->int('http.response.status_code', Payload::int($data['status_code'] ?? null)),
         ];
 
         if (filled($data['snapshot'] ?? null)) {

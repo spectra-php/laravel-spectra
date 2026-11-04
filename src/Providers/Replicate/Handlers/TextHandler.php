@@ -16,6 +16,7 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Replicate\Concerns\HandlesPredictions;
+use Spectra\Support\Payload;
 
 /**
  * Replicate predictions from language models (Claude, DeepSeek, Llama, ...).
@@ -41,8 +42,8 @@ class TextHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse
     {
         return new Metrics(
             tokens: new TokenMetrics(
-                promptTokens: (int) ($responseData['metrics']['input_token_count'] ?? 0),
-                completionTokens: (int) ($responseData['metrics']['output_token_count'] ?? 0),
+                promptTokens: Payload::int($responseData['metrics']['input_token_count'] ?? null),
+                completionTokens: Payload::int($responseData['metrics']['output_token_count'] ?? null),
             ),
         );
     }

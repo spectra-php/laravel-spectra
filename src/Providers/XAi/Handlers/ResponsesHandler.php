@@ -17,6 +17,7 @@ use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\XAi\Streaming\ResponsesStreaming;
 use Spectra\Providers\XAi\XAiUsage;
+use Spectra\Support\Payload;
 use Spectra\Support\Tracking\StreamHandler;
 
 /**
@@ -76,14 +77,14 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
         $inputDetails = is_array($inputDetails) ? $inputDetails : [];
         $outputDetails = is_array($outputDetails) ? $outputDetails : [];
 
-        $reasoning = (int) ($outputDetails['reasoning_tokens'] ?? 0);
+        $reasoning = Payload::int($outputDetails['reasoning_tokens'] ?? null);
 
         return new TokenMetrics(
-            promptTokens: (int) ($usage['input_tokens'] ?? $usage['prompt_tokens'] ?? 0),
-            completionTokens: (int) ($usage['output_tokens'] ?? $usage['completion_tokens'] ?? 0) + $reasoning,
-            cachedTokens: (int) ($inputDetails['cached_tokens'] ?? 0),
+            promptTokens: Payload::int($usage['input_tokens'] ?? $usage['prompt_tokens'] ?? null),
+            completionTokens: Payload::int($usage['output_tokens'] ?? $usage['completion_tokens'] ?? null) + $reasoning,
+            cachedTokens: Payload::int($inputDetails['cached_tokens'] ?? null),
             reasoningTokens: $reasoning,
-            imageInputTokens: (int) ($inputDetails['image_tokens'] ?? 0),
+            imageInputTokens: Payload::int($inputDetails['image_tokens'] ?? null),
         );
     }
 

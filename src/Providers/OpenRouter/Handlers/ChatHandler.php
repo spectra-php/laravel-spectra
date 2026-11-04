@@ -8,6 +8,7 @@ use Spectra\Data\Metrics;
 use Spectra\Data\TokenMetrics;
 use Spectra\Providers\Concerns\OpenAiCompatibleChatHandler;
 use Spectra\Providers\OpenRouter\Concerns\ReadsReportedCost;
+use Spectra\Support\Payload;
 
 /**
  * OpenRouter `chat/completions`, streamed or not.
@@ -41,7 +42,7 @@ class ChatHandler extends OpenAiCompatibleChatHandler
         // server tool. Chat responses report them under
         // `server_tool_use_details`, image responses under `server_tool_use`.
         $tools = $usage['server_tool_use_details'] ?? $usage['server_tool_use'] ?? [];
-        $searches = is_array($tools) ? (int) ($tools['web_search_requests'] ?? 0) : 0;
+        $searches = is_array($tools) ? Payload::int($tools['web_search_requests'] ?? null) : 0;
 
         if ($searches <= 0) {
             return $metrics;
@@ -64,8 +65,8 @@ class ChatHandler extends OpenAiCompatibleChatHandler
     public function tokensFromUsage(array $usage): TokenMetrics
     {
         $tokens = parent::tokensFromUsage($usage);
-        $imageOutput = (int) ($usage['completion_tokens_details']['image_tokens'] ?? 0);
-        $writes1h = (int) ($usage['cache_creation']['ephemeral_1h_input_tokens'] ?? 0);
+        $imageOutput = Payload::int($usage['completion_tokens_details']['image_tokens'] ?? null);
+        $writes1h = Payload::int($usage['cache_creation']['ephemeral_1h_input_tokens'] ?? null);
 
         if ($imageOutput <= 0 && $writes1h <= 0) {
             return $tokens;

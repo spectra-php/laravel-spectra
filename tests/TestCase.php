@@ -32,6 +32,9 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app): void
     {
         config()->set('database.default', 'testing');
+        // Testbench's skeleton has no .env on a fresh install, so the routes that
+        // start a session or encrypt a cookie need a key of their own.
+        config()->set('app.key', 'base64:'.base64_encode(str_repeat('s', 32)));
         config()->set('cache.default', 'array');
 
         // Create users table
