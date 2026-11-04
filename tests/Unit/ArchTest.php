@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Model;
+use Spectra\Http\Controllers\Api\BaseApiController;
+
 /**
  * Structural rules for the package source: readonly DTOs, invokable actions,
  * controllers on the base controller, interfaces for contracts and no debug
@@ -17,7 +20,7 @@ arch('enums are enums')
 
 arch('models extend eloquent model')
     ->expect('Spectra\Models')
-    ->toExtend('Illuminate\Database\Eloquent\Model');
+    ->toExtend(Model::class);
 
 arch('actions are invokable')
     ->expect('Spectra\Actions')
@@ -25,7 +28,7 @@ arch('actions are invokable')
 
 arch('controllers extend base controller')
     ->expect('Spectra\Http\Controllers\Api')
-    ->toExtend('Spectra\Http\Controllers\Api\BaseApiController');
+    ->toExtend(BaseApiController::class);
 
 arch('contracts are interfaces')
     ->expect('Spectra\Contracts')

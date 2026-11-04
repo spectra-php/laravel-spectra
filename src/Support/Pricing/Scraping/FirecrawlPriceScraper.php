@@ -73,7 +73,7 @@ class FirecrawlPriceScraper
                     'timeout' => $pageTimeout,
                 ]);
         } catch (Throwable $e) {
-            throw new RuntimeException("Firecrawl couldn't read {$url}: {$e->getMessage()}", previous: $e);
+            throw new RuntimeException("Firecrawl couldn't read {$url}: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
 
         if ($response->failed() || $response->json('success') !== true) {
@@ -85,9 +85,7 @@ class FirecrawlPriceScraper
         $models = $response->json('data.json.models');
         $markdown = $response->json('data.markdown');
 
-        if (! is_array($models)) {
-            throw new RuntimeException("Firecrawl found no prices on {$url}.");
-        }
+        throw_unless(is_array($models), RuntimeException::class, "Firecrawl found no prices on {$url}.");
 
         return new ScrapedPage($url, array_values(Arr::where($models, fn (mixed $row) => is_array($row))), is_string($markdown) ? $markdown : '');
     }

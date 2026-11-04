@@ -111,7 +111,7 @@ describe('ResponseProcessor', function () {
 
         $response = Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4.1']);
 
-        $row = SpectraRequest::sole();
+        $row = SpectraRequest::query()->sole();
 
         // gpt-4.1: $2 in / $8 out per 1M tokens: (19 × 200 + 10 × 800) / 1M = 0.0118¢
         expect($response->successful())->toBeTrue()
@@ -128,8 +128,8 @@ describe('ResponseProcessor', function () {
 
         Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4.1']);
 
-        expect(SpectraRequest::sole()->error_message)->toBe('{"error":{"message":{"quota":"exceeded"}}}')
-            ->and(SpectraRequest::sole()->status_code)->toBe(429);
+        expect(SpectraRequest::query()->sole()->error_message)->toBe('{"error":{"message":{"quota":"exceeded"}}}')
+            ->and(SpectraRequest::query()->sole()->status_code)->toBe(429);
     });
 
     it('records a Gemini image response whose parts have the wrong types, with its cost', function () {
@@ -148,7 +148,7 @@ describe('ResponseProcessor', function () {
                 'contents' => [['role' => 'user', 'parts' => [['text' => 'Hello']]]],
             ]);
 
-        $row = SpectraRequest::sole();
+        $row = SpectraRequest::query()->sole();
 
         // Gemini 3.1 Flash Image: (20×50 + (30 + 200)×300 + 1120×6000) / 1M = 6.79¢
         expect($row->model_type)->toBe('image')
@@ -170,7 +170,7 @@ describe('ResponseProcessor', function () {
 
         Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4.1']);
 
-        $row = SpectraRequest::sole();
+        $row = SpectraRequest::query()->sole();
 
         // gpt-4.1: (19 × 200 + 10 × 800) / 1M = 0.0118¢
         expect($row->finish_reason)->toBeNull()
@@ -196,7 +196,7 @@ describe('media downloads', function () {
 
         Http::post('https://api.replicate.com/v1/predictions', ['version' => 'black-forest-labs/flux-1.1-pro', 'input' => ['prompt' => 'x']]);
 
-        $row = SpectraRequest::sole();
+        $row = SpectraRequest::query()->sole();
 
         expect($row->media_storage_path)->toHaveCount(1)
             ->and(Storage::disk('spectra-test')->get($row->media_storage_path[0]))->toBe('webp-bytes')

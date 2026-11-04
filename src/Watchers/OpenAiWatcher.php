@@ -6,6 +6,8 @@ namespace Spectra\Watchers;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
+use OpenAI\Contracts\ClientContract;
+use OpenAI\Laravel\ServiceProvider;
 use Spectra\Contracts\Watcher;
 use Spectra\Support\ApiKeyResolver;
 use Spectra\Support\Tracking\GuzzleMiddleware;
@@ -18,13 +20,13 @@ use Spectra\Support\Tracking\GuzzleMiddleware;
  */
 class OpenAiWatcher implements Watcher
 {
-    private const OPENAI_CONTRACT = 'OpenAI\Contracts\ClientContract';
+    private const OPENAI_CONTRACT = ClientContract::class;
 
-    private const OPENAI_CLIENT = 'OpenAI\Client';
+    private const OPENAI_CLIENT = \OpenAI\Client::class;
 
-    private const OPENAI_SERVICE_PROVIDER = 'OpenAI\Laravel\ServiceProvider';
+    private const OPENAI_SERVICE_PROVIDER = ServiceProvider::class;
 
-    private const OPENAI_FACADE = 'OpenAI\Laravel\Facades\OpenAI';
+    private const OPENAI_FACADE = \OpenAI\Laravel\Facades\OpenAI::class;
 
     /**
      * Determine if the OpenAI Laravel package and client are installed.

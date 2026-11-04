@@ -21,9 +21,7 @@ class DashboardController extends Controller
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
-            if (Gate::denies('viewSpectra')) {
-                abort(403);
-            }
+            abort_if(Gate::denies('viewSpectra'), 403);
 
             return $next($request);
         });

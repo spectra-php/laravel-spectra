@@ -19,8 +19,7 @@ beforeEach(function () {
     $this->defaultProvider = config('spectra.budget.default_provider');
     $this->defaultModel = config('spectra.budget.default_model');
 
-    /** @var User $user */
-    $this->user = User::create([
+    $this->user = User::query()->create([
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => 'password',
@@ -183,5 +182,5 @@ it('updates the existing budget instead of creating a second one', function () {
 
     expect($updated->daily_limit)->toBe(2000)
         ->and($updated->weekly_limit)->toBe(10000)
-        ->and(SpectraBudget::where('budgetable_id', $this->user->id)->count())->toBe(1);
+        ->and(SpectraBudget::query()->where('budgetable_id', $this->user->id)->count())->toBe(1);
 });

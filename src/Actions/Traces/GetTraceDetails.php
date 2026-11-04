@@ -186,7 +186,7 @@ class GetTraceDetails
     private function spans(string $traceId): Collection
     {
         return rescue(
-            fn () => SpectraSpan::query()->where('trace_id', $traceId)->orderBy('started_at')->limit(self::SPAN_LIMIT)->get(),
+            fn () => SpectraSpan::query()->where('trace_id', $traceId)->oldest('started_at')->limit(self::SPAN_LIMIT)->get(),
             fn () => new Collection,
             report: false,
         );

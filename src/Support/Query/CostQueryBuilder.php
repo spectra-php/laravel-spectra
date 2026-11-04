@@ -7,8 +7,8 @@ namespace Spectra\Support\Query;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Spectra\Data\CostBreakdown;
 use Spectra\Models\SpectraRequest;
@@ -72,7 +72,7 @@ class CostQueryBuilder
      */
     public function between(CarbonInterface|string $start, CarbonInterface|string $end): self
     {
-        $start = $start instanceof CarbonInterface ? $start : Carbon::parse($start);
+        $start = $start instanceof CarbonInterface ? $start : Date::parse($start);
 
         $this->query->whereBetween('created_at', [$start, DateRange::inclusiveEnd($end)]);
 
@@ -84,7 +84,7 @@ class CostQueryBuilder
      */
     public function today(): self
     {
-        return $this->between(now()->startOfDay(), now());
+        return $this->between(today(), now());
     }
 
     /**

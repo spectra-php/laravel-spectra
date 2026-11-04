@@ -14,7 +14,7 @@ it('records a tracked ollama chat response with its tokens at zero cost', functi
 
     Spectra::track('ollama', 'llama3.2', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Ollama runs locally, so requests are tracked but deliberately cost $0.
     expect($record->provider)->toBe('ollama')

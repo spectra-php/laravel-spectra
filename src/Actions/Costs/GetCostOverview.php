@@ -25,7 +25,7 @@ class GetCostOverview
         $endOfLastWeek = $startOfThisWeek->copy()->subSecond();
 
         return new CostOverviewResponse(
-            today: $this->costSince(now()->startOfDay()),
+            today: $this->costSince(today()),
             this_week: $this->costSince($startOfThisWeek),
             last_week: $this->costSince($startOfLastWeek, $endOfLastWeek),
             this_month: $this->costSince(now()->startOfMonth()),

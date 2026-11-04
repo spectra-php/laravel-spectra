@@ -123,7 +123,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     protected function imageUrls(array $data): array
     {
         return collect($this->outputUrls($data))
-            ->filter(fn (string $url) => ! in_array($this->fileKind($url), ['video', 'audio'], true))
+            ->reject(fn (string $url): bool => in_array($this->fileKind($url), ['video', 'audio'], true))
             ->values()
             ->all();
     }

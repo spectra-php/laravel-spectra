@@ -34,8 +34,6 @@ class RecordsOriginJob implements ShouldQueue
             static::$origins[] = (new RequestContext)->origin;
         }
 
-        if ($this->mode === OriginJobMode::Fail) {
-            throw new RuntimeException('The job failed.');
-        }
+        throw_if($this->mode === OriginJobMode::Fail, RuntimeException::class, 'The job failed.');
     }
 }

@@ -21,7 +21,7 @@ it('records a prediction with iso timestamps and takes its latency from them', f
             'input' => ['prompt' => 'A beautiful sunset over mountains'],
         ]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // completed_at − created_at (no started_at) = 4 s
     expect($response->status())->toBe(201)
@@ -46,12 +46,12 @@ it('records a polled prediction once, when it succeeds', function () {
     ]);
     Http::get("https://api.replicate.com/v1/predictions/{$id}");
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 
     Http::get("https://api.replicate.com/v1/predictions/{$id}");
     Http::get("https://api.replicate.com/v1/predictions/{$id}");
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // A single URL output is an image, not a video: flux-1.1-pro is $0.04 per image.
     expect($record->provider)->toBe('replicate')
@@ -63,8 +63,8 @@ it('records a polled prediction once, when it succeeds', function () {
         // completed_at 10:00:04.750 − started_at 10:00:01.500
         ->and($record->latency_ms)->toBe(3250)
         ->and($record->total_cost_in_cents)->toEqualWithDelta(4.0, 0.000001)
-        ->and((int) SpectraDailyStat::sum('request_count'))->toBe(1)
-        ->and((float) SpectraDailyStat::sum('total_cost_in_cents'))->toEqualWithDelta(4.0, 0.000001);
+        ->and((int) SpectraDailyStat::query()->sum('request_count'))->toBe(1)
+        ->and((float) SpectraDailyStat::query()->sum('total_cost_in_cents'))->toEqualWithDelta(4.0, 0.000001);
 });
 
 it('records deployment predictions with the model from the response', function () {
@@ -72,8 +72,8 @@ it('records deployment predictions with the model from the response', function (
 
     Http::post('https://api.replicate.com/v1/deployments/acme/flux-pro-eu/predictions', ['input' => ['prompt' => 'x']]);
 
-    expect(SpectraRequest::sole()->model)->toBe('FLUX 1.1 Pro')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(4.0, 0.000001);
+    expect(SpectraRequest::query()->sole()->model)->toBe('FLUX 1.1 Pro')
+        ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(4.0, 0.000001);
 });
 
 it('records a failed prediction without cost', function () {
@@ -81,7 +81,7 @@ it('records a failed prediction without cost', function () {
 
     Http::get('https://api.replicate.com/v1/predictions/x1hfa7zq3hrmc0cs9qwbtyd0rg');
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     expect($record->finish_reason)->toBe('failed')
         ->and($record->image_count)->toBe(0)
@@ -93,7 +93,7 @@ it('prices wan video by the seconds the input asked for', function () {
 
     Http::get('https://api.replicate.com/v1/predictions/8rs0w5kq1nrmc0cs9qwv7tpbxc');
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // 81 frames / 16 fps = 5.0625 s × 9 cents per second = 45.5625 cents
     expect($record->model_type)->toBe('video')
@@ -107,7 +107,7 @@ it('bills 1080p veo output at the hd price', function () {
 
     Http::get('https://api.replicate.com/v1/predictions/2b7nvfw0f5rmc0cs9qx0jq3m9w');
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // 8 s × 8 cents per second (1080p) = 64 cents
     expect($record->model)->toBe('Veo 3.1 Lite')
@@ -123,7 +123,7 @@ it('prices official language models by the token counts in the metrics', functio
         'input' => ['prompt' => 'Summarise the attached policy in three bullet points.'],
     ]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // (1,200 × 200 + 350 × 1000) / 1M = 0.59 cents
     expect($record->model)->toBe('Claude Sonnet 5')

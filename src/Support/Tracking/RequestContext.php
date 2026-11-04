@@ -334,7 +334,7 @@ class RequestContext implements Arrayable
         $this->completedAt = now();
 
         $this->latencyMs = (int) $this->startedAt->diffInMilliseconds($this->completedAt);
-        $this->errorType = get_class($exception);
+        $this->errorType = $exception::class;
         $this->errorMessage = $exception->getMessage();
         $this->httpStatus = $httpStatus;
 
@@ -458,9 +458,9 @@ class RequestContext implements Arrayable
     {
         return match (true) {
             $trackable instanceof Model => [$trackable->getMorphClass(), $trackable->getKey()],
-            method_exists($trackable, 'getKey') => [get_class($trackable), $trackable->getKey()],
-            method_exists($trackable, 'getAuthIdentifier') => [get_class($trackable), $trackable->getAuthIdentifier()],
-            default => [get_class($trackable), null],
+            method_exists($trackable, 'getKey') => [$trackable::class, $trackable->getKey()],
+            method_exists($trackable, 'getAuthIdentifier') => [$trackable::class, $trackable->getAuthIdentifier()],
+            default => [$trackable::class, null],
         };
     }
 

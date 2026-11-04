@@ -21,10 +21,16 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
+use Spectra\Console\Commands\InstallCommand;
+use Spectra\Console\Commands\PruneCommand;
+use Spectra\Console\Commands\RebuildStatsCommand;
+use Spectra\Console\Commands\ScrapePricingCommand;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Contracts\SpanBuilder;
 use Spectra\Contracts\Watcher;
 use Spectra\Enums\SpanKind;
+use Spectra\Http\Middleware\ContinueTrace;
+use Spectra\Http\Middleware\EnforceBudgetLimit;
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
 use Spectra\Integrations\OpenTelemetry\OtlpExporter;
 use Spectra\Integrations\OpenTelemetry\SpanExporter;
@@ -72,9 +78,7 @@ class SpectraServiceProvider extends ServiceProvider
 
         // Scoped, so global tags, trackables, pricing tier and metadata are
         // reset between queued jobs and Octane requests instead of leaking.
-        $this->app->scoped(Spectra::class, function ($app) {
-            return new Spectra($app);
-        });
+        $this->app->scoped(Spectra::class, fn ($app) => new Spectra($app));
 
         // Scoped too: queue workers and Octane reset them before each job and request.
         $this->app->scoped(TraceOrigin::class);
@@ -83,17 +87,11 @@ class SpectraServiceProvider extends ServiceProvider
 
         $this->app->alias(Spectra::class, 'spectra');
 
-        $this->app->singleton(CostCalculator::class, function () {
-            return new CostCalculator;
-        });
+        $this->app->singleton(CostCalculator::class, fn () => new CostCalculator);
 
-        $this->app->singleton(BudgetEnforcer::class, function ($app) {
-            return new BudgetEnforcer($app['events']);
-        });
+        $this->app->singleton(BudgetEnforcer::class, fn ($app) => new BudgetEnforcer($app['events']));
 
-        $this->app->singleton(StatsAggregator::class, function () {
-            return new StatsAggregator;
-        });
+        $this->app->singleton(StatsAggregator::class, fn () => new StatsAggregator);
 
         $this->app->singleton(RequestTransformer::class, function () {
             $class = config('spectra.integrations.request_transformer', RequestTransformer::class);
@@ -105,26 +103,20 @@ class SpectraServiceProvider extends ServiceProvider
             return new RequestTransformer;
         });
 
-        $this->app->singleton(RequestWriter::class, function ($app) {
-            return new RequestWriter(
-                $app->make(StatsAggregator::class),
-                $app->make(RequestTransformer::class),
-                $app->make(RequestExporter::class),
-            );
-        });
+        $this->app->singleton(RequestWriter::class, fn ($app) => new RequestWriter(
+            $app->make(StatsAggregator::class),
+            $app->make(RequestTransformer::class),
+            $app->make(RequestExporter::class),
+        ));
 
-        $this->app->singleton(RequestPersister::class, function ($app) {
-            return new RequestPersister(
-                $app->make(RequestCostCalculator::class),
-                $app->make(RequestWriter::class),
-                $app->make(RequestExporter::class),
-                $app->make(RequestTransformer::class)
-            );
-        });
+        $this->app->singleton(RequestPersister::class, fn ($app) => new RequestPersister(
+            $app->make(RequestCostCalculator::class),
+            $app->make(RequestWriter::class),
+            $app->make(RequestExporter::class),
+            $app->make(RequestTransformer::class)
+        ));
 
-        $this->app->singleton(PricingLookup::class, function () {
-            return new PricingLookup(PricingCatalog::active());
-        });
+        $this->app->singleton(PricingLookup::class, fn () => new PricingLookup(PricingCatalog::active()));
 
         $this->app->alias(PricingLookup::class, 'spectra.pricing');
 
@@ -138,30 +130,22 @@ class SpectraServiceProvider extends ServiceProvider
             return new DefaultSpanBuilder;
         });
 
-        $this->app->singleton(SpanExporter::class, function ($app) {
-            return new SpanExporter(
-                config('app.name'),
-                config('spectra.integrations.opentelemetry.service_version', '1.0.0'),
-                config('spectra.integrations.opentelemetry.resource_attributes', []),
-                $app->make(SpanBuilder::class)
-            );
-        });
+        $this->app->singleton(SpanExporter::class, fn ($app) => new SpanExporter(
+            config('app.name'),
+            config('spectra.integrations.opentelemetry.service_version', '1.0.0'),
+            config('spectra.integrations.opentelemetry.resource_attributes', []),
+            $app->make(SpanBuilder::class)
+        ));
 
-        $this->app->singleton(OtlpExporter::class, function ($app) {
-            return new OtlpExporter(
-                config('spectra.integrations.opentelemetry.endpoint'),
-                config('spectra.integrations.opentelemetry.headers', []),
-                $app->make(SpanExporter::class)
-            );
-        });
+        $this->app->singleton(OtlpExporter::class, fn ($app) => new OtlpExporter(
+            config('spectra.integrations.opentelemetry.endpoint'),
+            config('spectra.integrations.opentelemetry.headers', []),
+            $app->make(SpanExporter::class)
+        ));
 
-        $this->app->singleton(RequestExporter::class, function ($app) {
-            return $app->make(OtlpExporter::class);
-        });
+        $this->app->singleton(RequestExporter::class, fn ($app) => $app->make(OtlpExporter::class));
 
-        $this->app->singleton(ApiKeyResolver::class, function () {
-            return new ApiKeyResolver;
-        });
+        $this->app->singleton(ApiKeyResolver::class, fn () => new ApiKeyResolver);
 
         $this->registerProviders();
     }
@@ -321,12 +305,10 @@ class SpectraServiceProvider extends ServiceProvider
      */
     protected function registerProviders(): void
     {
-        $this->app->singleton(ProviderRegistry::class, function ($app) {
-            return new ProviderRegistry(
-                config('spectra.providers'),
-                $app->make(ApiKeyResolver::class)
-            );
-        });
+        $this->app->singleton(ProviderRegistry::class, fn ($app) => new ProviderRegistry(
+            config('spectra.providers'),
+            $app->make(ApiKeyResolver::class)
+        ));
 
         $this->app->booted(function () {
             // An entry set to false turns that built-in provider off.
@@ -336,9 +318,7 @@ class SpectraServiceProvider extends ServiceProvider
                 $providerClass = is_array($providerConfig) ? ($providerConfig['class'] ?? null) : $providerConfig;
 
                 if (filled($providerClass) && class_exists($providerClass)) {
-                    $this->app->singleton("spectra.provider.{$provider}", function () use ($providerClass) {
-                        return new $providerClass;
-                    });
+                    $this->app->singleton("spectra.provider.{$provider}", fn () => new $providerClass);
                 }
             }
         });
@@ -490,10 +470,10 @@ class SpectraServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
-                Console\Commands\InstallCommand::class,
-                Console\Commands\PruneCommand::class,
-                Console\Commands\RebuildStatsCommand::class,
-                Console\Commands\ScrapePricingCommand::class,
+                InstallCommand::class,
+                PruneCommand::class,
+                RebuildStatsCommand::class,
+                ScrapePricingCommand::class,
             ]);
 
             AboutCommand::add('Spectra', fn () => [
@@ -520,8 +500,8 @@ class SpectraServiceProvider extends ServiceProvider
     protected function registerMiddleware(): void
     {
         $this->callAfterResolving('router', function (Router $router) {
-            $router->aliasMiddleware('spectra.budget', Http\Middleware\EnforceBudgetLimit::class);
-            $router->aliasMiddleware('spectra.trace', Http\Middleware\ContinueTrace::class);
+            $router->aliasMiddleware('spectra.budget', EnforceBudgetLimit::class);
+            $router->aliasMiddleware('spectra.trace', ContinueTrace::class);
         });
     }
 

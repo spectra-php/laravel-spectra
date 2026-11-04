@@ -38,7 +38,7 @@ it('prices cache reads and 5-minute and 1-hour cache writes separately', functio
 
     postAnthropic(['model' => 'claude-opus-4-8']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Opus 4.8: $5 in, $25 out, $0.50 cache read, $6.25 5m write, $10 1h write.
     // 2048×500 + 1800×50 + 148×625 + 100×1000 + 503×2500 = 2,564,000 / 1M = 2.564¢
@@ -56,7 +56,7 @@ it('prices fast mode with the fast-mode cache rates and the US-only inference su
 
     postAnthropic(['model' => 'claude-opus-5-5', 'speed' => 'fast', 'inference_geo' => 'us']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Opus 5.5 fast: $8 in, $40 out, $0.40 cache read, $16 1h write.
     // (1000×800 + 4000×40 + 2000×1600 + 500×4000) / 1M = 6.16¢, × 1.1 (US-only) = 6.776¢
@@ -76,7 +76,7 @@ it('bills web searches per search and web fetches for free', function () {
         ['type' => 'web_fetch_20260209', 'name' => 'web_fetch'],
     ]]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Sonnet 5.5: $2 in, $10 out → (18240×200 + 812×1000) / 1M = 4.46¢
     // plus 2 searches × 1¢ ($10 per 1,000); the fetch is free.
@@ -91,7 +91,7 @@ it('prices Claude Haiku 5.5 prompts over 100,000 tokens at the long-context rate
 
     postAnthropic(['model' => 'claude-haiku-5-5']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // 90,000 uncached + 20,000 cache reads = 110,000 > 100,000, so the whole
     // request pays $0.50 in, $2.50 out, $0.05 cache read:
@@ -109,7 +109,7 @@ it('keeps Claude Haiku 5.5 prompts up to 100,000 tokens at the base rates', func
     postAnthropic(['model' => 'claude-haiku-5-5']);
 
     // (80000×10 + 20000×1 + 1000×50) / 1M = 0.87¢
-    expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.87, 0.000001);
+    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(0.87, 0.000001);
 });
 
 it('adds the compaction iteration the top-level usage leaves out', function () {
@@ -117,7 +117,7 @@ it('adds the compaction iteration the top-level usage leaves out', function () {
 
     postAnthropic(['model' => 'claude-opus-5-5']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Billed: 180,000 + 23,000 input and 3,500 + 1,000 output on Opus 5.5 ($4 / $20):
     // (203000×400 + 4500×2000) / 1M = 90.2¢
@@ -131,7 +131,7 @@ it('records priority tier and bills it at standard prices', function () {
 
     postAnthropic(['model' => 'claude-sonnet-4-6', 'service_tier' => 'auto']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Priority Tier is a capacity contract; the catalog has no separate
     // prices, so Sonnet 4.6 standard: (410×300 + 585×1500) / 1M = 1.0005¢
@@ -145,8 +145,8 @@ it('ignores the configured default tier when the response says standard', functi
 
     postAnthropic(['model' => 'claude-opus-4-8']);
 
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('standard')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(2.564, 0.000001);
+    expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('standard')
+        ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(2.564, 0.000001);
 });
 
 it('falls back to the requested fast mode when the response does not say', function () {
@@ -157,8 +157,8 @@ it('falls back to the requested fast mode when the response does not say', funct
     postAnthropic(['model' => 'claude-opus-5-5', 'speed' => 'fast']);
 
     // Same tokens as the fast-mode test without the US surcharge: 6.16¢
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('fast')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(6.16, 0.000001);
+    expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('fast')
+        ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(6.16, 0.000001);
 });
 
 it('bills standard speed when fast mode was requested but not served', function () {
@@ -172,8 +172,8 @@ it('bills standard speed when fast mode was requested but not served', function 
     postAnthropic(['model' => 'claude-opus-4-6', 'speed' => 'fast']);
 
     // Opus 4.6: (1000×500 + 4000×50 + 2000×1000 + 500×2500) / 1M = 3.95¢
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('standard')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(3.95, 0.000001);
+    expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('standard')
+        ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(3.95, 0.000001);
 });
 
 it('lets an explicitly chosen tier win over the response', function () {
@@ -183,8 +183,8 @@ it('lets an explicitly chosen tier win over the response', function () {
     postAnthropic(['model' => 'claude-opus-4-8']);
 
     // Opus 4.8 batch: (2048×250 + 1800×25 + 148×312.5 + 100×500 + 503×1250) / 1M = 1.282¢
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('batch')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(1.282, 0.000001);
+    expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('batch')
+        ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(1.282, 0.000001);
 });
 
 it('prices a batch result message at batch rates', function () {
@@ -192,7 +192,7 @@ it('prices a batch result message at batch rates', function () {
 
     Spectra::track('anthropic', $message['model'], fn () => $message);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Sonnet 4.6 batch: $1.50 in, $7.50 out, $0.15 cache read:
     // (1200×150 + 800×15 + 40×750) / 1M = 0.222¢
@@ -212,11 +212,11 @@ it('takes the cumulative usage of message_delta over message_start in a stream',
 
     $response = postAnthropic(['model' => 'claude-opus-4-8', 'stream' => true]);
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 
     $response->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // message_start said 2,679 input tokens; the final delta says 10,682
     // (the search results were added). Opus 4.8: (10682×500 + 510×2500) / 1M
@@ -237,7 +237,7 @@ it('reads fast mode, US-only inference and cache usage from a stream', function 
 
     postAnthropic(['model' => 'claude-opus-5-5', 'stream' => true, 'speed' => 'fast', 'inference_geo' => 'us'])->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Same usage as the non-streamed fast-mode test: 6.16¢ × 1.1 = 6.776¢.
     // The cache counts come from message_start; the delta only updates output.
@@ -255,8 +255,8 @@ it('uses the requested tier for a stream that does not report one', function () 
 
     postAnthropic(['model' => 'claude-opus-5-5', 'stream' => true, 'speed' => 'fast'])->body();
 
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('fast')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(6.16, 0.000001);
+    expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('fast')
+        ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(6.16, 0.000001);
 });
 
 /*

@@ -18,7 +18,7 @@ it('bills text to speech per character of the request text', function () {
         'model_id' => 'eleven_flash_v2_5',
     ]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // eleven_flash_v2_5: $0.04 per 1,000 characters → 2,500 × 4000 / 1M = 10 cents
     expect($record->provider)->toBe('elevenlabs')
@@ -34,8 +34,8 @@ it('uses eleven_multilingual_v2 when the request names no model', function () {
     Http::post('https://api.elevenlabs.io/v1/text-to-speech/JBFqnCBsd6RMkjVDRZzb/stream', ['text' => str_repeat('b', 1000)]);
 
     // eleven_multilingual_v2: $0.08 per 1,000 characters → 8 cents
-    expect(SpectraRequest::sole()->model)->toBe('Eleven Multilingual v2')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(8.0, 0.000001);
+    expect(SpectraRequest::query()->sole()->model)->toBe('Eleven Multilingual v2')
+        ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(8.0, 0.000001);
 });
 
 it('bills text to speech with timestamps without storing the base64 audio', function () {
@@ -46,7 +46,7 @@ it('bills text to speech with timestamps without storing the base64 audio', func
         'model_id' => 'eleven_v3',
     ]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // eleven_v3: 5 characters × 8000 / 1M = 0.04 cents
     expect($record->model)->toBe('Eleven v3')
@@ -63,7 +63,7 @@ it('bills speech to text per minute of audio', function () {
         ['name' => 'file', 'contents' => 'fake-audio', 'filename' => 'meeting.mp3'],
     ]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Scribe v2: $0.22 per hour → 90 s = 1.5 min × 22/60 cents = 0.55 cents
     expect($record->model)->toBe('Scribe v2')
@@ -84,8 +84,8 @@ it('falls back to the last word end when the transcript has no audio length', fu
     ]);
 
     // Last word ends at 1.2 s → 0.02 min × 22/60 cents
-    expect(SpectraRequest::sole()->duration_seconds)->toEqualWithDelta(1.2, 0.001)
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(1.2 / 60 * 22 / 60, 0.000001);
+    expect(SpectraRequest::query()->sole()->duration_seconds)->toEqualWithDelta(1.2, 0.001)
+        ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(1.2 / 60 * 22 / 60, 0.000001);
 });
 
 it('does not record a speech to text webhook receipt', function () {
@@ -101,7 +101,7 @@ it('does not record a speech to text webhook receipt', function () {
         ['name' => 'file', 'contents' => 'fake-audio', 'filename' => 'long.mp3'],
     ]);
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 });
 
 it('bills sound effects per minute of requested audio', function () {
@@ -109,7 +109,7 @@ it('bills sound effects per minute of requested audio', function () {
 
     Http::post('https://api.elevenlabs.io/v1/sound-generation', ['text' => 'Thunder rolling in', 'duration_seconds' => 5]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Sound effects: $0.12 per minute → 5 s = 1 cent.
     expect($record->model)->toBe('Eleven Sound Effects v2')
@@ -121,7 +121,7 @@ it('bills music per minute of requested audio', function () {
 
     Http::post('https://api.elevenlabs.io/v1/music', ['prompt' => 'Calm piano', 'music_length_ms' => 30000]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Music: $0.15 per minute → 30 s = 7.5 cents.
     expect($record->model)->toBe('Eleven Music v1')

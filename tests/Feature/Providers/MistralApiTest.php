@@ -19,7 +19,7 @@ it('bills a reasoning response with its cache hits and thinking inside the outpu
 
     Http::post('https://api.mistral.ai/v1/chat/completions', ['model' => 'mistral-large-4', 'reasoning_effort' => 'high', 'messages' => []]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Mistral Large 4: 200 uncached × 70 + 1,000 cached × 7 + 1,114 × 210
     // = 254,940 / 1M = 0.25494 cents. Thinking tokens are already in completion_tokens.
@@ -46,7 +46,7 @@ it('records the tier Mistral says it served and bills it at standard without a p
 
     Http::post('https://api.mistral.ai/v1/chat/completions', ['model' => 'mistral-large-latest', 'service_tier' => 'priority', 'messages' => []]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // No priority price is published, so Mistral Large 3 bills at standard: (25×50 + 15×150) / 1M = 0.0035¢
     expect($row->pricing_tier)->toBe('priority')
@@ -71,7 +71,7 @@ it('records a streamed reasoning response with its answer text and cost', functi
 
     Http::post('https://api.mistral.ai/v1/chat/completions', ['model' => 'mistral-medium-3-5', 'stream' => true, 'reasoning_effort' => 'high', 'messages' => []])->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Mistral Medium 3.5: 14 × 150 + 86 × 750 = 66,600 / 1M = 0.0666 cents.
     expect($row->is_streaming)->toBeTrue()
@@ -91,7 +91,7 @@ it('bills OCR per page', function () {
         'document' => ['type' => 'document_url', 'document_url' => 'https://example.com/report.pdf'],
     ]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Mistral OCR 4.1: 3 pages × 0.4 cents = 1.2 cents.
     expect($row->provider)->toBe('mistral')

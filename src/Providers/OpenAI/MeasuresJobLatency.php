@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenAI;
 
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Throwable;
 
 /**
@@ -47,7 +47,7 @@ trait MeasuresJobLatency
         }
 
         try {
-            return Carbon::parse($value)->getTimestampMs();
+            return Date::parse($value)->getTimestampMs();
         } catch (Throwable) {
             return null;
         }

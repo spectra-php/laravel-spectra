@@ -27,7 +27,7 @@ function makeBudgetRequest(User $user, array $headers = []): Request
 }
 
 beforeEach(function () {
-    $this->user = User::create([
+    $this->user = User::query()->create([
         'name' => 'Budget User',
         'email' => 'budget@example.com',
         'password' => 'password',

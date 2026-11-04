@@ -25,15 +25,15 @@ it('records a background response once, when a poll returns it finished', functi
     ]);
 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.5-pro', 'background' => true, 'input' => 'Prove the bound.']);
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 
     Http::get('https://api.openai.com/v1/responses/resp_bg_7a6b5c4d3e2f1a0b');
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 
     Http::get('https://api.openai.com/v1/responses/resp_bg_7a6b5c4d3e2f1a0b');
     Http::get('https://api.openai.com/v1/responses/resp_bg_7a6b5c4d3e2f1a0b');
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Served at service_tier "flex": gpt-5.5-pro flex in 1500, out 9000.
     // (6000*1500 + 40000*9000) / 1M = 369.0
@@ -47,8 +47,8 @@ it('records a background response once, when a poll returns it finished', functi
         // completed_at - created_at = 180 s, not the duration of the poll.
         ->and($row->latency_ms)->toBe(180_000)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(369.0, 1e-9)
-        ->and((int) SpectraDailyStat::sum('request_count'))->toBe(1)
-        ->and((float) SpectraDailyStat::sum('total_cost_in_cents'))->toEqualWithDelta(369.0, 1e-9);
+        ->and((int) SpectraDailyStat::query()->sum('request_count'))->toBe(1)
+        ->and((float) SpectraDailyStat::query()->sum('total_cost_in_cents'))->toEqualWithDelta(369.0, 1e-9);
 });
 
 it('records a cancelled background response', function () {
@@ -58,7 +58,7 @@ it('records a cancelled background response', function () {
 
     Http::post('https://api.openai.com/v1/responses/resp_bg_7a6b5c4d3e2f1a0b/cancel');
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     expect($row->finish_reason)->toBe('cancelled')
         ->and($row->prompt_tokens)->toBe(0)
@@ -73,7 +73,7 @@ it('does not record again a stored response fetched later', function () {
     Http::get('https://api.openai.com/v1/responses/resp_0a1b2c3d4e5f60718293a4b5c6d7e8f9/input_items');
     Http::delete('https://api.openai.com/v1/responses/resp_0a1b2c3d4e5f60718293a4b5c6d7e8f9');
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 });
 
 it('records a finished sora video with its generation time as latency', function () {
@@ -81,7 +81,7 @@ it('records a finished sora video with its generation time as latency', function
 
     Http::get('https://api.openai.com/v1/videos/video_abc123');
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // sora-2: 10¢ per second, 10 seconds = 100¢. completed_at - created_at = 63 s.
     expect($row->provider)->toBe('openai')
@@ -96,7 +96,7 @@ it('bills gpt-image output as image tokens and the text part at the text rate', 
 
     Http::post('https://api.openai.com/v1/images/edits', ['model' => 'gpt-image-1.5', 'prompt' => 'Add a red scarf']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-image-1.5: text in 500, image in 800, text out 1000, image out 3200.
     // Input 20 text + 100 image; output 444 text + 1056 image.
@@ -116,7 +116,7 @@ it('bills all gpt-image-1 output as image tokens when there is no breakdown', fu
     Http::post('https://api.openai.com/v1/images/generations', ['model' => 'gpt-image-1', 'prompt' => 'A lighthouse', 'quality' => 'high']);
 
     // gpt-image-1: text in 500, image out 4000 → (50*500 + 4160*4000) / 1M = 16.665
-    expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(16.665, 1e-9);
+    expect((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(16.665, 1e-9);
 });
 
 it('applies the hd tier to dall-e-3 hd images', function () {
@@ -129,7 +129,7 @@ it('applies the hd tier to dall-e-3 hd images', function () {
         'response_format' => 'b64_json',
     ]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // dall-e-3 hd: 8¢ per 1024x1024 image.
     expect($row->pricing_tier)->toBe('hd')
@@ -143,7 +143,7 @@ it('bills token-priced transcriptions on audio input tokens', function () {
     Http::attach('file', 'RIFF....WAVEfmt ', 'speech.wav')
         ->post('https://api.openai.com/v1/audio/transcriptions', ['model' => 'gpt-4o-transcribe']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-4o-transcribe (in 250, out 1000): (14*250 + 45*1000) / 1M = 0.0485
     expect($row->provider)->toBe('openai')
@@ -160,7 +160,7 @@ it('bills whisper on the seconds in the usage', function () {
     Http::attach('file', 'RIFF....WAVEfmt ', 'speech.wav')
         ->post('https://api.openai.com/v1/audio/transcriptions', ['model' => 'whisper-1']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // whisper-1: 0.6¢ per minute, 11 s → 11 / 60 * 0.6 = 0.11
     expect($row->duration_seconds)->toEqual(11.0)
@@ -175,7 +175,7 @@ it('does not fail on plain-text transcription formats', function () {
 
     expect($response->body())->toBe("Hello world\n");
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // The text format has no duration, so it can't be priced.
     expect($row->model)->toBe('Whisper')
@@ -188,7 +188,7 @@ it('bills tts-1 per input character', function () {
 
     Http::post('https://api.openai.com/v1/audio/speech', ['model' => 'tts-1', 'voice' => 'alloy', 'input' => 'Hello world']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // tts-1: $15 per 1M characters, 11 characters → 11 * 1500 / 1M = 0.0165
     expect($row->provider)->toBe('openai')

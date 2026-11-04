@@ -121,7 +121,7 @@ class ImageGenerationHandler implements Handler, HasMedia, StreamsResponse
     {
         $images = $data['data'] ?? [];
 
-        return is_array($images) ? array_values(array_filter($images, 'is_array')) : [];
+        return is_array($images) ? array_values(array_filter($images, is_array(...))) : [];
     }
 
     /**

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\RequestTransformer;
 
@@ -54,10 +54,10 @@ it('leaves the payloads and internal fields out', function () {
 
 it('starts spans at the precise start time and never ends them before it', function () {
     $request = SpectraRequest::factory()->create([
-        'started_at' => Carbon::parse('2026-11-03 10:00:00.900'),
-        'created_at' => Carbon::parse('2026-11-03 10:00:00'),
+        'started_at' => Date::parse('2026-11-03 10:00:00.900'),
+        'created_at' => Date::parse('2026-11-03 10:00:00'),
         // Stored to the second: the call really ended at 10:00:00.950.
-        'completed_at' => Carbon::parse('2026-11-03 10:00:00'),
+        'completed_at' => Date::parse('2026-11-03 10:00:00'),
     ]);
 
     $data = app(RequestTransformer::class)->transform($request->fresh());
@@ -69,8 +69,8 @@ it('starts spans at the precise start time and never ends them before it', funct
 it('starts spans of rows saved before started_at existed at created_at', function () {
     $request = SpectraRequest::factory()->create([
         'started_at' => null,
-        'created_at' => Carbon::parse('2026-11-03 10:00:00'),
-        'completed_at' => Carbon::parse('2026-11-03 10:00:02'),
+        'created_at' => Date::parse('2026-11-03 10:00:00'),
+        'completed_at' => Date::parse('2026-11-03 10:00:02'),
     ]);
 
     $data = app(RequestTransformer::class)->transform($request->fresh());

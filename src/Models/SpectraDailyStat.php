@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use RuntimeException;
 
 /**
@@ -159,8 +159,8 @@ class SpectraDailyStat extends Model
         // Compare calendar dates: SQLite stores the date cast as
         // "Y-m-d 00:00:00", so a "Y-m-d" end bound would drop the end day.
         return $query
-            ->whereDate('date', '>=', Carbon::parse($start)->format('Y-m-d'))
-            ->whereDate('date', '<=', Carbon::parse($end)->format('Y-m-d'));
+            ->whereDate('date', '>=', Date::parse($start)->format('Y-m-d'))
+            ->whereDate('date', '<=', Date::parse($end)->format('Y-m-d'));
     }
 
     /**

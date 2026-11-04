@@ -90,7 +90,7 @@ it('hides request and response payloads from the list endpoint', function () {
     ]);
 
     $controller = app(RequestsController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request(['period' => 'month'])]);
+    $response = app()->call($controller->__invoke(...), ['request' => new Request(['period' => 'month'])]);
     $json = $response->toArray();
 
     expect($json['data'])->toHaveCount(1)

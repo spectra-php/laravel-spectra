@@ -31,7 +31,7 @@ it('records a completed responses stream with cached tokens and the served tier'
 
     expect($response->body())->toBe($body);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Served at service_tier "priority": gpt-5.4 Fast in 500, cached 50, out 3000.
     // (1000*500 + 4000*50 + 300*3000) / 1M = 1.6
@@ -57,7 +57,7 @@ it('bills the 12h cache writes of a responses stream at the 12h rate', function 
 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.6-sol', 'stream' => true, 'input' => 'x'])->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-5.6-sol standard: in 400, cached 40, 30m write 500, 12h write 1000, out 2000.
     // Uncached input = 5000 - 1000 cached - 3000 written = 1000.
@@ -73,7 +73,7 @@ it('records the usage of a responses stream that ends incomplete', function () {
 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.4', 'stream' => true, 'max_output_tokens' => 1024, 'input' => 'x'])->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-5.4 standard (in 250, out 1500): (800*250 + 1024*1500) / 1M = 1.736
     expect($row->prompt_tokens)->toBe(800)
@@ -88,7 +88,7 @@ it('records the usage of a responses stream that fails', function () {
 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.4', 'stream' => true, 'input' => 'x'])->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-5.4 standard: (1200*250 + 50*1500) / 1M = 0.375
     expect($row->prompt_tokens)->toBe(1200)
@@ -110,7 +110,7 @@ it('records a chat completions stream with include_usage at the served tier', fu
 
     expect($response->body())->toBe($body);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Served at service_tier "flex": gpt-5.4-mini flex in 37.5, cached 3.75, out 225.
     // (1000*37.5 + 2000*3.75 + 400*225) / 1M = 0.135
@@ -131,7 +131,7 @@ it('records a chat stream without include_usage with zero tokens', function () {
 
     expect($response->body())->toContain('[DONE]');
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // OpenAI only sends usage when stream_options.include_usage is set.
     expect($row->is_streaming)->toBeTrue()
@@ -148,7 +148,7 @@ it('records a streamed transcription from its final event', function () {
         ->post('https://api.openai.com/v1/audio/transcriptions', ['model' => 'gpt-4o-transcribe', 'stream' => 'true'])
         ->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-4o-transcribe (audio in 250, text out 1000): (14*250 + 45*1000) / 1M = 0.0485
     expect($row->model)->toBe('GPT-4o Transcribe')
@@ -168,7 +168,7 @@ it('records a streamed image generation from its completed event', function () {
         'partial_images' => 1,
     ])->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // The streamed usage has no output breakdown: all 1156 output tokens are image tokens.
     // gpt-image-1.5: text in 500, image out 3200 → (16*500 + 1156*3200) / 1M = 3.7072

@@ -22,7 +22,7 @@ it('bills a v2 chat on its billed tokens, with cached tokens at the input rate',
 
     Http::post('https://api.cohere.com/v2/chat', ['model' => 'command-r-08-2024', 'messages' => [['role' => 'user', 'content' => 'Tell me about LLMs']]]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Command R: 1,200 billed input × 15 + 418 output × 60 = 43,080 / 1M cents.
     // Cached tokens have no separate price, so they bill at the input rate.
@@ -53,7 +53,7 @@ it('tracks a streamed v2 chat from its message-end usage', function () {
 
     expect($response->body())->toBe($sse);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Command R7B: 5 × 3.75 + 26 × 15 = 408.75 / 1M cents.
     expect($row->is_streaming)->toBeTrue()
@@ -73,7 +73,7 @@ it('bills embed image tokens on top of text tokens', function () {
 
     Http::post('https://api.cohere.ai/v2/embed', ['model' => 'embed-v4.0', 'input_type' => 'image', 'embedding_types' => ['float'], 'images' => ['data:image/jpeg;base64,AAAA']]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Embed 4: (10 text + 1,000 image tokens) × 12 = 12,120 / 1M cents.
     expect($row->model_type)->toBe('embedding')
@@ -88,7 +88,7 @@ it('bills rerank per search unit', function () {
 
     Http::post('https://api.cohere.com/v2/rerank', ['model' => 'rerank-v4.0-pro', 'query' => 'q', 'documents' => ['a', 'b', 'c']]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Rerank 4 Pro: 3 searches × 0.25 cents.
     expect($row->model)->toBe('Rerank 4 Pro')
@@ -100,7 +100,7 @@ it('bills parse per page', function () {
 
     Http::post('https://api.cohere.com/v2/parse', ['model' => 'parse-v5.0', 'document' => ['type' => 'image_url', 'image_url' => 'https://cohere.com/favicon-32x32.png'], 'output_format' => 'markdown']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Parse 5: 2 pages × 0.15 cents.
     expect($row->provider)->toBe('cohere')

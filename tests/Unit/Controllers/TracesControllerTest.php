@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Spectra\Http\Controllers\Api\ShowRequestController;
 use Spectra\Http\Controllers\Api\ShowTraceController;
 use Spectra\Http\Controllers\Api\TracesController;
@@ -37,7 +37,7 @@ function callTrace(string $traceId): array
  */
 function checkoutCall(int $offsetMs, array $attributes = []): SpectraRequest
 {
-    $start = Carbon::parse('2026-11-03 10:00:00')->addMilliseconds($offsetMs);
+    $start = Date::parse('2026-11-03 10:00:00')->addMilliseconds($offsetMs);
 
     return SpectraRequest::factory()->create([
         'trace_id' => CHECKOUT_TRACE,
@@ -71,8 +71,8 @@ it('lists one row of totals per trace', function () {
 });
 
 it('starts calls saved before started_at existed at created_at', function () {
-    SpectraRequest::factory()->create(['trace_id' => CHECKOUT_TRACE, 'started_at' => null, 'created_at' => Carbon::parse('2026-11-03 10:00:00'), 'latency_ms' => 500]);
-    SpectraRequest::factory()->create(['trace_id' => CHECKOUT_TRACE, 'started_at' => null, 'created_at' => Carbon::parse('2026-11-03 10:00:02'), 'latency_ms' => 500]);
+    SpectraRequest::factory()->create(['trace_id' => CHECKOUT_TRACE, 'started_at' => null, 'created_at' => Date::parse('2026-11-03 10:00:00'), 'latency_ms' => 500]);
+    SpectraRequest::factory()->create(['trace_id' => CHECKOUT_TRACE, 'started_at' => null, 'created_at' => Date::parse('2026-11-03 10:00:02'), 'latency_ms' => 500]);
 
     expect(callTraces()['data'][0]['duration_ms'])->toBe(2500);
 });

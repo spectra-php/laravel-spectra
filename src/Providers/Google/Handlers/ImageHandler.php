@@ -138,11 +138,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         }
 
         // Imagen generateImages response
-        if (isset($data['generatedImages'])) {
-            return true;
-        }
-
-        return false;
+        return isset($data['generatedImages']);
     }
 
     /**

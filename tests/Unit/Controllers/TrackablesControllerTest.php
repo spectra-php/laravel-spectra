@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Spectra\Actions\Trackables\GetFilteredTrackables;
 use Spectra\Http\Controllers\Api\ShowTrackableController;
 use Spectra\Http\Controllers\Api\TrackablesController;
@@ -30,7 +30,7 @@ it('counts only the requests matching every request filter per trackable', funct
     $included->attachTags(['priority']);
 
     $controller = app(TrackablesController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+    $response = app()->call($controller->__invoke(...), ['request' => new Request([
         'period' => 'all',
         'provider' => 'openai',
         'model' => 'gpt-4o',
@@ -57,13 +57,13 @@ it('lists only the trackables with requests inside a custom date range', functio
     SpectraRequest::factory()
         ->count(2)
         ->state(new Sequence(
-            ['model' => 'gpt-4o', 'model_type' => 'text', 'prompt_tokens' => 100, 'completion_tokens' => 20, 'total_cost_in_cents' => 70, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 7, 'created_at' => Carbon::parse('2026-02-10 08:00:00')],
-            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'prompt_tokens' => 50, 'completion_tokens' => 10, 'total_cost_in_cents' => 40, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 8, 'created_at' => Carbon::parse('2026-02-12 08:00:00')],
+            ['model' => 'gpt-4o', 'model_type' => 'text', 'prompt_tokens' => 100, 'completion_tokens' => 20, 'total_cost_in_cents' => 70, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 7, 'created_at' => Date::parse('2026-02-10 08:00:00')],
+            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'prompt_tokens' => 50, 'completion_tokens' => 10, 'total_cost_in_cents' => 40, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 8, 'created_at' => Date::parse('2026-02-12 08:00:00')],
         ))
         ->create();
 
     $controller = app(TrackablesController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+    $response = app()->call($controller->__invoke(...), ['request' => new Request([
         'period' => 'custom',
         'start_date' => '2026-02-10',
         'end_date' => '2026-02-10',

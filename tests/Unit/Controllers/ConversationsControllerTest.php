@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\ShowConversationController;
 use Spectra\Models\SpectraRequest;
@@ -31,7 +31,7 @@ function callConversation(string $conversationId): array
  */
 function supportCall(int $second, ?int $turn, array $attributes = []): SpectraRequest
 {
-    $start = Carbon::parse('2026-11-03 10:00:00')->addSeconds($second);
+    $start = Date::parse('2026-11-03 10:00:00')->addSeconds($second);
 
     return SpectraRequest::factory()->create([
         'conversation_id' => 'support-42',
@@ -96,7 +96,7 @@ it('keeps every call of a conversation in its totals when a filter matches one c
 
 it('finds a conversation by part of its id and sorts by last activity', function () {
     supportCall(0, 1);
-    SpectraRequest::factory()->create(['conversation_id' => 'sales-7', 'created_at' => Carbon::parse('2026-11-04 09:00:00')]);
+    SpectraRequest::factory()->create(['conversation_id' => 'sales-7', 'created_at' => Date::parse('2026-11-04 09:00:00')]);
 
     expect(collect(callConversations(['search' => 'sales'])['data'])->pluck('conversation_id')->all())->toBe(['sales-7'])
         ->and(collect(callConversations()['data'])->pluck('conversation_id')->all())->toBe(['sales-7', 'support-42']);

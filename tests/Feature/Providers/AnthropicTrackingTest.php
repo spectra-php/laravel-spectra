@@ -17,7 +17,7 @@ it('records a tracked anthropic message with its model, tokens and cost', functi
 
     Spectra::track('anthropic', 'claude-sonnet-4-5-20250929', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Sonnet 4.5 standard (in 300, out 1500): (21×300 + 305×1500) / 1M = 0.4638¢
     expect($record->provider)->toBe('anthropic')

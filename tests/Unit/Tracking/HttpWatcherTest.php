@@ -19,8 +19,8 @@ it('tracks http client requests to provider hosts and ignores other hosts', func
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o', 'messages' => []]);
     Http::post('https://example.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
-    expect(SpectraRequest::count())->toBe(1)
-        ->and(SpectraRequest::first()->provider)->toBe('openai');
+    expect(SpectraRequest::query()->count())->toBe(1)
+        ->and(SpectraRequest::query()->first()->provider)->toBe('openai');
 });
 
 it('registers its middleware on the http client only once', function () {
@@ -31,7 +31,7 @@ it('registers its middleware on the http client only once', function () {
 
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
-    expect(SpectraRequest::count())->toBe(1);
+    expect(SpectraRequest::query()->count())->toBe(1);
 });
 
 it('does not track requests marked withoutAITracking()', function () {
@@ -39,5 +39,5 @@ it('does not track requests marked withoutAITracking()', function () {
 
     Http::withoutAITracking()->post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 });

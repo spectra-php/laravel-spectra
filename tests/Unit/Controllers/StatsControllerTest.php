@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Spectra\Http\Controllers\Api\StatsController;
 use Spectra\Models\SpectraRequest;
 
@@ -44,13 +44,13 @@ it('counts only the requests inside a custom date range', function () {
     SpectraRequest::factory()
         ->count(2)
         ->state(new Sequence(
-            ['model' => 'gpt-4o', 'model_type' => 'text', 'latency_ms' => 100, 'created_at' => Carbon::parse('2026-02-10 10:00:00')],
-            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'latency_ms' => 200, 'created_at' => Carbon::parse('2026-02-12 10:00:00')],
+            ['model' => 'gpt-4o', 'model_type' => 'text', 'latency_ms' => 100, 'created_at' => Date::parse('2026-02-10 10:00:00')],
+            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'latency_ms' => 200, 'created_at' => Date::parse('2026-02-12 10:00:00')],
         ))
         ->create();
 
     $controller = app(StatsController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+    $response = app()->call($controller->__invoke(...), ['request' => new Request([
         'period' => 'custom',
         'start_date' => '2026-02-10',
         'end_date' => '2026-02-10',
@@ -72,13 +72,13 @@ it('counts requests of every date when the period is all', function () {
     SpectraRequest::factory()
         ->count(2)
         ->state(new Sequence(
-            ['model' => 'old-model', 'model_type' => 'text', 'latency_ms' => 150, 'created_at' => Carbon::parse('2025-01-10 10:00:00')],
-            ['model' => 'new-model', 'model_type' => 'text', 'latency_ms' => 250, 'created_at' => Carbon::parse('2026-02-10 10:00:00')],
+            ['model' => 'old-model', 'model_type' => 'text', 'latency_ms' => 150, 'created_at' => Date::parse('2025-01-10 10:00:00')],
+            ['model' => 'new-model', 'model_type' => 'text', 'latency_ms' => 250, 'created_at' => Date::parse('2026-02-10 10:00:00')],
         ))
         ->create();
 
     $controller = app(StatsController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+    $response = app()->call($controller->__invoke(...), ['request' => new Request([
         'period' => 'all',
     ])]);
     $json = $response->toArray();

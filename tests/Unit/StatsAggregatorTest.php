@@ -27,7 +27,7 @@ it('records counts, tokens and cost on the global daily stat for a request', fun
 
     $aggregator->recordRequest($request);
 
-    $stat = SpectraDailyStat::where('provider', 'openai')
+    $stat = SpectraDailyStat::query()->where('provider', 'openai')
         ->where('model', 'gpt-4')
         ->whereNull('trackable_type')
         ->first();
@@ -55,7 +55,7 @@ it('adds repeated requests for one model into a single daily row', function () {
         ])
         ->each(fn ($request) => $aggregator->recordRequest($request));
 
-    $stat = SpectraDailyStat::where('provider', 'anthropic')
+    $stat = SpectraDailyStat::query()->where('provider', 'anthropic')
         ->where('model', 'claude-3')
         ->whereNull('trackable_type')
         ->first();
@@ -78,7 +78,7 @@ it('counts a 500 response as failed and halves the success rate', function () {
         ->create()
         ->each(fn ($request) => $aggregator->recordRequest($request));
 
-    $stat = SpectraDailyStat::where('model', 'gpt-4-failed-test')
+    $stat = SpectraDailyStat::query()->where('model', 'gpt-4-failed-test')
         ->whereNull('trackable_type')
         ->first();
 
@@ -90,7 +90,7 @@ it('counts a 500 response as failed and halves the success rate', function () {
 });
 
 it('writes both a global and a per-user daily stat for a tracked request', function () {
-    $user = User::create([
+    $user = User::query()->create([
         'name' => 'Test User',
         'email' => 'stats-test@example.com',
         'password' => 'password',
@@ -107,10 +107,10 @@ it('writes both a global and a per-user daily stat for a tracked request', funct
 
     $aggregator->recordRequest($request);
 
-    $globalStat = SpectraDailyStat::where('model', 'gpt-4-user-test')
+    $globalStat = SpectraDailyStat::query()->where('model', 'gpt-4-user-test')
         ->whereNull('trackable_type')
         ->first();
-    $userStat = SpectraDailyStat::where('model', 'gpt-4-user-test')
+    $userStat = SpectraDailyStat::query()->where('model', 'gpt-4-user-test')
         ->where('trackable_type', User::class)
         ->where('trackable_id', $user->id)
         ->first();
@@ -142,7 +142,7 @@ it('aggregates requests, tokens, cost and success rate over a period', function 
         ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $stats = SpectraDailyStat::getAggregatedStats(
-        now()->startOfDay(),
+        today(),
         now()->endOfDay(),
         'openai',
         'gpt-4-period-test'
@@ -187,7 +187,7 @@ it('filters aggregated stats by model type', function () {
         ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $textStats = SpectraDailyStat::getAggregatedStats(
-        now()->startOfDay(),
+        today(),
         now()->endOfDay(),
         'openai',
         null,
@@ -195,7 +195,7 @@ it('filters aggregated stats by model type', function () {
         'text'
     );
     $imageStats = SpectraDailyStat::getAggregatedStats(
-        now()->startOfDay(),
+        today(),
         now()->endOfDay(),
         'openai',
         null,
@@ -222,7 +222,7 @@ it('lists every provider with requests in the period', function () {
         ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $byProvider = SpectraDailyStat::getStatsByProvider(
-        now()->startOfDay(),
+        today(),
         now()->endOfDay()
     );
 

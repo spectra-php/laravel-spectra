@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Spectra\Http\Controllers\Api\RequestsController;
 use Spectra\Models\SpectraRequest;
 
@@ -17,13 +17,13 @@ it('lists only the requests inside a custom date range', function () {
     SpectraRequest::factory()
         ->count(2)
         ->state(new Sequence(
-            ['model' => 'gpt-4o-in-range', 'model_type' => 'text', 'prompt_tokens' => 100, 'completion_tokens' => 50, 'total_cost_in_cents' => 120, 'created_at' => Carbon::parse('2026-02-10 10:00:00')],
-            ['model' => 'gpt-4o-out-of-range', 'model_type' => 'text', 'prompt_tokens' => 60, 'completion_tokens' => 30, 'total_cost_in_cents' => 90, 'created_at' => Carbon::parse('2026-02-12 10:00:00')],
+            ['model' => 'gpt-4o-in-range', 'model_type' => 'text', 'prompt_tokens' => 100, 'completion_tokens' => 50, 'total_cost_in_cents' => 120, 'created_at' => Date::parse('2026-02-10 10:00:00')],
+            ['model' => 'gpt-4o-out-of-range', 'model_type' => 'text', 'prompt_tokens' => 60, 'completion_tokens' => 30, 'total_cost_in_cents' => 90, 'created_at' => Date::parse('2026-02-12 10:00:00')],
         ))
         ->create();
 
     $controller = app(RequestsController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+    $response = app()->call($controller->__invoke(...), ['request' => new Request([
         'period' => 'custom',
         'start_date' => '2026-02-10',
         'end_date' => '2026-02-10',

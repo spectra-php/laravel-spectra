@@ -60,13 +60,13 @@ function streamedRequest(string $body, string $contentType = 'text/event-stream'
 it('records a streamed response once the app has read it, without consuming it', function () {
     $response = streamedRequest(openAiStreamBody());
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 
     $body = $response->body();
 
     expect($body)->toBe(openAiStreamBody());
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
     expect($row->is_streaming)->toBeTrue()
         ->and($row->prompt_tokens)->toBe(12)
         ->and($row->completion_tokens)->toBe(2)
@@ -82,8 +82,8 @@ it('records a stream the app stops reading early', function () {
     unset($response);
     gc_collect_cycles();
 
-    expect(SpectraRequest::count())->toBe(1)
-        ->and(SpectraRequest::first()->is_streaming)->toBeTrue();
+    expect(SpectraRequest::query()->count())->toBe(1)
+        ->and(SpectraRequest::query()->first()->is_streaming)->toBeTrue();
 });
 
 it('records a stream once when the app also wraps it in Spectra::stream()', function () {
@@ -95,8 +95,8 @@ it('records a stream once when the app also wraps it in Spectra::stream()', func
     $tracker->finish();
 
     expect($text)->toBe('Hello')
-        ->and(SpectraRequest::count())->toBe(1)
-        ->and(SpectraRequest::first()->completion_tokens)->toBe(2);
+        ->and(SpectraRequest::query()->count())->toBe(1)
+        ->and(SpectraRequest::query()->first()->completion_tokens)->toBe(2);
 });
 
 it('tracks newline-delimited JSON streams (Ollama)', function () {
@@ -109,7 +109,7 @@ it('tracks newline-delimited JSON streams (Ollama)', function () {
 
     expect($response->body())->toBe($ndjson);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
     expect($row->prompt_tokens)->toBe(7)
         ->and($row->completion_tokens)->toBe(3)
         ->and($row->is_streaming)->toBeTrue();
@@ -121,7 +121,7 @@ it('records a stream error event as a failure', function () {
 
     streamedRequest($body)->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
     expect($row->error_message)->toBe('Overloaded')
         ->and($row->error_type)->toContain('StreamErrorException');
 });
@@ -133,7 +133,7 @@ it('reads one-pass JSON bodies only as the app reads them', function () {
 
     expect($response->json('choices.0.message.content'))->toBe('Hello! How can I assist you today?');
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
     expect($row->prompt_tokens)->toBe(19)
         ->and($row->is_streaming)->toBeFalse();
 });
@@ -143,7 +143,7 @@ it('records provider error responses with the provider message', function () {
 
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
     expect($row->status_code)->toBe(429)
         ->and($row->error_message)->toBe('Rate limit reached')
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0, 1e-9);
@@ -155,7 +155,7 @@ it('records connection failures and still throws them to the app', function () {
     expect(fn () => Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']))
         ->toThrow(ConnectionException::class);
 
-    expect(SpectraRequest::sole()->error_message)->toBe('Connection timed out');
+    expect(SpectraRequest::query()->sole()->error_message)->toBe('Connection timed out');
 });
 
 it('never lets a tracking failure reach the app', function () {
@@ -210,8 +210,8 @@ it('counts a polled job once and keeps its original start time', function () {
 
     $global = SpectraDailyStat::query()->whereNull('trackable_type')->sole();
 
-    expect(SpectraRequest::count())->toBe(1)
-        ->and(SpectraRequest::first()->created_at->equalTo($first->created_at))->toBeTrue()
+    expect(SpectraRequest::query()->count())->toBe(1)
+        ->and(SpectraRequest::query()->first()->created_at->equalTo($first->created_at))->toBeTrue()
         ->and($global->request_count)->toBe(1)
         ->and($global->prompt_tokens)->toBe(100)
         ->and((float) $global->total_cost_in_cents)->toEqualWithDelta(5.0, 1e-9);
@@ -220,22 +220,22 @@ it('counts a polled job once and keeps its original start time', function () {
 it('stores the trackable morph alias so budgets and usage find it', function () {
     Relation::morphMap(['user' => User::class]);
 
-    $user = User::create(['name' => 'a', 'email' => 'a@example.test', 'password' => 'x']);
+    $user = User::query()->create(['name' => 'a', 'email' => 'a@example.test', 'password' => 'x']);
     Spectra::forTrackable($user);
 
     Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json'))]);
 
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
-    expect(SpectraRequest::first()->trackable_type)->toBe('user')
+    expect(SpectraRequest::query()->first()->trackable_type)->toBe('user')
         ->and(SpectraRequest::query()->forTrackable($user)->count())->toBe(1);
 
     Relation::morphMap([], false);
 });
 
 it('lets an explicit trackable win over the signed-in user', function () {
-    $owner = User::create(['name' => 'owner', 'email' => 'owner@example.test', 'password' => 'x']);
-    $actor = User::create(['name' => 'actor', 'email' => 'actor@example.test', 'password' => 'x']);
+    $owner = User::query()->create(['name' => 'owner', 'email' => 'owner@example.test', 'password' => 'x']);
+    $actor = User::query()->create(['name' => 'actor', 'email' => 'actor@example.test', 'password' => 'x']);
     $this->actingAs($actor);
 
     Spectra::forTrackable($owner);
@@ -263,7 +263,7 @@ it('reads the model from multipart bodies even when the file comes first', funct
     Http::attach('file', str_repeat('A', 300_000), 'audio.mp3')
         ->post('https://api.openai.com/v1/audio/transcriptions', ['model' => 'whisper-1']);
 
-    expect(SpectraRequest::sole()->model)->not->toBe('unknown');
+    expect(SpectraRequest::query()->sole()->model)->not->toBe('unknown');
 });
 
 it('tracks Gemini streamed JSON arrays as streams', function () {
@@ -278,7 +278,7 @@ it('tracks Gemini streamed JSON arrays as streams', function () {
 
     expect($response->body())->toBe($body);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
     expect($row->is_streaming)->toBeTrue()
         ->and($row->prompt_tokens)->toBe(9)
         ->and($row->completion_tokens)->toBe(7)
@@ -355,7 +355,7 @@ it('prices a stream at the tier the request asked for', function () {
 
     $response->body();
 
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('flex');
+    expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('flex');
 });
 
 it('stores the provider model id even when the response echoes the request', function () {
@@ -363,7 +363,7 @@ it('stores the provider model id even when the response echoes the request', fun
 
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
     expect($row->snapshot)->toBe('gpt-4o')
         ->and($row->model)->toBe('GPT-4o');
 });

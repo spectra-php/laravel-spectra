@@ -135,6 +135,6 @@ class VideoHandler implements Handler, HasFinishReason, ReportsJobFailure, Skips
     {
         $urls = $response['unsigned_urls'] ?? $response['urls'] ?? [];
 
-        return is_array($urls) ? array_values(array_filter($urls, 'is_string')) : [];
+        return is_array($urls) ? array_values(array_filter($urls, is_string(...))) : [];
     }
 }

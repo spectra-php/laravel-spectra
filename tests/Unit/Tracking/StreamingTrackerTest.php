@@ -155,9 +155,7 @@ it('records a Gemini stream with inline image data as an image request', functio
 
     $tracker->finish();
 
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->modelType === 'image';
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->modelType === 'image');
 });
 
 it('reads text and usage from OpenAI SDK Responses API events', function () {
@@ -216,10 +214,8 @@ it('counts the image of an OpenAI SDK image generation stream', function () {
     $tracker->finish();
 
     Spectra::assertRequestCount(1);
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->imageCount === 1
-            && $r['context']->modelType === 'image';
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->imageCount === 1
+        && $r['context']->modelType === 'image');
 });
 
 it('counts the image of a raw Responses API image generation stream', function () {
@@ -254,10 +250,8 @@ it('counts the image of a raw Responses API image generation stream', function (
     $tracker->finish();
 
     Spectra::assertRequestCount(1);
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->imageCount === 1
-            && $r['context']->modelType === 'image';
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->imageCount === 1
+        && $r['context']->modelType === 'image');
 });
 
 it('records the response id of an OpenAI Chat Completions stream', function () {
@@ -274,9 +268,7 @@ it('records the response id of an OpenAI Chat Completions stream', function () {
 
     $tracker->finish();
 
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->responseId === 'chatcmpl-B9MBs8CjcvOU2jLn4n570S5qMJKcT';
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->responseId === 'chatcmpl-B9MBs8CjcvOU2jLn4n570S5qMJKcT');
 });
 
 it('records the response id of an OpenAI Responses API stream', function () {
@@ -298,9 +290,7 @@ it('records the response id of an OpenAI Responses API stream', function () {
 
     $tracker->finish();
 
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->responseId === 'resp_67ccd2bed1ec8190b14f964abc0542670bb6a6b452d3795b';
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->responseId === 'resp_67ccd2bed1ec8190b14f964abc0542670bb6a6b452d3795b');
 });
 
 it('records the response id of an Anthropic stream', function () {
@@ -319,9 +309,7 @@ it('records the response id of an Anthropic stream', function () {
 
     $tracker->finish();
 
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->responseId === 'msg_01HCDu5LRGeP2o7s2xGmxyx8';
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->responseId === 'msg_01HCDu5LRGeP2o7s2xGmxyx8');
 });
 
 it('takes over the pending context the Guzzle middleware left for the stream', function () {
@@ -345,10 +333,8 @@ it('takes over the pending context the Guzzle middleware left for the stream', f
 
     $tracker->finish();
 
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->endpoint === '/v1/chat/completions'
-            && $r['context']->requestData === ['model' => 'gpt-4o', 'stream' => true];
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->endpoint === '/v1/chat/completions'
+        && $r['context']->requestData === ['model' => 'gpt-4o', 'stream' => true]);
 });
 
 it('records the reasoning tokens of an OpenAI Chat Completions stream', function () {
@@ -370,9 +356,7 @@ it('records the reasoning tokens of an OpenAI Chat Completions stream', function
     $tracker->finish();
 
     expect($tracker->getUsage()['reasoning_tokens'])->toBe(30);
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->reasoningTokens === 30;
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->reasoningTokens === 30);
 });
 
 it('records the reasoning tokens of an OpenAI Responses API stream', function () {
@@ -398,9 +382,7 @@ it('records the reasoning tokens of an OpenAI Responses API stream', function ()
     $tracker->finish();
 
     expect($tracker->getUsage()['reasoning_tokens'])->toBe(15);
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->reasoningTokens === 15;
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->reasoningTokens === 15);
 });
 
 it('records the reasoning tokens of a Gemini stream', function () {
@@ -419,9 +401,7 @@ it('records the reasoning tokens of a Gemini stream', function () {
     $tracker->finish();
 
     expect($tracker->getUsage()['reasoning_tokens'])->toBe(100);
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->reasoningTokens === 100;
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->reasoningTokens === 100);
 });
 
 it('flags tool calls from an OpenAI tool_calls finish reason', function () {
@@ -441,10 +421,8 @@ it('flags tool calls from an OpenAI tool_calls finish reason', function () {
 
     $tracker->finish();
 
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->hasToolCalls === true
-            && $r['context']->finishReason === 'tool_calls';
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->hasToolCalls === true
+        && $r['context']->finishReason === 'tool_calls');
 });
 
 it('flags tool calls from an Anthropic tool_use stop reason', function () {
@@ -463,10 +441,8 @@ it('flags tool calls from an Anthropic tool_use stop reason', function () {
 
     $tracker->finish();
 
-    Spectra::assertTracked(function ($r) {
-        return $r['context']->hasToolCalls === true
-            && $r['context']->finishReason === 'tool_use';
-    });
+    Spectra::assertTracked(fn ($r) => $r['context']->hasToolCalls === true
+        && $r['context']->finishReason === 'tool_use');
 });
 
 it('reports the usage set by hand, reasoning tokens included', function () {

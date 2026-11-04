@@ -169,11 +169,9 @@ class RequestWriter
     protected function create(array $attributes): SpectraRequest
     {
         try {
-            return SpectraRequest::create($attributes);
+            return SpectraRequest::query()->create($attributes);
         } catch (QueryException $e) {
-            if ($e instanceof UniqueConstraintViolationException || ! $this->isMissingColumn($e)) {
-                throw $e;
-            }
+            throw_if($e instanceof UniqueConstraintViolationException || ! $this->isMissingColumn($e), $e);
 
             if (! $this->hasWarnedAboutTraceColumns) {
                 $this->hasWarnedAboutTraceColumns = true;
@@ -183,7 +181,7 @@ class RequestWriter
                 Log::warning("Spectra: spectra_requests has no {$columns} column yet, so calls are saved without them. Run `php artisan spectra:install` to publish and run the new migration.");
             }
 
-            return SpectraRequest::create(Arr::except($attributes, self::TRACE_COLUMNS));
+            return SpectraRequest::query()->create(Arr::except($attributes, self::TRACE_COLUMNS));
         }
     }
 

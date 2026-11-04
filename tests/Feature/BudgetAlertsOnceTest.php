@@ -16,7 +16,7 @@ use Workbench\App\Models\User;
 it('fires a threshold warning once per period, across processes', function () {
     Event::fake([BudgetThresholdReached::class]);
 
-    $user = User::create(['name' => 'b', 'email' => 'b@example.test', 'password' => 'x']);
+    $user = User::query()->create(['name' => 'b', 'email' => 'b@example.test', 'password' => 'x']);
     $user->configureAiBudget()->dailyCostLimitInCents(100)->warningThresholdPercentage(80)->criticalThresholdPercentage(95)->save();
 
     SpectraRequest::factory()->create([

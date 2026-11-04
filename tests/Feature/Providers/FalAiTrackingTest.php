@@ -45,12 +45,12 @@ it('records a queued job once, from its result, with the model and request id', 
     Http::get("{$base}/status?logs=1");
     Http::get("{$base}/status");
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 
     Http::get($base);
     Http::get($base);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // FLUX.1 dev bills $0.025 per megapixel, each image rounded up to whole
     // 1024×1024 megapixels: 1024×768 → 1 MP, 1920×1080 → 2 MP; 3 × 2.5 = 7.5 cents.
@@ -59,7 +59,7 @@ it('records a queued job once, from its result, with the model and request id', 
         ->and($record->model_type)->toBe('image')
         ->and($record->image_count)->toBe(2)
         ->and($record->total_cost_in_cents)->toEqualWithDelta(7.5, 0.000001)
-        ->and((int) SpectraDailyStat::sum('request_count'))->toBe(1);
+        ->and((int) SpectraDailyStat::query()->sum('request_count'))->toBe(1);
 });
 
 it('never records the status event stream', function () {
@@ -72,7 +72,7 @@ it('never records the status event stream', function () {
     $response = Http::get('https://queue.fal.run/fal-ai/flux/requests/abc/status/stream');
 
     expect($response->body())->toContain('COMPLETED')
-        ->and(SpectraRequest::count())->toBe(0);
+        ->and(SpectraRequest::query()->count())->toBe(0);
 });
 
 it('takes the model from the path when the result url drops the sub-path', function () {
@@ -80,8 +80,8 @@ it('takes the model from the path when the result url drops the sub-path', funct
 
     Http::get('https://queue.fal.run/fal-ai/flux/requests/764cabcf-b745-4b3e-ae38-1200304cf45b');
 
-    expect(SpectraRequest::sole()->model)->toBe('fal-ai/flux')
-        ->and(SpectraRequest::sole()->response_id)->toBe('764cabcf-b745-4b3e-ae38-1200304cf45b');
+    expect(SpectraRequest::query()->sole()->model)->toBe('fal-ai/flux')
+        ->and(SpectraRequest::query()->sole()->response_id)->toBe('764cabcf-b745-4b3e-ae38-1200304cf45b');
 });
 
 it('records video results as videos, not as zero images', function () {
@@ -89,7 +89,7 @@ it('records video results as videos, not as zero images', function () {
 
     Http::get('https://queue.fal.run/fal-ai/kling-video/requests/9a1b2c3d-0000-4e5f-8a9b-123456789abc');
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     expect($record->model_type)->toBe('video')
         ->and($record->video_count)->toBe(1)
@@ -102,7 +102,7 @@ it('records direct calls to fal.run per image', function () {
 
     Http::post('https://fal.run/fal-ai/nano-banana/edit', ['prompt' => 'add a tiny wizard hat', 'image_urls' => ['https://example.com/cat.png']]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // nano-banana/edit bills like nano-banana: $0.0398 per image
     expect($record->provider)->toBe('falai')
@@ -117,7 +117,7 @@ it('doubles the recraft price for vector styles', function (string $style, float
 
     Http::post('https://fal.run/fal-ai/recraft/v3/text-to-image', ['prompt' => 'a fox logo', 'style' => $style]);
 
-    expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta($expected, 0.000001);
+    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta($expected, 0.000001);
 })->with([
     // $0.04 per image, $0.08 for vector styles
     'raster' => ['realistic_image', 4.0],
@@ -133,7 +133,7 @@ it('bills flux pro ultra per image whatever its size', function () {
     Http::post('https://fal.run/fal-ai/flux-pro/v1.1-ultra', ['prompt' => 'x']);
 
     // $0.06 per image
-    expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(6.0, 0.000001);
+    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(6.0, 0.000001);
 });
 
 /**
@@ -169,7 +169,7 @@ function runQueuedFalVideo(string $model, array $input, array $result): void
 it('bills a queued video by the length its submit request asked for', function () {
     runQueuedFalVideo('fal-ai/kling-video/v3/pro/text-to-video', ['prompt' => 'a red fox in the snow', 'duration' => '5', 'aspect_ratio' => '16:9'], $this->loadMockResponse('falai/queue-result-video.json'));
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Kling 3.0 Pro with audio (the default): $0.168 per second × 5 s.
     expect($record->model)->toBe('Kling 3.0 Pro Text-to-Video')
@@ -183,7 +183,7 @@ it('bills a queued video by the length its submit request asked for', function (
 it('prices fal video by resolution and audio', function (string $model, array $input, float $seconds, float $cents) {
     runQueuedFalVideo($model, ['prompt' => 'a lighthouse at dusk', ...$input], $this->loadMockResponse('falai/queue-result-video.json'));
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     expect((float) $record->duration_seconds)->toEqualWithDelta($seconds, 1e-9)
         ->and((float) $record->total_cost_in_cents)->toEqualWithDelta($cents, 1e-6);
@@ -208,7 +208,7 @@ it('bills a direct video call from its own request body', function () {
     Http::post('https://fal.run/fal-ai/veo3.1/fast', ['prompt' => 'waves', 'duration' => '4s', 'generate_audio' => false]);
 
     // $0.10 per second without audio × 4 s.
-    expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(40.0, 1e-6);
+    expect((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(40.0, 1e-6);
 });
 
 it('keeps inline files out of the remembered submit body', function () {
@@ -220,7 +220,7 @@ it('keeps inline files out of the remembered submit body', function () {
 
     expect($remembered['model'])->toBe('fal-ai/kling-video/v3/pro/text-to-video')
         ->and($remembered['request'])->toBe(['prompt' => 'animate this', 'duration' => '5', 'elements' => [['label' => 'cat']]])
-        ->and((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(84.0, 1e-6);
+        ->and((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(84.0, 1e-6);
 });
 
 it('still reads a job model cached as a string by an earlier version', function () {
@@ -231,5 +231,5 @@ it('still reads a job model cached as a string by an earlier version', function 
 
     Http::get("https://queue.fal.run/fal-ai/flux/requests/{$id}");
 
-    expect(SpectraRequest::sole()->model)->toBe('FLUX.1 Dev');
+    expect(SpectraRequest::query()->sole()->model)->toBe('FLUX.1 Dev');
 });

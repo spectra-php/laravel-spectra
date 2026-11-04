@@ -14,7 +14,7 @@ it('records a tracked mistral chat response with its model, tokens and cost', fu
 
     Spectra::track('mistral', 'mistral-large-latest', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Mistral Large 3 (in 50, out 150): (25×50 + 15×150) / 1M = 0.0035¢
     expect($record->provider)->toBe('mistral')

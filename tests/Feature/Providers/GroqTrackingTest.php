@@ -14,7 +14,7 @@ it('records a tracked groq chat response with its model, tokens and cost', funct
 
     Spectra::track('groq', 'llama-3.3-70b-versatile', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Llama 3.3 70B Versatile (in 59, out 79): (25×59 + 15×79) / 1M = 0.00266¢
     expect($record->provider)->toBe('groq')

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Support;
 
 use Carbon\CarbonInterface;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 
@@ -154,7 +154,7 @@ class StatsAggregator
      */
     public function rebuildForDate(CarbonInterface|string $date): int
     {
-        $date = $date instanceof CarbonInterface ? $date : Carbon::parse($date);
+        $date = $date instanceof CarbonInterface ? $date : Date::parse($date);
 
         return $this->rebuild($date->copy()->startOfDay(), $date->copy()->endOfDay());
     }

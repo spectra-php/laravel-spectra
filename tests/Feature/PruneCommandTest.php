@@ -23,7 +23,7 @@ it('deletes old requests with their media but keeps daily stats by default', fun
 
     expect(SpectraRequest::query()->pluck('id')->all())->toBe([$recent->id])
         ->and(Storage::exists('spectra/old/0.png'))->toBeFalse()
-        ->and(SpectraDailyStat::count())->toBe(1);
+        ->and(SpectraDailyStat::query()->count())->toBe(1);
 });
 
 it('prunes daily stats only when given a retention', function () {
@@ -32,7 +32,7 @@ it('prunes daily stats only when given a retention', function () {
 
     $this->artisan('spectra:prune', ['--stats-days' => 7])->assertSuccessful();
 
-    expect(SpectraDailyStat::count())->toBe(1);
+    expect(SpectraDailyStat::query()->count())->toBe(1);
 });
 
 it('prunes requests when the spans table does not exist yet', function () {
@@ -42,6 +42,6 @@ it('prunes requests when the spans table does not exist yet', function () {
 
     $this->artisan('spectra:prune', ['--stats-days' => 7])->assertSuccessful();
 
-    expect(SpectraRequest::count())->toBe(0)
-        ->and(SpectraDailyStat::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0)
+        ->and(SpectraDailyStat::query()->count())->toBe(0);
 });

@@ -15,7 +15,7 @@ use Spectra\Support\Budget\BudgetEnforcer;
 use Workbench\App\Models\User;
 
 beforeEach(function () {
-    $this->user = User::create([
+    $this->user = User::query()->create([
         'name' => 'Blocked User',
         'email' => 'blocked@example.com',
         'password' => 'password',

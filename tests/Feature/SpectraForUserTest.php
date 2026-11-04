@@ -13,7 +13,7 @@ use Workbench\App\Models\User;
 beforeEach(function () {
     config(['auth.providers.users.model' => User::class]);
 
-    $this->user = User::create([
+    $this->user = User::query()->create([
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => 'password',

@@ -39,9 +39,9 @@ it('gives every AI call in the same request one trace id', function () {
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
-    $traceIds = SpectraRequest::pluck('trace_id')->unique();
+    $traceIds = SpectraRequest::query()->pluck('trace_id')->unique();
 
-    expect(SpectraRequest::count())->toBe(3)
+    expect(SpectraRequest::query()->count())->toBe(3)
         ->and($traceIds)->toHaveCount(1)
         ->and($traceIds->first())->toBe(Spectra::currentTraceId());
 });
@@ -127,7 +127,7 @@ it('stores the traceparent span and exports it as the OpenTelemetry parent', fun
 
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
     $span = (new DefaultSpanBuilder)->build([...$row->toArray(), 'started_at' => $row->created_at, 'completed_at' => $row->completed_at]);
 
     expect($row->trace_id)->toBe('4bf92f35-77b3-4da6-a3ce-929d0e0e4736')

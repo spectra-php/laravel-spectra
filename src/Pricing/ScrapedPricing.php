@@ -77,9 +77,7 @@ class ScrapedPricing extends ProviderPricing
     {
         foreach ($this->data as $id => $model) {
             try {
-                if (! is_array($model)) {
-                    throw new InvalidArgumentException('the model must be an object');
-                }
+                throw_unless(is_array($model), InvalidArgumentException::class, 'the model must be an object');
 
                 $this->definitions[] = static::definitionFromArray((string) $id, $model);
             } catch (Throwable $e) {
@@ -119,14 +117,10 @@ class ScrapedPricing extends ProviderPricing
 
         $tiers = $model['tiers'] ?? [];
 
-        if (! is_array($tiers) || $tiers === []) {
-            throw new InvalidArgumentException('the model has no tiers');
-        }
+        throw_if(! is_array($tiers) || $tiers === [], InvalidArgumentException::class, 'the model has no tiers');
 
         foreach ($tiers as $row) {
-            if (! is_array($row)) {
-                throw new InvalidArgumentException('each tier must be an object');
-            }
+            throw_unless(is_array($row), InvalidArgumentException::class, 'each tier must be an object');
 
             $tier = PricingTier::tryFrom((string) ($row['tier'] ?? PricingTier::Standard->value))
                 ?? throw new InvalidArgumentException("unknown tier '{$row['tier']}'");
@@ -135,9 +129,7 @@ class ScrapedPricing extends ProviderPricing
             foreach (self::PRICE_FIELDS as $field) {
                 $value = $row[$field] ?? null;
 
-                if ($value !== null && ! is_numeric($value)) {
-                    throw new InvalidArgumentException("{$field} must be a number");
-                }
+                throw_if($value !== null && ! is_numeric($value), InvalidArgumentException::class, "{$field} must be a number");
 
                 $prices[] = $value !== null ? (float) $value : null;
             }
@@ -154,9 +146,7 @@ class ScrapedPricing extends ProviderPricing
 
         // Prices fall back to the standard tier, so without one the model
         // would replace the built-in entry and bill nothing.
-        if (! in_array(PricingTier::Standard->value, Arr::pluck($definition->toTiersArray(), 'tier'), true)) {
-            throw new InvalidArgumentException('the model has no standard tier');
-        }
+        throw_unless(in_array(PricingTier::Standard->value, Arr::pluck($definition->toTiersArray(), 'tier'), true), InvalidArgumentException::class, 'the model has no standard tier');
 
         return $definition;
     }

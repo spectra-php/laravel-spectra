@@ -19,7 +19,7 @@ it('bills a voxtral transcription per minute of audio', function () {
 
     $manager->recordSuccess($context, $this->loadMockResponse('mistral/transcription.json'));
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // voxtral-mini-latest: 0.3 cents/minute × (120s / 60) = 0.6 cents
     expect($record->provider)->toBe('mistral')
@@ -43,7 +43,7 @@ it('bills voxtral speech per input character without storing the audio', functio
         'audio_data' => base64_encode(str_repeat('x', 2000)),
     ]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // voxtral-mini-tts-latest: 1600 cents per 1M chars × 1000 chars = 1.6 cents
     expect($record->provider)->toBe('mistral')

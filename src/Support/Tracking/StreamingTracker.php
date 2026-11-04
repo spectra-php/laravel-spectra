@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Support\Tracking;
 
 use Generator;
+use OpenAI\Responses\StreamResponse;
 use Spectra\Contracts\StreamsResponse;
 use Spectra\Data\TokenMetrics;
 use Spectra\Models\SpectraRequest;
@@ -99,7 +100,7 @@ class StreamingTracker
      * @var array<string, string>
      */
     protected const STREAM_CLASS_MAP = [
-        'OpenAI\Responses\StreamResponse' => 'openai',
+        StreamResponse::class => 'openai',
         'OpenAI\Responses\Streaming\StreamResponse' => 'openai',
     ];
 
@@ -221,9 +222,7 @@ class StreamingTracker
      */
     public function track(iterable|string $stream): Generator
     {
-        if ($this->provider === null) {
-            $this->provider = $this->detectProvider($stream);
-        }
+        $this->provider ??= $this->detectProvider($stream);
 
         if (is_string($stream)) {
             $stream = $this->parseRawStream($stream);
@@ -298,7 +297,7 @@ class StreamingTracker
     protected function detectProvider(mixed $stream): string
     {
         if (is_object($stream)) {
-            $className = get_class($stream);
+            $className = $stream::class;
 
             if (isset(self::STREAM_CLASS_MAP[$className])) {
                 return self::STREAM_CLASS_MAP[$className];

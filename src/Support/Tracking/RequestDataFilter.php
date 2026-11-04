@@ -73,7 +73,7 @@ class RequestDataFilter
     protected function withoutSystemMessages(array $messages): array
     {
         return collect($messages)
-            ->filter(fn (mixed $message) => ! (is_array($message) && in_array($message['role'] ?? null, self::SYSTEM_ROLES, true)))
+            ->reject(fn (mixed $message): bool => is_array($message) && in_array($message['role'] ?? null, self::SYSTEM_ROLES, true))
             ->values()
             ->all();
     }

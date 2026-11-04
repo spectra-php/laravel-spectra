@@ -14,7 +14,7 @@ it('records a tracked cohere chat response with its model, tokens and cost', fun
 
     Spectra::track('cohere', 'command-r-plus', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Command R+ 04-2024 (in 300, out 1500): (12×300 + 18×1500) / 1M = 0.0306¢
     expect($record->provider)->toBe('cohere')

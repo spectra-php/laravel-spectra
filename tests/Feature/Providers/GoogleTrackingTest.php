@@ -14,7 +14,7 @@ it('records a tracked gemini response with its model, tokens and cost', function
 
     Spectra::track('google', 'gemini-2.0-flash', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Gemini 2.0 Flash standard (in 10, out 40): (15×10 + 42×40) / 1M = 0.00183¢
     expect($record->provider)->toBe('google')

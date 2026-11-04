@@ -443,10 +443,10 @@ class BudgetEnforcer
     protected function getCostForPeriod(Model $budgetable, string $period): int
     {
         $start = match ($period) {
-            'day' => now()->startOfDay(),
+            'day' => today(),
             'week' => now()->startOfWeek(),
             'month' => now()->startOfMonth(),
-            default => now()->startOfDay(),
+            default => today(),
         };
 
         $cost = (float) SpectraRequest::query()
@@ -477,10 +477,10 @@ class BudgetEnforcer
     protected function getTokensForPeriod(Model $budgetable, string $period): int
     {
         $start = match ($period) {
-            'day' => now()->startOfDay(),
+            'day' => today(),
             'week' => now()->startOfWeek(),
             'month' => now()->startOfMonth(),
-            default => now()->startOfDay(),
+            default => today(),
         };
 
         return (int) SpectraRequest::query()
@@ -509,10 +509,10 @@ class BudgetEnforcer
     protected function getRequestsForPeriod(Model $budgetable, string $period): int
     {
         $start = match ($period) {
-            'day' => now()->startOfDay(),
+            'day' => today(),
             'week' => now()->startOfWeek(),
             'month' => now()->startOfMonth(),
-            default => now()->startOfDay(),
+            default => today(),
         };
 
         return SpectraRequest::query()

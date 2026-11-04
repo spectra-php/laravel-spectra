@@ -78,9 +78,7 @@ class SpanWriter
                 // An earlier attempt saved this span already.
                 return;
             } catch (QueryException $e) {
-                if (! $this->isMissingTable($e)) {
-                    throw $e;
-                }
+                throw_unless($this->isMissingTable($e), $e);
 
                 $this->warnAboutMissingTable();
 

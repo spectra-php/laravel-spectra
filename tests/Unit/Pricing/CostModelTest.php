@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
@@ -72,7 +72,7 @@ it('bills uncached, cache-read, 5m and 1h cache-write tokens at their own rates'
         cachedTokens: 20_000,
         cacheWriteTokens: 30_000,
         cacheWrite1hTokens: 10_000,
-    ), at: Carbon::parse('2026-10-15'));
+    ), at: Date::parse('2026-10-15'));
 
     // (10K uncached × 100 + 20K reads × 10 + 20K 5m-writes × 125 + 10K 1h-writes × 200) / 1M = 5.7; 10K out × 400 / 1M = 4
     expect($cost['prompt_cost'])->toEqualWithDelta(5.7, 1e-9)
@@ -88,7 +88,7 @@ it('bills audio and image tokens at their modality rates', function () {
         imageInputTokens: 10_000,
         audioOutputTokens: 10_000,
         imageOutputTokens: 10_000,
-    ), at: Carbon::parse('2026-10-15'));
+    ), at: Date::parse('2026-10-15'));
 
     // in: 10K text × 100 + 10K audio × 300 + 10K image × 200 = 6; out: 10K × 400 + 10K × 800 + 10K × 1000 = 22 (per 1M)
     expect($cost['prompt_cost'])->toEqualWithDelta(6.0, 1e-9)
@@ -99,7 +99,7 @@ it('never bills a breakdown beyond the prompt total', function () {
     $cost = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(
         promptTokens: 100_000,
         cachedTokens: 500_000,
-    ), at: Carbon::parse('2026-10-15'));
+    ), at: Date::parse('2026-10-15'));
 
     // Only the 100K prompt tokens are billed, all as cache reads: 100K × 10 / 1M
     expect($cost['prompt_cost'])->toEqualWithDelta(1.0, 1e-9);
@@ -107,7 +107,7 @@ it('never bills a breakdown beyond the prompt total', function () {
 
 it('switches to long-context prices above the threshold', function () {
     $calculator = app(CostCalculator::class);
-    $at = Carbon::parse('2026-10-15');
+    $at = Date::parse('2026-10-15');
 
     $short = $calculator->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 200_000), at: $at);
     $long = $calculator->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 200_001), at: $at);
@@ -122,14 +122,14 @@ it('applies dated prices from their start date', function () {
     $tokens = new TokenMetrics(promptTokens: 100_000);
 
     // 100K × 100 / 1M before 2027-01-01, 100K × 150 / 1M from then on
-    expect($calculator->forTokens('acme', 'acme-1', $tokens, at: Carbon::parse('2026-12-31'))['prompt_cost'])->toEqualWithDelta(10.0, 1e-9)
-        ->and($calculator->forTokens('acme', 'acme-1', $tokens, at: Carbon::parse('2027-01-01'))['prompt_cost'])->toEqualWithDelta(15.0, 1e-9);
+    expect($calculator->forTokens('acme', 'acme-1', $tokens, at: Date::parse('2026-12-31'))['prompt_cost'])->toEqualWithDelta(10.0, 1e-9)
+        ->and($calculator->forTokens('acme', 'acme-1', $tokens, at: Date::parse('2027-01-01'))['prompt_cost'])->toEqualWithDelta(15.0, 1e-9);
 });
 
 it('falls back to standard prices for a tier the model lacks', function () {
     $calculator = app(CostCalculator::class);
     $tokens = new TokenMetrics(promptTokens: 100_000);
-    $at = Carbon::parse('2026-10-15');
+    $at = Date::parse('2026-10-15');
 
     // 100K × 50 (batch) / 1M; priority isn't offered, so 100K × 100 (standard) / 1M
     expect($calculator->forTokens('acme', 'acme-1', $tokens, 'batch', $at)['prompt_cost'])->toEqualWithDelta(5.0, 1e-9)
@@ -161,7 +161,7 @@ it('converts catalog prices into the reporting currency', function () {
     useAcmePricing('EUR');
     config(['spectra.costs.currency' => 'USD', 'spectra.costs.exchange_rates' => ['EUR' => 1.5]]);
 
-    $cost = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Carbon::parse('2026-10-15'));
+    $cost = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Date::parse('2026-10-15'));
 
     // 100K × 100 / 1M = 10 EUR cents × 1.5
     expect($cost['prompt_cost'])->toEqualWithDelta(15.0, 1e-9);
@@ -197,7 +197,7 @@ it('converts each model at the currency of the catalog that defines it', functio
     app()->instance(PricingLookup::class, new PricingLookup([acmePricing('EUR'), $extraModels]));
     config(['spectra.costs.currency' => 'USD', 'spectra.costs.exchange_rates' => ['EUR' => 1.5]]);
 
-    $builtIn = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Carbon::parse('2026-10-15'));
+    $builtIn = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Date::parse('2026-10-15'));
     $extra = app(CostCalculator::class)->forTokens('acme', 'acme-extra', new TokenMetrics(promptTokens: 100_000));
 
     // 100K × 100 / 1M = 10 EUR cents × 1.5; the USD catalog's model stays at 10.
@@ -240,8 +240,8 @@ it('bills an unknown default tier at standard and warns once', function () {
     config(['spectra.costs.provider_settings.acme.default_tier' => 'turbo']);
     Log::spy();
 
-    $first = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Carbon::parse('2026-10-15'));
-    app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Carbon::parse('2026-10-15'));
+    $first = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Date::parse('2026-10-15'));
+    app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Date::parse('2026-10-15'));
 
     // 100K × 100 (standard input) / 1M
     expect($first['prompt_cost'])->toEqualWithDelta(10.0, 1e-9)
@@ -252,7 +252,7 @@ it('bills an unknown default tier at standard and warns once', function () {
 it('bills a valid default tier from config', function () {
     config(['spectra.costs.provider_settings.acme.default_tier' => 'batch']);
 
-    $cost = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Carbon::parse('2026-10-15'));
+    $cost = app(CostCalculator::class)->forTokens('acme', 'acme-1', new TokenMetrics(promptTokens: 100_000), at: Date::parse('2026-10-15'));
 
     // 100K × 50 (batch input) / 1M
     expect($cost['prompt_cost'])->toEqualWithDelta(5.0, 1e-9)
@@ -272,7 +272,7 @@ it('bills a pricing unit the enum does not know as tokens', function () {
         'provider' => 'acme',
         'model' => 'acme-1',
         'prompt_tokens' => 100_000,
-        'started_at' => Carbon::parse('2026-10-15'),
+        'started_at' => Date::parse('2026-10-15'),
     ]));
 
     // 100K × 100 / 1M

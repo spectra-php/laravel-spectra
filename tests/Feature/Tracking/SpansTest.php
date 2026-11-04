@@ -65,7 +65,7 @@ it('makes the AI calls and spans inside a span its children', function () {
 
     $outer = SpectraSpan::query()->where('name', 'answer-question')->sole();
     $inner = SpectraSpan::query()->where('name', 'retrieve-docs')->sole();
-    [$first, $second] = SpectraRequest::query()->orderBy('started_at')->get()->all();
+    [$first, $second] = SpectraRequest::query()->oldest('started_at')->get()->all();
 
     expect($inner->parent_span_id)->toBe($outer->span_id)
         ->and($first->parent_span_id)->toBe($inner->span_id)

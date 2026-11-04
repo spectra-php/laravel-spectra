@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Spectra\Http\Controllers\Api\CostsController;
 use Spectra\Models\SpectraRequest;
 
@@ -57,11 +57,11 @@ it('sums the cost overview cards over today, this and last week, this month and 
     SpectraRequest::factory()
         ->count(5)
         ->state(new Sequence(
-            ['model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 100, 'created_at' => Carbon::parse('2026-02-12 09:00:00')],
-            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'total_cost_in_cents' => 200, 'created_at' => Carbon::parse('2026-02-10 10:00:00')],
-            ['model' => 'gpt-4o-audio', 'model_type' => 'tts', 'total_cost_in_cents' => 300, 'created_at' => Carbon::parse('2026-02-04 15:00:00')],
-            ['model' => 'gpt-4.1', 'model_type' => 'text', 'total_cost_in_cents' => 400, 'created_at' => Carbon::parse('2026-01-15 13:00:00')],
-            ['model' => 'excluded-error', 'model_type' => 'text', 'total_cost_in_cents' => 9000, 'status_code' => 500, 'created_at' => Carbon::parse('2026-02-12 11:00:00')],
+            ['model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 100, 'created_at' => Date::parse('2026-02-12 09:00:00')],
+            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'total_cost_in_cents' => 200, 'created_at' => Date::parse('2026-02-10 10:00:00')],
+            ['model' => 'gpt-4o-audio', 'model_type' => 'tts', 'total_cost_in_cents' => 300, 'created_at' => Date::parse('2026-02-04 15:00:00')],
+            ['model' => 'gpt-4.1', 'model_type' => 'text', 'total_cost_in_cents' => 400, 'created_at' => Date::parse('2026-01-15 13:00:00')],
+            ['model' => 'excluded-error', 'model_type' => 'text', 'total_cost_in_cents' => 9000, 'status_code' => 500, 'created_at' => Date::parse('2026-02-12 11:00:00')],
         ))
         ->create();
 
@@ -80,13 +80,13 @@ it('counts only the costs inside a custom date range', function () {
     SpectraRequest::factory()
         ->count(2)
         ->state(new Sequence(
-            ['model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 120, 'created_at' => Carbon::parse('2026-02-10 08:00:00')],
-            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'total_cost_in_cents' => 80, 'created_at' => Carbon::parse('2026-02-12 08:00:00')],
+            ['model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 120, 'created_at' => Date::parse('2026-02-10 08:00:00')],
+            ['model' => 'gpt-4o-mini', 'model_type' => 'text', 'total_cost_in_cents' => 80, 'created_at' => Date::parse('2026-02-12 08:00:00')],
         ))
         ->create();
 
     $controller = app(CostsController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+    $response = app()->call($controller->__invoke(...), ['request' => new Request([
         'period' => 'custom',
         'start_date' => '2026-02-10',
         'end_date' => '2026-02-10',
@@ -104,13 +104,13 @@ it('counts costs of every date when the period is all', function () {
     SpectraRequest::factory()
         ->count(2)
         ->state(new Sequence(
-            ['model' => 'old-model', 'model_type' => 'text', 'total_cost_in_cents' => 120, 'created_at' => Carbon::parse('2025-01-10 08:00:00')],
-            ['model' => 'new-model', 'model_type' => 'text', 'total_cost_in_cents' => 80, 'created_at' => Carbon::parse('2026-02-10 08:00:00')],
+            ['model' => 'old-model', 'model_type' => 'text', 'total_cost_in_cents' => 120, 'created_at' => Date::parse('2025-01-10 08:00:00')],
+            ['model' => 'new-model', 'model_type' => 'text', 'total_cost_in_cents' => 80, 'created_at' => Date::parse('2026-02-10 08:00:00')],
         ))
         ->create();
 
     $controller = app(CostsController::class);
-    $response = app()->call([$controller, '__invoke'], ['request' => new Request([
+    $response = app()->call($controller->__invoke(...), ['request' => new Request([
         'period' => 'all',
     ])]);
     $json = $response->toArray();

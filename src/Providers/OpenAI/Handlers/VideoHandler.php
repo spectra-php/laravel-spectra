@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\OpenAI\Handlers;
 
 use Carbon\CarbonInterface;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Http;
 use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesParametricEndpoints;
@@ -103,7 +103,7 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
     {
         $expiresAt = $responseData['expires_at'] ?? null;
 
-        return is_numeric($expiresAt) ? Carbon::createFromTimestamp((int) $expiresAt) : null;
+        return is_numeric($expiresAt) ? Date::createFromTimestamp((int) $expiresAt) : null;
     }
 
     /**

@@ -21,7 +21,7 @@ it('bills chat completion cache reads and writes at the tier OpenAI served, not 
         'messages' => [['role' => 'user', 'content' => 'When does the contract renew?']],
     ]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-5.6-sol standard: in 400, cached 40, cache write 500, out 2000.
     // Uncached input = 12000 - 8000 cached - 3000 written = 1000.
@@ -44,7 +44,7 @@ it('uses the tier from the response when the request named none', function () {
 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.6-sol', 'input' => 'Check the contract.']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-5.6-sol priority (Fast): in 800, cached 80, cache write 1000, out 4000.
     // Uncached input = 20000 - 15000 - 4000 = 1000; reasoning is inside the 1500 output.
@@ -70,7 +70,7 @@ it('bills 12h cache writes at the 12h rate and 30m writes at the 30m rate', func
 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.6-sol', 'input' => 'Check the contract.']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     expect($row->cache_write_tokens)->toBe(4000)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta($expectedCents, 1e-9);
@@ -92,7 +92,7 @@ it('falls back to the requested tier when the response has none', function () {
 
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-5.6-sol', 'service_tier' => 'flex', 'messages' => []]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-5.6-sol flex: in 200, cached 20, cache write 250, out 1000.
     // (1000*200 + 8000*20 + 3000*250 + 900*1000) / 1M = 2.01
@@ -105,7 +105,7 @@ it('prices prompts over 272K tokens at the long-context rates', function () {
 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-6-astra', 'input' => 'Summarise the repository.']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // 300,000 input tokens > 272K, so gpt-6-astra long context: in 2000, cached 200, write 2500, out 7500.
     // Uncached input = 300000 - 200000 - 50000 = 50000.
@@ -129,7 +129,7 @@ it('keeps short-context rates for a prompt of exactly 272K tokens', function () 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-6-astra', 'input' => 'x']);
 
     // gpt-6-astra standard short context: (272000*1000 + 1000*5000) / 1M = 277.0
-    expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(277.0, 1e-9);
+    expect((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(277.0, 1e-9);
 });
 
 it('adds hosted tool fees, counting code interpreter once per container', function () {
@@ -137,7 +137,7 @@ it('adds hosted tool fees, counting code interpreter once per container', functi
 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.4', 'input' => 'Research the fines.']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Tokens, gpt-5.4 standard (in 250, out 1500): (2000*250 + 500*1500) / 1M = 1.25
     // Tools: 2 web searches * 1¢ + 1 file search * 0.25¢ + 2 containers * 3¢ = 8.25
@@ -157,7 +157,7 @@ it('bills audio tokens of chat completions at the audio rates', function () {
         'messages' => [],
     ]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-audio-1.5: text in 250 / out 1000, audio in 3200 / out 6400.
     // Input: 200 text + 1000 audio. Output: 100 text + 700 audio.
@@ -172,7 +172,7 @@ it('tracks conversation compaction with the model from the request', function ()
 
     Http::post('https://api.openai.com/v1/responses/compact', ['model' => 'gpt-5.4', 'input' => []]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-5.4 standard: (42897*250 + 12000*1500) / 1M = 28.72425
     expect($row->model)->toBe('GPT-5.4')
@@ -187,7 +187,7 @@ it('does not record token counting requests', function () {
 
     Http::post('https://api.openai.com/v1/responses/input_tokens', ['model' => 'gpt-5.4', 'input' => 'Hello']);
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 });
 
 it('records a provider error with its message and no cost', function () {
@@ -202,7 +202,7 @@ it('records a provider error with its message and no cost', function () {
 
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-5.4', 'messages' => []]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     expect($row->status_code)->toBe(429)
         ->and($row->error_message)->toStartWith('Rate limit reached for gpt-5.4')
@@ -218,6 +218,6 @@ it('prices gpt-4o-2024-05-13 as its own snapshot, not as gpt-4o', function () {
     Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o-2024-05-13', 'messages' => []]);
 
     // gpt-4o-2024-05-13 standard (in 500, out 1500): (19*500 + 10*1500) / 1M = 0.0245
-    expect(SpectraRequest::sole()->model)->toBe('GPT-4o (2024-05-13)')
-        ->and((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.0245, 1e-9);
+    expect(SpectraRequest::query()->sole()->model)->toBe('GPT-4o (2024-05-13)')
+        ->and((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(0.0245, 1e-9);
 });

@@ -19,7 +19,7 @@ it('prices prefixed production ids with cached input at half price', function ()
 
     Http::post('https://api.groq.com/openai/v1/chat/completions', ['model' => 'openai/gpt-oss-120b', 'messages' => []]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // GPT OSS 120B: 33 uncached × 15 + 4,608 cached × 7.5 + 1,817 × 60 = 144,075 / 1M cents.
     expect($row->provider)->toBe('groq')
@@ -56,7 +56,7 @@ it('reads streamed usage from x_groq.usage', function () {
 
     Http::post('https://api.groq.com/openai/v1/chat/completions', ['model' => 'openai/gpt-oss-20b', 'stream' => true, 'messages' => []])->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // GPT OSS 20B: 976 uncached × 7.5 + 1,024 cached × 3.75 + 100 × 30 = 14,160 / 1M cents.
     expect($row->is_streaming)->toBeTrue()
@@ -73,7 +73,7 @@ it('bills the 10-second minimum when a json transcription has no duration', func
     Http::attach('file', 'fake-audio-bytes', 'clip.m4a')
         ->post('https://api.groq.com/openai/v1/audio/transcriptions', ['model' => 'whisper-large-v3-turbo', 'response_format' => 'json']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Turbo: $0.04 / hour = 4/60 cents per minute; 10 s billed = 4/60 × 10/60 cents.
     expect($row->model)->toBe('Whisper Large v3 Turbo')
@@ -90,7 +90,7 @@ it('bills a verbose transcription shorter than 10 seconds at the 10-second minim
 
     Http::attach('file', 'a', 'a.wav')->post('https://api.groq.com/openai/v1/audio/transcriptions', ['model' => 'whisper-large-v3', 'response_format' => 'verbose_json']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Whisper Large v3: $0.111 / hour = 0.185 cents per minute × 10 s billed.
     expect((float) $row->duration_seconds)->toBe(10.0)
@@ -102,7 +102,7 @@ it('bills a translation by its audio length', function () {
 
     Http::attach('file', 'b', 'b.wav')->post('https://api.groq.com/openai/v1/audio/translations', ['model' => 'whisper-large-v3', 'response_format' => 'verbose_json']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Whisper Large v3: 0.185 cents per minute × (120.5 s / 60).
     expect($row->provider)->toBe('groq')
@@ -119,7 +119,7 @@ it('tracks Orpheus text to speech per character', function () {
 
     Http::post('https://api.groq.com/openai/v1/audio/speech', ['model' => 'canopylabs/orpheus-v1-english', 'voice' => 'troy', 'input' => $input, 'response_format' => 'wav']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // $22 per 1M characters = 2,200 cents per 1M characters.
     expect($row->provider)->toBe('groq')
@@ -154,7 +154,7 @@ it('bills a flex Responses API call like on-demand', function () {
 
     Http::post('https://api.groq.com/openai/v1/responses', ['model' => 'openai/gpt-oss-20b', 'input' => 'How are models trained?', 'service_tier' => 'flex']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Flex bills like on-demand: 80 × 7.5 + 213 × 30 = 6,990 / 1M cents.
     expect($row->pricing_tier)->toBe('flex')
@@ -171,7 +171,7 @@ it('records a streamed Responses API call from its completed event', function ()
 
     Http::post('https://api.groq.com/openai/v1/responses', ['model' => 'openai/gpt-oss-20b', 'input' => 'How are models trained?', 'stream' => true])->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // 80 × 7.5 + 213 × 30 = 6,990 / 1M cents.
     expect($row->is_streaming)->toBeTrue()

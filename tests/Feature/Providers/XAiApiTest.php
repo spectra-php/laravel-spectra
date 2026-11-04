@@ -19,7 +19,7 @@ it('bills reasoning tokens on top of completion tokens and uses the reported cos
 
     Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4.3', 'messages' => [['role' => 'user', 'content' => 'What is 101*3?']]]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // grok-4.3: 26 uncached × 125 + 6 cached × 20 + (9 + 94) output × 250 = 29,120 / 1M
     // = 0.02912 cents, which matches the reported 2,912,000 ticks (10^8 ticks per cent).
@@ -43,7 +43,7 @@ it('estimates the same cost from the catalog when no cost is reported', function
     Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4.3', 'messages' => []]);
 
     // 26 × 125 + 6 × 20 + 103 × 250 = 29,120 / 1M cents.
-    expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.02912, 1e-9);
+    expect((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(0.02912, 1e-9);
 });
 
 it('uses the priority tier only when the response confirms it', function () {
@@ -58,7 +58,7 @@ it('uses the priority tier only when the response confirms it', function () {
     Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4.3', 'service_tier' => 'priority', 'messages' => []]);
     Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4.3', 'service_tier' => 'priority', 'messages' => []]);
 
-    [$granted, $downgraded] = SpectraRequest::orderBy('id')->get()->all();
+    [$granted, $downgraded] = SpectraRequest::query()->orderBy('id')->get()->all();
 
     // Priority (2x): 26 × 250 + 6 × 40 + 103 × 500 = 58,240 / 1M cents.
     expect($granted->pricing_tier)->toBe('priority')
@@ -76,7 +76,7 @@ it('bills every token at the long-context rate once the prompt reaches 200K', fu
     Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4.3', 'messages' => []]);
 
     // Long context: 250,000 × 250 + 1,000 × 500 = 63,000,000 / 1M = 63 cents.
-    expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(63.0, 1e-9);
+    expect((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(63.0, 1e-9);
 });
 
 it('tracks the Responses API with server-side tools and their fees', function () {
@@ -86,7 +86,7 @@ it('tracks the Responses API with server-side tools and their fees', function ()
 
     Http::post('https://api.x.ai/v1/responses', ['model' => 'grok-4.7', 'input' => 'Latest SpaceXSI news?', 'tools' => [['type' => 'web_search'], ['type' => 'x_search']]]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // grok-4.7 tokens: 8,000 × 200 + 4,000 × 50 + (500 + 1,500) × 600 = 3,000,000 / 1M = 3 cents.
     // Tools: 2 web searches × 0.5 + 10 X posts × 0.5 + 1 X profile × 1 = 7 cents. Total 10 cents.
@@ -113,7 +113,7 @@ it('uses the reported cost, which includes the US endpoint surcharge', function 
 
     Http::post('https://us.api.x.ai/v1/responses', ['model' => 'grok-4.7', 'input' => 'hi']);
 
-    expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(10.3, 1e-9);
+    expect((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(10.3, 1e-9);
 });
 
 it('tracks streamed chat completions with the final reported cost', function () {
@@ -142,7 +142,7 @@ it('tracks streamed chat completions with the final reported cost', function () 
 
     expect($response->body())->toBe($sse);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Same usage as the non-streamed example: 0.02912 cents reported.
     expect($row->is_streaming)->toBeTrue()
@@ -167,7 +167,7 @@ it('records a streamed Responses API call at its reported cost', function () {
 
     Http::post('https://api.x.ai/v1/responses', ['model' => 'grok-4.7', 'stream' => true, 'input' => 'news'])->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Reported: 1,000,000,000 ticks = 10 cents (3 cents of tokens + 7 cents of tools).
     expect($row->is_streaming)->toBeTrue()
@@ -192,12 +192,12 @@ it('records a video once, from the finished poll, priced by the reported cost', 
     Http::post('https://api.x.ai/v1/videos/generations', ['model' => 'grok-imagine-video-1.5', 'prompt' => 'A lake at sunrise', 'duration' => 6, 'resolution' => '720p']);
     Http::get("https://api.x.ai/v1/videos/{$requestId}");
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 
     Http::get("https://api.x.ai/v1/videos/{$requestId}");
     Http::get("https://api.x.ai/v1/videos/{$requestId}");
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // 8,400,000,000 ticks = 84 cents (6 s at the 720p rate of 14 cents/s).
     expect($row->provider)->toBe('xai')
@@ -217,7 +217,7 @@ it('estimates a video per second when no cost is reported', function () {
     Http::get('https://api.x.ai/v1/videos/req-123');
 
     // grok-imagine-video-1.5 standard (480p): 6 s × 8 cents = 48 cents.
-    expect((float) SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(48.0, 1e-9);
+    expect((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(48.0, 1e-9);
 });
 
 it('tracks image generation with the reported cost', function () {
@@ -225,7 +225,7 @@ it('tracks image generation with the reported cost', function () {
 
     Http::post('https://api.x.ai/v1/images/generations', ['model' => 'grok-imagine-image-2.0', 'prompt' => 'A collage of London landmarks', 'n' => 2, 'resolution' => '2k']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // 1,600,000,000 ticks = 16 cents (2 images at 2K medium, 8 cents each).
     expect($row->provider)->toBe('xai')
@@ -246,11 +246,11 @@ it('records a deferred chat completion when its result is fetched', function () 
     Http::post('https://api.x.ai/v1/chat/completions', ['model' => 'grok-4.3', 'deferred' => true, 'messages' => []]);
     Http::get('https://api.x.ai/v1/chat/deferred-completion/deferred-1');
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 
     Http::get('https://api.x.ai/v1/chat/deferred-completion/deferred-1');
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     expect($row->model)->toBe('Grok 4.3')
         ->and($row->completion_tokens)->toBe(103)

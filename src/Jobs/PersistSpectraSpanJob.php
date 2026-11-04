@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Jobs;
 
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
+use Illuminate\Foundation\Queue\Queueable;
 use Spectra\Support\Tracking\SpanWriter;
 
 /**
@@ -16,7 +13,7 @@ use Spectra\Support\Tracking\SpanWriter;
  */
 class PersistSpectraSpanJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Queueable;
 
     /**
      * Create a new persist span job instance.

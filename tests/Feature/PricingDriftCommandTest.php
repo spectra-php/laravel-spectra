@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Spectra\Enums\PricingUnit;
 use Spectra\Pricing\ProviderPricing;
@@ -61,15 +62,15 @@ beforeEach(function () {
 
     $this->source = tempnam(sys_get_temp_dir(), 'models-dev');
     $this->baseline = tempnam(sys_get_temp_dir(), 'drift-baseline');
-    unlink($this->baseline);
+    File::delete($this->baseline);
     file_put_contents($this->source, json_encode($this->catalog));
 
     $this->app->make(Kernel::class)->registerCommand($this->app->make(PricingDriftCommand::class));
 });
 
 afterEach(function () {
-    @unlink($this->source);
-    @unlink($this->baseline);
+    File::delete($this->source);
+    File::delete($this->baseline);
 });
 
 it('reports differing prices and missing models, as Spectra bills them', function () {
@@ -127,7 +128,7 @@ it('writes a markdown report and downloads models.dev by default', function () {
         ->toContain('| openai | `gpt-x` | output | 400 | 450 |')
         ->toContain('| openai | `gpt-new` | 200 | 800 |');
 
-    unlink($markdown);
+    File::delete($markdown);
 });
 
 it('fails when models.dev cannot be loaded', function () {

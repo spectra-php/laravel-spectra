@@ -7,7 +7,7 @@ namespace Spectra\Support;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 
@@ -42,8 +42,8 @@ readonly class DateRange
 
         if ($period === 'custom' && $request->filled('start_date') && $request->filled('end_date')) {
             try {
-                $start = Carbon::parse((string) $request->input('start_date'))->startOfDay();
-                $end = Carbon::parse((string) $request->input('end_date'))->endOfDay();
+                $start = Date::parse((string) $request->input('start_date'))->startOfDay();
+                $end = Date::parse((string) $request->input('end_date'))->endOfDay();
 
                 if ($end->lt($start)) {
                     [$start, $end] = [
@@ -60,8 +60,8 @@ readonly class DateRange
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
             try {
-                $start = Carbon::parse((string) $request->input('start_date'))->startOfDay();
-                $end = Carbon::parse((string) $request->input('end_date'))->endOfDay();
+                $start = Date::parse((string) $request->input('start_date'))->startOfDay();
+                $end = Date::parse((string) $request->input('end_date'))->endOfDay();
 
                 if ($end->lt($start)) {
                     [$start, $end] = [
@@ -77,7 +77,7 @@ readonly class DateRange
         }
 
         $start = match ($period) {
-            'today' => now()->startOfDay(),
+            'today' => today(),
             'week' => now()->startOfWeek(),
             'year' => now()->startOfYear(),
             default => now()->startOfMonth(),
@@ -117,7 +117,7 @@ readonly class DateRange
             return $end;
         }
 
-        $parsed = Carbon::parse($end);
+        $parsed = Date::parse($end);
 
         return Str::isMatch('/^\d{4}-\d{2}-\d{2}$/', Str::trim($end)) ? $parsed->endOfDay() : $parsed;
     }

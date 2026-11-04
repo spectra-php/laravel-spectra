@@ -57,8 +57,8 @@ Every class has a short docblock that says what it is and why it exists, includi
 Every method (interfaces, constructors and `__invoke()` included) has a docblock that opens with one sentence, the way the framework and laravel/ai write them: verb first, ending with a period, in the project's terms ("Get the token usage from an OpenAI Responses API body.", "Determine if the budget allows the request.", "Create a new budget enforcer instance."). Type tags (`@param  array<string, mixed>  $data`) follow after a blank ` *` line, and only where the native type isn't enough.
 Inline comments explain why, never what the code does: if one explains what, rename or extract instead. No history, tickets or people in comments.
 
-## Leave formatting and types to the tools
-Pint (`laravel` preset plus `declare_strict_types`) owns code style: run `vendor/bin/pint <files>`, never format by hand. PHPStan runs at level 8 on `src` with an empty baseline (`composer analyse`); fix errors in the code, never add a baseline entry or an `ignoreErrors` line.
+## Leave formatting, refactorings and types to the tools
+Pint (`laravel` preset plus `declare_strict_types`) owns code style: run `vendor/bin/pint <files>`, never format by hand. Rector (`rector.php`) owns mechanical rewrites (dead code, early returns, `Model::query()`, `today()`, `throw_if()`, the `Date` facade): run `composer refactor`, then Pint; CI fails on anything it would still change. To keep code Rector rewrites, add the rule to `withSkip()` with a comment saying why, never an inline ignore. PHPStan runs at level 8 on `src` with an empty baseline (`composer analyse`); fix errors in the code, never add a baseline entry or an `ignoreErrors` line.
 
 ## Prefer interpolation to concatenation
 Write `"spectra.provider.{$provider}"`, not `'spectra.provider.'.$provider`.

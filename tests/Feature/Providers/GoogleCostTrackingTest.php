@@ -34,7 +34,7 @@ it('bills thinking tokens at the output rate', function () {
 
     postGemini('gemini-3.8-flash');
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Gemini 3.8 Flash (until 2026-12-31): $0.75 in, $3.75 out.
     // candidatesTokenCount leaves the 900 thinking tokens out; both are output:
@@ -58,7 +58,7 @@ it('prices Gemini 3.8 Flash at the doubled rates from 2027', function () {
     postGemini('gemini-3.8-flash');
 
     // $1.50 in, $7.50 out: (1200×150 + 1200×750) / 1M = 1.08¢
-    expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(1.08, 0.000001);
+    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(1.08, 0.000001);
 });
 
 it('adds tool-use prompt tokens to the input and counts search grounding without pricing it', function () {
@@ -66,7 +66,7 @@ it('adds tool-use prompt tokens to the input and counts search grounding without
 
     postGemini('gemini-2.5-flash', ['tools' => [['google_search' => (object) []]]]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Gemini 2.5 Flash: $0.30 in, $2.50 out, $0.03 cached.
     // Input = 5000 prompt (2000 of them cached) + 1500 tool-use prompt:
@@ -86,7 +86,7 @@ it('bills uncached audio input at the audio rate', function () {
     // Gemini 2.5 Flash: audio $1.00, text $0.30, cached $0.03, output $2.50.
     // 4800 audio tokens, 1000 of them read from cache; 200 text tokens:
     // (3800×100 + 1000×3 + 200×30 + 150×250) / 1M = 0.4265¢
-    expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.4265, 0.000001);
+    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(0.4265, 0.000001);
 });
 
 it('uses the flex tier the response reports', function () {
@@ -94,7 +94,7 @@ it('uses the flex tier the response reports', function () {
 
     postGemini('gemini-3-flash-preview', ['serviceTier' => 'flex']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Gemini 3 Flash Preview flex: $0.25 in, $1.50 out:
     // (10000×25 + 2000×150) / 1M = 0.55¢
@@ -110,8 +110,8 @@ it('bills a priority request that was downgraded at standard prices', function (
     postGemini('gemini-3-flash-preview', ['serviceTier' => 'priority']);
 
     // Standard: (10000×50 + 2000×300) / 1M = 1.1¢
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('standard')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(1.1, 0.000001);
+    expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('standard')
+        ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(1.1, 0.000001);
 });
 
 it('falls back to the requested tier when the response does not report one', function () {
@@ -122,8 +122,8 @@ it('falls back to the requested tier when the response does not report one', fun
     postGemini('gemini-3-flash-preview', ['serviceTier' => 'priority']);
 
     // Priority: $0.90 in, $5.40 out: (10000×90 + 2000×540) / 1M = 1.98¢
-    expect(SpectraRequest::sole()->pricing_tier)->toBe('priority')
-        ->and(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(1.98, 0.000001);
+    expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('priority')
+        ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(1.98, 0.000001);
 });
 
 it('prices prompts over 200K tokens at the long-context rates', function () {
@@ -133,7 +133,7 @@ it('prices prompts over 200K tokens at the long-context rates', function () {
 
     // Gemini 3.1 Pro Preview, prompt > 200K: $4 in, $18 out:
     // (250000×400 + 1000×1800) / 1M = 101.8¢
-    expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(101.8, 0.000001);
+    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(101.8, 0.000001);
 });
 
 it('bills image tokens at the image rate and text and thinking at the text rate', function () {
@@ -142,7 +142,7 @@ it('bills image tokens at the image rate and text and thinking at the text rate'
 
     postGemini('gemini-3.1-flash-image');
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Gemini 3.1 Flash Image: $0.50 in, $3 text/thinking out, $60 image out:
     // (20×50 + (30 + 200)×300 + 1120×6000) / 1M = 6.79¢
@@ -163,7 +163,7 @@ it('treats the candidate tokens of an image response without a breakdown as imag
     postGemini('gemini-2.5-flash-image');
 
     // Gemini 2.5 Flash Image: $0.30 in, $30 image out: (20×30 + 1150×3000) / 1M = 3.4506¢
-    expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(3.4506, 0.000001);
+    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(3.4506, 0.000001);
 });
 
 it('prices text-to-speech output tokens at the audio rate', function () {
@@ -172,7 +172,7 @@ it('prices text-to-speech output tokens at the audio rate', function () {
 
     postGemini('gemini-3.8-flash-tts');
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Gemini 3.8 Flash TTS: $0.50 text in, $9 audio out: (50×50 + 250×900) / 1M = 0.2275¢
     expect($row->provider)->toBe('google')
@@ -191,11 +191,11 @@ it('records a server-sent-events stream with thinking and the flex tier', functi
 
     $response = postGemini('gemini-3.8-flash', ['serviceTier' => 'flex'], 'streamGenerateContent', '?alt=sse');
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 
     $response->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // Usage is cumulative; the last chunk wins. Gemini 3.8 Flash flex:
     // (800×37.5 + (200 + 500)×187.5) / 1M = 0.16125¢
@@ -215,7 +215,7 @@ it('records a streamed JSON array (streamGenerateContent without alt=sse)', func
 
     postGemini('gemini-3.8-flash', ['serviceTier' => 'flex'], 'streamGenerateContent')->body();
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     expect($row->model)->toBe('Gemini 3.8 Flash')
         ->and($row->response_id)->toBe('s9_vaMHeB4yR7M8Pq-i3wQo')
@@ -249,11 +249,11 @@ it('records a Veo job from the operation poll that finishes it', function () {
     );
     Http::withHeaders(['x-goog-api-key' => 'test-key'])->get("https://generativelanguage.googleapis.com/v1beta/{$operation}");
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 
     Http::withHeaders(['x-goog-api-key' => 'test-key'])->get("https://generativelanguage.googleapis.com/v1beta/{$operation}");
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // The submit's 8 seconds at 1080p reach the poll through the remembered job:
     // 12 cents/second (hd) × 8 seconds.

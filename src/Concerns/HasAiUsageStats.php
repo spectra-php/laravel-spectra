@@ -30,7 +30,7 @@ trait HasAiUsageStats
      */
     public function aiUsageToday(): UsageStats
     {
-        return $this->getAiUsageForPeriod(now()->startOfDay(), now());
+        return $this->getAiUsageForPeriod(today(), now());
     }
 
     /**

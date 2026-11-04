@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -139,7 +139,7 @@ it('stores the start time to the millisecond and the origin', function () {
     $context = new RequestContext([
         'provider' => 'openai',
         'model' => 'gpt-4o',
-        'started_at' => Carbon::parse('2026-11-03 10:15:30.123'),
+        'started_at' => Date::parse('2026-11-03 10:15:30.123'),
     ]);
     $context->complete(['id' => 'resp-origin'], ['prompt_tokens' => 10, 'completion_tokens' => 5]);
 
@@ -161,8 +161,8 @@ it('keeps the start time and origin of the call that started an async job', func
         'response_id' => 'video_123',
         'status_code' => 200,
         'origin' => 'POST /videos',
-        'started_at' => Carbon::parse('2026-11-03 10:00:00.250'),
-        'created_at' => Carbon::parse('2026-11-03 10:00:00'),
+        'started_at' => Date::parse('2026-11-03 10:00:00.250'),
+        'created_at' => Date::parse('2026-11-03 10:00:00'),
     ]);
 
     $writer->write([
@@ -171,8 +171,8 @@ it('keeps the start time and origin of the call that started an async job', func
         'response_id' => 'video_123',
         'status_code' => 200,
         'origin' => 'App\Jobs\PollVideo',
-        'started_at' => Carbon::parse('2026-11-03 10:02:00.900'),
-        'created_at' => Carbon::parse('2026-11-03 10:02:00'),
+        'started_at' => Date::parse('2026-11-03 10:02:00.900'),
+        'created_at' => Date::parse('2026-11-03 10:02:00'),
     ]);
 
     $row = SpectraRequest::query()->sole();

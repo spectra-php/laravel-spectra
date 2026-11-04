@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Spectra\Support;
 
+use Illuminate\Support\Facades\File;
+use JamesHeinrich\GetID3\GetID3;
+
 /**
  * Extracts audio duration from binary audio data using getID3.
  *
@@ -50,7 +53,7 @@ class AudioDurationExtractor
         } catch (\Throwable) {
             return null;
         } finally {
-            @unlink($tempFile);
+            File::delete($tempFile);
         }
     }
 
@@ -67,8 +70,8 @@ class AudioDurationExtractor
      */
     protected static function resolveGetId3Class(): ?string
     {
-        if (class_exists(\JamesHeinrich\GetID3\GetID3::class)) {
-            return \JamesHeinrich\GetID3\GetID3::class;
+        if (class_exists(GetID3::class)) {
+            return GetID3::class;
         }
 
         return class_exists(\getID3::class) ? \getID3::class : null;

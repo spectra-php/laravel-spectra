@@ -124,7 +124,7 @@ it('round-trips propagationHeaders() through the middleware', function () {
 
     $this->withHeaders($headers)->postJson('/internal/tool')->assertOk();
 
-    expect(SpectraRequest::sole()->trace_id)->toBe($callerTrace)
+    expect(SpectraRequest::query()->sole()->trace_id)->toBe($callerTrace)
         ->and(tagsOfLatestRequest())->toBe(['chat-reply']);
 });
 

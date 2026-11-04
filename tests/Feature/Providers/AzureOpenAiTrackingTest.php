@@ -19,7 +19,7 @@ it('records azure chat completions as openai on the v1 endpoint', function (stri
     // Deployment requests name no model; it comes from the response.
     Http::post($url, ['messages' => [['role' => 'user', 'content' => 'When does the contract renew?']]]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // gpt-4.1 standard: in 200, out 800. (1000*200 + 200*800) / 1M = 0.36
     expect($row->provider)->toBe('openai')
@@ -39,7 +39,7 @@ it('records azure embeddings as openai embeddings with their cost', function () 
 
     Http::post('https://contoso.openai.azure.com/openai/deployments/embeddings/embeddings?api-version=2024-10-21', ['input' => 'hello']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     // text-embedding-3-small: 5 tokens × 2 cents per 1M = 0.00001¢
     expect($row->provider)->toBe('openai')
@@ -55,7 +55,7 @@ it('maps the azure responses preview api to the v1 responses endpoint', function
 
     Http::post('https://contoso.openai.azure.com/openai/responses?api-version=2025-04-01-preview', ['model' => 'gpt-4.1', 'input' => 'Hi']);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     expect($row->provider)->toBe('openai')
         ->and($row->endpoint)->toBe('/v1/responses')
@@ -69,7 +69,7 @@ it('does not track non-usage azure endpoints', function () {
     Http::get('https://contoso.openai.azure.com/openai/models?api-version=2024-10-21');
     Http::get('https://contoso.openai.azure.com/openai/deployments/gpt-41-prod/files');
 
-    expect(SpectraRequest::count())->toBe(0);
+    expect(SpectraRequest::query()->count())->toBe(0);
 });
 
 it('records requests to a custom azure domain configured through laravel-ai', function () {
@@ -85,7 +85,7 @@ it('records requests to a custom azure domain configured through laravel-ai', fu
         'messages' => [['role' => 'user', 'content' => 'Hi']],
     ]);
 
-    $row = SpectraRequest::sole();
+    $row = SpectraRequest::query()->sole();
 
     expect($row->provider)->toBe('openai')
         ->and($row->endpoint)->toBe('/v1/chat/completions')

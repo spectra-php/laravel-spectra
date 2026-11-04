@@ -38,7 +38,7 @@ it('records a track() call with its provider and the model display name', functi
         'usage' => ['input_tokens' => 100, 'output_tokens' => 50],
     ]);
 
-    $request = SpectraRequest::sole();
+    $request = SpectraRequest::query()->sole();
 
     expect($request->provider)->toBe('anthropic')
         ->and($request->model)->toBe('Claude Sonnet 4');

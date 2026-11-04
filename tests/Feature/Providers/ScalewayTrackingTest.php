@@ -16,7 +16,7 @@ it('records a tracked scaleway chat response with its model, tokens and cost', f
 
     Spectra::track('scaleway', 'llama-3.3-70b-instruct', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Llama 3.3 70B Instruct, EUR cents per 1M (in 90, out 90), no exchange rate set:
     // (30×90 + 18×90) / 1M = 0.00432
@@ -33,7 +33,7 @@ it('records an embedding sent to the default-project address', function () {
 
     Http::post('https://api.scaleway.ai/v1/embeddings', ['model' => 'bge-multilingual-gemma2', 'input' => 'Bonjour']);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // bge-multilingual-gemma2: 8 tokens × 10 EUR cents per 1M = 0.00008
     expect($record->provider)->toBe('scaleway')
@@ -54,7 +54,7 @@ it('converts euro prices with the configured exchange rate', function () {
         'messages' => [['role' => 'user', 'content' => 'Résume ce document.']],
     ]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // deepseek-v4.1-flash, EUR cents per 1M: 4,000 uncached × 60 + 6,000 cached × 12
     // + 1,500 output × 180 = 0.582 EUR cents → × 1.17 = 0.68094 USD cents
@@ -73,7 +73,7 @@ it('counts euro prices one to one when no exchange rate is set', function () {
     Http::post('https://api.scaleway.ai/v1/chat/completions', ['model' => 'deepseek-v4.1-flash', 'messages' => []]);
 
     // 0.582 EUR cents, unconverted
-    expect(SpectraRequest::sole()->total_cost_in_cents)->toEqualWithDelta(0.582, 0.000001);
+    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(0.582, 0.000001);
 });
 
 it('records a streamed chat completion with cached tokens', function () {
@@ -90,7 +90,7 @@ it('records a streamed chat completion with cached tokens', function () {
 
     expect($response->body())->toBe($sse);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // qwen3.8-27b, EUR cents per 1M: (1,000 × 60 + 1,000 cached × 12 + 100 × 330) / 1M = 0.105
     expect($record->is_streaming)->toBeTrue()
@@ -109,7 +109,7 @@ it('records a streamed responses api call from its completed event', function ()
 
     Http::post('https://api.scaleway.ai/v1/responses', ['model' => 'gpt-oss-120b', 'stream' => true, 'input' => 'Bonjour'])->body();
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // gpt-oss-120b, EUR cents per 1M: (400 × 15 + 120 × 60) / 1M = 0.0132
     expect($record->prompt_tokens)->toBe(400)
@@ -125,7 +125,7 @@ it('prices rerank calls as embedding tokens', function () {
 
     Http::post('https://api.scaleway.ai/v1/rerank', ['model' => 'qwen3-embedding-8b', 'query' => 'Biggest ocean?', 'documents' => ['a', 'b', 'c']]);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // qwen3-embedding-8b: 99 tokens × 10 EUR cents per 1M
     expect($record->prompt_tokens)->toBe(99)

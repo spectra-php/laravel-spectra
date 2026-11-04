@@ -16,7 +16,7 @@ it('records a tracked openai response with its model, tokens and cost', function
 
     Spectra::track('openai', 'gpt-4.1', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     expect($record->provider)->toBe('openai')
         ->and($record->model)->toBe('GPT-4.1')
@@ -57,7 +57,7 @@ it('records a Spectra::stream() chat stream with its usage and cost', function (
     // gpt-4o standard (in 250, out 1000): (15×250 + 5×1000) / 1M = 0.00875
     expect($content)->toBe('Hello, world!')
         ->and($tracker->getTimeToFirstToken())->not->toBeNull()
-        ->and(SpectraRequest::find($record->id))->not->toBeNull()
+        ->and(SpectraRequest::query()->find($record->id))->not->toBeNull()
         ->and($record->provider)->toBe('openai')
         ->and($record->model)->toBe('GPT-4o')
         ->and($record->prompt_tokens)->toBe(15)
@@ -84,7 +84,7 @@ it('prefers the reasoning effort in the request over the one the response echoes
         'completion_tokens' => 120,
     ]);
 
-    expect(SpectraRequest::sole()->reasoning_effort)->toBe('high');
+    expect(SpectraRequest::query()->sole()->reasoning_effort)->toBe('high');
 });
 
 it('marks a response as reasoning from its reasoning output block alone', function () {
@@ -93,7 +93,7 @@ it('marks a response as reasoning from its reasoning output block alone', functi
 
     Spectra::track('openai', 'gpt-5.2-codex', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     expect($record->reasoning_tokens)->toBe(0)
         ->and($record->reasoning_effort)->toBeNull()
@@ -105,7 +105,7 @@ it('counts chat completion tool calls by type', function () {
 
     Spectra::track('openai', 'gpt-4.1', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     expect($record->has_tool_calls)->toBeTrue()
         ->and($record->tool_call_counts)->toBe(['function' => 3])
@@ -122,5 +122,5 @@ it('stores the tags added to the context inside track()', function () {
         return $response;
     });
 
-    expect(SpectraRequest::sole()->tags->pluck('name')->all())->toEqualCanonicalizing(['chat', 'test']);
+    expect(SpectraRequest::query()->sole()->tags->pluck('name')->all())->toEqualCanonicalizing(['chat', 'test']);
 });

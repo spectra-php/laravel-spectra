@@ -75,7 +75,7 @@ class ScrapedPricesFile
         try {
             $data = json_decode(File::get($this->path), true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
-            throw new RuntimeException("{$this->path} is not valid JSON: {$e->getMessage()}", previous: $e);
+            throw new RuntimeException("{$this->path} is not valid JSON: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
 
         if (! is_array($data) || ! is_array($data['providers'] ?? null)) {

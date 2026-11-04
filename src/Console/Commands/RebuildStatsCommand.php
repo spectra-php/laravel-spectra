@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 use Spectra\Support\StatsAggregator;
 use Symfony\Component\Console\Attribute\AsCommand;
 
@@ -39,11 +39,11 @@ class RebuildStatsCommand extends Command
         }
 
         $from = $this->option('from')
-            ? Carbon::parse($this->option('from'))
+            ? Date::parse($this->option('from'))
             : null;
 
         $to = $this->option('to')
-            ? Carbon::parse($this->option('to'))
+            ? Date::parse($this->option('to'))
             : null;
 
         if ($from && $to && $from->gt($to)) {

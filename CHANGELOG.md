@@ -39,7 +39,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - `trackable_id` and tag ids are strings in the dashboard API, so ULID and UUID ids link to the right trackable
 - Pricing: dated ids that only add a date to a model id (`claude-sonnet-4-20250514`) are no longer listed as aliases. They resolve to the same price through date stripping, but `getAliases()` no longer returns them
 - Tracking: media downloads time out (30 seconds for images, 60 for videos), and a file that fails is skipped
-- Dev-only files (`bin/`, `whisky.json`, `pint.json`, the PHPStan configs) are no longer in the package download
+- Dev-only files (`bin/`, `whisky.json`, `pint.json`, `rector.php`, the PHPStan configs) are no longer in the package download
 - `SpectraRequest::$trackable_id` is always a string, also on a row just created from an integer key, the same as a row read back from the database
 - A whitespace-only API key in config (`spectra.api_keys.*`, `ai.providers.*.key`) counts as unset, like an empty one
 

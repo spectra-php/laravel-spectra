@@ -15,7 +15,7 @@ it('records a tracked cohere embed response with its billed tokens and cost', fu
 
     Spectra::track('cohere', 'embed-english-v3.0', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Embed v3 English: 5 billed tokens × 10 cents per 1M = 0.00005¢
     expect($record->provider)->toBe('cohere')
@@ -30,7 +30,7 @@ it('records a tracked cohere rerank response with its per-search cost', function
 
     Spectra::track('cohere', 'rerank-v3.5', fn () => $response);
 
-    $record = SpectraRequest::sole();
+    $record = SpectraRequest::query()->sole();
 
     // Rerank 3.5: 1 search unit × 0.2 cents
     expect($record->provider)->toBe('cohere')
