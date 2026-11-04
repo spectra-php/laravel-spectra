@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
@@ -32,4 +33,15 @@ it('prunes daily stats only when given a retention', function () {
     $this->artisan('spectra:prune', ['--stats-days' => 7])->assertSuccessful();
 
     expect(SpectraDailyStat::count())->toBe(1);
+});
+
+it('prunes requests when the spans table does not exist yet', function () {
+    Schema::connection(config('spectra.storage.connection'))->drop('spectra_spans');
+    SpectraRequest::factory()->create(['created_at' => now()->subDays(3)]);
+    SpectraDailyStat::query()->create(['date' => now()->subDays(30)->toDateString(), 'provider' => 'openai', 'model' => 'gpt-4o']);
+
+    $this->artisan('spectra:prune', ['--stats-days' => 7])->assertSuccessful();
+
+    expect(SpectraRequest::count())->toBe(0)
+        ->and(SpectraDailyStat::count())->toBe(0);
 });

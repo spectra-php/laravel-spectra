@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Console\Commands;
 
+use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use Spectra\Models\SpectraDailyStat;
@@ -52,13 +53,7 @@ class PruneCommand extends Command
             $requestCount += $deleted;
         } while ($deleted > 0);
 
-        $spanCount = 0;
-
-        do {
-            $spanIds = SpectraSpan::query()->where('started_at', '<', $cutoff)->limit($chunk)->pluck('id');
-            $deleted = $spanIds->isEmpty() ? 0 : SpectraSpan::query()->whereKey($spanIds->all())->delete();
-            $spanCount += $deleted;
-        } while ($deleted > 0);
+        $spanCount = $this->spansTableExists() ? $this->pruneSpans($cutoff, $chunk) : 0;
 
         $statsCount = 0;
         $statsDays = $this->option('stats-days');
@@ -72,6 +67,30 @@ class PruneCommand extends Command
         $this->info("{$requestCount} requests, {$spanCount} spans, {$fileCount} media files and {$statsCount} daily stats pruned.");
 
         return self::SUCCESS;
+    }
+
+    protected function pruneSpans(CarbonInterface $cutoff, int $chunk): int
+    {
+        $count = 0;
+
+        do {
+            $spanIds = SpectraSpan::query()->where('started_at', '<', $cutoff)->limit($chunk)->pluck('id');
+            $deleted = $spanIds->isEmpty() ? 0 : SpectraSpan::query()->whereKey($spanIds->all())->delete();
+            $count += $deleted;
+        } while ($deleted > 0);
+
+        return $count;
+    }
+
+    /**
+     * An app that updated Spectra but hasn't run the spans migration yet has
+     * no spectra_spans table; pruning the rest must still work there.
+     */
+    protected function spansTableExists(): bool
+    {
+        $span = new SpectraSpan;
+
+        return $span->getConnection()->getSchemaBuilder()->hasTable($span->getTable());
     }
 
     /**
