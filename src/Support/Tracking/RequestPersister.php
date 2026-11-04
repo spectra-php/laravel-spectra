@@ -39,7 +39,7 @@ class RequestPersister
      */
     public function persist(RequestContext $context): SpectraRequest
     {
-        if (! config('spectra.enabled', true)) {
+        if (! config('spectra.enabled', true) || RecordingSwitch::isPaused()) {
             return new SpectraRequest;
         }
 

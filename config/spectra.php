@@ -595,6 +595,23 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Dashboard Maintenance
+        |--------------------------------------------------------------------------
+        |
+        | Whether the dashboard's Maintenance screen may prune old data, rebuild
+        | the daily stats and pause recording. Running them also needs the
+        | `manageSpectra` gate, which allows only the local environment unless
+        | you define it. Set this to false to keep these actions on the
+        | command line only; the screen then shows the status read-only.
+        |
+        | Docs: https://spectraphp.com/dashboard#maintenance
+        |
+        */
+
+        'maintenance' => env('SPECTRA_DASHBOARD_MAINTENANCE', true),
+
+        /*
+        |--------------------------------------------------------------------------
         | Dashboard Layout
         |--------------------------------------------------------------------------
         |

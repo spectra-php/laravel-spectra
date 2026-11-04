@@ -43,7 +43,7 @@ class SpanWriter
      */
     public function record(array $attributes, bool $deferrable = true): void
     {
-        if (! config('spectra.enabled', true)) {
+        if (! config('spectra.enabled', true) || RecordingSwitch::isPaused()) {
             return;
         }
 

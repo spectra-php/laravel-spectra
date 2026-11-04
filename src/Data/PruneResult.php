@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Spectra\Data;
+
+/**
+ * What one prune deleted.
+ */
+readonly class PruneResult extends DataTransferObject
+{
+    /**
+     * Create a new prune result instance.
+     */
+    public function __construct(
+        public int $requests,
+        public int $spans,
+        public int $media_files,
+        public int $daily_stats,
+    ) {}
+}

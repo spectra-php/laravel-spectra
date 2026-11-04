@@ -2,6 +2,15 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## Unreleased
+
+#### Added
+
+- Dashboard: a Maintenance screen (the wrench icon) shows what is stored and runs the upkeep: prune old data with a count of what would be deleted before you confirm, pause and resume recording, rebuild the daily stats, and check prices with Firecrawl. Prunes, rebuilds and price checks run as queued jobs on Spectra's queue
+- Dashboard: a price check lists each scraped price that differs from the built-in catalog per model, and writes only the models you pick to the scraped prices file
+- The maintenance actions need the new `manageSpectra` gate (local-only by default) and the `dashboard.maintenance` option (`SPECTRA_DASHBOARD_MAINTENANCE`, on by default)
+- `spectra:pause` and `spectra:resume`: while paused, AI calls keep working but no request, span or media is stored
+
 ## v3.1.0 - 2026-11-04
 
 #### Fixed

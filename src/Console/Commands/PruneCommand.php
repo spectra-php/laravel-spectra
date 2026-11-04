@@ -4,14 +4,9 @@ declare(strict_types=1);
 
 namespace Spectra\Console\Commands;
 
-use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
-use Spectra\Models\SpectraDailyStat;
-use Spectra\Models\SpectraRequest;
-use Spectra\Models\SpectraSpan;
+use Spectra\Actions\Maintenance\PruneEntries;
 use Symfony\Component\Console\Attribute\AsCommand;
-use Throwable;
 
 /**
  * Deletes old request rows (and the media files stored for them).
@@ -32,99 +27,18 @@ class PruneCommand extends Command
     /**
      * Delete requests, spans and their media older than the cutoff, and old daily stats when asked.
      */
-    public function handle(): int
+    public function handle(PruneEntries $prune): int
     {
-        $cutoff = now()->subHours(max(0, (int) $this->option('hours')));
-        $chunk = max(1, (int) $this->option('chunk'));
-
-        $requestCount = 0;
-        $fileCount = 0;
-
-        // Delete in chunks so a large table isn't locked by one huge query.
-        do {
-            $requests = SpectraRequest::query()
-                ->where('created_at', '<', $cutoff)
-                ->limit($chunk)
-                ->get(['id', 'media_storage_path']);
-
-            $fileCount += $this->deleteMedia($requests->pluck('media_storage_path')->all());
-
-            $deleted = $requests->isEmpty()
-                ? 0
-                : SpectraRequest::query()->whereKey($requests->modelKeys())->delete();
-
-            $requestCount += $deleted;
-        } while ($deleted > 0);
-
-        $spanCount = $this->spansTableExists() ? $this->pruneSpans($cutoff, $chunk) : 0;
-
-        $statsCount = 0;
         $statsDays = $this->option('stats-days');
 
-        if (filled($statsDays)) {
-            $statsCount = SpectraDailyStat::query()
-                ->where('date', '<', now()->subDays(max(0, (int) $statsDays))->toDateString())
-                ->delete();
-        }
+        $result = $prune(
+            hours: (int) $this->option('hours'),
+            statsDays: filled($statsDays) ? (int) $statsDays : null,
+            chunk: (int) $this->option('chunk'),
+        );
 
-        $this->info("{$requestCount} requests, {$spanCount} spans, {$fileCount} media files and {$statsCount} daily stats pruned.");
+        $this->info("{$result->requests} requests, {$result->spans} spans, {$result->media_files} media files and {$result->daily_stats} daily stats pruned.");
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Delete spans started before the cutoff in chunks and return how many were deleted.
-     */
-    protected function pruneSpans(CarbonInterface $cutoff, int $chunk): int
-    {
-        $count = 0;
-
-        do {
-            $spanIds = SpectraSpan::query()->where('started_at', '<', $cutoff)->limit($chunk)->pluck('id');
-            $deleted = $spanIds->isEmpty() ? 0 : SpectraSpan::query()->whereKey($spanIds->all())->delete();
-            $count += $deleted;
-        } while ($deleted > 0);
-
-        return $count;
-    }
-
-    /**
-     * An app that updated Spectra but hasn't run the spans migration yet has
-     * no spectra_spans table; pruning the rest must still work there.
-     */
-    protected function spansTableExists(): bool
-    {
-        $span = new SpectraSpan;
-
-        return $span->getConnection()->getSchemaBuilder()->hasTable($span->getTable());
-    }
-
-    /**
-     * Delete the stored media files of pruned requests and return how many were deleted.
-     *
-     * @param  array<int, mixed>  $paths  media_storage_path values (lists of disk paths)
-     */
-    protected function deleteMedia(array $paths): int
-    {
-        $files = collect($paths)
-            ->filter(fn ($value) => is_array($value))
-            ->flatten()
-            ->filter(fn ($path) => filled($path))
-            ->values()
-            ->all();
-
-        if ($files === []) {
-            return 0;
-        }
-
-        try {
-            Storage::disk(config('spectra.storage.media.disk'))->delete($files);
-        } catch (Throwable $e) {
-            report($e);
-
-            return 0;
-        }
-
-        return count($files);
     }
 }

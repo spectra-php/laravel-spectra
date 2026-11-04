@@ -128,7 +128,8 @@ export function useHelpers() {
     const apiRequest = async (method, endpoint, data = {}) => {
         const url = '/' + spectra.path + '/api' + endpoint;
         try {
-            const response = await axios({ method, url, data });
+            const headers = spectra.csrfToken ? { 'X-CSRF-TOKEN': spectra.csrfToken } : {};
+            const response = await axios({ method, url, data, headers });
             return response.data;
         } catch (error) {
             showAlert('danger', 'API request failed: ' + (error.response?.data?.message || error.message));

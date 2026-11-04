@@ -22,8 +22,10 @@ use Illuminate\Support\Facades\Context;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use Spectra\Console\Commands\InstallCommand;
+use Spectra\Console\Commands\PauseCommand;
 use Spectra\Console\Commands\PruneCommand;
 use Spectra\Console\Commands\RebuildStatsCommand;
+use Spectra\Console\Commands\ResumeCommand;
 use Spectra\Console\Commands\ScrapePricingCommand;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Contracts\SpanBuilder;
@@ -173,13 +175,17 @@ class SpectraServiceProvider extends ServiceProvider
     }
 
     /**
-     * Define the viewSpectra gate as local-only, unless the app defined its own.
+     * Define the viewSpectra and manageSpectra gates as local-only, unless the
+     * app defined its own. manageSpectra runs the dashboard's maintenance
+     * actions, so allowing viewSpectra in production does not allow it.
      */
     protected function registerAuthorization(): void
     {
         $this->callAfterResolving(Gate::class, function (Gate $gate, Application $app) {
-            if (! $gate->has('viewSpectra')) {
-                $gate->define('viewSpectra', fn ($user = null) => $app->environment('local'));
+            foreach (['viewSpectra', 'manageSpectra'] as $ability) {
+                if (! $gate->has($ability)) {
+                    $gate->define($ability, fn ($user = null) => $app->environment('local'));
+                }
             }
         });
     }
@@ -471,8 +477,10 @@ class SpectraServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 InstallCommand::class,
+                PauseCommand::class,
                 PruneCommand::class,
                 RebuildStatsCommand::class,
+                ResumeCommand::class,
                 ScrapePricingCommand::class,
             ]);
 

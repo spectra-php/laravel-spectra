@@ -101,6 +101,20 @@ A trackable is the model a request is attributed to: the signed-in user by defau
 
 Open a trackable to see its spend and requests over time, the providers and models it uses, and its latest requests. This is the page to check when one user's spend looks off, or before you set them a [budget](/budgets).
 
+<a name="maintenance"></a>
+## Maintenance
+
+The wrench icon in the top bar opens the Maintenance screen. It shows how many requests, spans and daily stats are stored and when the oldest request was made, and it runs the upkeep that is otherwise on the command line:
+
+- **Prune old data.** Pick how much to keep (24 hours to 1 year) and, optionally, how many days of daily stats to keep. The screen counts what would be deleted before you confirm. It runs [`spectra:prune`](/commands#spectra-prune) on the queue.
+- **Pause recording.** While paused, AI calls keep working but nothing is stored, so their cost doesn't count toward budgets. Same as [`spectra:pause`](/commands#spectra-pause).
+- **Rebuild stats.** Recomputes the daily stats of the days whose requests are still stored, on the queue. Days whose requests were pruned keep their stats.
+- **Prices.** Reads the providers' pricing pages with Firecrawl (the same check as [`spectra:pricing-scrape`](/commands#spectra-pricing-scrape)) and lists, per model, each price that differs from the built-in catalog. Nothing changes until you tick the models to apply: they are written to the [scraped prices file](/pricing#scraping-prices), which the other models in the file keep. Check each change against the provider's page first, since Firecrawl's extraction can misread a page. The file is written on the server that handled the request, so commit it, and restart queue workers to pick up the new prices. Requests are billed with the file only when `SPECTRA_USE_SCRAPED_PRICES=true`.
+
+Prunes, rebuilds and price checks run as queued jobs on Spectra's queue connection (`queue.connection` and `queue.queue`), one of each at a time, and the screen refreshes while one is queued. Without a queue worker they wait in the queue; with the `sync` driver they run during the request.
+
+Anyone who can open the dashboard sees this screen. Running its actions also needs the `manageSpectra` gate, which allows only the `local` environment unless you define it (see [Dashboard Authorization](/installation#dashboard-authorization)). Set `dashboard.maintenance` to `false` to keep these actions on the command line. The pause flag, the pending price check and the last runs are kept in your default cache store.
+
 <a name="prices"></a>
 ## Prices
 

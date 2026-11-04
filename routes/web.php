@@ -7,6 +7,14 @@ use Spectra\Http\Controllers\Api\ConfigController;
 use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\CostsController;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
+use Spectra\Http\Controllers\Api\Maintenance\ApplyPricingController;
+use Spectra\Http\Controllers\Api\Maintenance\CheckPricingController;
+use Spectra\Http\Controllers\Api\Maintenance\DismissPricingReviewController;
+use Spectra\Http\Controllers\Api\Maintenance\MaintenanceStatusController;
+use Spectra\Http\Controllers\Api\Maintenance\PricingStatusController;
+use Spectra\Http\Controllers\Api\Maintenance\PruneController;
+use Spectra\Http\Controllers\Api\Maintenance\RebuildStatsController;
+use Spectra\Http\Controllers\Api\Maintenance\RecordingController;
 use Spectra\Http\Controllers\Api\ProvidersController;
 use Spectra\Http\Controllers\Api\RequestsController;
 use Spectra\Http\Controllers\Api\ServeAudioController;
@@ -43,6 +51,17 @@ Route::prefix('api')->group(function () {
     Route::get('/trackables/view/{id}', ShowTrackableController::class);
     Route::get('/trackables/view/{id}/requests-by-date', TrackableRequestsByDateController::class);
     Route::get('/providers', ProvidersController::class);
+
+    // Maintenance: anyone who may view the dashboard sees the status; the
+    // actions also need the manageSpectra gate.
+    Route::get('/maintenance', MaintenanceStatusController::class);
+    Route::post('/maintenance/prune', PruneController::class);
+    Route::post('/maintenance/rebuild-stats', RebuildStatsController::class);
+    Route::post('/maintenance/recording', RecordingController::class);
+    Route::get('/maintenance/pricing', PricingStatusController::class);
+    Route::post('/maintenance/pricing/check', CheckPricingController::class);
+    Route::post('/maintenance/pricing/apply', ApplyPricingController::class);
+    Route::delete('/maintenance/pricing/review', DismissPricingReviewController::class);
 });
 
 // SPA catch-all route. It skips api/ so an unknown or malformed API URL is a

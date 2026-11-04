@@ -1,6 +1,6 @@
 # Artisan Commands
 
-Spectra provides four Artisan commands for installation, data retention, statistics maintenance, and pricing updates.
+Spectra provides Artisan commands for installation, data retention, statistics maintenance, pausing recording and pricing updates. The dashboard's [Maintenance screen](/dashboard#maintenance) runs the same prune, rebuild and price check.
 
 <a name="spectra-install"></a>
 ## `spectra:install`
@@ -150,6 +150,18 @@ php artisan spectra:pricing-scrape openai --dry-run
 
 See [Scraping Prices with Firecrawl](/pricing#scraping-prices) for how rows are matched and checked.
 
+<a name="spectra-pause"></a>
+## `spectra:pause` and `spectra:resume`
+
+Pause recording without a deploy, for example during a load test or an incident:
+
+```shell
+php artisan spectra:pause
+php artisan spectra:resume
+```
+
+While paused, AI calls keep working, but Spectra stores no request, span or media file. Their cost is not recorded, so it doesn't count toward [budgets](/budgets). The flag is kept in your default cache store, so every server and queue worker sees it when they share that store; `cache:clear` resumes recording. The dashboard's Maintenance screen has the same switch.
+
 ## Command Summary
 
 | Command | Purpose | Typical Usage |
@@ -158,3 +170,4 @@ See [Scraping Prices with Firecrawl](/pricing#scraping-prices) for how rows are 
 | `spectra:prune --hours=168` | Delete old request data and media | Scheduled daily for retention management |
 | `spectra:rebuild-stats --yesterday` | Rebuild aggregated statistics | Scheduled daily, after data corrections, or once after upgrading |
 | `spectra:pricing-scrape` | Save new provider prices to the scraped prices file | Before a release picks them up; review and commit the file |
+| `spectra:pause` / `spectra:resume` | Stop and restart storing requests | During load tests or incidents |

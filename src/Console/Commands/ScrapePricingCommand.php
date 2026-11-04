@@ -5,16 +5,13 @@ declare(strict_types=1);
 namespace Spectra\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Arr;
 use RuntimeException;
+use Spectra\Actions\Pricing\ScrapeProviderPrices;
 use Spectra\Enums\PricingUnit;
-use Spectra\Models\SpectraRequest;
 use Spectra\Pricing\ProviderPricing;
 use Spectra\Support\Pricing\PricingCatalog;
 use Spectra\Support\Pricing\ScrapedPricesFile;
-use Spectra\Support\Pricing\Scraping\FirecrawlPriceScraper;
-use Spectra\Support\Pricing\Scraping\PageText;
 use Spectra\Support\Pricing\Scraping\PriceChange;
 use Spectra\Support\Pricing\Scraping\ScrapedPriceMapper;
 use Spectra\Support\Pricing\Scraping\ScrapedPrices;
@@ -42,9 +39,9 @@ class ScrapePricingCommand extends Command
     /**
      * Scrape each provider's pricing pages and save the prices that differ from the catalog.
      */
-    public function handle(ScrapedPriceMapper $mapper): int
+    public function handle(ScrapedPriceMapper $mapper, ScrapeProviderPrices $scrapePrices): int
     {
-        if (! config('spectra.costs.firecrawl.api_key')) {
+        if (! ScrapeProviderPrices::configured()) {
             $this->components->error('Set SPECTRA_FIRECRAWL_API_KEY in your .env file. Get a key at https://firecrawl.dev.');
 
             return self::FAILURE;
@@ -66,24 +63,15 @@ class ScrapePricingCommand extends Command
             return self::FAILURE;
         }
 
-        $scraper = FirecrawlPriceScraper::fromConfig();
-        $urls = collect($this->option('url'))->filter()->values()->all();
+        $urls = array_values(collect($this->option('url'))->filter()->all());
         $scraped = 0;
 
         foreach ($catalogs as $provider => $pricing) {
-            $sources = $urls !== [] ? $urls : $pricing->sources();
-
             $this->newLine();
-            $this->components->twoColumnDetail("<fg=cyan;options=bold>{$provider}</>", implode(', ', $sources));
+            $this->components->twoColumnDetail("<fg=cyan;options=bold>{$provider}</>", implode(', ', $urls !== [] ? $urls : $pricing->sources()));
 
             try {
-                $rows = [];
-                $markdown = [];
-                foreach ($sources as $url) {
-                    $page = $scraper->scrape($pricing, $url);
-                    $rows = [...$rows, ...$page->rows];
-                    $markdown[] = $page->markdown;
-                }
+                $scrape = $scrapePrices($pricing, $urls);
             } catch (RuntimeException $e) {
                 $this->components->error($e->getMessage().' Kept the current file entries for '.$provider.'.');
 
@@ -91,8 +79,8 @@ class ScrapePricingCommand extends Command
             }
 
             $scraped++;
-            $result = $mapper->map($pricing, $rows, page: new PageText(implode("\n", $markdown)));
-            $this->report($mapper, $result, count($rows));
+            $result = $scrape->result;
+            $this->report($mapper, $result, $scrape->rows);
 
             if ($result->models === []) {
                 unset($data['providers'][$provider]);
@@ -100,12 +88,7 @@ class ScrapePricingCommand extends Command
                 continue;
             }
 
-            $data['providers'][$provider] = [
-                'currency' => strtoupper($pricing->currency()),
-                'scraped_at' => now()->toIso8601String(),
-                'sources' => $sources,
-                'models' => $result->models,
-            ];
+            $data['providers'][$provider] = $scrape->fileSection($result->models);
         }
 
         if ($scraped === 0) {
@@ -171,7 +154,7 @@ class ScrapePricingCommand extends Command
             return $this->resolveCatalogs($builtIn, $configured);
         }
 
-        $tracked = $this->trackedProviders();
+        $tracked = ScrapeProviderPrices::trackedProviders();
         $catalogs = Arr::only($scrapable, $tracked);
 
         if ($catalogs === []) {
@@ -213,23 +196,6 @@ class ScrapePricingCommand extends Command
         }
 
         return $catalogs;
-    }
-
-    /**
-     * Provider slugs with at least one tracked request. Empty when the
-     * Spectra tables aren't there (not migrated, or another connection).
-     *
-     * @return list<string>
-     */
-    protected function trackedProviders(): array
-    {
-        try {
-            $providers = SpectraRequest::query()->distinct()->orderBy('provider')->pluck('provider');
-        } catch (QueryException) {
-            return [];
-        }
-
-        return array_values($providers->map(fn (mixed $provider) => (string) $provider)->filter()->all());
     }
 
     /**

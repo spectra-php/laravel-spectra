@@ -81,6 +81,22 @@ if (typeof window !== 'undefined') {
             </div>
 
             <div class="flex items-center gap-1">
+                <router-link
+                    :to="{ name: 'maintenance' }"
+                    :class="[
+                        'inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
+                        route.name === 'maintenance'
+                            ? 'bg-gray-100 text-gray-900 dark:bg-white/[0.07] dark:text-white'
+                            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-white',
+                    ]"
+                    title="Maintenance"
+                    aria-label="Maintenance"
+                >
+                    <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75a4.5 4.5 0 0 1-4.884 4.484c-1.076-.091-2.264.071-2.95.904l-7.152 8.684a2.548 2.548 0 1 1-3.586-3.586l8.684-7.152c.833-.686.995-1.874.904-2.95a4.5 4.5 0 0 1 6.336-4.486l-3.276 3.276a3.004 3.004 0 0 0 2.25 2.25l3.276-3.276c.256.565.398 1.192.398 1.852Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.867 19.125h.008v.008h-.008v-.008Z" />
+                    </svg>
+                </router-link>
                 <button
                     type="button"
                     @click="toggleDarkMode"

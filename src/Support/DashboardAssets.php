@@ -115,6 +115,8 @@ class DashboardAssets
             'currency' => config('spectra.costs.currency', 'USD'),
             'currencySymbol' => config('spectra.costs.currency_symbol', '$'),
             'version' => static::version(),
+            // The maintenance actions are POSTs behind the web middleware's CSRF check.
+            'csrfToken' => rescue(fn () => csrf_token(), null, report: false),
         ];
     }
 

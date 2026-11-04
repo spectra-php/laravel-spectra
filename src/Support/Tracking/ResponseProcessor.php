@@ -278,6 +278,13 @@ class ResponseProcessor
             return;
         }
 
+        // A paused recording stores no row, so the files would be orphans.
+        if (RecordingSwitch::isPaused()) {
+            $context->rawResponseBody = null;
+
+            return;
+        }
+
         $mediaBody = $body;
         if (filled($context->requestData)) {
             $mediaBody = array_merge($mediaBody, ['_request_data' => $context->requestData]);

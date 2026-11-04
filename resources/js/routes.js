@@ -8,6 +8,7 @@ import ConversationDetail from './screens/conversations/detail.vue';
 import Costs from './screens/costs/index.vue';
 import Trackables from './screens/trackables/index.vue';
 import TrackableDetail from './screens/trackables/detail.vue';
+import Maintenance from './screens/maintenance/index.vue';
 
 export default [
     {
@@ -59,5 +60,10 @@ export default [
         path: '/trackables/view/:id',
         name: 'trackable-detail',
         component: TrackableDetail,
+    },
+    {
+        path: '/maintenance',
+        name: 'maintenance',
+        component: Maintenance,
     },
 ];
