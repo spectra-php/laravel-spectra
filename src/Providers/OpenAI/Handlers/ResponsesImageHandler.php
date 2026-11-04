@@ -87,7 +87,7 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
             }
         }
 
-        return ! empty($parts) ? implode("\n", $parts) : null;
+        return filled($parts) ? implode("\n", $parts) : null;
     }
 
     /** @param  array<string, mixed>  $response */

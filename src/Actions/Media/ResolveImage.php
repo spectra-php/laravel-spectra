@@ -59,7 +59,7 @@ class ResolveImage
         /** @var array<int, array<string, mixed>> $outputItems */
         $outputItems = $response['output'] ?? [];
         $imageItems = collect($outputItems)
-            ->filter(fn (array $item) => ($item['type'] ?? '') === 'image_generation_call' && ! empty($item['result']))
+            ->filter(fn (array $item) => ($item['type'] ?? '') === 'image_generation_call' && filled($item['result'] ?? null))
             ->values();
 
         if ($imageItems->isNotEmpty()) {

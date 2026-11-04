@@ -93,7 +93,7 @@ abstract class Provider
         }
 
         // No endpoint matches — try response shape matching (specialists last, checked first)
-        if (empty($matches) && ! empty($responseData)) {
+        if (blank($matches) && filled($responseData)) {
             foreach (array_reverse($this->resolvedHandlers()) as $handler) {
                 if ($handler instanceof MatchesResponseShape && $handler->matchesResponse($responseData)) {
                     return $handler;
@@ -108,7 +108,7 @@ abstract class Provider
         }
 
         // Multiple handlers match the same endpoint — check specialists (later entries) first.
-        if (! empty($responseData)) {
+        if (filled($responseData)) {
             foreach (array_reverse($matches) as $handler) {
                 if ($handler instanceof MatchesResponseShape && $handler->matchesResponse($responseData)) {
                     return $handler;
@@ -167,7 +167,7 @@ abstract class Provider
 
         $data = $this->toArray($response);
 
-        if (empty($data)) {
+        if (blank($data)) {
             return null;
         }
 

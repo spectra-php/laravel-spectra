@@ -57,7 +57,7 @@ class ImageHandler implements ExtractsModelFromResponse, Handler, HasMedia, Stre
         return new Metrics(
             tokens: $tokens->totalTokens() > 0 ? $tokens : null,
             image: new ImageMetrics(
-                count: isset($responseData['data']) && is_array($responseData['data']) ? count($responseData['data']) : 0,
+                count: is_array($responseData['data'] ?? null) ? count($responseData['data']) : 0,
             ),
         );
     }

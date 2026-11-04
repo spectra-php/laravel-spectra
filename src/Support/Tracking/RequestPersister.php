@@ -301,7 +301,7 @@ class RequestPersister
         // Strip embedding vectors (large float arrays) when store_embeddings is disabled
         if ($context->modelType === ModelType::Embedding->value && ! config('spectra.storage.store_embeddings', false)) {
             // OpenAI / Mistral: data[].embedding
-            if (isset($response['data']) && is_array($response['data'])) {
+            if (is_array($response['data'] ?? null)) {
                 foreach ($response['data'] as $i => $item) {
                     if (isset($item['embedding'])) {
                         $response['data'][$i]['embedding'] = '[stripped]';
@@ -315,7 +315,7 @@ class RequestPersister
             }
 
             // Google batch / Ollama: embeddings[]
-            if (isset($response['embeddings']) && is_array($response['embeddings'])) {
+            if (is_array($response['embeddings'] ?? null)) {
                 foreach ($response['embeddings'] as $i => $item) {
                     if (is_array($item) && isset($item['values'])) {
                         // Google batch: embeddings[].values

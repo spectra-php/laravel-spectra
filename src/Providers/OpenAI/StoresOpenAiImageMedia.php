@@ -34,7 +34,7 @@ trait StoresOpenAiImageMedia
             }
         }
 
-        return ! empty($urls) ? implode("\n", $urls) : null;
+        return filled($urls) ? implode("\n", $urls) : null;
     }
 
     /**

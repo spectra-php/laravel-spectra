@@ -64,7 +64,7 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
             $this->resolveImages($response),
         ));
 
-        return ! empty($urls) ? implode("\n", $urls) : null;
+        return filled($urls) ? implode("\n", $urls) : null;
     }
 
     /** @param  array<string, mixed>  $data */

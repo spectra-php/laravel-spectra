@@ -98,7 +98,7 @@ class ScrapedPricing extends ProviderPricing
             $definition->{$method}();
         }
 
-        if (! empty($model['aliases'])) {
+        if (filled($model['aliases'] ?? null)) {
             $definition->aliases(...array_map('strval', (array) $model['aliases']));
         }
 

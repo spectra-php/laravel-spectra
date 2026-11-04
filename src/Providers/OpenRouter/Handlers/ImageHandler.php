@@ -55,7 +55,7 @@ class ImageHandler extends ChatHandler implements HasMedia
             $parts[] = "[{$imageCount} generated image(s)]";
         }
 
-        return ! empty($parts) ? implode("\n", $parts) : null;
+        return filled($parts) ? implode("\n", $parts) : null;
     }
 
     /**
@@ -67,7 +67,7 @@ class ImageHandler extends ChatHandler implements HasMedia
     {
         return isset($data['choices'][0]['message']['images'])
             && is_array($data['choices'][0]['message']['images'])
-            && ! empty($data['choices'][0]['message']['images']);
+            && filled($data['choices'][0]['message']['images'] ?? null);
     }
 
     /**

@@ -152,7 +152,7 @@ trait ParsesRequestData
             /** @var array<int|string, mixed> $data */
             $data = $request->data();
 
-            if (! empty($data)) {
+            if (filled($data)) {
                 if (static::isGuzzleMultipartFormat($data)) {
                     return static::flattenGuzzleMultipart($data);
                 }

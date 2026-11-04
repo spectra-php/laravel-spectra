@@ -67,7 +67,7 @@ class ChatHandler extends OpenAiCompatibleChatHandler
     /** @param  array<string, mixed>  $response */
     public function extractResponse(array $response): ?string
     {
-        if (isset($response['choices']) && is_array($response['choices'])) {
+        if (is_array($response['choices'] ?? null)) {
             $contents = [];
 
             foreach ($response['choices'] as $choice) {
@@ -78,12 +78,12 @@ class ChatHandler extends OpenAiCompatibleChatHandler
                 }
             }
 
-            if (! empty($contents)) {
+            if (filled($contents)) {
                 return implode("\n", $contents);
             }
         }
 
-        if (isset($response['output']) && is_array($response['output'])) {
+        if (is_array($response['output'] ?? null)) {
             $texts = [];
 
             foreach ($response['output'] as $outputItem) {
@@ -96,7 +96,7 @@ class ChatHandler extends OpenAiCompatibleChatHandler
                 }
             }
 
-            if (! empty($texts)) {
+            if (filled($texts)) {
                 return implode("\n", $texts);
             }
         }

@@ -134,7 +134,7 @@ class RequestWriter
         // one from the request that started the job.
         $keep = ['id', 'created_at', 'started_at', 'origin', 'span_id', 'parent_span_id'];
 
-        if (empty($attributes['request']) && ! empty($existing->getAttribute('request'))) {
+        if (blank($attributes['request'] ?? null) && filled($existing->getAttribute('request'))) {
             $keep[] = 'request';
         }
 

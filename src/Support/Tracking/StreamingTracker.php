@@ -146,8 +146,8 @@ class StreamingTracker
             $pending->streamClaimed = true;
             $context = $pending;
             $this->startTime = (float) $pending->getStartedAt()->format('U.u');
-            $this->provider = $this->provider ?? $pending->provider;
-            $this->requestedModel = $this->requestedModel ?? $pending->model;
+            $this->provider ??= $pending->provider;
+            $this->requestedModel ??= $pending->model;
             $this->applyOptions($pending);
         } else {
             $context = app(SpectraManager::class)->startRequest(
@@ -384,7 +384,7 @@ class StreamingTracker
 
         // OpenAI PHP SDK toArray() returns ['event' => '...', 'data' => [...]]
         // but our extraction methods expect the raw SSE format: ['type' => '...', ...]
-        if (isset($data['event']) && is_string($data['event']) && isset($data['data']) && is_array($data['data'])) {
+        if (isset($data['event']) && is_string($data['event']) && is_array($data['data'] ?? null)) {
             $type = $data['event'];
 
             // Terminal events nest the full response under 'response' in raw SSE
@@ -479,7 +479,7 @@ class StreamingTracker
      */
     protected function extractUsage(array $data): void
     {
-        if (empty($this->usage)) {
+        if (blank($this->usage)) {
             $this->usage = (new TokenMetrics)->toUsageArray();
         }
 
@@ -536,8 +536,8 @@ class StreamingTracker
             $result = $this->streamHandler->model($data);
 
             if ($result !== null) {
-                $this->model = $this->model ?? ($result['model'] ?? null);
-                $this->responseId = $this->responseId ?? ($result['id'] ?? null);
+                $this->model ??= $result['model'] ?? null;
+                $this->responseId ??= $result['id'] ?? null;
             }
 
             return;
@@ -586,8 +586,8 @@ class StreamingTracker
             && $this->error === null
             && ! $this->sawStreamData
             && $this->content === ''
-            && empty($this->usage)
-            && empty($this->completedResponse)
+            && blank($this->usage)
+            && blank($this->completedResponse)
         ) {
             $manager->consumePendingStreamContext();
 
@@ -641,7 +641,7 @@ class StreamingTracker
 
         // When the stream contained a completed response (e.g. image generation),
         // delegate to ResponseProcessor to get metrics, media storage, model type, etc.
-        if (! empty($this->completedResponse)) {
+        if (filled($this->completedResponse)) {
             $result = app(ResponseProcessor::class)->process($context, $this->completedResponse);
 
             if ($result !== null) {
@@ -708,11 +708,11 @@ class StreamingTracker
     {
         $options = $this->options;
 
-        if (! empty($options['tags']) && is_array($options['tags'])) {
+        if (filled($options['tags'] ?? null) && is_array($options['tags'])) {
             $context->tags = array_values(array_unique([...$context->tags, ...$options['tags']]));
         }
 
-        if (! empty($options['metadata']) && is_array($options['metadata'])) {
+        if (filled($options['metadata'] ?? null) && is_array($options['metadata'])) {
             $context->metadata = array_merge($context->metadata, $options['metadata']);
         }
 
@@ -754,7 +754,7 @@ class StreamingTracker
             $this->context->withPricingTier($usage['pricing_tier']);
         }
 
-        if (isset($usage['tool_calls']) && is_array($usage['tool_calls'])) {
+        if (is_array($usage['tool_calls'] ?? null)) {
             $counts = $this->context->toolCallCounts ?? [];
 
             foreach ($usage['tool_calls'] as $type => $count) {

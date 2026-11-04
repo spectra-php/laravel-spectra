@@ -125,7 +125,7 @@ class SpectraBudget extends Model
 
     public function isProviderAllowed(string $provider): bool
     {
-        if (empty($this->allowed_providers)) {
+        if (blank($this->allowed_providers)) {
             return true;
         }
 
@@ -134,7 +134,7 @@ class SpectraBudget extends Model
 
     public function isModelAllowed(string $model): bool
     {
-        if (empty($this->allowed_models)) {
+        if (blank($this->allowed_models)) {
             return true;
         }
 

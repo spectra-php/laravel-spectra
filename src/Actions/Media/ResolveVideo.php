@@ -29,7 +29,7 @@ class ResolveVideo
         // Serve from persisted media storage (Google Veo, xAI, Replicate, etc.)
         $media = $request->media_storage_path ?? [];
 
-        if (! empty($media)) {
+        if ($media !== []) {
             /** @var string $firstMediaPath */
             $firstMediaPath = $media[array_key_first($media)];
 

@@ -87,7 +87,7 @@ class ResponseProcessor
 
         // Fallback: extract model from request data when response didn't contain it
         // (e.g. binary responses like TTS, or Whisper where model is only in the request)
-        if ($context->model === 'unknown' && ! empty($context->requestData)) {
+        if ($context->model === 'unknown' && filled($context->requestData)) {
             rescue(function () use ($context, $providerInstance, $endpoint) {
                 $requestModel = $providerInstance?->extractModelFromRequest($context->requestData ?? [], $endpoint)
                     ?? $context->requestData['model']
@@ -137,7 +137,7 @@ class ResponseProcessor
             }
         }
 
-        if (! empty($toolCallCounts)) {
+        if (filled($toolCallCounts)) {
             $context->hasToolCalls = true;
             $context->toolCallCounts = $toolCallCounts;
         } elseif (! $context->hasToolCalls) {
@@ -193,23 +193,21 @@ class ResponseProcessor
 
         if ($handler instanceof HasMedia && config('spectra.storage.media.enabled')) {
             $mediaBody = $body;
-            if (! empty($context->requestData)) {
+            if (filled($context->requestData)) {
                 $mediaBody = array_merge($mediaBody, ['_request_data' => $context->requestData]);
             }
 
             $rawResponseBody = $context->rawResponseBody;
             $media = rescue(fn () => $handler->storeMedia($context->id, $mediaBody, $rawResponseBody), []);
-            if (! empty($media)) {
+            if (filled($media)) {
                 $context->mediaStoragePath = $media;
             }
 
             $context->rawResponseBody = null;
         }
 
-        if ($context->modelType === null) {
-            $context->modelType = $handler?->modelType()->value
-                ?? rescue(fn () => $this->resolveModelType($providerInstance, $context)?->value);
-        }
+        $context->modelType ??= $handler?->modelType()->value
+            ?? rescue(fn () => $this->resolveModelType($providerInstance, $context)?->value);
 
         if ($context->responseId === null) {
             rescue(function () use ($context, $providerInstance, $body, $endpoint) {
@@ -268,9 +266,9 @@ class ResponseProcessor
         $counts = [];
 
         // OpenAI Completions API: choices[*].message.tool_calls
-        if (isset($body['choices']) && is_array($body['choices'])) {
+        if (is_array($body['choices'] ?? null)) {
             foreach ($body['choices'] as $choice) {
-                if (! empty($choice['message']['tool_calls']) && is_array($choice['message']['tool_calls'])) {
+                if (filled($choice['message']['tool_calls'] ?? null) && is_array($choice['message']['tool_calls'])) {
                     foreach ($choice['message']['tool_calls'] as $toolCall) {
                         $type = $toolCall['type'] ?? 'function';
                         $counts[$type] = ($counts[$type] ?? 0) + 1;
@@ -280,7 +278,7 @@ class ResponseProcessor
         }
 
         // OpenAI Responses API: output[*].type — counts all output item types
-        if (isset($body['output']) && is_array($body['output'])) {
+        if (is_array($body['output'] ?? null)) {
             $containers = [];
 
             foreach ($body['output'] as $item) {
@@ -306,7 +304,7 @@ class ResponseProcessor
         }
 
         // Anthropic: content[*].type === 'tool_use'
-        if (isset($body['content']) && is_array($body['content'])) {
+        if (is_array($body['content'] ?? null)) {
             foreach ($body['content'] as $block) {
                 if (($block['type'] ?? null) === 'tool_use') {
                     $counts['tool_use'] = ($counts['tool_use'] ?? 0) + 1;
@@ -315,7 +313,7 @@ class ResponseProcessor
         }
 
         // Google: candidates[*].content.parts[*].functionCall
-        if (isset($body['candidates']) && is_array($body['candidates'])) {
+        if (is_array($body['candidates'] ?? null)) {
             foreach ($body['candidates'] as $candidate) {
                 foreach ($candidate['content']['parts'] ?? [] as $part) {
                     if (isset($part['functionCall'])) {
@@ -372,7 +370,7 @@ class ResponseProcessor
     protected function hasReasoningOutput(array $body): bool
     {
         // OpenAI Responses API: output[*].type === 'reasoning'
-        if (isset($body['output']) && is_array($body['output'])) {
+        if (is_array($body['output'] ?? null)) {
             foreach ($body['output'] as $item) {
                 if (($item['type'] ?? null) === 'reasoning') {
                     return true;
@@ -381,7 +379,7 @@ class ResponseProcessor
         }
 
         // Anthropic: content[*].type === 'thinking'
-        if (isset($body['content']) && is_array($body['content'])) {
+        if (is_array($body['content'] ?? null)) {
             foreach ($body['content'] as $block) {
                 if (($block['type'] ?? null) === 'thinking') {
                     return true;
@@ -574,7 +572,7 @@ class ResponseProcessor
     protected function stripBinaryData(array $body): array
     {
         // OpenAI DALL-E: data[].b64_json
-        if (isset($body['data']) && is_array($body['data'])) {
+        if (is_array($body['data'] ?? null)) {
             foreach ($body['data'] as $i => $item) {
                 if (isset($item['b64_json'])) {
                     $body['data'][$i]['b64_json'] = '[stripped]';
@@ -583,7 +581,7 @@ class ResponseProcessor
         }
 
         // OpenAI Responses API: output[].result (image_generation_call base64)
-        if (isset($body['output']) && is_array($body['output'])) {
+        if (is_array($body['output'] ?? null)) {
             foreach ($body['output'] as $i => $item) {
                 if (($item['type'] ?? null) === 'image_generation_call' && isset($item['result']) && is_string($item['result']) && strlen($item['result']) > 1000) {
                     $body['output'][$i]['result'] = '[stripped]';
@@ -592,7 +590,7 @@ class ResponseProcessor
         }
 
         // Google Gemini: candidates[].content.parts[].inlineData.data (images/audio)
-        if (isset($body['candidates']) && is_array($body['candidates'])) {
+        if (is_array($body['candidates'] ?? null)) {
             foreach ($body['candidates'] as $ci => $candidate) {
                 foreach ($candidate['content']['parts'] ?? [] as $pi => $part) {
                     if (isset($part['inlineData']['data'])) {
@@ -603,7 +601,7 @@ class ResponseProcessor
         }
 
         // Google Imagen: generatedImages[].image.imageBytes
-        if (isset($body['generatedImages']) && is_array($body['generatedImages'])) {
+        if (is_array($body['generatedImages'] ?? null)) {
             foreach ($body['generatedImages'] as $i => $image) {
                 if (isset($image['image']['imageBytes'])) {
                     $body['generatedImages'][$i]['image']['imageBytes'] = '[stripped]';
@@ -617,7 +615,7 @@ class ResponseProcessor
         }
 
         // OpenRouter image generation: choices[].message.images[].image_url.url (base64 data URLs)
-        if (isset($body['choices']) && is_array($body['choices'])) {
+        if (is_array($body['choices'] ?? null)) {
             foreach ($body['choices'] as $ci => $choice) {
                 foreach ($choice['message']['images'] ?? [] as $ii => $image) {
                     $url = $image['image_url']['url'] ?? null;

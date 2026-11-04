@@ -104,7 +104,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
             $parts[] = '[generated image]';
         }
 
-        return ! empty($parts) ? implode("\n", $parts) : null;
+        return filled($parts) ? implode("\n", $parts) : null;
     }
 
     /** @param  array<string, mixed>  $data */

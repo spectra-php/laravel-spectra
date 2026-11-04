@@ -83,7 +83,7 @@ class EmbeddingHandler implements ExtractsModelFromRequest, Handler, MatchesResp
         }
 
         // batchEmbedContents: { "requests": [{ "content": { "parts": [...] } }] }
-        if (isset($requestData['requests']) && is_array($requestData['requests'])) {
+        if (is_array($requestData['requests'] ?? null)) {
             $batchParts = [];
             foreach ($requestData['requests'] as $request) {
                 $batchParts[] = $request['content']['parts'] ?? [];

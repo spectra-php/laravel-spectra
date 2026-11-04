@@ -46,7 +46,7 @@ class OpenAiWatcher implements Watcher
         $resolver = app(ApiKeyResolver::class);
         $apiKey = $resolver->resolve('openai');
 
-        if (empty($apiKey)) {
+        if (blank($apiKey)) {
             return;
         }
 

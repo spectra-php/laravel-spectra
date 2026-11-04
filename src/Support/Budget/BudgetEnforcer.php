@@ -509,7 +509,7 @@ class BudgetEnforcer
             }
         }
 
-        return empty($percentages) ? 0.0 : max($percentages);
+        return $percentages === [] ? 0.0 : max($percentages);
     }
 
     /**

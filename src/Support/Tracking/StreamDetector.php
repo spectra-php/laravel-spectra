@@ -55,7 +55,7 @@ class StreamDetector
         }
 
         // The request explicitly asked for streaming.
-        if (! empty($requestData['stream'])) {
+        if ($requestData['stream'] ?? false) {
             return true;
         }
 

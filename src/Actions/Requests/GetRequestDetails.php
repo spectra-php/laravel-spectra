@@ -39,7 +39,7 @@ class GetRequestDetails
             $data['image_urls'] = $this->resolveImageUrls($id, $request);
         }
 
-        if ($request->model_type === 'tts' && ! empty($request->media_storage_path)) {
+        if ($request->model_type === 'tts' && filled($request->media_storage_path)) {
             $basePath = config('spectra.dashboard.path', 'spectra');
             $data['audio_url'] = "/{$basePath}/api/requests/{$id}/audio";
             $data['audio_download_url'] = "/{$basePath}/api/requests/{$id}/audio/download";
@@ -65,7 +65,7 @@ class GetRequestDetails
 
         $media = $request->media_storage_path ?? [];
 
-        if (! empty($media)) {
+        if (filled($media)) {
             /** @var array<string, mixed> $media */
             return collect($media)->keys()->map(
                 fn (string $index) => "/{$basePath}/api/requests/{$requestId}/images/{$index}"
@@ -89,9 +89,9 @@ class GetRequestDetails
         }
 
         foreach ($response['data'] ?? [] as $index => $item) {
-            if (! empty($item['b64_json']) && $item['b64_json'] !== '[stripped]') {
+            if (filled($item['b64_json'] ?? null) && $item['b64_json'] !== '[stripped]') {
                 $urls[] = "/{$basePath}/api/requests/{$requestId}/images/{$index}";
-            } elseif (! empty($item['url'])) {
+            } elseif (filled($item['url'] ?? null)) {
                 $urls[] = $item['url'];
             }
         }

@@ -94,7 +94,7 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     {
         $samples = $this->extractSamples($response);
 
-        if (empty($samples)) {
+        if (blank($samples)) {
             return null;
         }
 
@@ -160,7 +160,7 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     {
         $samples = $this->extractSamples($responseData);
 
-        if (empty($samples)) {
+        if (blank($samples)) {
             return [];
         }
 

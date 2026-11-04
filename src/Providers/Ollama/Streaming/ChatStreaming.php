@@ -18,17 +18,8 @@ class ChatStreaming extends StreamHandler
     /** @param  array<string, mixed>  $data */
     public function text(array $data): ?string
     {
-        // /api/chat format: message.content
-        if (isset($data['message']['content'])) {
-            return $data['message']['content'];
-        }
-
-        // /api/generate format: response
-        if (isset($data['response'])) {
-            return $data['response'];
-        }
-
-        return null;
+        // /api/chat streams message.content; /api/generate streams response.
+        return $data['message']['content'] ?? $data['response'] ?? null;
     }
 
     /**

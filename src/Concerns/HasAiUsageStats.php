@@ -70,8 +70,8 @@ trait HasAiUsageStats
 
     public function getAiUsageByProvider(CarbonInterface|string|null $start = null, CarbonInterface|string|null $end = null): array
     {
-        $start = $start ?? now()->startOfMonth();
-        $end = $end ?? now();
+        $start ??= now()->startOfMonth();
+        $end ??= now();
 
         return $this->aiRequests()
             ->whereBetween('created_at', [$start, DateRange::inclusiveEnd($end)])
@@ -96,8 +96,8 @@ trait HasAiUsageStats
 
     public function getAiUsageByModel(CarbonInterface|string|null $start = null, CarbonInterface|string|null $end = null): array
     {
-        $start = $start ?? now()->startOfMonth();
-        $end = $end ?? now();
+        $start ??= now()->startOfMonth();
+        $end ??= now();
 
         return $this->aiRequests()
             ->whereBetween('created_at', [$start, DateRange::inclusiveEnd($end)])

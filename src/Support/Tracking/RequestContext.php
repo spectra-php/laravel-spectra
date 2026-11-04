@@ -293,7 +293,7 @@ class RequestContext implements Arrayable
     public function complete(mixed $response, TokenMetrics|array $usage = []): self
     {
         $this->completedAt = now();
-        $this->httpStatus = $this->httpStatus ?? 200;
+        $this->httpStatus ??= 200;
 
         $this->latencyMs = (int) $this->startedAt->diffInMilliseconds($this->completedAt);
 

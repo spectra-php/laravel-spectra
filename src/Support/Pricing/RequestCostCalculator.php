@@ -116,14 +116,14 @@ class RequestCostCalculator
      */
     protected function calculateToolCallCost(RequestContext $context): float
     {
-        if (empty($context->toolCallCounts)) {
+        if (blank($context->toolCallCounts)) {
             return 0.0;
         }
 
         $lookup = app(PricingLookup::class);
         $pricing = $lookup->getToolCallPricing($context->provider);
 
-        if (empty($pricing)) {
+        if (blank($pricing)) {
             return 0.0;
         }
 

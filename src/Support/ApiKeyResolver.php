@@ -55,7 +55,7 @@ class ApiKeyResolver
 
         foreach ($chain as $configKey) {
             $value = config($configKey);
-            if (! empty($value)) {
+            if (filled($value)) {
                 return $value;
             }
         }
@@ -75,7 +75,7 @@ class ApiKeyResolver
 
         foreach ($chain as $configKey) {
             $value = config($configKey);
-            if (! empty($value)) {
+            if (filled($value)) {
                 return $value;
             }
         }

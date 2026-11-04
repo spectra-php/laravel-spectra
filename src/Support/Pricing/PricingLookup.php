@@ -396,7 +396,7 @@ class PricingLookup
             $this->currencies[$provider] = $currency;
 
             $toolPricing = $pricing->toolCallPricing();
-            if (! empty($toolPricing)) {
+            if (filled($toolPricing)) {
                 $this->toolCallPricing[$provider] = $toolPricing;
                 $this->toolCallCurrencies[$provider] = $currency;
             }

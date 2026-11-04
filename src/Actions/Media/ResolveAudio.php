@@ -22,7 +22,7 @@ class ResolveAudio
 
         $media = $request->media_storage_path ?? [];
 
-        abort_if(empty($media), 404, 'No audio file stored for this request.');
+        abort_if($media === [], 404, 'No audio file stored for this request.');
 
         /** @var string $path */
         $path = $media[array_key_first($media)];

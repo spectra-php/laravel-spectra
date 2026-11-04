@@ -27,7 +27,7 @@ class BudgetExceededException extends Exception
         public readonly int $current,
         ?string $message = null
     ) {
-        $message = $message ?? $this->buildMessage();
+        $message ??= $this->buildMessage();
         parent::__construct($message);
     }
 

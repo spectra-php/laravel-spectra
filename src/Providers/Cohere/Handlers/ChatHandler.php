@@ -83,7 +83,7 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
             }
         }
 
-        return ! empty($texts) ? implode("\n", $texts) : null;
+        return filled($texts) ? implode("\n", $texts) : null;
     }
 
     /** @param  array<string, mixed>  $response */

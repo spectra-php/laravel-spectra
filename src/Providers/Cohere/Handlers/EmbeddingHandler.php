@@ -81,6 +81,6 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     /** @param  array<string, mixed>  $data */
     public function matchesResponse(array $data): bool
     {
-        return isset($data['embeddings']) && is_array($data['embeddings']);
+        return is_array($data['embeddings'] ?? null);
     }
 }

@@ -111,7 +111,7 @@ class Spectra
             [$processedResponse, $processedUsage] = $result;
             $response = $processedResponse;
 
-            if (empty($usage) && $processedUsage !== null) {
+            if (blank($usage) && $processedUsage !== null) {
                 $usage = $processedUsage;
             }
         }

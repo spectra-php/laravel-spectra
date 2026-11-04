@@ -80,7 +80,7 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     public function extractResponse(array $response): ?string
     {
         // Chat completions: choices[*].message.content
-        if (isset($response['choices']) && is_array($response['choices'])) {
+        if (is_array($response['choices'] ?? null)) {
             $contents = [];
 
             foreach ($response['choices'] as $choice) {
@@ -91,13 +91,13 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
                 }
             }
 
-            if (! empty($contents)) {
+            if (filled($contents)) {
                 return implode("\n", $contents);
             }
         }
 
         // Responses API: output[*].content[*].text
-        if (isset($response['output']) && is_array($response['output'])) {
+        if (is_array($response['output'] ?? null)) {
             $texts = [];
 
             foreach ($response['output'] as $outputItem) {
@@ -110,7 +110,7 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
                 }
             }
 
-            if (! empty($texts)) {
+            if (filled($texts)) {
                 return implode("\n", $texts);
             }
         }

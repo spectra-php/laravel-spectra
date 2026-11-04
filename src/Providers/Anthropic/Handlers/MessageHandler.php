@@ -158,7 +158,7 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
             }
         }
 
-        if (empty($texts)) {
+        if (blank($texts)) {
             return null;
         }
 

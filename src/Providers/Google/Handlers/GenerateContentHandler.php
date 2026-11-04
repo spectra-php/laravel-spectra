@@ -78,7 +78,7 @@ class GenerateContentHandler implements ExtractsModelFromRequest, ExtractsModelF
             }
         }
 
-        if (empty($texts)) {
+        if (blank($texts)) {
             return null;
         }
 
