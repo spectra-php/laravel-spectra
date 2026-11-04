@@ -1,5 +1,116 @@
 # Upgrade Guide
 
+## From 2.x to 3.0
+
+Spectra 3.0 adds traces, spans and conversations, fixes several billing and
+budget bugs, and closes a gap that let a client choose which provider its
+budget was checked against. Most apps only need to run the installer once.
+Read the sections below if you use budgets, if your published
+`config/spectra.php` removes built-in providers, if your code reads or sets
+`RequestContext` properties, or if you report on failed requests.
+
+The full guide is at https://spectraphp.com/upgrade#from-2x-to-3.
+
+### 0. Requirements
+
+Unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Laravel 12 or 13.
+
+### 1. Run the installer (recommended)
+
+3.0 adds the `started_at` and `origin` columns for traces, and the
+`spectra_spans` table and a `span_id` column for spans. The installer
+publishes only the migrations your app doesn't have yet and offers to run
+them:
+
+```bash
+php artisan spectra:install
+```
+
+Nothing breaks if you upgrade first: until the migrations run, calls are
+recorded as before, the new columns and spans are skipped, and Spectra logs
+one warning per process. A published config doesn't need to be published
+again; `tracking.capture_origin` and `tracking.root_spans` default to `true`.
+
+### 2. Built-in providers stay on under a published config
+
+Built-in providers and pricing classes now stay active under your published
+config. If you turned one off by deleting its entry, it is back on. Set it to
+`false` instead:
+
+```php
+'providers' => ['replicate' => false],
+'costs' => ['pricing' => ['replicate' => false]],
+```
+
+### 3. The budget middleware takes its provider and model from the route
+
+`spectra.budget` no longer reads `provider` or `model` from the request
+input: a client could name an allowed model and get past
+`allowed_providers` / `allowed_models`. It uses the route arguments, then
+`budget.default_provider` and `budget.default_model`:
+
+```php
+Route::middleware(['auth', 'spectra.budget:openai,gpt-4o'])
+    ->post('/chat', ChatController::class);
+```
+
+### 4. `BudgetExceeded` fires for every hard block
+
+`BudgetExceeded` (`wasBlocked: true`) now fires before every hard block, not
+only cost limits, so `currentUsage` and `limit` are not always cents. Check
+`limitType` first:
+
+| `limitType` | `currentUsage` and `limit` are |
+| --- | --- |
+| `daily`, `weekly`, `monthly`, `total` | cents |
+| `daily_tokens`, `weekly_tokens`, `monthly_tokens`, `total_tokens` | tokens |
+| `daily_requests`, `weekly_requests`, `monthly_requests` | requests |
+| `provider`, `model` (not on the allowed list) | both `0` |
+
+### 5. `RequestContext` lists are arrays
+
+`messages`, `tools`, `requestParameters`, `requestData`, `toolCalls`,
+`toolCallCounts` and `mediaStoragePath` are now `array` and start as `[]`
+instead of `null`. Compare with `=== []` (or `blank()`), and assign `[]`
+instead of `null`: assigning `null` throws a `TypeError`. Passing `null` for
+one to `new RequestContext([...])` still means empty, and empty lists are
+still stored as `NULL`.
+
+### 6. Failed requests and their cost
+
+A failed request is any status outside 200-299, or none, everywhere.
+`SpectraRequest::failed()` / `isFailed()` and the exported `is_failed` now
+include 3xx. `UsageQueryBuilder` and `HasAiUsageStats` count failed requests
+in request totals but leave them out of cost and latency, so
+`->failed()->totalCostCents()` is `0`. Recheck reports built on the old
+numbers.
+
+### 7. What changes in the numbers
+
+Older rows keep their old values.
+
+- OpenAI 12-hour cache writes (GPT-5.6 and later) are billed at 2.5x input
+  instead of the 30-minute 1.25x, so those costs go up.
+- Token totals from `UsageQueryBuilder::byProvider()`, `byModel()`,
+  `dailyUsage()` and the `HasAiUsageStats` methods are the real sums. They
+  were `0`.
+- Budget spend for a recorded request is rounded up to whole cents like
+  every other budget total.
+- A usage field of the wrong type (an array, a word) counts as `0` tokens.
+
+### 8. Other changes
+
+- With `store_system_prompts` or `store_tools` off, system prompts and tool
+  definitions are now removed from the stored request body too. Rows saved
+  before 3.0 still hold them; prune or clear them if that matters to you.
+- `SpectraRequest::$trackable_id` is always a string.
+- A whitespace-only API key in config counts as unset.
+- Dated ids that only add a date to a model id (`claude-sonnet-4-20250514`)
+  are no longer listed by `getAliases()`. They still resolve to the same
+  price.
+- Firecrawl reads `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL`
+  and `SPECTRA_FIRECRAWL_TIMEOUT`; the unprefixed names still work.
+
 ## From 1.x to 2.0
 
 Spectra 2.0 fixes how requests are tracked and priced. Most apps only need

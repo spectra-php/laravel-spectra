@@ -92,9 +92,9 @@ Spectra is an AI observability package for Laravel, built to track AI requests, 
 
 Official documentation can be found on [spectraphp.com](https://spectraphp.com).
 
-## Upgrading to 2.0
+## Upgrading to 3.0
 
-Spectra 2.0 tracks streamed responses automatically, bills prompt-cache reads and writes and reasoning tokens for every provider, and updates every pricing catalog. Most apps only need to run one new migration. See the [upgrade guide](UPGRADE.md) and the [changelog](CHANGELOG.md).
+Spectra 3.0 adds traces, spans and conversations, and fixes several billing and budget bugs. Most apps only need to run `php artisan spectra:install` once. Check the guide if you use budgets, remove built-in providers in your published config, or touch `RequestContext` in your code. See the [upgrade guide](UPGRADE.md) and the [changelog](CHANGELOG.md).
 
 ## Code of Conduct
 

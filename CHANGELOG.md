@@ -68,6 +68,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 #### Upgrading
 
+- This is a major release (3.0). Follow the [upgrade guide](UPGRADE.md) ([online](https://spectraphp.com/upgrade#from-2x-to-3)); every item below is covered there
 - Run `php artisan spectra:install` to publish and run the new `add_trace_timing_columns_to_spectra_tables` migration. Until you do, Spectra keeps recording calls without the two new columns and logs a warning once per process
 - A published `config/spectra.php` gets `tracking.capture_origin` with its default (`true`), so you don't need to publish it again
 - Run `php artisan spectra:install` to publish and run the new `add_spans_to_spectra_tables` migration too. Until you do, calls are recorded as before, spans are skipped and a warning is logged once per process. A published config gets `tracking.root_spans` (`true`)

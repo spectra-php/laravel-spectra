@@ -1,17 +1,132 @@
 # Upgrade Guide
 
-<a name="trace-columns"></a>
-## Trace Columns (2.x)
+<a name="from-2x-to-3"></a>
+## From 2.x to 3.0
 
-A 2.x release adds the `started_at` and `origin` columns to `spectra_requests`, for [traces](/usage#traces). Run the installer to publish and run the migration:
+Spectra 3.0 adds traces, spans and conversations, fixes several billing and budget bugs, and closes a gap that let a client choose which provider its budget was checked against. Most apps only need to run the installer once. Read the rest of this page if you use budgets, if your published `config/spectra.php` removes built-in providers, if your code reads or sets `RequestContext` properties, or if you report on failed requests.
+
+The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Laravel 12 or 13.
+
+**Quick checklist:**
+
+1. [Run the installer](#trace-columns) for the two new migrations (recommended).
+2. If you turned off a built-in provider or price by deleting it from your config, [set it to `false`](#v3-built-in-providers).
+3. If you use the `spectra.budget` middleware without arguments and relied on the request's `provider` / `model` input, [pass them as arguments](#v3-budget-middleware).
+4. If you listen for `BudgetExceeded`, [check `limitType`](#v3-budget-exceeded) before reading the amounts as cents.
+5. If your code touches `RequestContext` lists, [compare with `[]`, not `null`](#v3-request-context).
+6. If you report on failed requests or their cost, [recheck the numbers](#v3-failed-requests).
+
+<a name="trace-columns"></a>
+### Run the Installer (Recommended)
+
+3.0 adds the `started_at` and `origin` columns to `spectra_requests` for [traces](/usage#traces), and the `spectra_spans` table and a `span_id` column for [spans](/usage#spans). Run the installer. It publishes only the migrations your app doesn't have yet, then asks if it should run them:
 
 ```shell
 php artisan spectra:install
 ```
 
-Nothing breaks if you upgrade first: until the migration runs, Spectra saves calls without the two columns and logs a warning. See [The Trace Columns Migration](/migrations#trace-columns-migration).
+Nothing breaks if you upgrade first. Until the migrations run, calls are recorded as before, the new columns and spans are skipped, and Spectra logs one warning per process. See [The Trace Columns Migration](/migrations#trace-columns-migration) and [The Spans Migration](/migrations#spans-migration).
 
-The same release adds the `spectra_spans` table and a `span_id` column for [spans](/usage#spans). `spectra:install` publishes both migrations. Until the spans migration runs, calls are recorded as before and spans are skipped. See [The Spans Migration](/migrations#spans-migration).
+A published `config/spectra.php` doesn't need to be published again. The new `tracking.capture_origin` and `tracking.root_spans` keys default to `true`.
+
+<a name="v3-built-in-providers"></a>
+### Built-in Providers Stay On Under a Published Config
+
+Built-in providers and pricing classes now stay active under your published config, so an older config no longer misses providers and prices added later. If you turned one off by deleting its entry, it is back on. Set it to `false` instead:
+
+```php
+// config/spectra.php
+'providers' => [
+    'replicate' => false,
+],
+
+'costs' => [
+    'pricing' => [
+        'replicate' => false,
+    ],
+],
+```
+
+<a name="v3-budget-middleware"></a>
+### The Budget Middleware Takes Its Provider and Model from the Route
+
+The `spectra.budget` middleware no longer reads `provider` or `model` from the request input, because a client could name an allowed model and get past `allowed_providers` / `allowed_models`. It uses the route arguments, then `budget.default_provider` and `budget.default_model` from your config:
+
+```php
+Route::middleware(['auth', 'spectra.budget:openai,gpt-4o'])
+    ->post('/chat', ChatController::class);
+```
+
+If a route relied on the request input, name the provider and model in its middleware, or set the defaults in `config/spectra.php`. See [Budgets](/budgets).
+
+<a name="v3-budget-exceeded"></a>
+### `BudgetExceeded` Fires for Every Hard Block
+
+`BudgetExceeded` (`wasBlocked: true`) used to fire only when a cost limit blocked a request. It now fires before every hard block, so `currentUsage` and `limit` are not always cents. Check `limitType` first:
+
+| `limitType` | `currentUsage` and `limit` are |
+| --- | --- |
+| `daily`, `weekly`, `monthly`, `total` | cents |
+| `daily_tokens`, `weekly_tokens`, `monthly_tokens`, `total_tokens` | tokens |
+| `daily_requests`, `weekly_requests`, `monthly_requests` | requests |
+| `provider`, `model` (not on the allowed list) | both `0` |
+
+```php
+use Illuminate\Support\Facades\Event;
+use Spectra\Events\BudgetExceeded;
+
+Event::listen(function (BudgetExceeded $event) {
+    if (in_array($event->limitType, ['daily', 'weekly', 'monthly', 'total'], true)) {
+        $dollars = $event->getOverageAmountInDollars();
+    }
+});
+```
+
+<a name="v3-request-context"></a>
+### `RequestContext` Lists Are Arrays
+
+These `RequestContext` properties are now `array` and start as `[]` instead of `null`: `messages`, `tools`, `requestParameters`, `requestData`, `toolCalls`, `toolCallCounts` and `mediaStoragePath`.
+
+```php
+// 2.x
+if ($context->requestData === null) { /* ... */ }
+$context->toolCallCounts = null;
+
+// 3.0
+if ($context->requestData === []) { /* ... */ }
+$context->toolCallCounts = [];
+```
+
+Assigning `null` to one of them now throws a `TypeError`. Passing `null` for one to `new RequestContext([...])` still works and means empty, and empty lists are still stored as `NULL`.
+
+<a name="v3-failed-requests"></a>
+### Failed Requests and Their Cost
+
+A failed request is now any status outside 200-299, or none, everywhere:
+
+- `SpectraRequest::failed()` and `isFailed()` include 3xx responses, like the dashboard already did. The exported `is_failed` attribute does too.
+- `UsageQueryBuilder` (`stats()`, `byProvider()`, `byModel()`, `dailyUsage()`, `totalCostCents()`, `averageLatency()`) and the `HasAiUsageStats` methods count failed requests in request totals, but leave them out of cost and latency. So `->failed()->totalCostCents()` is `0`.
+
+Reports built on the old numbers change. Recheck them after upgrading.
+
+<a name="v3-what-changes-in-the-numbers"></a>
+### What Changes in the Numbers
+
+Older rows keep their old values. Nothing is rewritten.
+
+- **OpenAI 12-hour cache writes** (GPT-5.6 and later, Responses API) are billed at their own rate, 2.5x input. They were billed at the 30-minute rate (1.25x), so these costs go up.
+- **Token totals** from `UsageQueryBuilder::byProvider()`, `byModel()` and `dailyUsage()`, and from the `HasAiUsageStats` methods, are the real sums. They were `0`.
+- **Budget spend** for a recorded request is rounded up to whole cents like every other budget total.
+- **A usage field of the wrong type** (an array, a word) counts as `0` tokens.
+
+<a name="v3-other-changes"></a>
+### Other Changes
+
+- With `store_system_prompts` or `store_tools` turned off, system prompts and tool definitions are now removed from the stored request body too. Rows saved before 3.0 still hold them. Prune or clear them if that matters to you.
+- `SpectraRequest::$trackable_id` is always a string, also on a row just created from an integer key.
+- A whitespace-only API key in config counts as unset.
+- Pricing: dated ids that only add a date to a model id (`claude-sonnet-4-20250514`) are no longer listed by `getAliases()`. They still resolve to the same price.
+- The Firecrawl settings read `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL` and `SPECTRA_FIRECRAWL_TIMEOUT`. The unprefixed `FIRECRAWL_*` names still work.
 
 <a name="from-1x-to-2"></a>
 ## From 1.x to 2.0

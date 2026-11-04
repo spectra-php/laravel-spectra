@@ -24,8 +24,8 @@ composer require james-heinrich/getid3
 ```
 :::
 
-::: tip Upgrading from 1.x?
-Read the [Upgrade Guide](/upgrade). Most apps only need to run one new migration.
+::: tip Upgrading from 2.x or 1.x?
+Read the [Upgrade Guide](/upgrade). Most apps only need to run `php artisan spectra:install` once.
 :::
 
 Then publish Spectra's assets and run the database migrations with the `spectra:install` Artisan command:
