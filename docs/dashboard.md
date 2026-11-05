@@ -2,6 +2,8 @@
 
 Spectra ships with a dashboard for exploring your AI traffic. It lives at `/spectra` and, by default, opens only in the `local` environment. To open it elsewhere, define the `viewSpectra` gate (see [Dashboard Authorization](/installation#dashboard-authorization)). To change its path, middleware or layout, see [Configuration](/configuration#dashboard).
 
+The screens are in the sidebar on the left; the arrows at its bottom collapse it to icons, and the dashboard remembers your choice in the browser. The top bar holds the actions: pause and resume recording, prune old data, refresh the screen, the Review screen, the Maintenance screen, and dark mode. Pausing and pruning show only to users the `manageSpectra` gate allows (see [Maintenance](#maintenance)).
+
 Every screen has a period picker (today, this week, this month, this year, all time) and a date range picker. The lists filter by model type, provider, tag, finish reason and more, and keep the filters in the URL, so you can share a filtered view.
 
 As everywhere in Spectra, request counts include failed requests, while cost and latency cover successful requests only (see [Costs](/costs#querying-costs)).
@@ -101,7 +103,12 @@ Failures saved before the [error fingerprint migration](/migrations#error-finger
 <a name="review"></a>
 ## Review
 
-Once the app configures an [annotation queue](/annotations), a clipboard icon in the header opens the Review screen, with the number of traces waiting. It lists each queue with its progress; open one to read a trace's calls, give the queue's scores, and move to the next. A trace's page has an **Add to review** menu to queue it by hand.
+Once the app configures an [annotation queue](/annotations), a clipboard icon in the top bar opens the Review screen, with the number of traces waiting. It lists each queue with its progress; open one to read a trace's calls, give the queue's scores, and move to the next. A trace's page has an **Add to review** menu to queue it by hand.
+
+<a name="evals"></a>
+## Evals
+
+The Evals screen lists each [evaluation](/evaluations) with its latest runs and every scorer's result per run, and the datasets. Open a run to see each example's input, expected output, output, scores, latency and cost, and compare it with an earlier run. A call's page has an **Add to dataset** card that saves the call as an example.
 
 <a name="costs"></a>
 ## Costs

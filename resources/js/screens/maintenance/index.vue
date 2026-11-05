@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
 import StatCard from '@/components/StatCard.vue';
@@ -128,7 +129,15 @@ const pruneSummary = computed(() => {
     return parts.join(', ');
 });
 
-onMounted(() => loadStatus());
+// The top bar's prune button opens this screen at #prune.
+const route = useRoute();
+onMounted(async () => {
+    await loadStatus();
+    if (route.hash === '#prune') {
+        await nextTick();
+        document.getElementById('prune')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+});
 onUnmounted(() => clearTimeout(pollTimer));
 </script>
 
@@ -171,7 +180,7 @@ onUnmounted(() => clearTimeout(pollTimer));
 
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <!-- Prune -->
-            <div class="card lg:col-span-2">
+            <div id="prune" class="card scroll-mt-24 lg:col-span-2">
                 <div class="card-header">
                     <h2>Prune old data</h2>
                     <span v-if="pending.prune" class="badge badge-info"><span class="spinner h-2.5 w-2.5 border-[1.5px]" aria-hidden="true"></span> Queued</span>

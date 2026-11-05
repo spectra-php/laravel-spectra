@@ -126,6 +126,17 @@ php artisan spectra:install
 
 Until it runs, no trace is queued for review and a warning is logged once per process; tracking is not affected.
 
+<a name="evaluation-migration"></a>
+## The Evaluation Migration
+
+`create_spectra_evaluation_tables` creates the `spectra_datasets`, `spectra_dataset_examples`, `spectra_eval_runs` and `spectra_eval_results` tables for [evaluations](/evaluations). Run the installer to publish and run it:
+
+```shell
+php artisan spectra:install
+```
+
+Until it runs, the Evals screen asks you to, and `Spectra::dataset()` and `spectra:eval` fail with a database error.
+
 ### Custom Database Connection
 
 All Spectra migrations use the `spectra.storage.connection` config value. To store Spectra data in a separate database, set the connection in `config/spectra.php`:

@@ -14,8 +14,10 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraAnnotationItem;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Annotations\AnnotationQueues;
+use Spectra\Support\Evaluations\EvaluationRunner;
 use Spectra\Support\Tracking\ProviderErrorException;
 use Spectra\Support\Tracking\SpanStack;
+use Workbench\App\Evals\SupportAnswerEval;
 use Workbench\App\Models\User;
 
 /**
@@ -180,7 +182,37 @@ class DatabaseSeeder extends Seeder
         Carbon::setTestNow();
 
         $this->reviewQueuedTraces($users->take(2)->values()->all());
+        $this->runEvaluations();
         $this->seedRedactedCall($users->first());
+    }
+
+    /**
+     * A dataset of refund questions, and two runs of the support agent's
+     * evaluation over it: v2 of the prompt five days ago, v3 yesterday.
+     */
+    protected function runEvaluations(): void
+    {
+        $dataset = Spectra::dataset('refund-questions');
+        $dataset->model()->forceFill(['description' => 'Refund questions customers asked, with the answer we want'])->save();
+
+        foreach ([
+            'Can I get a refund on my annual plan?' => 'Yes. Annual plans get a full refund within 30 days, then a refund for the unused months.',
+            'How long does a refund take?' => 'A refund reaches your card in 5 to 10 business days.',
+            'Do you refund unused seats?' => 'Yes, removed seats are refunded on your next invoice.',
+            'I was charged twice, what do I do?' => 'We refund the double charge right away. Reply with the invoice number.',
+            'Can I get a refund after cancelling?' => 'Yes, within 30 days of the charge you get a full refund.',
+            'Is the setup fee refundable?' => 'The setup fee is refunded only within the first 14 days.',
+            'Can I get my refund as credit?' => 'Yes, we can add the refund as account credit instead.',
+            'Why was my refund smaller?' => 'Discounts and taxes are taken off the refund, as on the invoice.',
+        ] as $question => $answer) {
+            $dataset->add(['question' => $question], expected: $answer);
+        }
+
+        foreach (['v2' => 5, 'v3' => 1] as $version => $daysAgo) {
+            Carbon::setTestNow(Carbon::now()->subDays($daysAgo)->setTime(16, 20));
+            app(EvaluationRunner::class)->run(new SupportAnswerEval($version), metadata: ['prompt_version' => $version]);
+            Carbon::setTestNow();
+        }
     }
 
     /**

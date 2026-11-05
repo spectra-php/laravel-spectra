@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Spectra\Http\Controllers\Api\Evaluations;
+
+use Spectra\Actions\Evaluations\GetDataset;
+use Spectra\Data\Responses\DatasetResponse;
+use Spectra\Http\Controllers\Api\BaseApiController;
+use Spectra\Models\SpectraDataset;
+
+/**
+ * GET /api/datasets/{id}: one dataset with its examples and the runs over it.
+ */
+class ShowDatasetController extends BaseApiController
+{
+    /**
+     * Get the dataset, its examples and its runs.
+     */
+    public function __invoke(string $id, GetDataset $getDataset): DatasetResponse
+    {
+        $data = $getDataset(SpectraDataset::query()->findOrFail($id));
+
+        return new DatasetResponse(dataset: $data['dataset'], examples: $data['examples'], runs: $data['runs']);
+    }
+}

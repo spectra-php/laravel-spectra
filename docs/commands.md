@@ -180,6 +180,17 @@ Groups the failed calls saved before the [error fingerprint migration](/migratio
 php artisan spectra:group-errors
 ```
 
+<a name="spectra-eval"></a>
+## `spectra:eval`
+
+Runs an [evaluation](/evaluations) over its dataset and prints each scorer's result. Pass the class, or its name in `App\Evals`:
+
+```shell
+php artisan spectra:eval SupportAnswerEval [--limit=10]
+```
+
+The run, with every example's output and scores, shows on the dashboard's Evals screen.
+
 ## Command Summary
 
 | Command | Purpose | Typical Usage |
@@ -190,4 +201,5 @@ php artisan spectra:group-errors
 | `spectra:pricing-scrape` | Save new provider prices to the scraped prices file | Before a release picks them up; review and commit the file |
 | `spectra:pause` / `spectra:resume` | Stop and restart storing requests | During load tests or incidents |
 | `spectra:check-alerts` | Check the alert rules and notify | Scheduled every few minutes |
+| `spectra:eval SupportAnswerEval` | Run an evaluation over its dataset | After changing a prompt or model, or in CI |
 | `spectra:group-errors` | Group failed calls saved before the error fingerprint migration | Once after upgrading |

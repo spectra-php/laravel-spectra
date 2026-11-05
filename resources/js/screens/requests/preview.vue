@@ -18,6 +18,7 @@ import Breadcrumb from '@/components/Breadcrumb.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Money from '@/components/Money.vue';
 import ScoresCard from '@/components/ScoresCard.vue';
+import AddToDataset from '@/components/AddToDataset.vue';
 
 const route = useRoute();
 const { spectra, formatNumber, formatDuration, apiRequest } = useHelpers();
@@ -318,6 +319,8 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                     </div>
 
                     <ScoresCard v-if="request.scores?.length" :scores="request.scores" :current-request-id="request.id" />
+
+                    <AddToDataset v-if="modelType === 'text' && request.request" :request-id="request.id" />
 
                     <div v-if="request.tags?.length" class="card">
                         <div class="card-header"><h3>Tags</h3></div>

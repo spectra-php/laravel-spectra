@@ -40,7 +40,8 @@ export default defineConfig({
           { text: 'Scores', link: '/scores' },
           { text: 'Prompts', link: '/prompts' },
           { text: 'Tools', link: '/tools' },
-          { text: 'Annotation Queues', link: '/annotations' }
+          { text: 'Annotation Queues', link: '/annotations' },
+          { text: 'Evaluations', link: '/evaluations' }
         ]
       },
       {

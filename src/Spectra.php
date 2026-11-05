@@ -16,6 +16,7 @@ use Spectra\Enums\SpanKind;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
 use Spectra\Support\Annotations\AnnotationQueues;
+use Spectra\Support\Evaluations\Dataset;
 use Spectra\Support\Query\CostQueryBuilder;
 use Spectra\Support\Query\UsageQueryBuilder;
 use Spectra\Support\Redaction\Redactor;
@@ -335,6 +336,23 @@ class Spectra
         return $this->app->make(ScoreRecorder::class)->record(
             $name, $value, $request, $traceId, $conversationId, $comment, $source, $author, $metadata,
         );
+    }
+
+    /**
+     * A dataset of examples to run evaluations over, made the first time
+     * something is added to it.
+     *
+     *   Spectra::dataset('refund-questions')->add(['question' => 'Can I get my money back?'], expected: 'Yes, within 30 days.');
+     *
+     * @throws InvalidArgumentException when the name is empty or longer than 100 characters
+     */
+    public function dataset(string $name): Dataset
+    {
+        $name = Str::trim($name);
+
+        throw_if($name === '' || mb_strlen($name) > 100, InvalidArgumentException::class, 'A dataset needs a name of 1 to 100 characters.');
+
+        return new Dataset($name);
     }
 
     /**

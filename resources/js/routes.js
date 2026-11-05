@@ -8,6 +8,9 @@ import ConversationDetail from './screens/conversations/detail.vue';
 import Costs from './screens/costs/index.vue';
 import Prompts from './screens/prompts/index.vue';
 import Errors from './screens/errors/index.vue';
+import Evals from './screens/evals/index.vue';
+import EvalRun from './screens/evals/run.vue';
+import Dataset from './screens/evals/dataset.vue';
 import Trackables from './screens/trackables/index.vue';
 import TrackableDetail from './screens/trackables/detail.vue';
 import Maintenance from './screens/maintenance/index.vue';
@@ -64,6 +67,21 @@ export default [
         path: '/errors',
         name: 'errors',
         component: Errors,
+    },
+    {
+        path: '/evals',
+        name: 'evals',
+        component: Evals,
+    },
+    {
+        path: '/evals/runs/:id',
+        name: 'eval-run',
+        component: EvalRun,
+    },
+    {
+        path: '/evals/datasets/:id',
+        name: 'eval-dataset',
+        component: Dataset,
     },
     {
         path: '/trackables',

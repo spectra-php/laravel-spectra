@@ -26,6 +26,8 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Tool spans: with `tracking.tool_spans` (`SPECTRA_TOOL_SPANS`, off by default), a call that sends tool results back to the model records a span per tool, from the end of the previous call to its start, read from OpenAI Chat Completions and compatible APIs, the OpenAI Responses API, Anthropic and Gemini request bodies, streamed or not. The trace timeline draws tools with their arguments and result, and OpenTelemetry exports them as `execute_tool {name}`
 - Error grouping: each failed call is saved with a fingerprint of its provider, status, error type and message, without the ids, numbers, URLs, emails, masked keys and model names that change from call to call. The dashboard's Errors screen lists the groups with their failures, share, daily trend, models and first and last seen; the requests list filters by group, and a failed call links to the calls that failed the same way. `spectra:group-errors` groups failures saved before the new migration
 - Annotation queues: queues in `spectra.annotations.queues` name the scores reviewers give (yes/no, a number in a range, or one of a set of options), and can sample a share of the traces whose calls match a filter. Traces are also queued with `Spectra::queueForReview()` or from a trace's page. The dashboard's Review screen shows each queue's progress and walks reviewers through its traces, saving their labels as Annotation scores. Reviewing needs the new `annotateSpectra` gate, which follows `viewSpectra` unless you define it. `spectra:prune` deletes old queue items, and the fake gets `assertQueuedForReview()`
+- Evaluations: `Spectra::dataset('refund-questions')->add($input, expected: $output)` builds datasets of examples, also from a call's page or `addRequest()`. A class that extends `Spectra\Evaluations\Evaluation` names a dataset, the code to run on each example and its scorers (closures, or the built-in `ExactMatch` and `Contains`); `php artisan spectra:eval` runs it, each example in a trace of its own tagged `eval`, and saves the run with every output and score. The dashboard's Evals screen lists the runs and datasets, and compares two runs example by example
+- Dashboard: the screens moved to a sidebar on the left that collapses to icons, and the top bar holds the actions: pause and resume recording, prune, refresh, review, maintenance and dark mode
 - Dashboard: the Overview has an Alerts card (each rule's value now and whether it is firing) and a Performance card (each model's error rate and p50/p95/p99 latency, and median time to first token)
 
 #### Changed
@@ -38,6 +40,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - The same command publishes and runs `add_prompt_columns_to_spectra_requests_table`. Until it runs, calls are saved without their prompt and a warning is logged once per process
 - And `add_error_fingerprint_to_spectra_requests_table`; then run `php artisan spectra:group-errors` once to group the failures saved before it
 - And `create_spectra_annotation_items_table`. Until it runs, no trace is queued for review and a warning is logged once per process
+- And `create_spectra_evaluation_tables`, for datasets and evaluation runs
 
 #### Fixed
 

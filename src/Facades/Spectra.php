@@ -10,6 +10,7 @@ use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ScoreSource;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
+use Spectra\Support\Evaluations\Dataset;
 use Spectra\Support\Query\CostQueryBuilder;
 use Spectra\Support\Query\UsageQueryBuilder;
 use Spectra\Support\Tracking\RequestContext;
@@ -31,6 +32,7 @@ use Spectra\Testing\SpectraFake;
  * @method static SpectraScore|null score(string $name, int|float|bool|string $value, SpectraRequest|string|null $request = null, ?string $traceId = null, ?string $conversationId = null, ?string $comment = null, ScoreSource|string $source = ScoreSource::Api, ?Model $author = null, array<string, mixed> $metadata = [])
  * @method static \Spectra\Spectra redactUsing(\Closure $callback)
  * @method static bool queueForReview(string $queue, ?string $traceId = null)
+ * @method static Dataset dataset(string $name)
  * @method static StreamingTracker stream(?string $provider = null, ?string $model = null, array<string, mixed> $options = [])
  * @method static \Spectra\Spectra addGlobalTags(array<int, string> $tags)
  * @method static mixed withPrompt(string $name, ?string $version, callable $callback)
