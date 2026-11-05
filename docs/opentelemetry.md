@@ -144,10 +144,12 @@ OpenTelemetry export follows the same persistence mode as request storage, contr
 
 Spectra assigns a `trace_id` to each tracked request. The same ID appears in the Spectra dashboard and in the exported OpenTelemetry spans, so you can follow a single user action across multiple AI calls and external services.
 
+<a name="automatic-trace-ids"></a>
 ### Automatic Trace IDs
 
 All AI calls of the same HTTP request, queued job, or Artisan command share one trace ID. A queued job dispatched during a request keeps the request's trace ID. Each exported span is a separate span inside that trace, so your backend shows the calls of one request together. See [Traces](/usage#traces).
 
+<a name="joining-an-incoming-trace"></a>
 ### Joining an Incoming Trace
 
 When the incoming HTTP request has a W3C [`traceparent`](https://www.w3.org/TR/trace-context/#traceparent-header) header, Spectra uses its trace ID and sets the caller's span as the parent of each AI span. Your gateway, proxy, or calling service then shows the AI calls nested under its own span.
@@ -156,11 +158,12 @@ The header's 32-character trace ID is stored as a UUID in the `trace_id` column 
 
 Turn this off with `SPECTRA_USE_TRACEPARENT=false`.
 
+<a name="spans-and-parents"></a>
 ### Spans and Parents
 
 Each AI call is exported with its own stored span ID, and with the span it ran in as its parent: a `Spectra::span()` block, or the request, job or command it ran in (see [Spans](/usage#spans)). Those spans are exported too, as `INTERNAL` spans (`SERVER` for a request, `CONSUMER` for a job), with their attributes, so your backend shows the same tree as the dashboard. A [tool](/tools) is exported as `execute_tool {name}` with `gen_ai.operation.name` set to `execute_tool`, as the GenAI conventions name tool runs. The outermost span's parent is the incoming `traceparent` span.
 
-A custom exporter receives AI calls through `RequestExporter::export()` as before. To receive the other spans as well, also implement `Spectra\Contracts\ExportsSpans`:
+A custom exporter receives AI calls through `RequestExporter::export()`. To receive the other spans as well, also implement `Spectra\Contracts\ExportsSpans`:
 
 ```php
 use Spectra\Contracts\ExportsSpans;
@@ -174,10 +177,11 @@ class MyExporter implements ExportsSpans, RequestExporter
         // started_at, ended_at, duration_ms, status, error_message, attributes
     }
 
-    // export() and exportBatch() as before
+    // export() and exportBatch() from RequestExporter
 }
 ```
 
+<a name="custom-trace-ids"></a>
 ### Custom Trace IDs
 
 You can provide your own trace ID to integrate with an existing tracing system. Use a UUID, or a 32-character hex OpenTelemetry trace ID written as a UUID. Set it for the rest of the request or job with `Spectra::withTraceId($traceId)`, or for one call:
@@ -191,6 +195,7 @@ $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($myTraceId) {
 }, ['trace_id' => $myTraceId]);
 ```
 
+<a name="where-trace-ids-appear"></a>
 ### Where Trace IDs Appear
 
 | System | Location |
@@ -268,6 +273,7 @@ If your dashboards or alerts use the old names, update them. Or extend `DefaultS
 
 You can customize how spans are built by providing your own `SpanBuilder` implementation.
 
+<a name="extending-the-default-builder"></a>
 ### Extending the Default Builder
 
 The easiest approach is to extend `DefaultSpanBuilder` and override only the methods you want to change. Apart from `build()`, its methods are `protected`, so you can override them one at a time:
@@ -305,6 +311,7 @@ Register it in `config/spectra.php`:
 ],
 ```
 
+<a name="building-spans-from-scratch"></a>
 ### Building Spans from Scratch
 
 For full control, implement the `SpanBuilder` contract directly. The `build()` method receives a data array (produced by `RequestTransformer`) and must return an OTLP-compatible span array:
@@ -337,6 +344,7 @@ class MinimalSpanBuilder implements SpanBuilder
 }
 ```
 
+<a name="available-data"></a>
 ### Available Data
 
 The `$data` array passed to `SpanBuilder::build()` holds the stored request columns (without the raw `request` and `response` payloads). The main fields are:
@@ -422,6 +430,7 @@ Register it in `config/spectra.php`:
 
 Spectra dispatches a `RequestTracked` event after every AI request is persisted. The event carries the same data array the `RequestTransformer` produces, so you can build your own integrations without changing Spectra itself.
 
+<a name="listening-to-the-event"></a>
 ### Listening to the Event
 
 Register a listener in your `EventServiceProvider` or use a closure:
@@ -438,6 +447,7 @@ protected $listen = [
 ];
 ```
 
+<a name="listener-example"></a>
 ### Listener Example
 
 ```php
@@ -461,6 +471,7 @@ class AlertOnHighCost
 }
 ```
 
+<a name="available-event-data"></a>
 ### Available Event Data
 
-The `$event->request` array contains the same fields listed in the [Available Data](#customizing-spans) table above. The data is produced by the configured `RequestTransformer`.
+The `$event->request` array contains the same fields listed in the [Available Data](#available-data) table above. The data is produced by the configured `RequestTransformer`.

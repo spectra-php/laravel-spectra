@@ -167,7 +167,7 @@ Assigning `null` to one of them now throws a `TypeError`. Passing `null` for one
 A failed request is now any status outside 200-299, or none, everywhere:
 
 - `SpectraRequest::failed()` and `isFailed()` include 3xx responses, like the dashboard already did. The exported `is_failed` attribute does too.
-- `UsageQueryBuilder` (`stats()`, `byProvider()`, `byModel()`, `dailyUsage()`, `totalCostCents()`, `averageLatency()`) and the `HasAiUsageStats` methods count failed requests in request totals, but leave them out of cost and latency. So `->failed()->totalCostCents()` is `0`.
+- `UsageQueryBuilder` (`stats()`, `byProvider()`, `byModel()`, `dailyUsage()`, `totalCostCents()`, `averageLatency()`) and the `HasAiUsage` methods count failed requests in request totals, but leave them out of cost and latency. So `->failed()->totalCostCents()` is `0`.
 
 Reports built on the old numbers change. Recheck them after upgrading.
 
@@ -177,7 +177,7 @@ Reports built on the old numbers change. Recheck them after upgrading.
 Older rows keep their old values. Nothing is rewritten.
 
 - **OpenAI 12-hour cache writes** (GPT-5.6 and later, Responses API) are billed at their own rate, 2.5x input. They were billed at the 30-minute rate (1.25x), so these costs go up.
-- **Token totals** from `UsageQueryBuilder::byProvider()`, `byModel()` and `dailyUsage()`, and from the `HasAiUsageStats` methods, are the real sums. They were `0`.
+- **Token totals** from `UsageQueryBuilder::byProvider()`, `byModel()` and `dailyUsage()`, and from the `HasAiUsage` methods, are the real sums. They were `0`.
 - **Budget spend** for a recorded request is rounded up to whole cents like every other budget total.
 - **A usage field of the wrong type** (an array, a word) counts as `0` tokens.
 
@@ -366,6 +366,7 @@ The new migration adds a `parent_span_id` column for the `traceparent` span. To 
 
 A long-running Artisan command that handles many separate items puts all of their AI calls in one trace. Call `Spectra::newTrace()` for each item if you want them apart.
 
+<a name="v2-other-changes"></a>
 ## Other Changes
 
 - Saving a tracked request never throws into your app any more. Failures go to your exception handler.

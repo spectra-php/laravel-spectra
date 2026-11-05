@@ -197,13 +197,14 @@ class MyProvider extends Provider
 ```
 
 > [!NOTE]
-> When each handler targets its own endpoints, order does not matter. Spectra checks all handlers and picks the one whose endpoint matches. When several handlers share an endpoint (for example, OpenAI's `/v1/responses` serves both text and image generation), implement the `MatchesResponseShape` interface on the specialized handlers so Spectra can tell them apart by the response body.
+> When each handler targets its own endpoints, order does not matter. Spectra checks all handlers and picks the one whose endpoint matches. When several handlers share an endpoint (for example, OpenAI's `/v1/responses` serves both text and image generation), implement the `MatchesResponseShape` interface on the specialized handlers so Spectra can tell them apart by the response body. List each specialized handler after the generic handler it specializes: Spectra checks later handlers first and falls back to the first matching handler.
 
 <a name="optional-handler-interfaces"></a>
 ## Optional Handler Interfaces
 
 Handlers can implement these extra interfaces to extract more metrics or change how a request is handled.
 
+<a name="has-finish-reason"></a>
 ### `HasFinishReason`
 
 Each response says why text generation stopped. OpenAI uses `finish_reason` (`stop`, `length`, `tool_calls`), while Anthropic uses `stop_reason` (`end_turn`, `max_tokens`, `stop_sequence`). Implement `HasFinishReason` to read this value, so it shows in the dashboard and you can filter by it:
@@ -224,6 +225,7 @@ class MyChatHandler implements Handler, HasFinishReason
 }
 ```
 
+<a name="matches-response-shape"></a>
 ### `MatchesResponseShape`
 
 Some providers use the same endpoint for different kinds of output. For example, OpenAI's `/v1/responses` endpoint can return both text completions and generated images. When several handlers match the same endpoint, Spectra calls `matchesResponse()` on each one to decide which should process the response. The handler that recognizes the response structure wins:
@@ -268,6 +270,7 @@ class MyTextHandler implements Handler, MatchesResponseShape
 }
 ```
 
+<a name="extracts-model-from-response"></a>
 ### `ExtractsModelFromResponse`
 
 Most AI providers include the model name in the JSON response body. Implement `ExtractsModelFromResponse` so Spectra can read the model identifier for pricing lookup and dashboard display. This is the most common way to get the model, so implement it on any handler whose response body has a model field:
@@ -287,6 +290,7 @@ class MyChatHandler implements Handler, ExtractsModelFromResponse
 > [!NOTE]
 > `extractModelFromResponse()` is not part of the base `Handler` interface. You opt in by implementing `ExtractsModelFromResponse`. If your handler does not implement this interface, Spectra falls back to `ExtractsModelFromRequest` (below) or the `model` field in the request body.
 
+<a name="extracts-model-from-request"></a>
 ### `ExtractsModelFromRequest`
 
 Some providers put the model name in the URL path instead of the response body (for example, Google's `/v1/models/{model}:generateContent` or fal.ai's `/fal-ai/flux/dev`). Implement `ExtractsModelFromRequest` to read the model from the request data or the endpoint path. Handlers that implement this interface usually don't implement `ExtractsModelFromResponse`, but you can combine both when the model appears in the request URL and in the response body:
@@ -310,6 +314,7 @@ class MyHandler implements Handler, ExtractsModelFromRequest
 }
 ```
 
+<a name="skips-response"></a>
 ### `SkipsResponse`
 
 Some APIs make you poll for a result that isn't ready yet. Video generation, for example, returns an unfinished job (`queued`, `in_progress`) until processing finishes. Implement `SkipsResponse` and return `true` for these unfinished states, so Spectra does not record the polls. Only the finished response is tracked:
@@ -329,6 +334,7 @@ class MyVideoHandler implements Handler, SkipsResponse
 
 If the finished job is fetched more than once, Spectra does not count it twice. Writes with the same provider response id update the existing row, and only the change is added to the daily stats and budgets. Make sure your handler's response id is the job id.
 
+<a name="has-provider-latency"></a>
 ### `HasProviderLatency`
 
 For an async job, the HTTP call that fetched the result only measures a status poll. Implement `HasProviderLatency` on the handler to return the real generation time the provider reports, in milliseconds. Spectra stores it as the request's latency. Return `null` when the response doesn't say:
@@ -348,6 +354,7 @@ class MyVideoHandler implements Handler, HasProviderLatency
 }
 ```
 
+<a name="has-expiration"></a>
 ### `HasExpiration`
 
 Generated media URLs (images, videos) are often temporary and expire after a set period. Implement `HasExpiration` so Spectra records when the generated content stops being available:
@@ -367,6 +374,7 @@ class MyHandler implements Handler, HasExpiration
 }
 ```
 
+<a name="returns-binary-response"></a>
 ### `ReturnsBinaryResponse`
 
 Some endpoints return binary data instead of JSON (for example, text-to-speech endpoints return raw audio bytes). Implement this marker interface so Spectra knows not to JSON-decode the response body. A binary response can't contain a model name, so these handlers usually implement `ExtractsModelFromRequest` instead of `ExtractsModelFromResponse`:
@@ -391,6 +399,7 @@ class MySpeechHandler implements Handler, ExtractsModelFromRequest, ReturnsBinar
 }
 ```
 
+<a name="streams-response"></a>
 ### `StreamsResponse`
 
 Implement `StreamsResponse` to provide a custom `StreamHandler` for streamed responses. Spectra parses the stream (server-sent events, newline-delimited JSON, or a JSON array) and passes each decoded event to the `StreamHandler`, which extracts text content, token usage, finish reasons, and the model:
@@ -470,6 +479,7 @@ You may also return these extra keys. Spectra applies them to the request:
 | `pricing_tier` | `string` | The tier the provider says it served. Ignored when a tier was set explicitly. |
 | `cost_multiplier` | `float` | A price multiplier, for example `1.1` for US-only inference |
 
+<a name="has-media"></a>
 ### `HasMedia`
 
 AI providers often return generated images and videos as temporary URLs that expire after a set period. Implement `HasMedia` to download these files and save them to a Laravel filesystem disk before the URLs expire. `$rawBody` holds the raw response body for binary responses (for example, TTS audio). The following example shows how OpenAI's image handler stores generated images:
@@ -506,6 +516,7 @@ class MyImageHandler implements Handler, HasMedia
 }
 ```
 
+<a name="extracts-pricing-tier"></a>
 ### `ExtractsPricingTierFromRequest` / `ExtractsPricingTierFromResponse`
 
 Implement these on the **provider class** (not the handler) when the provider offers several pricing tiers. They let Spectra detect the active tier from the request or the response. Implement one or both, depending on where the tier shows up. Return a Spectra tier name (`standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, `hd`) or `null`:

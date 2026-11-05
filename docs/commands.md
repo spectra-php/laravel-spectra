@@ -52,6 +52,7 @@ Deletes old request records, with their spans, scores, review queue items and me
 php artisan spectra:prune [--hours=24] [--stats-days=] [--chunk=1000]
 ```
 
+<a name="spectra-prune-options"></a>
 ### Options
 
 | Option | Default | Description |
@@ -64,6 +65,7 @@ The command deletes rows from `spectra_requests` whose `created_at` is older tha
 
 Daily stats (`spectra_daily_stats`) are the long-term history behind the dashboard charts, so they are **kept** by default. Pass `--stats-days` to prune them too.
 
+<a name="spectra-prune-examples"></a>
 ### Examples
 
 ```shell
@@ -77,6 +79,7 @@ php artisan spectra:prune --hours=168
 php artisan spectra:prune --hours=720 --stats-days=365
 ```
 
+<a name="spectra-prune-scheduling"></a>
 ### Scheduling
 
 Add pruning to your application's scheduler to apply your retention period automatically:
@@ -108,6 +111,7 @@ The stats are rebuilt only from the requests that still exist. If you pruned req
 php artisan spectra:rebuild-stats [--from=] [--to=] [--yesterday]
 ```
 
+<a name="spectra-rebuild-stats-options"></a>
 ### Options
 
 | Option | Description |
@@ -116,6 +120,7 @@ php artisan spectra:rebuild-stats [--from=] [--to=] [--yesterday]
 | `--to=` | End date in `Y-m-d` format (e.g., `2026-01-31`) |
 | `--yesterday` | Rebuild only yesterday's statistics |
 
+<a name="spectra-rebuild-stats-examples"></a>
 ### Examples
 
 ```shell
@@ -129,6 +134,7 @@ php artisan spectra:rebuild-stats --from=2026-01-01 --to=2026-01-31
 php artisan spectra:rebuild-stats --yesterday
 ```
 
+<a name="spectra-rebuild-stats-scheduling"></a>
 ### Scheduling
 
 To keep the stats fresh, schedule a nightly rebuild:
@@ -146,6 +152,7 @@ Reads the providers' pricing pages with [Firecrawl](https://firecrawl.dev) and s
 php artisan spectra:pricing-scrape [provider*] [--all] [--url=*] [--path=] [--dry-run]
 ```
 
+<a name="spectra-pricing-scrape-options"></a>
 ### Options
 
 | Option | Description |
@@ -156,6 +163,7 @@ php artisan spectra:pricing-scrape [provider*] [--all] [--url=*] [--path=] [--dr
 | `--path=` | Read and write this file instead of `spectra.costs.scraped_prices_path`. |
 | `--dry-run` | Print the changes without writing the file. |
 
+<a name="spectra-pricing-scrape-examples"></a>
 ### Examples
 
 ```shell
@@ -209,6 +217,7 @@ php artisan spectra:eval SupportAnswerEval [--limit=10]
 
 The run, with every example's output and scores, shows on the dashboard's Evals screen.
 
+<a name="command-summary"></a>
 ## Command Summary
 
 | Command | Purpose | Typical Usage |

@@ -11,18 +11,21 @@ Applications use AI APIs for text generation, image generation, embeddings, spee
 
 See [Dashboard](/dashboard) for a tour of every screen.
 
+<a name="how-it-works"></a>
 ## How It Works
 
 When your application sends a request to a supported AI provider, Spectra picks it up in one of three ways: automatic tracking, Guzzle middleware, or manual tracking. Spectra then identifies the provider, picks the right handler, reads the usage metrics, calculates the cost from the pricing catalog, and saves the record to the database. Daily statistics are updated in real time, and you can also export traces to OpenTelemetry-compatible backends.
 
 Your application code doesn't see any of this. In most cases you install the package, run the installer, and tracking starts with no code changes.
 
+<a name="supported-providers"></a>
 ## Supported Providers
 
 For the full list of supported providers, see [Models](/models#supported-providers).
 
 You can add more providers by creating a custom provider class. See [Custom Providers](/custom-providers) for details.
 
+<a name="key-features"></a>
 ## Key Features
 
 - **Automatic tracking.** Requests made with Laravel's HTTP client and the OpenAI PHP SDK are tracked with no code changes. If you use Guzzle directly, add Spectra's Guzzle middleware.

@@ -26,6 +26,7 @@ it('tracks the AI request', function () {
 <a name="available-assertions"></a>
 ## Available Assertions
 
+<a name="request-count"></a>
 ### Request Count
 
 Assert that a given number of requests were tracked, or that none were:
@@ -35,6 +36,7 @@ $fake->assertRequestCount(3);     // Exactly 3 requests tracked
 $fake->assertNothingTracked();    // No requests tracked
 ```
 
+<a name="provider-and-model"></a>
 ### Provider and Model
 
 Assert that a provider or model was used during the test:
@@ -46,6 +48,7 @@ $fake->assertModelUsed('gpt-4o');
 $fake->assertModelUsed('claude-sonnet-4-20250514');
 ```
 
+<a name="success-and-failure"></a>
 ### Success and Failure
 
 Assert on the outcome of tracked requests:
@@ -55,6 +58,7 @@ $fake->assertSuccessful();        // At least one successful request
 $fake->assertFailed();            // At least one failed request
 ```
 
+<a name="tags"></a>
 ### Tags
 
 Assert that requests were tracked with specific tags:
@@ -63,6 +67,7 @@ Assert that requests were tracked with specific tags:
 $fake->assertTrackedWithTags(['chat', 'high-priority']);
 ```
 
+<a name="token-usage"></a>
 ### Token Usage
 
 Assert on the total token count across all tracked requests:
@@ -71,6 +76,7 @@ Assert on the total token count across all tracked requests:
 $fake->assertTotalTokens(1500);
 ```
 
+<a name="spans"></a>
 ### Spans
 
 The fake runs `Spectra::span()` and `Spectra::tool()` callbacks and remembers the spans instead of storing them:
@@ -106,6 +112,7 @@ Traces queued with `Spectra::queueForReview()` are remembered too (see [Annotati
 $fake->assertQueuedForReview('support-review');
 ```
 
+<a name="custom-assertions"></a>
 ### Custom Assertions
 
 For more complex checks, pass a callback that receives the recorded request data and returns a boolean:

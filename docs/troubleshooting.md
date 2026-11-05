@@ -2,6 +2,7 @@
 
 Common problems with Spectra, and how to fix them.
 
+<a name="no-requests-are-being-tracked"></a>
 ## No Requests Are Being Tracked
 
 **Symptoms:** The dashboard shows no data and the `spectra_requests` table is empty.
@@ -33,6 +34,7 @@ Common problems with Spectra, and how to fix them.
 
 8. **Saving failed.** Spectra never throws saving errors into your app. They go to your exception handler, so check your error log. A common cause is a missing column after an upgrade (see [Migrations](/migrations#v2-migration)).
 
+<a name="requests-tracked-but-cost-is-zero"></a>
 ## Requests Tracked But Cost Is Zero
 
 **Symptoms:** Requests appear in the dashboard but `total_cost_in_cents` shows `0.000000`.
@@ -56,6 +58,7 @@ Common problems with Spectra, and how to fix them.
 
 6. **Streamed OpenAI Chat Completions.** OpenAI only sends usage in a Chat Completions stream when the request has `'stream_options' => ['include_usage' => true]`. Without it, the request is recorded with zero tokens and zero cost. See [Streaming](/usage#streaming).
 
+<a name="dashboard-shows-empty-data"></a>
 ## Dashboard Shows Empty Data
 
 **Symptoms:** The dashboard loads but displays no requests or statistics.
@@ -83,6 +86,7 @@ Common problems with Spectra, and how to fix them.
 
 5. **The middleware is correct.** If you added `auth` to the dashboard middleware, make sure you are logged in when you open the dashboard.
 
+<a name="queue-persistence-not-working"></a>
 ## Queue Persistence Not Working
 
 **Symptoms:** Requests are tracked but never appear in the database when using queue mode.
@@ -110,6 +114,7 @@ Common problems with Spectra, and how to fix them.
 
 4. **Queue takes priority over after-response.** You can only use one of these modes. When `queue.enabled` is `true`, the `after_response` setting is ignored.
 
+<a name="after-response-mode-not-working"></a>
 ## After-Response Mode Not Working
 
 **Symptoms:** `after_response` is enabled but requests appear to persist synchronously.
@@ -119,6 +124,7 @@ This is expected in two cases:
 - **Non-HTTP context.** After-response only works during web requests. Console commands, queue jobs, and scheduled tasks always save synchronously, because there is no HTTP response to wait for.
 - **Queue is enabled.** When `queue.enabled` is `true`, it takes priority and `after_response` is ignored.
 
+<a name="budget-middleware-not-enforcing"></a>
 ## Budget Middleware Not Enforcing
 
 **Symptoms:** Requests proceed even when the user's budget is exceeded.
@@ -143,6 +149,7 @@ This is expected in two cases:
 
 4. **The hard limit is enabled.** With `hard_limit = false`, requests go through and Spectra only fires events. Set `hard_limit = true` on the budget to block requests once it is exceeded.
 
+<a name="opentelemetry-export-not-appearing"></a>
 ## OpenTelemetry Export Not Appearing
 
 **Symptoms:** OTEL is enabled but no traces appear in your observability backend.
@@ -168,6 +175,7 @@ This is expected in two cases:
    SPECTRA_OTEL_TIMEOUT=30
    ```
 
+<a name="stats-look-wrong-after-data-changes"></a>
 ## Stats Look Wrong After Data Changes
 
 **Symptoms:** Dashboard charts or cost totals don't match the raw request data.
@@ -185,6 +193,7 @@ php artisan spectra:rebuild-stats --from=2026-01-01 --to=2026-01-31
 
 The stats are rebuilt only from requests that still exist. If you pruned old requests but kept their daily stats, rebuild only the days you still have requests for (see [`spectra:rebuild-stats`](/commands#spectra-rebuild-stats)).
 
+<a name="media-files-not-being-saved"></a>
 ## Media Files Not Being Saved
 
 **Symptoms:** Image or video generation requests are tracked but no media files are downloaded to disk.
@@ -202,6 +211,7 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
 
 4. **The URLs haven't expired.** Provider media URLs don't last long. If saving is delayed (for example, by a queue with a long delay), the URLs may expire before the download finishes.
 
+<a name="macro-not-available"></a>
 ## Macro Not Available
 
 **Symptoms:** `Http::withAITracking()` or `Http::withoutAITracking()` throws a "Method not found" error.
@@ -223,6 +233,7 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
 
 3. **Check for conflicts.** Another package may have registered a macro with the same name. Laravel macros are global, and the last registration wins.
 
+<a name="high-memory-usage"></a>
 ## High Memory Usage
 
 **Symptoms:** Application memory spikes when making many AI requests in a single process.
@@ -246,6 +257,7 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
   php artisan spectra:prune --hours=168
   ```
 
+<a name="duplicate-requests-being-tracked"></a>
 ## Duplicate Requests Being Tracked
 
 **Symptoms:** The same AI request appears multiple times in the dashboard.

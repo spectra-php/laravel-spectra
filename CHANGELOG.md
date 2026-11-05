@@ -23,23 +23,13 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Dashboard: the Overview has an Alerts card (each rule's value now and whether it is firing) and a Performance card (each model's error rate and p50/p95/p99 latency, and median time to first token)
 - Dashboard: a Maintenance screen (the wrench icon) shows what is stored and runs the upkeep: prune old data with a count of what would be deleted before you confirm, pause and resume recording, and rebuild the daily stats. Prunes and rebuilds run as queued jobs on Spectra's queue. Its Prices card is read-only (whether the scraped prices file is billed, and what it holds): the dashboard runs in production, so prices are checked and written only with `spectra:pricing-scrape`
 - `spectra:pricing-scrape` prints the page line each changed price was confirmed on, to check it against without opening the page
-- The maintenance actions need the new `manageSpectra` gate (local-only by default) and the `dashboard.maintenance` option (`SPECTRA_DASHBOARD_MAINTENANCE`, on by default)
+- Dashboard: the maintenance actions need the new `manageSpectra` gate (local-only by default) and the `dashboard.maintenance` option (`SPECTRA_DASHBOARD_MAINTENANCE`, on by default)
 - `spectra:pause` and `spectra:resume`: while paused, AI calls keep working but no request, span, score or media is stored. Each request or job reads the flag once, and a long-running process every 5 seconds
 
 #### Changed
 
 - `RequestContext::$id` is the id the call is saved under (a UUID), so code inside `Spectra::track()` can score the call before it is saved. It used to be a separate ULID that was never stored
 - `spectra:install` without a terminal (`--no-interaction`, a Composer script) publishes the new migrations and no longer runs them, so it can sit in your app's `post-update-cmd` scripts. (see the `spectra:install` docs)
-
-#### Upgrading
-
-- Run `php artisan spectra:install` to publish and run the new `create_spectra_scores_table` migration. Until you do, `Spectra::score()` returns `null` and logs a warning once per process; tracking is not affected
-- The same command publishes and runs `add_prompt_columns_to_spectra_requests_table`. Until it runs, calls are saved without their prompt and a warning is logged once per process
-- And `add_error_fingerprint_to_spectra_requests_table`; then run `php artisan spectra:group-errors` once to group the failures saved before it
-- And `create_spectra_annotation_items_table`. Until it runs, no trace is queued for review and a warning is logged once per process
-- And `create_spectra_evaluation_tables`, for datasets and evaluation runs
-- `spectra:install` without a terminal no longer runs the migrations it publishes: run `php artisan migrate` after it in deploy scripts
-- The dashboard's maintenance actions need the new `manageSpectra` gate, which allows only the `local` environment unless you define it. Reviewing traces and adding dataset examples need `annotateSpectra`, which follows `viewSpectra` unless you define it
 
 #### Fixed
 
@@ -49,13 +39,23 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Conversations: a turn's message and reply come from the call the user saw, not from side calls made in the same turn. A guardrail or judge that asks for structured output (JSON schema or JSON mode on OpenAI, Anthropic, Gemini, Ollama and compatible APIs) and a query rewriter are passed over when the turn has a streamed call or one that offers tools, so a turn no longer shows the guardrail's prompt with the whole history and its JSON verdict
 - Spans: a queued job whose parent request or job made no AI call no longer hangs off a span that was never saved, which drew it as a second root of the trace and showed the missing parent as an incoming `traceparent`. The job now also saves the spans it came from (see Root spans in the usage docs)
 
+#### Upgrading
+
+- Scores: run `php artisan spectra:install` to publish and run the new `create_spectra_scores_table` migration. Until you do, `Spectra::score()` returns `null` and logs a warning once per process; tracking is not affected
+- Prompt versions: the same command publishes and runs `add_prompt_columns_to_spectra_requests_table`. Until it runs, calls are saved without their prompt and a warning is logged once per process
+- Error grouping: the same command publishes and runs `add_error_fingerprint_to_spectra_requests_table`; then run `php artisan spectra:group-errors` once to group the failures saved before it
+- Annotation queues: the same command publishes and runs `create_spectra_annotation_items_table`. Until it runs, no trace is queued for review and a warning is logged once per process
+- Evaluations: the same command publishes and runs `create_spectra_evaluation_tables`, for datasets and evaluation runs
+- `spectra:install` without a terminal no longer runs the migrations it publishes: run `php artisan migrate` after it in deploy scripts
+- Dashboard: the maintenance actions need the new `manageSpectra` gate, which allows only the `local` environment unless you define it. Reviewing traces and adding dataset examples need `annotateSpectra`, which follows `viewSpectra` unless you define it
+
 ## v3.0.0 - 2026-11-04
 
 #### Added
 
-- Every call stores where it came from in the new `origin` column: the queued job class, the Artisan command (`artisan reports:send`) or the route pattern of the HTTP request (`POST /chats/{chat}`, never the URL). A synchronous job run inside a request is named by the job. Turn it off with `tracking.capture_origin` (`SPECTRA_CAPTURE_ORIGIN`)
-- Every call stores its start time to the millisecond in the new `started_at` column (`created_at` is stored to the second). OpenTelemetry spans start at it, and never end before it
-- An async job that is polled again keeps the origin and start time of the call that started it
+- Tracking: every call stores where it came from in the new `origin` column: the queued job class, the Artisan command (`artisan reports:send`) or the route pattern of the HTTP request (`POST /chats/{chat}`, never the URL). A synchronous job run inside a request is named by the job. Turn it off with `tracking.capture_origin` (`SPECTRA_CAPTURE_ORIGIN`)
+- Tracking: every call stores its start time to the millisecond in the new `started_at` column (`created_at` is stored to the second). OpenTelemetry spans start at it, and never end before it
+- Tracking: an async job that is polled again keeps the origin and start time of the call that started it
 - Dashboard: a Traces screen lists one row per trace (origin, calls, failures, models, trackable, duration, cost) with totals for the filtered traces. It has the same filters as the requests list; a trace stays when one of its calls matches, with all its calls in its totals
 - Dashboard: a trace page shows a trace's calls on one millisecond timeline, with a lane per origin, cost per model, tags and trackable. The request page's Trace card links to it
 - Dashboard: a Conversations screen lists one row per `conversation_id` (turns, failures, models, trackable, cost, last activity) with totals for the filtered conversations. A conversation page shows it as a transcript: each turn's user message and reply, its calls, its cost and the cost so far. Calls with the same `conversation_turn` are one turn
@@ -68,7 +68,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - `spectra:prune` deletes spans with the requests
 - `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL` and `SPECTRA_FIRECRAWL_TIMEOUT`. The unprefixed `FIRECRAWL_*` names still work
 - `SpectraRequest::forTrace()` scope
-- The costs dashboard's top spenders include `trackable_type`, so a user and a team with the same id no longer collide
+- Dashboard: the costs screen's top spenders include `trackable_type`, so a user and a team with the same id no longer collide
 - OpenAI: GPT-6 Rosalind (`gpt-6-rosalind`, with its long-context price) and GPT-6 Astra for Law (`gpt-6-astra-law`, promotional price through 2026-12-31)
 - Google: Gemini Robotics-ER 2 Streaming Preview (`gemini-robotics-er-2-streaming-preview`), $1 / $5 per 1M tokens, doubling on 2027-01-01
 - Mistral: Voxtral TTS 3 (`voxtral-mini-tts-3-0`, $13 per 1M characters), Voxtral Mini Transcribe 3 ($0.0035 per minute), Voxtral Mini Transcribe Realtime 3 ($0.008) and Voxtral Small Transcribe 3 ($0.004), with the `-3` and `-latest` ids their model cards list. `voxtral-mini-tts-latest` stays on Voxtral TTS (26.03) until Mistral moves it
@@ -82,20 +82,20 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Budgets: `BudgetExceeded` (`wasBlocked: true`) now fires before every hard block, not only cost limits. `limitType` is `{period}_tokens` for token limits, `{period}_requests` for request limits, and `provider` or `model` for allow-list blocks (usage and limit both 0)
 - A failed request is any status outside 200-299, or none, everywhere: `SpectraRequest::failed()` / `isFailed()` now include 3xx, like the dashboard and `UsageQueryBuilder::failed()` already did, and so does the exported `is_failed`
 - Cost and latency count successful (2xx) requests only, and request counts include failures, everywhere: `UsageQueryBuilder` (`stats()`, `byProvider()`, `byModel()`, `dailyUsage()`, `totalCostCents()`, `averageLatency()`), `HasAiUsageStats` and the dashboard's per-model, per-type, top-spender and trackables lists. A model whose requests all failed now shows with $0
-- A date-only end (`'2026-11-02'`) now includes that whole day in `between()`, the `getAiUsage*` methods and the `SpectraDailyStat` stats queries
+- Usage API: a date-only end (`'2026-11-02'`) now includes that whole day in `between()`, the `getAiUsage*` methods and the `SpectraDailyStat` stats queries
 - `trackable_id` and tag ids are strings in the dashboard API, so ULID and UUID ids link to the right trackable
 - Pricing: dated ids that only add a date to a model id (`claude-sonnet-4-20250514`) are no longer listed as aliases. They resolve to the same price through date stripping, but `getAliases()` no longer returns them
 - Tracking: media downloads time out (30 seconds for images, 60 for videos), and a file that fails is skipped
 - Dev-only files (`bin/`, `whisky.json`, `pint.json`, `rector.php`, the PHPStan configs) are no longer in the package download
 - `SpectraRequest::$trackable_id` is always a string, also on a row just created from an integer key, the same as a row read back from the database
-- A whitespace-only API key in config (`spectra.api_keys.*`, `ai.providers.*.key`) counts as unset, like an empty one
+- Config: a whitespace-only API key in config (`spectra.api_keys.*`, `ai.providers.*.key`) counts as unset, like an empty one
 
 #### Fixed
 
 - OpenAI: 12-hour prompt cache writes (GPT-5.6 and later, Responses API) were billed at the 30-minute rate (1.25x input). They now bill at the 12-hour rate (2.5x input), read from the usage's `input_tokens_details.cache_write_tokens_details.ttl_12h_tokens`, for streamed and non-streamed responses
 - Usage API: `UsageQueryBuilder::byProvider()`, `byModel()` and `dailyUsage()`, and the `HasAiUsageStats` methods (`getAiUsageForPeriod()`, `getAiUsageByProvider()`, `getAiUsageByModel()` and the today/week/month shortcuts) always reported `total_tokens` as 0: the sum was read through the model's own `total_tokens` accessor
 - Tracking errors no longer reach your code. `Spectra::track()` returns your result when recording fails, a malformed stream chunk is skipped instead of ending your `foreach`, and a provider field of the wrong type drops only that field: the request is still recorded with its cost
-- A retried persist job no longer saves a duplicate row and counts the spend twice, and a failing stats update, budget report, export or `RequestTracked` listener no longer loses the row. A failed save after the response is reported and no longer stops the app's other terminating callbacks
+- Tracking: a retried persist job no longer saves a duplicate row and counts the spend twice, and a failing stats update, budget report, export or `RequestTracked` listener no longer loses the row. A failed save after the response is reported and no longer stops the app's other terminating callbacks
 - Budgets: a database or cache error during the middleware's check is reported and the request goes through, instead of a 500
 - Tracking: a usage field of the wrong type (an array, a word) counts as 0 tokens instead of whatever a cast made of it (an array counted as 1)
 - Budgets: the spend recorded for a tracked request is rounded up to whole cents like every other budget total, so float noise can no longer add a cent
@@ -109,21 +109,21 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Dashboard: searching requests by model works on PostgreSQL (a non-UUID search was an SQL error), and a malformed request id or image index is a 404
 - Dashboard: the trackables count is right on MariaDB, and trackable names resolve for apps that use a morph map
 - Dashboard: Sora video downloads use the configured OpenAI base URL (Azure and custom base URLs got an error)
-- A misspelled watcher class in config is reported and skipped instead of breaking the app at boot
-- Both 2.x migrations are safe to run again on a Spectra database that kept its tables after `migrate:fresh`
+- Config: a misspelled watcher class in config is reported and skipped instead of breaking the app at boot
+- Migrations: both 2.x migrations are safe to run again on a Spectra database that kept its tables after `migrate:fresh`
 - Storage: `store_system_prompts` and `store_tools` set to `false` now keep system prompts and tool definitions out of the database. They were saved anyway inside the stored request body. Spectra now removes `system` / `developer` messages, the `system`, `instructions`, `systemInstruction` and `system_prompt` fields, and the `tools` / `functions` lists before saving
 
 #### Upgrading
 
 - This is a major release (3.0). Follow the [upgrade guide](UPGRADE.md) ([online](https://spectraphp.com/upgrade#from-2x-to-3)); every item below is covered there
-- Run `php artisan spectra:install` to publish and run the new `add_trace_timing_columns_to_spectra_tables` migration. Until you do, Spectra keeps recording calls without the two new columns and logs a warning once per process
-- A published `config/spectra.php` gets `tracking.capture_origin` with its default (`true`), so you don't need to publish it again
-- Run `php artisan spectra:install` to publish and run the new `add_spans_to_spectra_tables` migration too. Until you do, calls are recorded as before, spans are skipped and a warning is logged once per process. A published config gets `tracking.root_spans` (`true`)
-- An async job polled again keeps the `span_id` and `parent_span_id` of the call that started it
-- If you removed a built-in provider or pricing class from your published config to turn it off, set it to `false` instead: built-ins now stay active underneath your config
-- Routes that relied on the `spectra.budget` middleware reading `provider` / `model` from the request input must pass them as arguments: `spectra.budget:openai,gpt-4o`
+- Tracking: run `php artisan spectra:install` to publish and run the new `add_trace_timing_columns_to_spectra_tables` migration. Until you do, Spectra keeps recording calls without the two new columns and logs a warning once per process
+- Config: a published `config/spectra.php` gets `tracking.capture_origin` with its default (`true`), so you don't need to publish it again
+- Spans: run `php artisan spectra:install` to publish and run the new `add_spans_to_spectra_tables` migration too. Until you do, calls are recorded as before, spans are skipped and a warning is logged once per process. A published config gets `tracking.root_spans` (`true`)
+- Spans: an async job polled again keeps the `span_id` and `parent_span_id` of the call that started it
+- Config: if you removed a built-in provider or pricing class from your published config to turn it off, set it to `false` instead: built-ins now stay active underneath your config
+- Budgets: routes that relied on the `spectra.budget` middleware reading `provider` / `model` from the request input must pass them as arguments: `spectra.budget:openai,gpt-4o`
 - `BudgetExceeded` listeners that treat `currentUsage` and `limit` as cents should check `limitType` first: token, request and allow-list blocks now fire it too
-- If you turned off `store_system_prompts` or `store_tools`, rows saved before this release still hold system prompts and tools in their `request` column. Prune or clear them if that matters to you
+- Storage: if you turned off `store_system_prompts` or `store_tools`, rows saved before this release still hold system prompts and tools in their `request` column. Prune or clear them if that matters to you
 - `RequestContext`'s list properties (`messages`, `tools`, `requestParameters`, `requestData`, `toolCalls`, `toolCallCounts`, `mediaStoragePath`) are `array` and start as `[]` instead of `null`. Code that checks one with `=== null` should check `=== []` (or `blank()`), and code that assigns `null` should assign `[]`. Passing `null` for one to `new RequestContext([...])` still works and means empty. Empty lists are still stored as NULL
 - `SpectraRequest::failed()` now includes 3xx responses, and `UsageQueryBuilder` / `HasAiUsageStats` costs and latencies leave out failed requests, so `->failed()->totalCostCents()` is 0. Recheck reports built on the old numbers
 
@@ -138,7 +138,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 #### Upgrading
 
 - Nothing to do. With `use_scraped_prices` off (the default), requests are priced as before, and a published `config/spectra.php` gets the new `costs.use_scraped_prices`, `costs.scraped_prices_path` and `costs.firecrawl` keys with their defaults, so you don't need to publish it again
-- If one of your pricing classes already has a method called `sources()`, it now overrides `ProviderPricing::sources()`: it must be public and return the list of pricing page URLs (or `[]`)
+- Pricing: if one of your pricing classes already has a method called `sources()`, it now overrides `ProviderPricing::sources()`: it must be public and return the list of pricing page URLs (or `[]`)
 
 ## v2.5.0 - 2026-10-29
 
@@ -163,12 +163,12 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - fal.ai video prices: Kling 3.0 Pro (`fal-ai/kling-video/v3/pro/text-to-video`), Veo 3.1, Veo 3.1 Fast, Veo 3.1 Lite and Wan 2.2 A14B (`fal-ai/wan/v2.2-a14b/text-to-video`), per second of video. The price follows the request's `resolution` and `generate_audio`, and Wan's `num_frames` is counted at 16 frames per second, as fal bills it. Previously fal.ai videos were recorded at $0
 - `ExtractsCostMultiplierForModel` contract: a cost multiplier that depends on the model as well as the request
 - `Spectra::propagationHeaders()` and the `spectra.trace` middleware continue a trace and its tags across your own services. The caller sends a W3C `baggage` header with the trace id and its current tags, and the AI calls of the receiving route (and its jobs) join that trace with those tags. Previously a loopback call, such as a tool on your own MCP server, started a new, untagged trace
-- Queued jobs inherit the tags of the work that dispatched them: global tags and the `withTags()` tags around the dispatch, down a chain of jobs too. Set `spectra.tracking.propagate_tags` (`SPECTRA_PROPAGATE_TAGS`) to `false` to turn this off
+- Tags: queued jobs inherit the tags of the work that dispatched them: global tags and the `withTags()` tags around the dispatch, down a chain of jobs too. Set `spectra.tracking.propagate_tags` (`SPECTRA_PROPAGATE_TAGS`) to `false` to turn this off
 - `Spectra::currentTags()` returns the tags a request tracked right now would get
 
 #### Fixed
 
-- A polled async job was measured from its result fetch alone, which has no request body, so anything only the submit request states was lost. A queued fal.ai video had no length and cost nothing. Spectra now remembers the submit request's body with the job's model (in the cache, for a day, without inline `data:` files) and uses it for the result. When request data is stored, the result row keeps that body too, so it shows the prompt
+- Tracking: a polled async job was measured from its result fetch alone, which has no request body, so anything only the submit request states was lost. A queued fal.ai video had no length and cost nothing. Spectra now remembers the submit request's body with the job's model (in the cache, for a day, without inline `data:` files) and uses it for the result. When request data is stored, the result row keeps that body too, so it shows the prompt
 
 ## v2.3.1 - 2026-10-25
 
@@ -182,7 +182,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 #### Added
 
 - Azure OpenAI requests are now tracked as `openai`. The `{resource}.openai.azure.com`, `{resource}.cognitiveservices.azure.com` and `{resource}.services.ai.azure.com` hosts are detected, and Azure paths (`/openai/deployments/{deployment}/...`, `/openai/v1/...`, `/openai/responses`) are mapped to the OpenAI `/v1` endpoints. Previously these requests were skipped without any error
-- Custom Azure domains are detected through `spectra.endpoint_urls.azure` or laravel-ai's `ai.providers.azure.url` (`AZURE_OPENAI_URL`), without replacing the OpenAI base URL
+- Azure OpenAI: custom Azure domains are detected through `spectra.endpoint_urls.azure` or laravel-ai's `ai.providers.azure.url` (`AZURE_OPENAI_URL`), without replacing the OpenAI base URL
 - `Provider::normalizeEndpoint()` lets a provider map another path layout onto its endpoints before matching
 
 ## v2.2.0 - 2026-10-21
@@ -255,8 +255,6 @@ catalog, and ships a redesigned dashboard. See [UPGRADE.md](UPGRADE.md).
 
 ## v1.3.0 - 2026-07-04
 
-### 1.3.0 - 2026-07-04
-
 #### Added
 
 - Cohere embed and rerank handlers (`/v1` + `/v2` endpoints, billed via `meta.billed_units`) — embed/rerank requests were previously tracked with zero metrics and $0 cost
@@ -298,52 +296,9 @@ catalog, and ships a redesigned dashboard. See [UPGRADE.md](UPGRADE.md).
 - Migrations are published via `publishesMigrations()`; `per_page` is clamped to 100; `composer analyse` sets a 1G memory limit
 - Documentation drift fixed: pricing map (fal.ai, Scaleway, ElevenLabs), budget defaults, new storage key, and budget pre-flight semantics
 
-## 1.3.0 - 2026-07-04
+## v1.2.0 - 2026-06-28
 
-### Added
-
-- Cohere embed and rerank handlers (`/v1` + `/v2` endpoints, billed via `meta.billed_units`) — embed/rerank requests were previously tracked with zero metrics and $0 cost
-- Groq Whisper transcription handler (per-minute billing from the `verbose_json` duration)
-- Mistral Voxtral audio handlers: transcription (per-minute via `usage.prompt_audio_seconds`) and TTS (per-character, with base64 `audio_data` media persistence)
-- `ElevenLabsPricing` catalog (per-character rates from the published API pricing) — ElevenLabs TTS previously recorded $0; Ollama's deliberate $0 is now documented in the pricing docs
-- `SearchMetrics` and a `searchCount` on the request context, so per-search models bill the actual number of billed search units (and never bill failed requests)
-- Post-persist budget reporting: `BudgetExceeded` (with `wasBlocked = false`) now fires when the request that actually crosses a cost limit is recorded — pre-flight middleware can only see spend from previous requests (documented in the budgets guide)
-- `spectra.storage.store_request_data` config key to control storage of raw API request parameters independently of `store_prompts` (defaults to following `store_prompts`)
-- `PricingTier::Hd` for DALL·E 3 HD and Sora Pro — explicit `'hd'` tier requests previously fell back to standard pricing silently
-- `total_reasoning_tokens` in `SpectraDailyStat::getAggregatedStats()`
-- fal.ai and Scaleway provider logos in the dashboard
-- Provider tracking tests for OpenRouter, Ollama, and Scaleway; endpoint tests for the media, config, and detail controllers; `EnforceBudgetLimit` middleware tests; characterization tests locking the dashboard endpoint numbers
-
-### Fixed
-
-- OpenRouter image-generation responses were processed by the chat handler (wrong registration order), losing image counts, media persistence, and per-image cost
-- Dashboard cost and latency aggregates were inconsistent: nine queries (overview stats, model-type breakdowns, top models, and the trackable stats/usage/latency endpoints) included failed requests in cost and latency sums while the rest excluded them — cost and latency now aggregate over successful (2xx) requests everywhere, while request counts still include failures
-- `Spectra::costs()->monthly()` crashed on SQLite (`EXTRACT()` is not supported) — replaced with a driver-aware period expression covering SQLite, MySQL, and PostgreSQL
-- Fractional-cent costs were truncated to integers in `UsageQueryBuilder::stats()`, `totalCostCents()`, and the `HasAiUsageStats` trait (`UsageStats::$totalCostInCents` is now a float)
-- 3xx responses were counted in `request_count` but excluded from both `successful_count` and `failed_count`, breaking `success + failed = total`; anything outside 2xx now counts as failed
-- Costs-by-user grouped by `trackable_id` alone, merging different polymorphic types that share an id; it now groups by type + id and resolves a `user_name` for the dashboard
-- A stream that failed before its first chunk leaked its pending Guzzle context to the next stream, which inherited the wrong provider/model; empty streams no longer persist all-zero request rows
-- Budget sums could exceed a limit through float noise alone — sums are rounded to storage precision before the conservative ceil
-- Video downloads always sent `Content-Type: video/mp4`; the real stored extension (webm/mov/avi) is now used for the mime type and filename
-- `spectra:rebuild-stats` silently did nothing when `--from` was after `--to` (now errors), and gained the missing `#[AsCommand]` attribute
-- A typo'd `SPECTRA_DASHBOARD_LAYOUT` silently disabled stat filtering; unknown layouts now log a warning
-- OpenAI Responses API image handler checked `prompt_tokens_details` before `input_tokens_details` for cached tokens
-- Missing `dist/` assets now log an actionable warning instead of rendering a blank, unstyled dashboard; removed favicon references to files that don't ship
-
-### Changed
-
-- Removed all 21 `src/Queries/` classes — dashboard aggregates now compose an internal `Support\Query\RequestAggregateQuery` fluent builder that owns the shared scaffolding (date ranges, success filtering, layout/trackable scoping, aggregate select bundles); the cost select alias is standardized to `cost`
-- `SpectraRequest` now hides the raw `request`/`response` payloads from serialization by default — the requests list endpoint ships lightweight rows, and the detail endpoint re-exposes them explicitly
-- The requests-list search matches model names and exact ids (request id, response id, trace id) instead of running unindexable `LIKE` scans over the full response payload
-- Streaming detection is shared via `Support\Tracking\StreamDetector` instead of duplicated across the Guzzle middleware and the Http macro
-- `ModelDefinition::pricingUnit()` accepts a `PricingUnit` enum or string and validates it
-- `HasAiBudget::getBudgetStatus()` defaults to the configured budget provider/model instead of a hardcoded `gpt-4`
-- Migrations are published via `publishesMigrations()`; `per_page` is clamped to 100; `composer analyse` sets a 1G memory limit
-- Documentation drift fixed: pricing map (fal.ai, Scaleway, ElevenLabs), budget defaults, new storage key, and budget pre-flight semantics
-
-## 1.2.0 - 2026-06-28
-
-### Added
+#### Added
 
 - `Spectra::forUser()` now accepts an integer user ID and loads the configured auth user model (`config('auth.providers.users.model')`) automatically, in addition to a `Model` instance
 - Date-suffix tolerant pricing lookups — an undated catalog entry (e.g. `claude-opus-4-8`) now matches the dated snapshot id the API returns (e.g. `claude-opus-4-8-20260528`), and OpenAI-style `gpt-4o-2024-08-06` resolves to `gpt-4o`
@@ -353,14 +308,14 @@ catalog, and ships a redesigned dashboard. See [UPGRADE.md](UPGRADE.md).
 - `PricingCatalogInvariantsTest` and per-unit cost tests guarding against models that silently bill 0
 - `declare(strict_types=1)` across the codebase, enforced via a `declare_strict_types` Pint rule
 
-### Fixed
+#### Fixed
 
 - Cohere `rerank-v3.5` (and any `search`-unit model) silently billed $0 because the pricing unit was unsupported and fell through to the token path
 - Cost was calculated twice — `RequestContext` produced a token-only cost that `RequestPersister` silently overwrote. Both now share a single `RequestCostCalculator`, so the in-memory cost is unit-aware and matches the persisted value
 - Corrected stale Mistral prices (Medium 3.5, Small 4, and `mistral-embed` which was priced 10× too low)
 - `PruneCommand::handle()` now returns an exit code
 
-### Changed
+#### Changed
 
 - Refreshed the built-in pricing catalog to current provider rates (Anthropic, OpenAI, Google, xAI, Mistral)
 - Collapsed duplicated provider handler logic into a shared `OpenAiCompatibleChatHandler` base class and an `ExtractsModelField` trait
@@ -370,48 +325,39 @@ catalog, and ships a redesigned dashboard. See [UPGRADE.md](UPGRADE.md).
 
 ## v1.1.0 - 2026-06-05
 
-### 1.1.0
-
 #### Fixed
 
 - Widen `trackable_id` from UUID to string on `spectra_requests` and `spectra_daily_stats` so trackable models can use UUIDs, ULIDs, or integer primary keys (a new follow-up migration handles the schema change)
 - Remove `formatted_expires_at` from `SpectraRequest::$appends` and append it explicitly in `GetRequestDetails`, preventing `MissingAttributeException` on partial-select endpoints when the consuming app enables strict-mode models
 
-## 1.1.0
+## v1.0.0
 
-### Fixed
-
-- Widen `trackable_id` from UUID to string on `spectra_requests` and `spectra_daily_stats` so trackable models can use UUIDs, ULIDs, or integer primary keys (a new follow-up migration handles the schema change)
-- Remove `formatted_expires_at` from `SpectraRequest::$appends` and append it explicitly in `GetRequestDetails`, preventing `MissingAttributeException` on partial-select endpoints when the consuming app enables strict-mode models
-
-## 1.0.0
-
-### Added
+#### Added
 
 - Add support for [Scaleway](https://www.scaleway.com) provider (Generative APIs: chat, embeddings, and Whisper transcription)
 
-## 1.0.0-beta.1 - 2026-06-03
+## v1.0.0-beta.1 - 2026-06-03
 
-### Added
+#### Added
 
 - Add support for Laravel 13
 
-## 0.2.0 - 2026-01-26
+## v0.2.0 - 2026-01-26
 
-### Breaking Changes
+#### Breaking Changes
 
 - Extract `extractModelFromResponse()` from `Handler` contract into a new `ExtractsModelFromResponse` interface. Custom handlers that implement this method must now implement `ExtractsModelFromResponse` separately.
 
-### Added
+#### Added
 
 - Add support for [fal.ai](https://fal.ai) provider (image generation)
 - Add `ExtractsModelFromResponse` contract for handlers that extract model names from response payloads
 
-### Changed
+#### Changed
 
 - Make GPT-5.2 the default model in `budget` instead of GPT-4
 - Update `custom-providers.md` documentation
 
-## 0.1.0 - 2026-01-16
+## v0.1.0 - 2026-01-16
 
 - Initial release

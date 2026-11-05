@@ -203,6 +203,7 @@ Spectra keeps the "already sent" mark in your application's default cache store,
 
 One exception: a blocked request always dispatches `BudgetExceeded` (with `wasBlocked = true`), every time. See [`BudgetExceeded`](#budget-exceeded-event).
 
+<a name="budget-threshold-reached-event"></a>
 ### `BudgetThresholdReached`
 
 Fired when usage hits the warning or critical threshold:

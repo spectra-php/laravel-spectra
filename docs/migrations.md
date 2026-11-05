@@ -24,7 +24,13 @@ Spectra ships these migration files:
 | `add_v2_tracking_columns_to_spectra_tables` | Adds the Spectra 2.0 columns (see below) |
 | `add_spans_to_spectra_tables` | Creates `spectra_spans` and adds `span_id` to `spectra_requests`, for [spans](/usage#spans) |
 | `add_trace_timing_columns_to_spectra_tables` | Adds `started_at` (to the millisecond) and `origin` for [traces](/usage#traces), with an index on `trace_id` and `started_at` |
+| `create_spectra_scores_table` | Creates `spectra_scores`, for [scores](/scores) (see [below](#scores-migration)) |
+| `add_prompt_columns_to_spectra_requests_table` | Adds `prompt_name` and `prompt_version` to `spectra_requests`, for [prompt versions](/prompts) (see [below](#prompt-columns-migration)) |
+| `add_error_fingerprint_to_spectra_requests_table` | Adds `error_fingerprint` to `spectra_requests`, for the [Errors screen](/dashboard#errors) (see [below](#error-fingerprint-migration)) |
+| `create_spectra_annotation_items_table` | Creates `spectra_annotation_items`, for [annotation queues](/annotations) (see [below](#annotation-migration)) |
+| `create_spectra_evaluation_tables` | Creates `spectra_datasets`, `spectra_dataset_examples`, `spectra_eval_runs` and `spectra_eval_results`, for [evaluations](/evaluations) (see [below](#evaluation-migration)) |
 
+<a name="publishing-schema-migrations"></a>
 ### Publishing Schema Migrations
 
 Publish the schema migrations to your application:
@@ -38,7 +44,7 @@ This copies the migration files to `database/migrations/`. By default, Laravel g
 <a name="v2-migration"></a>
 ## The 2.0 Migration
 
-Spectra 2.0 adds columns for prompt-cache usage, page counts, error details, the incoming trace's parent span, conversation ids, and request origin. Earlier versions tracked some of these values in memory but never saved them.
+Spectra 2.0 adds columns for prompt-cache usage, page counts, error details, the incoming trace's parent span, conversation ids, and request origin.
 
 | Table | New columns |
 | --- | --- |
@@ -137,6 +143,7 @@ php artisan spectra:install
 
 Until it runs, the Evals screen asks you to, and `Spectra::dataset()` and `spectra:eval` fail with a database error.
 
+<a name="custom-database-connection"></a>
 ### Custom Database Connection
 
 All Spectra migrations use the `spectra.storage.connection` config value. To store Spectra data in a separate database, set the connection in `config/spectra.php`:

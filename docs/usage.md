@@ -246,6 +246,7 @@ Spectra records the request when the stream ends. This happens when your code re
 
 An error event inside a stream (for example, an Anthropic `error` event) is recorded as a failed request. Spectra also measures the time to the first token of each stream.
 
+<a name="with-the-laravel-http-client"></a>
 ### With the Laravel HTTP Client
 
 ```php
@@ -272,6 +273,7 @@ while (! $body->eof()) {
 // Spectra records the request when the body has been read to the end.
 ```
 
+<a name="with-the-openai-sdk"></a>
 ### With the OpenAI SDK
 
 ```php
@@ -293,6 +295,7 @@ foreach ($stream as $response) {
 > [!IMPORTANT]
 > When you stream from the OpenAI Chat Completions API (`/v1/chat/completions`), you must include `'stream_options' => ['include_usage' => true]` in your request. Without it, OpenAI does not send token usage in the stream, and Spectra records zero tokens and zero cost. The Responses API (`/v1/responses`) doesn't need this, because it always includes usage in the `response.completed` event.
 
+<a name="streamed-image-generation"></a>
 ### Streamed Image Generation (OpenAI Responses API)
 
 OpenAI's Responses API can stream image generation. Spectra tracks these streams too. When [media persistence](/configuration#media-persistence) is enabled, it stores the final image when the stream finishes.
@@ -454,6 +457,7 @@ $answer = Spectra::span('answer-question', function () use ($question) {
 
 Spans are stored in the `spectra_spans` table. They are never billed or counted as requests, and `spectra:prune` deletes them with the requests. The trace page draws the tree: each span with its children indented under it. In the screenshot above, the embedding call sits inside the `retrieve-context` span, which sits inside the `POST /api/chat` request.
 
+<a name="setting-the-trace-yourself"></a>
 ### Setting the Trace Yourself
 
 ```php
@@ -476,7 +480,7 @@ foreach ($tickets as $ticket) {
 Spectra::track('openai', 'gpt-4o', fn () => ..., ['trace_id' => $traceId]);
 ```
 
-To give every AI call its own trace id (the 1.x behaviour), set
+To give every AI call its own trace id, set
 `SPECTRA_TRACE_PER_REQUEST=false`. See [Tracking Context](/configuration#tracking-context).
 
 <a name="global-configuration"></a>
@@ -486,6 +490,7 @@ These methods set defaults for every request tracked after them. Use them in mid
 
 Global settings are reset between queued jobs and Octane requests (`Spectra` is a scoped service). They do not leak from one job or request into the next one. Set them where the work happens: in the job, or in middleware.
 
+<a name="global-tags"></a>
 ### Global Tags
 
 Attach tags to every tracked request, for example to record the environment or deployment:
@@ -494,6 +499,7 @@ Attach tags to every tracked request, for example to record the environment or d
 Spectra::addGlobalTags(['production', 'us-east-1']);
 ```
 
+<a name="global-pricing-tier"></a>
 ### Global Pricing Tier
 
 Set the pricing tier for all requests, so their costs use the right tier. This helps when you process batch jobs or have a specific pricing agreement. A tier set this way wins over the tier in the response or request:
@@ -502,6 +508,7 @@ Set the pricing tier for all requests, so their costs use the right tier. This h
 Spectra::withPricingTier('batch');
 ```
 
+<a name="global-trackable"></a>
 ### Global Trackable
 
 Associate all requests with a specific user or Eloquent model. This wins over the signed-in user:
@@ -517,6 +524,7 @@ Spectra::forUser(1);
 Spectra::forTrackable($team);
 ```
 
+<a name="combining-and-clearing-globals"></a>
 ### Combining and Clearing Globals
 
 You can chain global settings, and clear them when you no longer need them:
