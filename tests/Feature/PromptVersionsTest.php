@@ -105,3 +105,21 @@ it('saves calls without the prompt columns, keeping the trace columns, until the
         ->and(SpectraRequest::query()->whereNull('started_at')->count())->toBe(0);
     Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => str_contains($message, 'prompt_name, prompt_version'));
 });
+
+it('lists no versions and says the migration is missing until it runs', function () {
+    Schema::table('spectra_requests', function ($table) {
+        $table->dropIndex('spectra_requests_prompt_index');
+        $table->dropColumn(['prompt_name', 'prompt_version']);
+    });
+    Log::spy();
+
+    // SQLite reads the missing quoted column as a string, so an unguarded
+    // query would list these calls under a "prompt_name" prompt.
+    trackPromptCall();
+    trackPromptCall();
+
+    $response = app()->call([app(PromptsController::class), '__invoke'], ['request' => new Request(['period' => 'all'])])->toArray();
+
+    expect($response['migrated'])->toBeFalse()
+        ->and($response['versions'])->toBeEmpty();
+});

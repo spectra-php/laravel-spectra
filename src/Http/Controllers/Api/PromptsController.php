@@ -19,6 +19,6 @@ class PromptsController extends BaseApiController
      */
     public function __invoke(Request $request, GetPromptVersions $getPromptVersions): PromptsResponse
     {
-        return new PromptsResponse($getPromptVersions(DateRange::fromRequest($request)));
+        return $getPromptVersions(DateRange::fromRequest($request));
     }
 }

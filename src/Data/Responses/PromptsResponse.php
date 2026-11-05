@@ -17,8 +17,10 @@ readonly class PromptsResponse extends DataTransferObject
      * Create a new prompts response instance.
      *
      * @param  Collection<int, PromptVersion>  $versions
+     * @param  bool  $migrated  Whether the prompt migration has run
      */
     public function __construct(
         public Collection $versions,
+        public bool $migrated,
     ) {}
 }

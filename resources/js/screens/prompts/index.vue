@@ -16,6 +16,7 @@ const loading = useLoading();
 
 loading.value = true;
 const versions = ref([]);
+const migrated = ref(true);
 
 const prompts = computed(() => {
     const groups = new Map();
@@ -30,7 +31,9 @@ const prompts = computed(() => {
 const load = async () => {
     loading.value = true;
     try {
-        versions.value = (await apiRequest('get', '/prompts?' + buildQueryParams().toString())).versions || [];
+        const data = await apiRequest('get', '/prompts?' + buildQueryParams().toString());
+        versions.value = data.versions || [];
+        migrated.value = data.migrated !== false;
     } catch (error) {
         console.error('Failed to load prompts:', error);
     } finally {
@@ -68,6 +71,11 @@ onMounted(async () => {
         />
 
         <div v-if="loading" class="card"><Skeleton variant="table-row" :lines="6" /></div>
+
+        <!-- Upgrades: the prompt columns are missing until the migration runs -->
+        <div v-else-if="!migrated" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            Calls are tagged with their prompt once the prompt migration runs. Run <code class="font-mono">php artisan spectra:install</code> to publish and run it.
+        </div>
 
         <div v-else-if="!prompts.length" class="card">
             <div class="empty-state">

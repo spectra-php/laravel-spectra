@@ -7,7 +7,9 @@ namespace Spectra\Actions\Prompts;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Schema;
 use Spectra\Data\PromptVersion;
+use Spectra\Data\Responses\PromptsResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
 use Spectra\Support\DateRange;
@@ -25,11 +27,25 @@ class GetPromptVersions
     private const LIMIT = 100;
 
     /**
-     * Get one row per prompt template and version.
+     * Get one row per prompt template and version, none until the prompt
+     * migration has run.
+     */
+    public function __invoke(DateRange $dateRange): PromptsResponse
+    {
+        $migrated = $this->hasPromptColumns();
+
+        return new PromptsResponse(
+            versions: $migrated ? $this->versions($dateRange) : collect(),
+            migrated: $migrated,
+        );
+    }
+
+    /**
+     * One row per prompt template and version.
      *
      * @return Collection<int, PromptVersion>
      */
-    public function __invoke(DateRange $dateRange): Collection
+    private function versions(DateRange $dateRange): Collection
     {
         return RequestAggregateQuery::make($dateRange)
             ->withPrompt()
@@ -92,6 +108,20 @@ class GetPromptVersions
                 'average' => $score->average !== null ? round((float) $score->average, 4) : null,
             ])
             ->all(), [], report: false);
+    }
+
+    /**
+     * Determine if the prompt migration has run. Without it MySQL and
+     * PostgreSQL reject the query, and SQLite reads the quoted column name as
+     * a string and groups every call under it.
+     */
+    private function hasPromptColumns(): bool
+    {
+        return rescue(
+            fn () => Schema::connection((new SpectraRequest)->getConnectionName())->hasColumns('spectra_requests', ['prompt_name', 'prompt_version']),
+            false,
+            report: false,
+        );
     }
 
     /**
