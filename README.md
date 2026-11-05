@@ -34,72 +34,72 @@ Spectra is an AI observability package for Laravel, built to track AI requests, 
 <table>
   <tr>
     <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/requests.png" target="_blank" rel="noopener"><img alt="The requests list" src="docs/public/images/dashboard/thumbnails/requests.png" width="100%" /></a>
-      <p align="center"><strong>Requests</strong><br />Every AI call with its usage, cost and latency</p>
+      <a href="docs/public/images/dashboard/requests.png?raw=true" target="_blank" rel="noopener"><img alt="The requests list" src="docs/public/images/dashboard/thumbnails/requests.png" width="100%" /></a>
+      <p align="center"><strong>Requests</strong><br />Usage, cost and latency per call</p>
     </td>
     <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/request-detail.png" target="_blank" rel="noopener"><img alt="A single request" src="docs/public/images/dashboard/thumbnails/request-detail.png" width="100%" /></a>
-      <p align="center"><strong>Request details</strong><br />Its trace, token breakdown, cache hits, cost split and payload</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/traces.png" target="_blank" rel="noopener"><img alt="The traces list" src="docs/public/images/dashboard/thumbnails/traces.png" width="100%" /></a>
-      <p align="center"><strong>Traces</strong><br />The AI calls of one request, job or command</p>
-    </td>
-    <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/trace-detail.png" target="_blank" rel="noopener"><img alt="A trace timeline" src="docs/public/images/dashboard/thumbnails/trace-detail.png" width="100%" /></a>
-      <p align="center"><strong>Trace timeline</strong><br />Every call, span and tool on one timeline</p>
+      <a href="docs/public/images/dashboard/request-detail.png?raw=true" target="_blank" rel="noopener"><img alt="A single request" src="docs/public/images/dashboard/thumbnails/request-detail.png" width="100%" /></a>
+      <p align="center"><strong>Request details</strong><br />Trace, tokens, cache hits and payload</p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/conversations.png" target="_blank" rel="noopener"><img alt="The conversations list" src="docs/public/images/dashboard/thumbnails/conversations.png" width="100%" /></a>
-      <p align="center"><strong>Conversations</strong><br />Multi-turn chats with their turns and cost</p>
+      <a href="docs/public/images/dashboard/traces.png?raw=true" target="_blank" rel="noopener"><img alt="The traces list" src="docs/public/images/dashboard/thumbnails/traces.png" width="100%" /></a>
+      <p align="center"><strong>Traces</strong><br />AI calls grouped by request or job</p>
     </td>
     <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/conversation-detail.png" target="_blank" rel="noopener"><img alt="A conversation transcript" src="docs/public/images/dashboard/thumbnails/conversation-detail.png" width="100%" /></a>
-      <p align="center"><strong>Conversation transcript</strong><br />Each turn with its messages and running cost</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/errors.png" target="_blank" rel="noopener"><img alt="The errors screen" src="docs/public/images/dashboard/thumbnails/errors.png" width="100%" /></a>
-      <p align="center"><strong>Errors</strong><br />Failed calls grouped by cause, with their trend</p>
-    </td>
-    <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/prompts.png" target="_blank" rel="noopener"><img alt="The prompts screen" src="docs/public/images/dashboard/thumbnails/prompts.png" width="100%" /></a>
-      <p align="center"><strong>Prompts</strong><br />Each prompt version's cost, latency, errors and scores</p>
+      <a href="docs/public/images/dashboard/trace-detail.png?raw=true" target="_blank" rel="noopener"><img alt="A trace timeline" src="docs/public/images/dashboard/thumbnails/trace-detail.png" width="100%" /></a>
+      <p align="center"><strong>Trace timeline</strong><br />Calls, spans and tools in order</p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/eval-run.png" target="_blank" rel="noopener"><img alt="An evaluation run" src="docs/public/images/dashboard/thumbnails/eval-run.png" width="100%" /></a>
-      <p align="center"><strong>Evals</strong><br />Run your AI code over a dataset and compare runs</p>
+      <a href="docs/public/images/dashboard/conversations.png?raw=true" target="_blank" rel="noopener"><img alt="The conversations list" src="docs/public/images/dashboard/thumbnails/conversations.png" width="100%" /></a>
+      <p align="center"><strong>Conversations</strong><br />Multi-turn chats and their cost</p>
     </td>
     <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/review-queue.png" target="_blank" rel="noopener"><img alt="A review queue" src="docs/public/images/dashboard/thumbnails/review-queue.png" width="100%" /></a>
-      <p align="center"><strong>Review</strong><br />Label traces by hand, one after the other</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/costs.png" target="_blank" rel="noopener"><img alt="The costs screen" src="docs/public/images/dashboard/thumbnails/costs.png" width="100%" /></a>
-      <p align="center"><strong>Costs</strong><br />Spend over time, by provider, model and user</p>
-    </td>
-    <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/trackables.png" target="_blank" rel="noopener"><img alt="The trackables list" src="docs/public/images/dashboard/thumbnails/trackables.png" width="100%" /></a>
-      <p align="center"><strong>Trackables</strong><br />Usage and spend per user, team or any model</p>
+      <a href="docs/public/images/dashboard/conversation-detail.png?raw=true" target="_blank" rel="noopener"><img alt="A conversation transcript" src="docs/public/images/dashboard/thumbnails/conversation-detail.png" width="100%" /></a>
+      <p align="center"><strong>Conversation transcript</strong><br />Each turn and its running cost</p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/trackable-detail.png" target="_blank" rel="noopener"><img alt="One user's usage" src="docs/public/images/dashboard/thumbnails/trackable-detail.png" width="100%" /></a>
-      <p align="center"><strong>Trackable details</strong><br />One user's spend, models and latest requests</p>
+      <a href="docs/public/images/dashboard/errors.png?raw=true" target="_blank" rel="noopener"><img alt="The errors screen" src="docs/public/images/dashboard/thumbnails/errors.png" width="100%" /></a>
+      <p align="center"><strong>Errors</strong><br />Failed calls grouped by cause</p>
     </td>
     <td width="50%">
-      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/overview-dark.png" target="_blank" rel="noopener"><img alt="The overview in dark mode" src="docs/public/images/dashboard/thumbnails/overview-dark.png" width="100%" /></a>
-      <p align="center"><strong>Dark mode</strong><br />Follows your system theme, or toggle it</p>
+      <a href="docs/public/images/dashboard/prompts.png?raw=true" target="_blank" rel="noopener"><img alt="The prompts screen" src="docs/public/images/dashboard/thumbnails/prompts.png" width="100%" /></a>
+      <p align="center"><strong>Prompts</strong><br />Cost, latency and scores per version</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <a href="docs/public/images/dashboard/eval-run.png?raw=true" target="_blank" rel="noopener"><img alt="An evaluation run" src="docs/public/images/dashboard/thumbnails/eval-run.png" width="100%" /></a>
+      <p align="center"><strong>Evals</strong><br />Datasets, runs and comparisons</p>
+    </td>
+    <td width="50%">
+      <a href="docs/public/images/dashboard/review-queue.png?raw=true" target="_blank" rel="noopener"><img alt="A review queue" src="docs/public/images/dashboard/thumbnails/review-queue.png" width="100%" /></a>
+      <p align="center"><strong>Review</strong><br />Label traces by hand</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <a href="docs/public/images/dashboard/costs.png?raw=true" target="_blank" rel="noopener"><img alt="The costs screen" src="docs/public/images/dashboard/thumbnails/costs.png" width="100%" /></a>
+      <p align="center"><strong>Costs</strong><br />Spend by provider, model and user</p>
+    </td>
+    <td width="50%">
+      <a href="docs/public/images/dashboard/trackables.png?raw=true" target="_blank" rel="noopener"><img alt="The trackables list" src="docs/public/images/dashboard/thumbnails/trackables.png" width="100%" /></a>
+      <p align="center"><strong>Trackables</strong><br />Spend per user or team</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <a href="docs/public/images/dashboard/trackable-detail.png?raw=true" target="_blank" rel="noopener"><img alt="One user's usage" src="docs/public/images/dashboard/thumbnails/trackable-detail.png" width="100%" /></a>
+      <p align="center"><strong>Trackable details</strong><br />One user's spend and requests</p>
+    </td>
+    <td width="50%">
+      <a href="docs/public/images/dashboard/overview-dark.png?raw=true" target="_blank" rel="noopener"><img alt="The overview in dark mode" src="docs/public/images/dashboard/thumbnails/overview-dark.png" width="100%" /></a>
+      <p align="center"><strong>Dark mode</strong><br />Follows your system theme</p>
     </td>
   </tr>
 </table>
