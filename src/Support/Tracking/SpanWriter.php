@@ -20,7 +20,7 @@ use Throwable;
  * the exporter can take spans.
  *
  * A span is written once per span id, so a retried queue job changes
- * nothing. Until the app runs the migration that adds the spans table,
+ * nothing; only a stand-in a dispatched job saved for it gives way. Until the app runs the migration that adds the spans table,
  * spans are skipped with one warning; a failure never reaches the app.
  */
 class SpanWriter
@@ -77,12 +77,17 @@ class SpanWriter
      */
     public function save(array $attributes): void
     {
+        $inferred = $this->isInferred($attributes['attributes'] ?? null);
+
         if (config('spectra.storage.store_requests', true)) {
             try {
                 SpectraSpan::query()->create($attributes);
             } catch (UniqueConstraintViolationException) {
-                // An earlier attempt saved this span already.
-                return;
+                // An earlier attempt saved this span already, or a job it
+                // dispatched saved a stand-in for it, which the span replaces.
+                if ($inferred || ! $this->replaceInferred($attributes)) {
+                    return;
+                }
             } catch (QueryException $e) {
                 throw_unless($this->isMissingTable($e), $e);
 
@@ -92,9 +97,37 @@ class SpanWriter
             }
         }
 
-        if (config('spectra.integrations.opentelemetry.enabled') && $this->exporter instanceof ExportsSpans) {
+        // A stand-in stays out of OpenTelemetry: the span may still arrive itself.
+        if (! $inferred && config('spectra.integrations.opentelemetry.enabled') && $this->exporter instanceof ExportsSpans) {
             rescue(fn () => $this->exporter->exportSpan($this->exportData(new SpectraSpan($attributes))));
         }
+    }
+
+    /**
+     * Overwrite the stand-in a dispatched job saved for this span, if that is
+     * what holds its id.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function replaceInferred(array $attributes): bool
+    {
+        $existing = SpectraSpan::query()->where('span_id', $attributes['span_id'] ?? null)->first();
+
+        if ($existing === null || ! $this->isInferred($existing->attributes)) {
+            return false;
+        }
+
+        $existing->fill($attributes)->save();
+
+        return true;
+    }
+
+    /**
+     * Whether the span is a stand-in a job saved for the unit that dispatched it.
+     */
+    protected function isInferred(mixed $attributes): bool
+    {
+        return is_array($attributes) && ($attributes[SpanStack::INFERRED_ATTRIBUTE] ?? false) === true;
     }
 
     /**

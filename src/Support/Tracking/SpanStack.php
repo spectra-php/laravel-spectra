@@ -21,6 +21,13 @@ use Throwable;
  * the parent; with none open, it is the span the work was started from (the
  * incoming `traceparent`, or the span that dispatched the job).
  *
+ * A queued job's parent may be a unit that made no AI call, so it is never
+ * saved, and the job would hang off a span that doesn't exist. So a dispatch
+ * hands the job that unit's span, and the unsaved spans the unit was handed
+ * itself ({@see pendingForDispatch()}); the job saves them with its own span,
+ * marked `spectra.inferred` and ended when the job was dispatched. The unit's
+ * own span replaces that stand-in if the unit is saved after all.
+ *
  * Bound as scoped: queue workers and Octane start each job and request with
  * an empty stack. A synchronous job pushes its unit on top of the request's.
  */
@@ -30,6 +37,12 @@ class SpanStack
     protected const HTTP_UNIT = 'http';
 
     protected const COMMAND_UNIT = 'command';
+
+    /** The most unsaved spans a job carries: the nearest ones when a chain runs longer. */
+    protected const MAX_PENDING_SPANS = 16;
+
+    /** Marks a span a job saved for the unit that dispatched it. */
+    public const INFERRED_ATTRIBUTE = 'spectra.inferred';
 
     /** The command the user ran, so a command it calls doesn't close its span. */
     protected ?string $commandName = null;
@@ -44,7 +57,7 @@ class SpanStack
     /**
      * Open units of work, innermost last.
      *
-     * @var array<string, array{kind: SpanKind, name: string, started_at: CarbonInterface, span_id: ?string, parent_span_id: ?string, trace_id: ?string, used: bool, opened: int}>
+     * @var array<string, array{kind: SpanKind, name: string, started_at: CarbonInterface, span_id: ?string, parent_span_id: ?string, trace_id: ?string, used: bool, opened: int, pending: list<array<string, mixed>>}>
      */
     protected array $units = [];
 
@@ -77,6 +90,7 @@ class SpanStack
             'trace_id' => null,
             'used' => false,
             'opened' => ++$this->opened,
+            'pending' => [],
         ];
     }
 
@@ -103,6 +117,17 @@ class SpanStack
             error: $error,
             attributes: [],
         ), deferrable: false);
+
+        foreach ($unit['pending'] as $pending) {
+            // A unit still open here (a synchronous job's request) saves its own span.
+            if ($this->unitKeyOf($pending['span_id']) === null) {
+                $this->writer->record([
+                    ...$pending,
+                    'started_at' => Date::parse($pending['started_at']),
+                    'ended_at' => Date::parse($pending['ended_at']),
+                ], deferrable: false);
+            }
+        }
     }
 
     /**
@@ -253,6 +278,50 @@ class SpanStack
     }
 
     /**
+     * The spans a queued job dispatched now must save with its own, outermost
+     * first: the current unit's, when nothing has saved it yet, after the ones
+     * that unit was handed. Ask after {@see parentForDispatch()}, which gives
+     * the unit its span id.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function pendingForDispatch(?string $traceId): array
+    {
+        $key = $this->units === [] ? null : array_key_last($this->units);
+        $span = end($this->spans);
+
+        // An open Spectra::span() block is saved when it closes, and its unit with it.
+        if ($key === null || $traceId === null || ($span !== false && $span['opened'] > $this->units[$key]['opened'])) {
+            return [];
+        }
+
+        $unit = $this->units[$key];
+
+        // A unit in use saves its own span and the ones it was handed.
+        if ($unit['used'] || $unit['span_id'] === null || $unit['trace_id'] !== $traceId) {
+            return [];
+        }
+
+        $row = $this->attributes(
+            traceId: $unit['trace_id'],
+            spanId: $unit['span_id'],
+            parentSpanId: $unit['parent_span_id'],
+            name: $unit['name'],
+            kind: $unit['kind'],
+            origin: $unit['name'],
+            startedAt: $unit['started_at'],
+            error: null,
+            attributes: [self::INFERRED_ATTRIBUTE => true],
+        );
+
+        // Plain strings, as the job payload carries them.
+        $row['started_at'] = $row['started_at']->format('Y-m-d\TH:i:s.uP');
+        $row['ended_at'] = $row['ended_at']->format('Y-m-d\TH:i:s.uP');
+
+        return array_slice([...$unit['pending'], $row], -self::MAX_PENDING_SPANS);
+    }
+
+    /**
      * Get the innermost open span id in this trace, giving the current unit its root span on first use.
      */
     protected function currentSpanId(?string $traceId, ?string $upstreamParentSpanId, bool $markUsed): ?string
@@ -280,6 +349,10 @@ class SpanStack
             $unit['span_id'] = $this->newSpanId();
             $unit['trace_id'] = $traceId;
             $unit['parent_span_id'] = $upstreamParentSpanId;
+            $unit['pending'] = array_values(array_filter(
+                TraceContext::pendingSpans(),
+                fn (array $pending): bool => $pending['trace_id'] === $traceId,
+            ));
         }
 
         if ($unit['trace_id'] !== $traceId) {

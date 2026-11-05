@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Spectra\Enums\SpanKind;
 use Spectra\Enums\SpanStatus;
 use Spectra\Facades\Spectra;
@@ -15,7 +16,10 @@ use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraSpan;
 use Spectra\Support\RequestTransformer;
+use Spectra\Support\Tracking\SpanStack;
+use Spectra\Support\Tracking\SpanWriter;
 use Spectra\Tests\Fixtures\CallsAiJob;
+use Spectra\Tests\Fixtures\QueuesAiJob;
 
 /**
  * Spans make a trace a tree: Spectra::span() blocks, and the request, job or
@@ -171,6 +175,111 @@ it('saves the request span too when a synchronous job inside it made the only ca
     $job = SpectraSpan::query()->where('kind', SpanKind::Job->value)->sole();
 
     expect($job->parent_span_id)->toBe($request->span_id);
+});
+
+/**
+ * Queue jobs on the database queue, so each runs later in a worker with only
+ * what its payload carries, as in production.
+ */
+function useDatabaseQueue(): void
+{
+    Schema::create('jobs', function ($table) {
+        $table->id();
+        $table->string('queue')->index();
+        $table->longText('payload');
+        $table->unsignedTinyInteger('attempts');
+        $table->unsignedInteger('reserved_at')->nullable();
+        $table->unsignedInteger('available_at');
+        $table->unsignedInteger('created_at');
+    });
+
+    config()->set('queue.default', 'database');
+}
+
+function workQueue(): void
+{
+    servingHttp(false);
+    // The worker quits before its first job once the process passes --memory
+    // (128 MB by default), which the whole suite does.
+    Artisan::call('queue:work', ['connection' => 'database', '--stop-when-empty' => true, '--sleep' => 0, '--memory' => 4096]);
+}
+
+it('saves the request and job a queued job came from when they made no AI call', function () {
+    useDatabaseQueue();
+    servingHttp(true);
+    Route::post('/conversations', function () {
+        dispatch(new QueuesAiJob);
+
+        return 'ok';
+    });
+
+    $this->post('/conversations')->assertOk();
+
+    expect(SpectraSpan::query()->count())->toBe(0);
+
+    workQueue();
+
+    $request = SpectraSpan::query()->where('kind', SpanKind::Request->value)->sole();
+    $between = SpectraSpan::query()->where('name', QueuesAiJob::class)->sole();
+    $job = SpectraSpan::query()->where('name', CallsAiJob::class)->sole();
+
+    expect($request->name)->toBe('POST /conversations')
+        ->and($request->parent_span_id)->toBeNull()
+        ->and($request->attributes)->toBe([SpanStack::INFERRED_ATTRIBUTE => true])
+        ->and($between->parent_span_id)->toBe($request->span_id)
+        ->and($between->attributes)->toBe([SpanStack::INFERRED_ATTRIBUTE => true])
+        ->and($job->parent_span_id)->toBe($between->span_id)
+        ->and($job->attributes)->toBeNull()
+        ->and(collect([$request, $between, $job])->pluck('trace_id')->unique()->all())->toBe([$request->trace_id])
+        ->and(SpectraRequest::query()->sole()->parent_span_id)->toBe($job->span_id);
+});
+
+it('keeps the request its own span when it made AI calls after queuing the job', function () {
+    useDatabaseQueue();
+    servingHttp(true);
+    Route::post('/chat', function () {
+        dispatch(new QueuesAiJob);
+        callOpenAi();
+
+        return 'ok';
+    });
+
+    $this->post('/chat')->assertOk();
+    workQueue();
+
+    $request = SpectraSpan::query()->where('kind', SpanKind::Request->value)->sole();
+
+    expect($request->attributes)->toBeNull()
+        ->and(SpectraSpan::query()->where('name', QueuesAiJob::class)->sole()->parent_span_id)->toBe($request->span_id);
+});
+
+it('replaces a stand-in span with the span itself when that arrives later', function () {
+    $writer = app(SpanWriter::class);
+    $row = [
+        'trace_id' => (string) Str::uuid(),
+        'span_id' => 'a1b2c3d4e5f60718',
+        'parent_span_id' => null,
+        'name' => 'POST /chat',
+        'kind' => SpanKind::Request->value,
+        'origin' => 'POST /chat',
+        'started_at' => now()->subSeconds(3),
+        'ended_at' => now()->subSeconds(2),
+        'duration_ms' => 1000,
+        'status' => SpanStatus::Ok->value,
+        'error_type' => null,
+        'error_message' => null,
+    ];
+
+    $writer->save([...$row, 'attributes' => [SpanStack::INFERRED_ATTRIBUTE => true]]);
+    $writer->save([...$row, 'ended_at' => now(), 'duration_ms' => 3000, 'status' => SpanStatus::Error->value, 'attributes' => null]);
+    // A later stand-in never overwrites the span.
+    $writer->save([...$row, 'attributes' => [SpanStack::INFERRED_ATTRIBUTE => true]]);
+
+    $span = SpectraSpan::query()->sole();
+
+    expect($span->duration_ms)->toBe(3000)
+        ->and($span->status)->toBe(SpanStatus::Error)
+        ->and($span->attributes)->toBeNull();
 });
 
 it('stores no root spans when root_spans is off', function () {

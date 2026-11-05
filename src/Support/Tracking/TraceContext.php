@@ -36,6 +36,13 @@ class TraceContext
 
     public const PARENT_SPAN_ID = 'spectra.parent_span_id';
 
+    /**
+     * Spans of the work that dispatched this job, and of the work before it,
+     * that may never be saved on their own: a request or job is stored only
+     * when it makes an AI call. The job saves them with its own span.
+     */
+    public const PENDING_SPANS = 'spectra.pending_spans';
+
     /** Tags handed down by the work that started this one (a request, a job). */
     public const TAGS = 'spectra.tags';
 
@@ -88,6 +95,25 @@ class TraceContext
         } catch (Throwable) {
             return null;
         }
+    }
+
+    /**
+     * The spans this job was handed to save with its own ({@see PENDING_SPANS}),
+     * outermost first.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function pendingSpans(): array
+    {
+        try {
+            $spans = Context::getHidden(self::PENDING_SPANS);
+        } catch (Throwable) {
+            return [];
+        }
+
+        return is_array($spans)
+            ? array_values(array_filter($spans, fn (mixed $span): bool => is_array($span) && is_string($span['span_id'] ?? null) && is_string($span['trace_id'] ?? null)))
+            : [];
     }
 
     /**
@@ -225,7 +251,7 @@ class TraceContext
     public static function reset(): void
     {
         try {
-            Context::forgetHidden([self::TRACE_ID, self::PARENT_SPAN_ID]);
+            Context::forgetHidden([self::TRACE_ID, self::PARENT_SPAN_ID, self::PENDING_SPANS]);
         } catch (Throwable) {
             //
         }

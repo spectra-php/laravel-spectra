@@ -278,6 +278,16 @@ class SpectraServiceProvider extends ServiceProvider
             if ($parentSpanId !== null) {
                 $context->addHidden(TraceContext::PARENT_SPAN_ID, $parentSpanId);
             }
+
+            // That span, and the ones before it, when nothing saves them: the
+            // job saves them with its own, so it never hangs off a missing span.
+            $pending = rescue(fn () => $this->app->make(SpanStack::class)->pendingForDispatch(TraceContext::traceId()), []);
+
+            if ($pending === []) {
+                $context->forgetHidden(TraceContext::PENDING_SPANS);
+            } else {
+                $context->addHidden(TraceContext::PENDING_SPANS, $pending);
+            }
         });
     }
 
