@@ -78,7 +78,7 @@ class FormatConversationsList
                     ])
                     ->values()
                     ->all(),
-                'trackable' => $this->trackable($calls, $metadata),
+                'trackable' => $this->findSoleTrackable($calls, $metadata),
             ];
         })->values()->all();
     }
@@ -90,7 +90,7 @@ class FormatConversationsList
      * @param  array<string, array<string, mixed>>  $metadata
      * @return array<string, mixed>|null
      */
-    private function trackable(Collection $calls, array $metadata): ?array
+    private function findSoleTrackable(Collection $calls, array $metadata): ?array
     {
         $trackables = $calls
             ->filter(fn (SpectraRequest $call) => filled($call->trackable_type) && filled($call->trackable_id))

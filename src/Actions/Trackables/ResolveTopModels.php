@@ -30,7 +30,7 @@ class ResolveTopModels
                 'trackable_type' => $item->trackable_type,
                 'trackable_id' => (string) $item->trackable_id,
             ])
-            ->unique(fn ($pair) => $pair['trackable_type'].':'.$pair['trackable_id'])
+            ->unique(fn ($pair) => "{$pair['trackable_type']}:{$pair['trackable_id']}")
             ->values();
 
         $modelCounts = SpectraRequest::query()
@@ -50,7 +50,7 @@ class ResolveTopModels
 
         $topModels = [];
         foreach ($modelCounts as $row) {
-            $key = $row->trackable_type.':'.$row->trackable_id;
+            $key = "{$row->trackable_type}:{$row->trackable_id}";
             $topModels[$key] ??= $row->model;
         }
 

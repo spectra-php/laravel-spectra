@@ -15,8 +15,8 @@ class ShowRequestController extends BaseApiController
     /**
      * Get the request detail screen's data for one request.
      */
-    public function __invoke(string $id, GetRequestDetails $action): RequestDetailsResponse
+    public function __invoke(string $id, GetRequestDetails $getRequestDetails): RequestDetailsResponse
     {
-        return $action($id);
+        return $getRequestDetails($id);
     }
 }

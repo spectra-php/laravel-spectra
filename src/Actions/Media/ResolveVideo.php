@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Actions\Media;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -67,8 +68,8 @@ class ResolveVideo
         abort_unless($stream !== null, 404);
 
         // Handlers store videos under their real extension (mp4, webm, mov, …).
-        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'mp4';
-        $mime = match ($extension) {
+        $extension = Str::lower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'mp4';
+        $mimeType = match ($extension) {
             'webm' => 'video/webm',
             'mov' => 'video/quicktime',
             'avi' => 'video/x-msvideo',
@@ -79,7 +80,7 @@ class ResolveVideo
             fpassthru($stream);
             fclose($stream);
         }, 200, [
-            'Content-Type' => $mime,
+            'Content-Type' => $mimeType,
             'Content-Disposition' => "attachment; filename=\"{$requestId}.{$extension}\"",
         ]);
     }

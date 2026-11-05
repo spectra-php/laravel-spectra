@@ -38,32 +38,32 @@ class GetRequestDetails
 
         $request->append('formatted_expires_at');
 
-        $data = $request->makeVisible(['request', 'response'])->toArray();
-        $data['prompt'] = $request->prompt;
-        $data['tags'] = $request->tags->pluck('name')->toArray();
-        $data['model_capabilities'] = $this->pricingLookup->getCapabilities($request->provider ?? '', $request->model);
+        $details = $request->makeVisible(['request', 'response'])->toArray();
+        $details['prompt'] = $request->prompt;
+        $details['tags'] = $request->tags->pluck('name')->toArray();
+        $details['model_capabilities'] = $this->pricingLookup->getCapabilities($request->provider ?? '', $request->model);
 
         if ($request->model_type === 'image') {
-            $data['image_urls'] = $this->resolveImageUrls($id, $request);
+            $details['image_urls'] = $this->resolveImageUrls($id, $request);
         }
 
         if ($request->model_type === 'tts' && filled($request->media_storage_path)) {
             $basePath = config('spectra.dashboard.path', 'spectra');
-            $data['audio_url'] = "/{$basePath}/api/requests/{$id}/audio";
-            $data['audio_download_url'] = "/{$basePath}/api/requests/{$id}/audio/download";
+            $details['audio_url'] = "/{$basePath}/api/requests/{$id}/audio";
+            $details['audio_download_url'] = "/{$basePath}/api/requests/{$id}/audio/download";
         }
 
         if (in_array($request->model_type, ['image', 'tts', 'video'], true)) {
-            $data['media_storage_enabled'] = (bool) config('spectra.storage.media.enabled');
+            $details['media_storage_enabled'] = (bool) config('spectra.storage.media.enabled');
         }
 
-        $data['scores'] = ($this->getScores)(requestId: $request->id);
+        $details['scores'] = ($this->getScores)(requestId: $request->id);
 
-        $data['trace'] = filled($request->trace_id)
+        $details['trace'] = filled($request->trace_id)
             ? ($this->getTraceDetails)($request->trace_id, $request->id, self::TRACE_LIMIT)?->toArray()
             : null;
 
-        return new RequestDetailsResponse(data: $data);
+        return new RequestDetailsResponse(data: $details);
     }
 
     /**

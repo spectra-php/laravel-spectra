@@ -15,8 +15,8 @@ class ProvidersController extends BaseApiController
     /**
      * Get every provider the dashboard can show.
      */
-    public function __invoke(GetProviders $action): ProvidersResponse
+    public function __invoke(GetProviders $getProviders): ProvidersResponse
     {
-        return $action();
+        return $getProviders();
     }
 }

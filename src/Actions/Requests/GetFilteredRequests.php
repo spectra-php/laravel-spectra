@@ -37,7 +37,7 @@ class GetFilteredRequests
     {
         $sortable = ['created_at', 'total_tokens', 'total_cost_in_cents', 'latency_ms'];
         $sortBy = in_array($request->input('sort_by'), $sortable, true) ? $request->input('sort_by') : 'created_at';
-        $sortDir = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
+        $sortDirection = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
 
         $query = SpectraRequest::query()
             ->select([
@@ -57,8 +57,8 @@ class GetFilteredRequests
             // total_tokens is an appended attribute, not a column.
             ->when(
                 $sortBy === 'total_tokens',
-                fn (Builder $query) => $query->orderByRaw("(prompt_tokens + completion_tokens) {$sortDir}"),
-                fn (Builder $query) => $query->orderBy($sortBy, $sortDir),
+                fn (Builder $query) => $query->orderByRaw("(prompt_tokens + completion_tokens) {$sortDirection}"),
+                fn (Builder $query) => $query->orderBy($sortBy, $sortDirection),
             );
         $dateRange->apply($query);
 
@@ -84,10 +84,10 @@ class GetFilteredRequests
             // and turn every keystroke into a full-table scan at volume.
             // id and trace_id are native uuid columns on PostgreSQL, which
             // errors on any other string, so only compare them with a UUID.
-            $query->where(function (Builder $q) use ($search) {
-                $q->where('model', 'like', "%{$search}%")
+            $query->where(function (Builder $searchQuery) use ($search) {
+                $searchQuery->where('model', 'like', "%{$search}%")
                     ->orWhere('response_id', $search)
-                    ->when(Str::isUuid($search), fn (Builder $uuid) => $uuid
+                    ->when(Str::isUuid($search), fn (Builder $uuidQuery) => $uuidQuery
                         ->orWhere('id', $search)
                         ->orWhere('trace_id', $search));
             });

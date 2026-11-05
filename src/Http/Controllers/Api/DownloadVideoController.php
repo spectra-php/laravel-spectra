@@ -15,8 +15,8 @@ class DownloadVideoController extends BaseApiController
     /**
      * Stream the request's generated video as a download.
      */
-    public function __invoke(string $id, ResolveVideo $action): StreamedResponse
+    public function __invoke(string $id, ResolveVideo $resolveVideo): StreamedResponse
     {
-        return $action($id);
+        return $resolveVideo($id);
     }
 }

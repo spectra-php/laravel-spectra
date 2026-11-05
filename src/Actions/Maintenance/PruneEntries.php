@@ -58,6 +58,8 @@ class PruneEntries
     }
 
     /**
+     * Determine if the spans table exists.
+     *
      * An app that updated Spectra but hasn't run the spans migration yet has
      * no spectra_spans table; pruning the rest must still work there.
      */
@@ -69,6 +71,8 @@ class PruneEntries
     }
 
     /**
+     * Determine if the scores table exists.
+     *
      * An app that updated Spectra but hasn't run the scores migration yet has
      * no spectra_scores table; pruning the rest must still work there.
      */
@@ -126,6 +130,8 @@ class PruneEntries
     }
 
     /**
+     * Determine if the review queue items table exists.
+     *
      * An app that hasn't run the annotation migration yet has no
      * spectra_annotation_items table; pruning the rest must still work there.
      */

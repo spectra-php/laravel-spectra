@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Actions\Media;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spectra\Data\MediaContent;
 use Spectra\Models\SpectraRequest;
 
@@ -36,19 +37,19 @@ class ResolveAudio
 
         return new MediaContent(
             content: $content,
-            mime_type: $this->mimeType($path),
-            filename: $request->id.'.'.$this->extension($path),
+            mime_type: $this->resolveMimeType($path),
+            filename: "{$request->id}.{$this->resolveExtension($path)}",
         );
     }
 
     /**
      * Get the audio mime type for the stored file's extension.
      */
-    private function mimeType(string $path): string
+    private function resolveMimeType(string $path): string
     {
-        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $extension = Str::lower(pathinfo($path, PATHINFO_EXTENSION));
 
-        return match ($ext) {
+        return match ($extension) {
             'mp3' => 'audio/mpeg',
             'wav' => 'audio/wav',
             'opus' => 'audio/opus',
@@ -63,8 +64,8 @@ class ResolveAudio
     /**
      * Get the stored file's extension, defaulting to mp3.
      */
-    private function extension(string $path): string
+    private function resolveExtension(string $path): string
     {
-        return strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'mp3';
+        return Str::lower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'mp3';
     }
 }

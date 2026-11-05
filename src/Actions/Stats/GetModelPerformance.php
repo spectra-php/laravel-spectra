@@ -49,7 +49,7 @@ class GetModelPerformance
                     ->where('model', $row->model);
 
                 $latency = $this->percentiles->of($successful, 'latency_ms');
-                $ttft = $this->percentiles->of($successful->clone()->where('is_streaming', true), 'time_to_first_token_ms', [50]);
+                $timeToFirstToken = $this->percentiles->of($successful->clone()->where('is_streaming', true), 'time_to_first_token_ms', [50]);
 
                 return new ModelPerformance(
                     provider: $row->provider,
@@ -60,7 +60,7 @@ class GetModelPerformance
                     latency_p50: $latency['p50'],
                     latency_p95: $latency['p95'],
                     latency_p99: $latency['p99'],
-                    ttft_p50: $ttft['p50'],
+                    ttft_p50: $timeToFirstToken['p50'],
                 );
             })
             ->values();

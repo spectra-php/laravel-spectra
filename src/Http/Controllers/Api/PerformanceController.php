@@ -20,7 +20,7 @@ class PerformanceController extends BaseApiController
      */
     public function __invoke(Request $request, GetModelPerformance $getModelPerformance): PerformanceResponse
     {
-        return new PerformanceResponse($getModelPerformance(
+        return new PerformanceResponse(models: $getModelPerformance(
             DateRange::fromRequest($request),
             config('spectra.dashboard.layout', 'full'),
         ));

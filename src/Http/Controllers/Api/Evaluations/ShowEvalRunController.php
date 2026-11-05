@@ -28,8 +28,8 @@ class ShowEvalRunController extends BaseApiController
             ? SpectraEvalRun::query()->where('evaluation', $run->evaluation)->whereKey($input['compare'])->firstOrFail()
             : null;
 
-        $data = $getEvalRun($run, $baseline);
+        $runDetails = $getEvalRun($run, $baseline);
 
-        return new EvalRunResponse(run: $data['run'], baseline: $data['baseline'], results: $data['results'], runs: $data['runs']);
+        return new EvalRunResponse(run: $runDetails['run'], baseline: $runDetails['baseline'], results: $runDetails['results'], runs: $runDetails['runs']);
     }
 }

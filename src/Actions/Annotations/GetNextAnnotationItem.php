@@ -24,7 +24,7 @@ class GetNextAnnotationItem
      * Create a new get next annotation item action instance.
      */
     public function __construct(
-        private readonly MessageTextExtractor $messages,
+        private readonly MessageTextExtractor $messageTextExtractor,
         private readonly GetScores $getScores,
     ) {}
 
@@ -39,13 +39,13 @@ class GetNextAnnotationItem
             ->oldest('created_at')
             ->first();
 
-        return $item !== null ? $this->forItem($item) : null;
+        return $item !== null ? $this->buildReviewItem($item) : null;
     }
 
     /**
-     * The review view of one item.
+     * Build the review view of one item.
      */
-    public function forItem(SpectraAnnotationItem $item): AnnotationReviewItem
+    private function buildReviewItem(SpectraAnnotationItem $item): AnnotationReviewItem
     {
         $calls = SpectraRequest::query()
             ->forTrace($item->trace_id)
@@ -71,8 +71,8 @@ class GetNextAnnotationItem
                 'error_message' => $call->error_message,
                 'latency_ms' => $call->latency_ms,
                 'total_cost_in_cents' => $call->total_cost_in_cents,
-                'prompt' => $this->messages->prompt($call->request),
-                'reply' => $this->messages->reply($call),
+                'prompt' => $this->messageTextExtractor->prompt($call->request),
+                'reply' => $this->messageTextExtractor->reply($call),
                 'is_queued_call' => $call->id === $item->request_id,
             ])->values()->all(),
             scores: ($this->getScores)(traceId: $item->trace_id),

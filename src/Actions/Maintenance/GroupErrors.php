@@ -18,7 +18,7 @@ class GroupErrors
      * Create a new group errors action instance.
      */
     public function __construct(
-        protected ErrorFingerprint $fingerprint,
+        private readonly ErrorFingerprint $fingerprint,
     ) {}
 
     /**

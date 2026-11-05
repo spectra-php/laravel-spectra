@@ -55,7 +55,7 @@ class GetEvaluations
     }
 
     /**
-     * A run as the screens read it.
+     * Format a run as the screens read it.
      *
      * @return array<string, mixed>
      */

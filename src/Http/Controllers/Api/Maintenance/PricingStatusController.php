@@ -17,8 +17,8 @@ class PricingStatusController extends BaseApiController
     /**
      * Get the pricing status.
      */
-    public function __invoke(GetPricingStatus $action): PricingStatusResponse
+    public function __invoke(GetPricingStatus $getPricingStatus): PricingStatusResponse
     {
-        return $action();
+        return $getPricingStatus();
     }
 }

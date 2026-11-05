@@ -15,8 +15,8 @@ class ConfigController extends BaseApiController
     /**
      * Get the dashboard layout and model types the SPA loads first.
      */
-    public function __invoke(GetDashboardConfig $action): DashboardConfigResponse
+    public function __invoke(GetDashboardConfig $getDashboardConfig): DashboardConfigResponse
     {
-        return $action();
+        return $getDashboardConfig();
     }
 }

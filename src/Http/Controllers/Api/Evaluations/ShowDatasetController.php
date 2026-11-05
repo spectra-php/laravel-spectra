@@ -19,8 +19,8 @@ class ShowDatasetController extends BaseApiController
      */
     public function __invoke(string $id, GetDataset $getDataset): DatasetResponse
     {
-        $data = $getDataset(SpectraDataset::query()->findOrFail($id));
+        $datasetDetails = $getDataset(SpectraDataset::query()->findOrFail($id));
 
-        return new DatasetResponse(dataset: $data['dataset'], examples: $data['examples'], runs: $data['runs']);
+        return new DatasetResponse(dataset: $datasetDetails['dataset'], examples: $datasetDetails['examples'], runs: $datasetDetails['runs']);
     }
 }

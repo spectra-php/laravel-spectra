@@ -44,12 +44,11 @@ class RebuildStats
     }
 
     /**
-     * Rebuild only the days whose requests are all still stored, so the stats
-     * of pruned days (the long-term history) survive. Returns how many
-     * requests were processed.
+     * Rebuild only the days whose requests are all still stored and return how many requests were processed.
      *
-     * When older stats exist, the oldest stored day was cut by a prune and
-     * keeps its stats too.
+     * The stats of pruned days (the long-term history) survive. When older
+     * stats exist, the oldest stored day was cut by a prune and keeps its
+     * stats too.
      */
     public function storedDays(): int
     {

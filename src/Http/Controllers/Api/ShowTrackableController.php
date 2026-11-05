@@ -19,8 +19,8 @@ class ShowTrackableController extends BaseApiController
     public function __invoke(
         Request $request,
         string $id,
-        GetTrackableDetails $action,
+        GetTrackableDetails $getTrackableDetails,
     ): TrackableDetailsResponse {
-        return $action($request, $id);
+        return $getTrackableDetails($request, $id);
     }
 }

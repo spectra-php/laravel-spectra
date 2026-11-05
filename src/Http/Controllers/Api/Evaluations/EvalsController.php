@@ -23,8 +23,8 @@ class EvalsController extends BaseApiController
             return new EvalsResponse(evaluations: [], datasets: [], migrated: false, can_curate: false);
         }
 
-        $data = $getEvaluations();
+        $evaluationsAndDatasets = $getEvaluations();
 
-        return new EvalsResponse(evaluations: $data['evaluations'], datasets: $data['datasets'], migrated: true, can_curate: Gate::allows('annotateSpectra'));
+        return new EvalsResponse(evaluations: $evaluationsAndDatasets['evaluations'], datasets: $evaluationsAndDatasets['datasets'], migrated: true, can_curate: Gate::allows('annotateSpectra'));
     }
 }

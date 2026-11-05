@@ -19,6 +19,6 @@ class ScoresController extends BaseApiController
      */
     public function __invoke(Request $request, GetScoreSummary $getScoreSummary): ScoresResponse
     {
-        return new ScoresResponse($getScoreSummary(DateRange::fromRequest($request)));
+        return new ScoresResponse(scores: $getScoreSummary(DateRange::fromRequest($request)));
     }
 }

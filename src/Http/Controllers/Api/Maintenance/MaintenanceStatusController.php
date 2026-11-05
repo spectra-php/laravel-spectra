@@ -19,14 +19,14 @@ class MaintenanceStatusController extends BaseApiController
     /**
      * Get the maintenance status for the chosen retention.
      */
-    public function __invoke(Request $request, GetMaintenanceStatus $action): MaintenanceStatusResponse
+    public function __invoke(Request $request, GetMaintenanceStatus $getMaintenanceStatus): MaintenanceStatusResponse
     {
         $validated = $request->validate([
             'hours' => ['nullable', 'integer', 'min:1', 'max:876000'],
             'stats_days' => ['nullable', 'integer', 'min:1', 'max:36500'],
         ]);
 
-        return $action(
+        return $getMaintenanceStatus(
             (int) ($validated['hours'] ?? 24),
             isset($validated['stats_days']) ? (int) $validated['stats_days'] : null,
         );

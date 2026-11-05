@@ -32,20 +32,20 @@ class GetPromptVersions
      */
     public function __invoke(DateRange $dateRange): PromptsResponse
     {
-        $migrated = $this->hasPromptColumns();
+        $isMigrated = $this->hasPromptColumns();
 
         return new PromptsResponse(
-            versions: $migrated ? $this->versions($dateRange) : collect(),
-            migrated: $migrated,
+            versions: $isMigrated ? $this->getVersions($dateRange) : collect(),
+            migrated: $isMigrated,
         );
     }
 
     /**
-     * One row per prompt template and version.
+     * Get one row per prompt template and version.
      *
      * @return Collection<int, PromptVersion>
      */
-    private function versions(DateRange $dateRange): Collection
+    private function getVersions(DateRange $dateRange): Collection
     {
         return RequestAggregateQuery::make($dateRange)
             ->withPrompt()
@@ -71,20 +71,20 @@ class GetPromptVersions
                 avg_cost_in_cents: $row->request_count > 0 ? $row->cost / $row->request_count : 0.0,
                 avg_tokens: $row->request_count > 0 ? (int) round($row->tokens_sum / $row->request_count) : 0,
                 avg_latency_ms: round($row->avg_latency, 1),
-                first_seen_at: $this->iso($row->getRawOriginal('first_seen_at')),
-                last_seen_at: $this->iso($row->getRawOriginal('last_seen_at')),
-                scores: $this->scores($dateRange, (string) $row->prompt_name, $row->prompt_version),
+                first_seen_at: $this->formatIso($row->getRawOriginal('first_seen_at')),
+                last_seen_at: $this->formatIso($row->getRawOriginal('last_seen_at')),
+                scores: $this->getScores($dateRange, (string) $row->prompt_name, $row->prompt_version),
             ))
             ->values();
     }
 
     /**
-     * The scores given to this version's calls or their traces, averaged per
-     * score name. None until the app runs the scores migration.
+     * Get the scores given to this version's calls or their traces, averaged
+     * per score name. None until the app runs the scores migration.
      *
      * @return array<int, array{name: string, type: string, count: int, average: float|null}>
      */
-    private function scores(DateRange $dateRange, string $name, ?string $version): array
+    private function getScores(DateRange $dateRange, string $name, ?string $version): array
     {
         $calls = RequestAggregateQuery::make($dateRange)->toQuery()
             ->where('prompt_name', $name)
@@ -125,9 +125,9 @@ class GetPromptVersions
     }
 
     /**
-     * A database date as ISO 8601, as the screen reads it.
+     * Format a database date as ISO 8601, as the screen reads it.
      */
-    private function iso(mixed $value): ?string
+    private function formatIso(mixed $value): ?string
     {
         return filled($value) ? Date::parse((string) $value)->toIso8601String() : null;
     }

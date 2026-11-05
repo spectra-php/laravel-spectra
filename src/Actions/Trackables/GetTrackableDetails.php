@@ -81,8 +81,8 @@ class GetTrackableDetails
     }
 
     /**
-     * The trackable model itself. The stored type is the morph class, which
-     * is an alias when the app uses a morph map; anything that doesn't
+     * Find the trackable model itself. The stored type is the morph class,
+     * which is an alias when the app uses a morph map; anything that doesn't
      * resolve to an Eloquent model is never instantiated.
      */
     private function findTrackable(string $type, string $id): ?Model

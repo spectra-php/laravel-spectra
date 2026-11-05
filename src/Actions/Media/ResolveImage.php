@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Actions\Media;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spectra\Data\MediaContent;
 use Spectra\Models\SpectraRequest;
 
@@ -23,7 +24,6 @@ class ResolveImage
 
         abort_unless($request->model_type === 'image', 404);
 
-        // Try persisted media first
         /** @var array<int|string, string> $media */
         $media = $request->media_storage_path ?? [];
 
@@ -36,12 +36,11 @@ class ResolveImage
 
             return new MediaContent(
                 content: $content,
-                mime_type: $this->mimeType($path),
-                filename: $request->id.'.'.$this->extension($path),
+                mime_type: $this->resolveMimeType($path),
+                filename: "{$request->id}.{$this->resolveExtension($path)}",
             );
         }
 
-        // Fallback: extract base64 from raw response
         $base64 = $this->extractBase64($request->response ?? [], $index);
 
         abort_unless((bool) $base64, 404);
@@ -49,7 +48,7 @@ class ResolveImage
         return new MediaContent(
             content: base64_decode($base64),
             mime_type: 'image/png',
-            filename: $request->id.'.png',
+            filename: "{$request->id}.png",
         );
     }
 
@@ -82,11 +81,11 @@ class ResolveImage
     /**
      * Get the image mime type for the stored file's extension.
      */
-    private function mimeType(string $path): string
+    private function resolveMimeType(string $path): string
     {
-        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $extension = Str::lower(pathinfo($path, PATHINFO_EXTENSION));
 
-        return match ($ext) {
+        return match ($extension) {
             'jpg', 'jpeg' => 'image/jpeg',
             'webp' => 'image/webp',
             'gif' => 'image/gif',
@@ -97,8 +96,8 @@ class ResolveImage
     /**
      * Get the stored file's extension, defaulting to png.
      */
-    private function extension(string $path): string
+    private function resolveExtension(string $path): string
     {
-        return strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'png';
+        return Str::lower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'png';
     }
 }

@@ -23,9 +23,9 @@ class RecordingController extends BaseApiController
     {
         abort_unless(MaintenanceAccess::allowed(), 403);
 
-        $paused = $request->validate(['paused' => ['required', 'boolean']])['paused'];
+        $request->validate(['paused' => ['required', 'boolean']]);
 
-        filter_var($paused, FILTER_VALIDATE_BOOLEAN) ? RecordingSwitch::pause() : RecordingSwitch::resume();
+        $request->boolean('paused') ? RecordingSwitch::pause() : RecordingSwitch::resume();
 
         return new JsonResponse(['recording_paused' => RecordingSwitch::isPaused(fresh: true)]);
     }

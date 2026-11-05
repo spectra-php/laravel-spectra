@@ -64,8 +64,8 @@ class ScrapeProviderPrices
     }
 
     /**
-     * Provider slugs with at least one tracked request. Empty when the
-     * Spectra tables aren't there (not migrated, or another connection).
+     * Get the provider slugs with at least one tracked request. Empty when
+     * the Spectra tables aren't there (not migrated, or another connection).
      *
      * @return list<string>
      */

@@ -25,10 +25,10 @@ class FormatRequestsList
         $items = $paginated->items();
 
         return collect($items)->map(function ($item) {
-            $arr = $item->toArray();
-            $arr['tags'] = $item->tags->pluck('name')->toArray();
+            $row = $item->toArray();
+            $row['tags'] = $item->tags->pluck('name')->toArray();
 
-            return $arr;
+            return $row;
         })->toArray();
     }
 }

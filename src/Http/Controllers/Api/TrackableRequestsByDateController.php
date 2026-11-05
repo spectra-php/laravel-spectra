@@ -21,7 +21,7 @@ class TrackableRequestsByDateController extends BaseApiController
     public function __invoke(
         Request $request,
         string $id,
-        GetTrackableRequestsByDate $action,
+        GetTrackableRequestsByDate $getTrackableRequestsByDate,
     ): RequestsByDateResponse {
         $type = $request->input('type');
 
@@ -29,6 +29,6 @@ class TrackableRequestsByDateController extends BaseApiController
 
         $dateRange = DateRange::fromRequest($request);
 
-        return new RequestsByDateResponse(requests_by_date: $action($type, $id, $dateRange));
+        return new RequestsByDateResponse(requests_by_date: $getTrackableRequestsByDate($type, $id, $dateRange));
     }
 }

@@ -31,7 +31,7 @@ class GetScoreSummary
      */
     public function __invoke(DateRange $dateRange): Collection
     {
-        return rescue(fn () => $this->summaries($dateRange), new Collection, report: false);
+        return rescue(fn () => $this->getSummaries($dateRange), new Collection, report: false);
     }
 
     /**
@@ -39,7 +39,7 @@ class GetScoreSummary
      *
      * @return Collection<int, ScoreSummary>
      */
-    private function summaries(DateRange $dateRange): Collection
+    private function getSummaries(DateRange $dateRange): Collection
     {
         $query = SpectraScore::query();
         $dateRange->apply($query);

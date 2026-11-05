@@ -37,8 +37,9 @@ class GetPricingStatus
     {
         $file = PricingCatalog::scrapedPricesFile();
         $path = $file->path();
+        $projectRoot = base_path(DIRECTORY_SEPARATOR);
         $summary = [
-            'path' => Str::startsWith($path, base_path().DIRECTORY_SEPARATOR) ? Str::after($path, base_path().DIRECTORY_SEPARATOR) : $path,
+            'path' => Str::startsWith($path, $projectRoot) ? Str::after($path, $projectRoot) : $path,
             'exists' => $file->exists(),
             'generated_at' => null,
             'error' => null,
@@ -46,13 +47,13 @@ class GetPricingStatus
         ];
 
         try {
-            $data = $file->read();
+            $scrapedPrices = $file->read();
         } catch (RuntimeException $e) {
             return [...$summary, 'error' => $e->getMessage()];
         }
 
-        $summary['generated_at'] = is_string($data['generated_at'] ?? null) ? $data['generated_at'] : null;
-        $summary['providers'] = collect((array) $data['providers'])->map(fn (mixed $section) => [
+        $summary['generated_at'] = is_string($scrapedPrices['generated_at'] ?? null) ? $scrapedPrices['generated_at'] : null;
+        $summary['providers'] = collect((array) $scrapedPrices['providers'])->map(fn (mixed $section) => [
             'scraped_at' => is_array($section) ? ($section['scraped_at'] ?? null) : null,
             'models' => is_array($section) && is_array($section['models'] ?? null) ? count($section['models']) : 0,
         ])->all();

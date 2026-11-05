@@ -15,8 +15,8 @@ class TagsController extends BaseApiController
     /**
      * Get every tag with its request count.
      */
-    public function __invoke(GetTags $action): TagsResponse
+    public function __invoke(GetTags $getTags): TagsResponse
     {
-        return $action();
+        return $getTags();
     }
 }

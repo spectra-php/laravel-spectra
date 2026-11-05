@@ -26,8 +26,8 @@ class GetEvalRun
      */
     public function __invoke(SpectraEvalRun $run, ?SpectraEvalRun $baseline = null): array
     {
-        $results = collect($this->results($run));
-        $baselineResults = $baseline !== null ? collect($this->results($baseline))->keyBy('example_id') : collect();
+        $results = collect($this->getResults($run));
+        $baselineResults = $baseline !== null ? collect($this->getResults($baseline))->keyBy('example_id') : collect();
 
         return [
             'run' => GetEvaluations::run($run) + ['total_cost_in_cents' => (float) $results->sum('total_cost_in_cents')],
@@ -42,11 +42,11 @@ class GetEvalRun
     }
 
     /**
-     * The run's results with each trace's cost (successful calls only).
+     * Get the run's results with each trace's cost (successful calls only).
      *
      * @return array<int, array<string, mixed>>
      */
-    private function results(SpectraEvalRun $run): array
+    private function getResults(SpectraEvalRun $run): array
     {
         $results = $run->results()->oldest('created_at')->limit(self::RESULTS)->get();
 
@@ -68,15 +68,15 @@ class GetEvalRun
             'scores' => $result->scores ?? [],
             'error' => $result->error,
             'latency_ms' => $result->latency_ms,
-            'total_cost_in_cents' => $this->cost($costs->get($result->trace_id)),
+            'total_cost_in_cents' => $this->readCost($costs->get($result->trace_id)),
             'call_count' => (int) ($costs->get($result->trace_id)->call_count ?? 0),
         ])->all();
     }
 
     /**
-     * A trace's summed cost, or 0 when it made no successful call.
+     * Read a trace's summed cost, or 0 when it made no successful call.
      */
-    private function cost(?stdClass $row): float
+    private function readCost(?stdClass $row): float
     {
         return $row !== null && is_numeric($row->cost) ? (float) $row->cost : 0.0;
     }

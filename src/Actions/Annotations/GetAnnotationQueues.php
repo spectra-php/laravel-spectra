@@ -41,8 +41,9 @@ class GetAnnotationQueues
     }
 
     /**
-     * How many items each queue has per status, by "queue|status"; none
-     * until the annotation migration runs.
+     * Count the items each queue has per status, keyed by "queue|status".
+     *
+     * None until the annotation migration runs.
      *
      * @return array<string, int>
      */
@@ -57,12 +58,12 @@ class GetAnnotationQueues
             ->selectRaw('COUNT(*) as item_count')
             ->groupBy('queue', 'status')
             ->get()
-            ->mapWithKeys(fn (stdClass $row) => [$row->queue.'|'.$row->status => (int) $row->item_count])
+            ->mapWithKeys(fn (stdClass $row) => ["{$row->queue}|{$row->status}" => (int) $row->item_count])
             ->all();
     }
 
     /**
-     * One queue with its counts.
+     * Build the summary of one queue with its counts.
      *
      * @param  array<string, int>  $counts  By "queue|status"
      */

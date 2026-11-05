@@ -25,18 +25,18 @@ class GetCostOverview
         $endOfLastWeek = $startOfThisWeek->copy()->subSecond();
 
         return new CostOverviewResponse(
-            today: $this->costSince(today()),
-            this_week: $this->costSince($startOfThisWeek),
-            last_week: $this->costSince($startOfLastWeek, $endOfLastWeek),
-            this_month: $this->costSince(now()->startOfMonth()),
-            this_year: $this->costSince(now()->startOfYear()),
+            today: $this->getCostSince(today()),
+            this_week: $this->getCostSince($startOfThisWeek),
+            last_week: $this->getCostSince($startOfLastWeek, $endOfLastWeek),
+            this_month: $this->getCostSince(now()->startOfMonth()),
+            this_year: $this->getCostSince(now()->startOfYear()),
         );
     }
 
     /**
      * Get the cost of successful requests between the two moments.
      */
-    protected function costSince(CarbonInterface $from, ?CarbonInterface $to = null): float
+    protected function getCostSince(CarbonInterface $from, ?CarbonInterface $to = null): float
     {
         return RequestAggregateQuery::make(new DateRange($from, $to))
             ->successfulOnly()

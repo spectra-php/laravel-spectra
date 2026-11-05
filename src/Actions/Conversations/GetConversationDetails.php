@@ -77,7 +77,7 @@ class GetConversationDetails
             truncated: $totals->request_count > $calls->count(),
             stores_prompts: (bool) config('spectra.storage.store_prompts', true),
             stores_responses: (bool) config('spectra.storage.store_responses', true),
-            turns: $this->turns($calls),
+            turns: $this->buildTurns($calls),
             models: ($this->buildModelBreakdown)(RequestAggregateQuery::make()->forConversation($conversationId)),
             tags: SpectraTag::query()
                 ->whereHas('requests', fn ($requests) => $requests->where('conversation_id', $conversationId))
@@ -95,7 +95,7 @@ class GetConversationDetails
      * @param  Collection<int, SpectraRequest>  $calls
      * @return array<int, array<string, mixed>>
      */
-    private function turns(Collection $calls): array
+    private function buildTurns(Collection $calls): array
     {
         $runningCost = 0.0;
 
@@ -108,21 +108,21 @@ class GetConversationDetails
 
                 /** @var SpectraRequest $first */
                 $first = $turnCalls->first();
-                $transcriptCalls = $this->transcriptCalls(
+                $transcriptCalls = $this->pickTranscriptCalls(
                     $turnCalls->filter(fn (SpectraRequest $call) => in_array($call->model_type, ['text', null], true)),
                 );
 
                 return [
                     'turn' => $first->conversation_turn,
-                    'started_at' => $this->startOf($first)->format(self::ISO_MILLISECONDS),
-                    'prompt' => $this->firstFilled($transcriptCalls, fn (SpectraRequest $call) => $this->messageTextExtractor->prompt($call->request)),
-                    'reply' => $this->firstFilled($transcriptCalls->reverse(), fn (SpectraRequest $call) => $this->messageTextExtractor->reply($call)),
+                    'started_at' => $this->resolveStartedAt($first)->format(self::ISO_MILLISECONDS),
+                    'prompt' => $this->findFirstFilled($transcriptCalls, fn (SpectraRequest $call) => $this->messageTextExtractor->prompt($call->request)),
+                    'reply' => $this->findFirstFilled($transcriptCalls->reverse(), fn (SpectraRequest $call) => $this->messageTextExtractor->reply($call)),
                     'request_count' => $turnCalls->count(),
                     'failed_count' => $turnCalls->filter(fn (SpectraRequest $call) => $call->isFailed())->count(),
                     'total_cost_in_cents' => $cost,
                     'running_cost_in_cents' => $runningCost,
                     'total_tokens' => $turnCalls->sum(fn (SpectraRequest $call) => $call->prompt_tokens + $call->completion_tokens),
-                    'duration_ms' => $this->durationMs($turnCalls),
+                    'duration_ms' => $this->measureDurationMs($turnCalls),
                     'trace_id' => $first->trace_id,
                     'calls' => $turnCalls->map(fn (SpectraRequest $call) => [
                         'id' => $call->id,
@@ -144,7 +144,7 @@ class GetConversationDetails
     }
 
     /**
-     * The text calls most likely to be the exchange the user saw, in order.
+     * Get the text calls most likely to be the exchange the user saw, in order.
      *
      * An app often makes side calls in the same turn: a guardrail or judge
      * that wraps the message and the history in its own prompt, a query
@@ -154,39 +154,41 @@ class GetConversationDetails
      * @param  Collection<int, SpectraRequest>  $calls
      * @return Collection<int, SpectraRequest>
      */
-    private function transcriptCalls(Collection $calls): Collection
+    private function pickTranscriptCalls(Collection $calls): Collection
     {
-        $kinds = $calls->map(fn (SpectraRequest $call) => $this->transcriptKind($call));
+        $kinds = $calls->map(fn (SpectraRequest $call) => $this->rankTranscriptKind($call));
         $best = $kinds->max();
 
         return $calls->filter(fn (SpectraRequest $call, int $key) => $kinds[$key] === $best);
     }
 
     /**
-     * How surely the call is the user's exchange: 2 when it streams or offers
-     * tools, as an agent's reply does; 0 when it asks for structured output,
-     * as a classifier, judge or extractor does; 1 otherwise.
+     * Rank how surely the call is the user's exchange.
+     *
+     * 2 when it streams or offers tools, as an agent's reply does; 0 when it
+     * asks for structured output, as a classifier, judge or extractor does;
+     * 1 otherwise.
      */
-    private function transcriptKind(SpectraRequest $call): int
+    private function rankTranscriptKind(SpectraRequest $call): int
     {
         $request = is_array($call->request) ? $call->request : [];
 
-        if ($this->requestsStructuredOutput($request)) {
+        if ($this->isStructuredOutputRequest($request)) {
             return 0;
         }
 
-        $streams = ($request['stream'] ?? false) === true
+        $isStreaming = ($request['stream'] ?? false) === true
             || (is_array($call->response) && ($call->response['streaming'] ?? false) === true);
 
-        return $streams || filled($request['tools'] ?? null) ? 2 : 1;
+        return $isStreaming || filled($request['tools'] ?? null) ? 2 : 1;
     }
 
     /**
-     * Whether the request asks for a JSON answer rather than a reply to read.
+     * Determine if the request asks for a JSON answer rather than a reply to read.
      *
      * @param  array<mixed>  $request
      */
-    private function requestsStructuredOutput(array $request): bool
+    private function isStructuredOutputRequest(array $request): bool
     {
         $formats = [
             // OpenAI Chat Completions and the APIs that copy it (Mistral, Groq, xAI, OpenRouter, Cohere v2).
@@ -218,12 +220,12 @@ class GetConversationDetails
     }
 
     /**
-     * The first non-empty text the reader finds in the calls, in their order.
+     * Find the first non-empty text the reader returns for the calls, in their order.
      *
      * @param  Collection<int, SpectraRequest>  $calls
      * @param  callable(SpectraRequest): ?string  $read
      */
-    private function firstFilled(Collection $calls, callable $read): ?string
+    private function findFirstFilled(Collection $calls, callable $read): ?string
     {
         foreach ($calls as $call) {
             $text = $read($call);
@@ -237,11 +239,11 @@ class GetConversationDetails
     }
 
     /**
-     * From the turn's first call starting to its last call ending.
+     * Measure the turn's duration in milliseconds, from its first call starting to its last call ending.
      *
      * @param  Collection<int, SpectraRequest>  $calls
      */
-    private function durationMs(Collection $calls): int
+    private function measureDurationMs(Collection $calls): int
     {
         $first = $calls->first();
 
@@ -249,8 +251,8 @@ class GetConversationDetails
             return 0;
         }
 
-        $start = $this->startOf($first);
-        $end = $calls->max(fn (SpectraRequest $call) => $this->startOf($call)->getPreciseTimestamp(3) + ($call->latency_ms ?? 0));
+        $start = $this->resolveStartedAt($first);
+        $end = $calls->max(fn (SpectraRequest $call) => $this->resolveStartedAt($call)->getPreciseTimestamp(3) + ($call->latency_ms ?? 0));
 
         return max(0, (int) round($end - $start->getPreciseTimestamp(3)));
     }
@@ -258,7 +260,7 @@ class GetConversationDetails
     /**
      * Get when the call started, falling back to when it was recorded.
      */
-    private function startOf(SpectraRequest $call): CarbonInterface
+    private function resolveStartedAt(SpectraRequest $call): CarbonInterface
     {
         return $call->started_at ?? $call->created_at ?? Date::now();
     }
