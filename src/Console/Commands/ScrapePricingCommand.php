@@ -6,6 +6,7 @@ namespace Spectra\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Spectra\Actions\Pricing\ScrapeProviderPrices;
 use Spectra\Enums\PricingUnit;
@@ -210,13 +211,14 @@ class ScrapePricingCommand extends Command
 
         if ($result->changes !== []) {
             $this->table(
-                ['Model', 'Tier', 'Price', 'Ours', 'Scraped'],
+                ['Model', 'Tier', 'Price', 'Ours', 'Scraped', 'On the page'],
                 collect($result->changes)->map(fn (PriceChange $change) => [
                     $change->model.(in_array($change->model, $result->newModels, true) ? ' <fg=green>(new)</>' : ''),
                     $change->tier.($change->aboveInputTokens !== null ? ' > '.number_format($change->aboveInputTokens) : ''),
                     $mapper->label($change->field),
                     $this->money($change->old, $change),
                     $this->money($change->new, $change),
+                    Str::limit((string) $change->pageLine, 70),
                 ])->all(),
             );
         }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Spectra\Pricing\ProviderPricing;
 use Spectra\Support\Pricing\Scraping\CatalogShape;
 use Spectra\Support\Pricing\Scraping\PageText;
+use Spectra\Support\Pricing\Scraping\PriceChange;
 use Spectra\Support\Pricing\Scraping\ScrapedPriceMapper;
 use Spectra\Tests\Fixtures\FakeOpenAIPricing;
 
@@ -136,6 +137,37 @@ it('ignores prices the page does not print next to the model', function () {
 
     expect($result->models['long-x']['tiers'][0])->toEqual(['tier' => 'standard', 'input_price' => 250.0, 'output_price' => 1200.0])
         ->and($result->skipped)->toBe(['long-x: standard output 15 not found next to the model on the page, ignored.']);
+});
+
+it('keeps the page line that confirms each change, for the review', function () {
+    $page = implode("\n", [
+        '## Long context',
+        '| long-x | $2.50 | $12.00 |',
+        '| long-x (> 200K) | $5.00 | $18.00 |',
+        '| new-x | $1.00   |   $4.00 |',
+    ]);
+
+    $result = ($this->map)([
+        ['model_id' => 'long-x', 'tier' => 'standard', 'input' => 2.5, 'output' => 12],
+        ['model_id' => 'new-x', 'tier' => 'standard', 'input' => 1, 'output' => 4],
+    ], $page);
+
+    $lines = collect($result->changes)->mapWithKeys(fn (PriceChange $change) => ["{$change->model} {$change->field}" => $change->pageLine])->all();
+
+    expect($lines)->toBe([
+        'long-x input_price' => '| long-x | $2.50 | $12.00 |',
+        'new-x input_price' => '| new-x | $1.00 | $4.00 |',
+        'new-x output_price' => '| new-x | $1.00 | $4.00 |',
+    ]);
+});
+
+it('cuts a long confirming line for the review', function () {
+    $page = '| long-x | $2.50 | $12.00 | '.str_repeat('notes ', 50).'|';
+
+    $change = ($this->map)([['model_id' => 'long-x', 'tier' => 'standard', 'input' => 2.5]], $page)->changes[0];
+
+    expect(mb_strlen((string) $change->pageLine))->toBe(ScrapedPriceMapper::MAX_PAGE_LINE_LENGTH + 1)
+        ->and($change->pageLine)->toStartWith('| long-x | $2.50 | $12.00 |')->toEndWith('…');
 });
 
 it('converts printed prices with the quantity they are for', function () {

@@ -518,7 +518,7 @@ LLM extraction makes mistakes: on real pricing pages it copies prices from the n
 - **No outliers**: a price 10 times higher or lower than the catalog's.
 - **Only what billing can use**: a unit price for a token model (or the reverse), a price in a different unit than the catalog's, a per-character price for a single character, a new tier or model missing a price billing needs, or a new model without a `standard` price.
 
-The checks favour skipping a real change over saving a wrong one, so a run can miss some changes. Run it again later, or add them to the file by hand. Review the printed changes, and the file diff, before you deploy it. New models get a type and capabilities guessed from their pricing unit.
+The checks favour skipping a real change over saving a wrong one, so a run can miss some changes. Run it again later, or add them to the file by hand. Review the printed changes, and the file diff, before you deploy it. Each change prints the page line it was confirmed on, so you can check that the price sits in the right column and tier without opening the page; the checks above can't tell a batch price from a standard one printed on the same row. New models get a type and capabilities guessed from their pricing unit.
 
 ### Options
 

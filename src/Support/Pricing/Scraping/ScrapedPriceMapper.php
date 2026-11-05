@@ -28,7 +28,7 @@ use Spectra\Support\Pricing\PricingLookup;
  *
  * @phpstan-import-type TierEntry from ModelDefinition
  *
- * @phpstan-type ScrapedRow array{tier: string, above: int|null, prices: array<string, float>, scales: array<string, float>}
+ * @phpstan-type ScrapedRow array{tier: string, above: int|null, prices: array<string, float>, scales: array<string, float>, lines: array<string, string>}
  * @phpstan-type ScrapedModel array{display_name: string|null, unit: string|null, names: list<string>, rows: array<string, ScrapedRow>}
  */
 class ScrapedPriceMapper
@@ -37,6 +37,9 @@ class ScrapedPriceMapper
     public const OUTLIER_RATIO = 10;
 
     protected const MODEL_ID_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._:\/@+-]{0,199}$/';
+
+    /** Characters of a confirming page line kept for the review. */
+    public const MAX_PAGE_LINE_LENGTH = 300;
 
     /** @var array<string, list<PriceChange>> */
     protected array $changes = [];
@@ -155,7 +158,7 @@ class ScrapedPriceMapper
             $unit = is_string($row['unit'] ?? null) ? PricingUnit::tryFrom($row['unit'])?->value : null;
             $catalogUnit = isset($definitions[$id]) ? $definitions[$id]->toModelArray()['pricing_unit'] : null;
             $pricedPer = is_numeric($row['priced_per'] ?? null) && $row['priced_per'] > 0 ? (float) $row['priced_per'] : null;
-            [$prices, $scales, $unconfirmed, $ignored] = $this->rowPrices($row, $id, $shape, $page, $names, $catalogUnit ?? $unit, $pricedPer);
+            [$prices, $scales, $unconfirmed, $ignored, $lines] = $this->rowPrices($row, $id, $shape, $page, $names, $catalogUnit ?? $unit, $pricedPer);
 
             foreach ($ignored as $field) {
                 $ignoredFields[$field] = ($ignoredFields[$field] ?? 0) + 1;
@@ -174,7 +177,9 @@ class ScrapedPriceMapper
             $grouped[$id]['names'] = array_values(collect([...$grouped[$id]['names'], ...$names])->uniqueStrict()->all());
 
             $key = $catalogTier.'|'.$above;
-            $grouped[$id]['rows'][$key] ??= ['tier' => $catalogTier, 'above' => $above, 'prices' => [], 'scales' => []];
+            $grouped[$id]['rows'][$key] ??= ['tier' => $catalogTier, 'above' => $above, 'prices' => [], 'scales' => [], 'lines' => []];
+            // A price and its page line come from the same row: the first that gives the price wins both.
+            $grouped[$id]['rows'][$key]['lines'] += array_diff_key($lines, $grouped[$id]['rows'][$key]['prices']);
             $grouped[$id]['rows'][$key]['prices'] += $prices;
             $grouped[$id]['rows'][$key]['scales'] += $scales;
         }
@@ -224,12 +229,13 @@ class ScrapedPriceMapper
 
     /**
      * The row's prices in catalog cents, with the scale each was converted
-     * by. A price the page doesn't show next to the model is unconfirmed; a
-     * field the catalog doesn't use is ignored.
+     * by and the page line that confirms it. A price the page doesn't show
+     * next to the model is unconfirmed; a field the catalog doesn't use is
+     * ignored.
      *
      * @param  array<string, mixed>  $row
      * @param  list<string>  $names
-     * @return array{0: array<string, float>, 1: array<string, float>, 2: list<string>, 3: list<string>}
+     * @return array{0: array<string, float>, 1: array<string, float>, 2: list<string>, 3: list<string>, 4: array<string, string>}
      */
     protected function rowPrices(array $row, string $id, CatalogShape $shape, ?PageText $page, array $names, ?string $unit, ?float $pricedPer): array
     {
@@ -237,6 +243,7 @@ class ScrapedPriceMapper
         $scales = [];
         $unconfirmed = [];
         $ignored = [];
+        $lines = [];
 
         foreach (CatalogShape::FIELDS as $source => $field) {
             $value = $row[$source] ?? null;
@@ -275,9 +282,24 @@ class ScrapedPriceMapper
 
             $scales[$field] = $this->scale($field, $unit, $pricedPer);
             $prices[$field] = round((float) $value * $scales[$field] * 100, 6);
+
+            if ($line !== null) {
+                $lines[$field] = $this->pageLine($line);
+            }
         }
 
-        return [$prices, $scales, $unconfirmed, $ignored];
+        return [$prices, $scales, $unconfirmed, $ignored, $lines];
+    }
+
+    /**
+     * A confirming page line as the review shows it: one line of single
+     * spaces, cut to MAX_PAGE_LINE_LENGTH characters.
+     */
+    protected function pageLine(string $line): string
+    {
+        $line = trim((string) preg_replace('/\s+/u', ' ', $line));
+
+        return mb_strlen($line) > self::MAX_PAGE_LINE_LENGTH ? mb_substr($line, 0, self::MAX_PAGE_LINE_LENGTH).'…' : $line;
     }
 
     /**
@@ -401,7 +423,7 @@ class ScrapedPriceMapper
                 }
 
                 $updated[$field] = $new;
-                $pending[] = new PriceChange($id, $row['tier'], $row['above'], $field, $old, $new, $unit);
+                $pending[] = new PriceChange($id, $row['tier'], $row['above'], $field, $old, $new, $unit, $row['lines'][$field] ?? null);
             }
 
             if ($pending === []) {
@@ -535,7 +557,7 @@ class ScrapedPriceMapper
     protected function recordNewRow(string $id, array $row, array $prices, string $unit): void
     {
         foreach ($prices as $field => $price) {
-            $this->changes[$id][] = new PriceChange($id, $row['tier'], $row['above'], $field, null, $price, $unit);
+            $this->changes[$id][] = new PriceChange($id, $row['tier'], $row['above'], $field, null, $price, $unit, $row['lines'][$field] ?? null);
         }
     }
 

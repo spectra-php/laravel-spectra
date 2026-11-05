@@ -58,10 +58,10 @@ it('saves the changed and new models to the scraped prices file', function () {
 
     $this->artisan('spectra:pricing-scrape')
         ->expectsOutputToContain('2 catalog models found')
-        ->expectsTable(['Model', 'Tier', 'Price', 'Ours', 'Scraped'], [
-            ['gpt-x', 'standard', 'input', '1 /1M', '0.9 /1M'],
-            ['gpt-z <fg=green>(new)</>', 'standard', 'input', '—', '2 /1M'],
-            ['gpt-z <fg=green>(new)</>', 'standard', 'output', '—', '8 /1M'],
+        ->expectsTable(['Model', 'Tier', 'Price', 'Ours', 'Scraped', 'On the page'], [
+            ['gpt-x', 'standard', 'input', '1 /1M', '0.9 /1M', '| gpt-x | $0.90 | $4.00 | $0.10 |'],
+            ['gpt-z <fg=green>(new)</>', 'standard', 'input', '—', '2 /1M', '| gpt-z | $2.00 | $8.00 | - |'],
+            ['gpt-z <fg=green>(new)</>', 'standard', 'output', '—', '8 /1M', '| gpt-z | $2.00 | $8.00 | - |'],
         ])
         ->expectsOutputToContain('SPECTRA_USE_SCRAPED_PRICES=true')
         ->assertSuccessful();

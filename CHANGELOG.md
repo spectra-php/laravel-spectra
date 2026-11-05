@@ -22,7 +22,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Conversations: `Spectra::forConversation($chat, turn: 3)` puts every call tracked after it in the conversation and turn, however it is tracked (the HTTP client, the OpenAI SDK, Laravel AI, Prism), until the request or job ends. Before, only calls made with `Spectra::track()` or `Spectra::stream()` could be given a conversation
 - Dashboard: the Overview has an Alerts card (each rule's value now and whether it is firing) and a Performance card (each model's error rate and p50/p95/p99 latency, and median time to first token)
 - Dashboard: a Maintenance screen (the wrench icon) shows what is stored and runs the upkeep: prune old data with a count of what would be deleted before you confirm, pause and resume recording, rebuild the daily stats, and check prices with Firecrawl. Prunes, rebuilds and price checks run as queued jobs on Spectra's queue
-- Dashboard: a price check lists each scraped price that differs from the built-in catalog per model, and writes only the models you pick to the scraped prices file
+- Dashboard: a price check lists each scraped price that differs from the built-in catalog per model, with the page line it was confirmed on, and writes only the models you pick to the scraped prices file. `spectra:pricing-scrape` prints the page line too
 - The maintenance actions need the new `manageSpectra` gate (local-only by default) and the `dashboard.maintenance` option (`SPECTRA_DASHBOARD_MAINTENANCE`, on by default)
 - `spectra:pause` and `spectra:resume`: while paused, AI calls keep working but no request, span, score or media is stored. Each request or job reads the flag once, and a long-running process every 5 seconds
 

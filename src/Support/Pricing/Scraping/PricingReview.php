@@ -87,6 +87,7 @@ class PricingReview
                 'unit' => $change->unit,
                 'old' => $change->old,
                 'new' => $change->new,
+                'page_line' => $change->pageLine,
             ], $result->changes),
             'error' => null,
         ];

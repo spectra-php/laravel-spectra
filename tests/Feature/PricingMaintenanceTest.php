@@ -71,7 +71,7 @@ it('keeps a check for review without writing the scraped prices file', function 
     expect($models->keys()->all())->toBe(['gpt-x', 'gpt-z'])
         ->and($models['gpt-x']['is_new'])->toBeFalse()
         ->and($models['gpt-x']['applied'])->toBeFalse()
-        ->and($models['gpt-x']['changes'][0])->toMatchArray(['field' => 'input_price', 'label' => 'input', 'old' => 100, 'new' => 90])
+        ->and($models['gpt-x']['changes'][0])->toMatchArray(['field' => 'input_price', 'label' => 'input', 'old' => 100, 'new' => 90, 'page_line' => '| gpt-x | $0.90 | $4.00 | $0.10 |'])
         ->and($models['gpt-z']['is_new'])->toBeTrue()
         ->and($models['gpt-z']['changes'])->toHaveCount(2);
 });

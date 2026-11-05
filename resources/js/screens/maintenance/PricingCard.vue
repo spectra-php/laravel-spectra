@@ -238,7 +238,15 @@ onUnmounted(() => clearTimeout(pollTimer));
                                         </div>
                                     </td>
                                     <td class="text-xs text-gray-600 dark:text-gray-300">{{ tierLabel(change) }}</td>
-                                    <td class="text-xs text-gray-600 dark:text-gray-300">{{ change.label }}</td>
+                                    <td class="text-xs text-gray-600 dark:text-gray-300">
+                                        {{ change.label }}
+                                        <!-- The page line that shows this price next to the model, to check the change against. -->
+                                        <div
+                                            v-if="change.page_line"
+                                            class="mt-0.5 max-w-[14rem] truncate font-mono xl:max-w-[26rem] text-[11px] text-gray-400 dark:text-gray-500"
+                                            v-tooltip.truncated="change.page_line"
+                                        >{{ change.page_line }}</div>
+                                    </td>
                                     <td class="text-right text-xs tabular-nums text-gray-500 dark:text-gray-400">{{ formatPrice(change.old, change, provider.currency) }}</td>
                                     <td class="text-right text-xs tabular-nums text-gray-900 dark:text-white">{{ formatPrice(change.new, change, provider.currency) }}</td>
                                     <td
@@ -261,7 +269,7 @@ onUnmounted(() => clearTimeout(pollTimer));
                 </div>
 
                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                    Firecrawl reads the pages with an LLM and can misread them; check each change against the page before you apply it.
+                    Firecrawl reads the pages with an LLM and can misread them. Each change shows the page line it was confirmed on: check that the price sits in the right column and tier before you apply it.
                     The file is written on this server: commit it so every server and deploy uses it, and restart queue workers to pick up new prices.
                 </p>
             </div>
