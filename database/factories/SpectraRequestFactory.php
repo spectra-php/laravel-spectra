@@ -27,7 +27,7 @@ class SpectraRequestFactory extends Factory
         return [
             'provider' => config('spectra.budget.default_provider', 'openai'),
             'model' => config('spectra.budget.default_model', 'gpt-4'),
-            'response' => json_encode(['prompt' => 'test']),
+            'response' => json_encode(['prompt' => 'test'], JSON_THROW_ON_ERROR),
             'total_cost_in_cents' => 0,
             'status_code' => 200,
             'created_at' => now(),

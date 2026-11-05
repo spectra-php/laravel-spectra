@@ -44,7 +44,7 @@ trait AggregatesSuccessfulRequests
     }
 
     /**
-     * Null when no request succeeded.
+     * Get the SQL that averages the latency of 2xx requests, null when no request succeeded.
      *
      * @return literal-string
      */

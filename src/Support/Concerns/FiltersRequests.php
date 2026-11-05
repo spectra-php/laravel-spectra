@@ -24,16 +24,12 @@ trait FiltersRequests
         'is_reasoning', 'reasoning_effort', 'trace_id', 'conversation_id', 'prompt_name', 'prompt_version', 'error_fingerprint', 'trackable_type', 'trackable_id', 'tag', 'tags',
     ];
 
-    /** Whether the request sets any of the filters applyRequestFilters() reads. */
+    /**
+     * Determine if the request sets any of the filters applyRequestFilters() reads.
+     */
     protected function hasRequestFilters(Request $request): bool
     {
-        foreach (self::REQUEST_FILTER_KEYS as $key) {
-            if ($request->filled($key)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $request->anyFilled(self::REQUEST_FILTER_KEYS);
     }
 
     /**
@@ -80,11 +76,11 @@ trait FiltersRequests
         }
 
         if ($request->filled('has_tool_calls')) {
-            $query->where('has_tool_calls', filter_var($request->input('has_tool_calls'), FILTER_VALIDATE_BOOLEAN));
+            $query->where('has_tool_calls', $request->boolean('has_tool_calls'));
         }
 
         if ($request->filled('is_reasoning')) {
-            $query->where('is_reasoning', filter_var($request->input('is_reasoning'), FILTER_VALIDATE_BOOLEAN));
+            $query->where('is_reasoning', $request->boolean('is_reasoning'));
         }
 
         if ($request->filled('reasoning_effort')) {

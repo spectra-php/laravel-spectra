@@ -58,7 +58,9 @@ class RequestAggregateQuery
         return $instance;
     }
 
-    /** Only include successful (2xx) requests. */
+    /**
+     * Limit the query to successful (2xx) requests.
+     */
     public function successfulOnly(): self
     {
         $this->query->whereBetween('status_code', [200, 299]);
@@ -66,7 +68,9 @@ class RequestAggregateQuery
         return $this;
     }
 
-    /** Apply the dashboard layout's model-type filter. */
+    /**
+     * Apply the dashboard layout's model-type filter.
+     */
     public function forLayout(string $layout): self
     {
         $this->applyLayoutFilter($this->query, $layout);
@@ -74,7 +78,9 @@ class RequestAggregateQuery
         return $this;
     }
 
-    /** Scope to a single polymorphic trackable. */
+    /**
+     * Scope the query to a single polymorphic trackable.
+     */
     public function forTrackable(string $type, string $id): self
     {
         $this->query
@@ -84,7 +90,9 @@ class RequestAggregateQuery
         return $this;
     }
 
-    /** Only rows that belong to some trackable. */
+    /**
+     * Limit the query to rows that belong to some trackable.
+     */
     public function withTrackable(): self
     {
         $this->query
@@ -94,7 +102,9 @@ class RequestAggregateQuery
         return $this;
     }
 
-    /** Only rows that name a prompt template. */
+    /**
+     * Limit the query to rows that name a prompt template.
+     */
     public function withPrompt(): self
     {
         $this->query->whereNotNull('prompt_name');
@@ -102,7 +112,9 @@ class RequestAggregateQuery
         return $this;
     }
 
-    /** Only rows that belong to a trace. */
+    /**
+     * Limit the query to rows that belong to a trace.
+     */
     public function withTrace(): self
     {
         $this->query->whereNotNull('trace_id');
@@ -111,7 +123,7 @@ class RequestAggregateQuery
     }
 
     /**
-     * Only the calls of the given traces.
+     * Limit the query to the calls of the given traces.
      *
      * @param  array<int, string>  $traceIds
      */
@@ -122,7 +134,9 @@ class RequestAggregateQuery
         return $this;
     }
 
-    /** Only rows that belong to a conversation. */
+    /**
+     * Limit the query to rows that belong to a conversation.
+     */
     public function withConversation(): self
     {
         $this->query->whereNotNull('conversation_id');
@@ -130,7 +144,9 @@ class RequestAggregateQuery
         return $this;
     }
 
-    /** Only the calls of one conversation. */
+    /**
+     * Limit the query to the calls of one conversation.
+     */
     public function forConversation(string $conversationId): self
     {
         $this->query->where('conversation_id', $conversationId);
@@ -139,7 +155,7 @@ class RequestAggregateQuery
     }
 
     /**
-     * Only the calls of the given conversations.
+     * Limit the query to the calls of the given conversations.
      *
      * @param  array<int, string>  $conversationIds
      */
@@ -151,8 +167,8 @@ class RequestAggregateQuery
     }
 
     /**
-     * Only rows of the conversations the given query's conversation ids
-     * name, so a conversation keeps all its calls in its totals.
+     * Limit the query to rows of the conversations the given query's
+     * conversation ids name, so a conversation keeps all its calls in its totals.
      *
      * @param  Builder<SpectraRequest>  $conversationIds  a query selecting conversation_id
      */
@@ -163,7 +179,9 @@ class RequestAggregateQuery
         return $this;
     }
 
-    /** Only the calls of one trace. */
+    /**
+     * Limit the query to the calls of one trace.
+     */
     public function forTrace(string $traceId): self
     {
         $this->query->forTrace($traceId);
@@ -172,8 +190,8 @@ class RequestAggregateQuery
     }
 
     /**
-     * Only rows of the traces the given query's trace ids name, so a trace
-     * keeps all its calls in its totals even when only one call matched.
+     * Limit the query to rows of the traces the given query's trace ids name,
+     * so a trace keeps all its calls in its totals even when only one call matched.
      *
      * @param  Builder<SpectraRequest>  $traceIds  a query selecting trace_id
      */
@@ -185,9 +203,10 @@ class RequestAggregateQuery
     }
 
     /**
-     * Totals of a group of calls (a trace, a conversation): calls, failures,
-     * cost (2xx only), tokens, first and last start, and duration. A call
-     * ends at its start plus its latency (completed_at is stored to the
+     * Select the totals of a group of calls (a trace, a conversation): calls,
+     * failures, cost (2xx only), tokens, first and last start, and duration.
+     *
+     * A call ends at its start plus its latency (completed_at is stored to the
      * second), and rows saved before started_at existed start at created_at.
      */
     public function callTotals(): self
@@ -206,9 +225,10 @@ class RequestAggregateQuery
     }
 
     /**
-     * A conversation's totals: the call totals plus its turns. Calls with
-     * the same turn number are one turn; a call without one is a turn of
-     * its own.
+     * Select a conversation's totals: the call totals plus its turns.
+     *
+     * Calls with the same turn number are one turn; a call without one is a
+     * turn of its own.
      */
     public function conversationTotals(): self
     {
@@ -228,7 +248,7 @@ class RequestAggregateQuery
     }
 
     /**
-     * COUNT(*) under the given alias.
+     * Select COUNT(*) under the given alias.
      *
      * @param  literal-string  $alias
      */
@@ -238,7 +258,7 @@ class RequestAggregateQuery
     }
 
     /**
-     * Requests outside 2xx (or with no status) under the given alias.
+     * Select the count of requests outside 2xx (or with no status) under the given alias.
      *
      * @param  literal-string  $alias
      */
@@ -248,7 +268,7 @@ class RequestAggregateQuery
     }
 
     /**
-     * Cost over successful requests only (safe on unfiltered row sets).
+     * Select the cost over successful requests only (safe on unfiltered row sets).
      *
      * @param  literal-string  $alias
      */
@@ -258,7 +278,7 @@ class RequestAggregateQuery
     }
 
     /**
-     * Average latency over successful requests only; 0 when none succeeded.
+     * Select the average latency over successful requests only; 0 when none succeeded.
      *
      * @param  literal-string  $alias
      */
@@ -268,7 +288,7 @@ class RequestAggregateQuery
     }
 
     /**
-     * Token sum under the given alias.
+     * Select the token sum under the given alias.
      *
      * @param  literal-string  $alias
      */
@@ -277,7 +297,9 @@ class RequestAggregateQuery
         return $this->aggregate('COALESCE(SUM(prompt_tokens + completion_tokens), 0)', $alias, 'integer');
     }
 
-    /** The per-modality usage sums shared by the model/type breakdowns. */
+    /**
+     * Select the per-modality usage sums shared by the model/type breakdowns.
+     */
     public function usageSums(): self
     {
         return $this
@@ -287,7 +309,9 @@ class RequestAggregateQuery
             ->aggregate('COALESCE(SUM(duration_seconds), 0)', 'duration_seconds_sum', 'float');
     }
 
-    /** The TTS/STT sums shared by the overview and trackable stats. */
+    /**
+     * Select the TTS/STT sums shared by the overview and trackable stats.
+     */
     public function audioSums(): self
     {
         return $this
@@ -296,7 +320,9 @@ class RequestAggregateQuery
             ->aggregate("COALESCE(SUM(CASE WHEN model_type = 'stt' THEN duration_seconds ELSE 0 END), 0)", 'stt_duration_sum', 'float');
     }
 
-    /** Image, video and audio usage as the trackables screens show it. */
+    /**
+     * Select image, video and audio usage as the trackables screens show it.
+     */
     public function mediaSums(): self
     {
         return $this
@@ -306,7 +332,9 @@ class RequestAggregateQuery
             ->aggregate("COALESCE(SUM(CASE WHEN model_type IN ('tts', 'stt') THEN duration_seconds ELSE 0 END), 0)", 'audio_duration_sum', 'float');
     }
 
-    /** Bucket rows by calendar date (adds select, group, and order). */
+    /**
+     * Bucket rows by calendar date (adds select, group, and order).
+     */
     public function byDate(): self
     {
         $this->query
@@ -317,7 +345,9 @@ class RequestAggregateQuery
         return $this;
     }
 
-    /** Group by the given columns, selecting them as dimensions. */
+    /**
+     * Group by the given columns, selecting them as dimensions.
+     */
     public function groupByColumns(string ...$columns): self
     {
         $this->query->select($columns)->groupBy($columns);
@@ -384,8 +414,10 @@ class RequestAggregateQuery
     }
 
     /**
-     * Milliseconds since the Unix epoch of a date expression, keeping its
-     * fraction. Each driver spells this differently.
+     * Build the milliseconds since the Unix epoch of a date expression,
+     * keeping its fraction.
+     *
+     * Each driver spells this differently.
      *
      * @param  literal-string  $expression
      * @return literal-string
@@ -401,7 +433,7 @@ class RequestAggregateQuery
     }
 
     /**
-     * The built query, for wrapping it as a subquery.
+     * Get the built query, for wrapping it as a subquery.
      *
      * @return Builder<SpectraRequest>
      */
@@ -439,7 +471,7 @@ class RequestAggregateQuery
     }
 
     /**
-     * How many distinct combinations of the given columns the rows hold.
+     * Count the distinct combinations of the given columns the rows hold.
      *
      * Counted over a grouped subquery: COUNT(DISTINCT a, b) is MySQL-only and
      * concatenating the columns needs a different operator per driver.

@@ -41,8 +41,7 @@ trait FiltersByLayout
                 break;
             default:
                 Log::warning(
-                    "Spectra: unknown dashboard layout \"{$layout}\" — no model-type filter applied. "
-                    .'Valid values: full, text, embedding, image, video, audio.'
+                    "Spectra: unknown dashboard layout \"{$layout}\" — no model-type filter applied. Valid values: full, text, embedding, image, video, audio."
                 );
         }
     }

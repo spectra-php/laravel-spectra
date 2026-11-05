@@ -243,8 +243,8 @@ class SpectraRequest extends Model
      */
     public function scopeWithTag(Builder $query, string $tag): Builder
     {
-        return $query->whereHas('tags', function ($q) use ($tag) {
-            $q->where('name', $tag);
+        return $query->whereHas('tags', function ($tagQuery) use ($tag) {
+            $tagQuery->where('name', $tag);
         });
     }
 
@@ -257,8 +257,8 @@ class SpectraRequest extends Model
      */
     public function scopeWithAnyTags(Builder $query, array $tags): Builder
     {
-        return $query->whereHas('tags', function ($q) use ($tags) {
-            $q->whereIn('name', $tags);
+        return $query->whereHas('tags', function ($tagQuery) use ($tags) {
+            $tagQuery->whereIn('name', $tags);
         });
     }
 
@@ -321,14 +321,14 @@ class SpectraRequest extends Model
      */
     public function scopeFailed(Builder $query): Builder
     {
-        return $query->where(function (Builder $q) {
-            $q->whereNotBetween('status_code', [200, 299])
+        return $query->where(function (Builder $statusQuery) {
+            $statusQuery->whereNotBetween('status_code', [200, 299])
                 ->orWhereNull('status_code');
         });
     }
 
     /**
-     * Requests that belong to the given trace.
+     * Scope the query to requests that belong to the given trace.
      *
      * @param  Builder<static>  $query
      * @return Builder<static>
@@ -485,7 +485,7 @@ class SpectraRequest extends Model
     }
 
     /**
-     * Whether the request failed: any status outside 200-299, or none at all.
+     * Determine if the request failed: any status outside 200-299, or none at all.
      */
     public function isFailed(): bool
     {

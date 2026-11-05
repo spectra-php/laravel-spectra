@@ -37,7 +37,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests to the given provider.
+     * Limit the query to requests to the given provider.
      */
     public function provider(string $provider): self
     {
@@ -47,7 +47,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests for the given model.
+     * Limit the query to requests for the given model.
      */
     public function model(string $model): self
     {
@@ -57,7 +57,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests tracked for the given model (a user, team…).
+     * Limit the query to requests tracked for the given model (a user, team…).
      */
     public function forTrackable(Model $trackable): self
     {
@@ -68,7 +68,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests made between the two dates, the end date inclusive.
+     * Limit the query to requests made between the two dates, the end date inclusive.
      */
     public function between(CarbonInterface|string $start, CarbonInterface|string $end): self
     {
@@ -80,7 +80,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests made since the start of today.
+     * Limit the query to requests made since the start of today.
      */
     public function today(): self
     {
@@ -88,7 +88,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests made since the start of this week.
+     * Limit the query to requests made since the start of this week.
      */
     public function thisWeek(): self
     {
@@ -96,7 +96,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests made since the start of this month.
+     * Limit the query to requests made since the start of this month.
      */
     public function thisMonth(): self
     {
@@ -104,7 +104,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests made in the last given number of days.
+     * Limit the query to requests made in the last given number of days.
      */
     public function lastDays(int $days): self
     {

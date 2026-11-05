@@ -140,8 +140,7 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * Get total cost in dollars.
-     * Note: total_cost_in_cents is stored in cents.
+     * Get the day's total cost in dollars, from the stored cents.
      */
     public function getTotalCostInDollarsAttribute(): float
     {
@@ -222,7 +221,7 @@ class SpectraDailyStat extends Model
     /**
      * Add one request to the day's stats.
      *
-     * Kept for backwards compatibility; StatsAggregator now calls accumulate().
+     * Kept for backwards compatibility; StatsAggregator calls accumulate() directly.
      */
     public static function record(
         string $date,
@@ -276,8 +275,10 @@ class SpectraDailyStat extends Model
 
     /**
      * Add the given amounts to one day/provider/model/trackable row, creating
-     * it first when needed. Amounts may be negative to move a request between
-     * the successful and failed counts.
+     * it first when needed.
+     *
+     * Amounts may be negative to move a request between the successful and
+     * failed counts.
      *
      * @param  array<string, int|float>  $increments
      */
@@ -297,7 +298,7 @@ class SpectraDailyStat extends Model
             return;
         }
 
-        $trackableIdStr = $trackableId !== null ? (string) $trackableId : null;
+        $trackableIdString = $trackableId !== null ? (string) $trackableId : null;
 
         $find = fn () => static::query()
             ->whereDate('date', $date)
@@ -311,7 +312,7 @@ class SpectraDailyStat extends Model
             ->when(
                 $trackableType === null,
                 fn ($query) => $query->whereNull('trackable_type')->whereNull('trackable_id'),
-                fn ($query) => $query->where('trackable_type', $trackableType)->where('trackable_id', $trackableIdStr)
+                fn ($query) => $query->where('trackable_type', $trackableType)->where('trackable_id', $trackableIdString)
             )
             ->first();
 
@@ -325,7 +326,7 @@ class SpectraDailyStat extends Model
                     'model' => $model,
                     'model_type' => $modelType,
                     'trackable_type' => $trackableType,
-                    'trackable_id' => $trackableIdStr,
+                    'trackable_id' => $trackableIdString,
                 ]);
             } catch (UniqueConstraintViolationException) {
                 // Another worker created the row between our read and insert.
@@ -344,12 +345,12 @@ class SpectraDailyStat extends Model
 
             static::query()
                 ->whereKey($key)
-                ->where(fn (Builder $q) => $q->whereNull('min_latency_ms')->orWhere('min_latency_ms', '>', $latencyMs))
+                ->where(fn (Builder $latencyQuery) => $latencyQuery->whereNull('min_latency_ms')->orWhere('min_latency_ms', '>', $latencyMs))
                 ->update(['min_latency_ms' => $latencyMs]);
 
             static::query()
                 ->whereKey($key)
-                ->where(fn (Builder $q) => $q->whereNull('max_latency_ms')->orWhere('max_latency_ms', '<', $latencyMs))
+                ->where(fn (Builder $latencyQuery) => $latencyQuery->whereNull('max_latency_ms')->orWhere('max_latency_ms', '<', $latencyMs))
                 ->update(['max_latency_ms' => $latencyMs]);
         }
     }

@@ -32,7 +32,7 @@ trait FiltersTrackables
         }
 
         if ($request->filled('model')) {
-            $query->where('model', 'like', '%'.$request->input('model').'%');
+            $query->where('model', 'like', "%{$request->input('model')}%");
         }
 
         if ($request->filled('status')) {
@@ -53,7 +53,7 @@ trait FiltersTrackables
         }
 
         if ($request->filled('has_tool_calls')) {
-            $query->where('has_tool_calls', filter_var($request->input('has_tool_calls'), FILTER_VALIDATE_BOOLEAN));
+            $query->where('has_tool_calls', $request->boolean('has_tool_calls'));
         }
 
         if ($request->filled('trace_id')) {
