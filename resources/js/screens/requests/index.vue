@@ -297,7 +297,7 @@ onUnmounted(() => {
                                     <div class="flex items-center gap-2 min-w-0">
                                         <ProviderLogo
                                             :provider="request.provider"
-                                            :title="request.provider_display_name || request.provider"
+                                            v-tooltip="request.provider_display_name || request.provider"
                                             class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                         />
                                         <span class="font-medium text-gray-900 dark:text-white">{{ request.model }}</span>
@@ -308,7 +308,7 @@ onUnmounted(() => {
                                         <span
                                             v-if="request.is_streaming"
                                             class="inline-flex items-center text-primary-500 dark:text-primary-400 shrink-0"
-                                            title="Streaming"
+                                            v-tooltip="'Streaming'"
                                         >
                                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M6.26,19.089A9.625,9.625,0,0,1,6.234,4.911C6.709,4.475,6,3.769,5.527,4.2A10.516,10.516,0,0,0,5.553,19.8c.475.433,1.184-.273.707-.707Z"/>
@@ -321,7 +321,7 @@ onUnmounted(() => {
                                         <span
                                             v-if="request.is_reasoning"
                                             class="inline-flex items-center text-amber-500 dark:text-amber-400 shrink-0"
-                                            :title="'Reasoning' + (request.reasoning_effort ? ` (${request.reasoning_effort})` : '')"
+                                            v-tooltip="'Reasoning' + (request.reasoning_effort ? ` (${request.reasoning_effort})` : '')"
                                         >
                                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M16,4c-4.963,0-9,4.038-9,9c0,3.186,1.781,5.278,3.212,6.959C11.172,21.085,12,22.059,12,23v5h3v1h2v-1h3v-5c0-0.941,0.828-1.915,1.788-3.041C23.219,18.278,25,16.186,25,13C25,8.038,20.963,4,16,4z M18,26h-4v-2h4V26z M20.265,18.662c-0.923,1.084-1.805,2.12-2.132,3.338h-4.266c-0.327-1.218-1.209-2.254-2.132-3.338C10.391,17.083,9,15.45,9,13c0-3.86,3.141-7,7-7s7,3.14,7,7C23,15.45,21.609,17.083,20.265,18.662z M16,7v2c-2.206,0-4,1.794-4,4h-2C10,9.691,12.691,7,16,7z"/>

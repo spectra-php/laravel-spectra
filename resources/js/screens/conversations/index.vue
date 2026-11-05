@@ -261,7 +261,7 @@ onUnmounted(() => {
                                 @click="goToConversation(conversation.conversation_id)"
                             >
                                 <td class="max-w-sm">
-                                    <div class="truncate font-mono text-[13px] font-medium text-gray-900 dark:text-white" :title="conversation.conversation_id">{{ conversation.conversation_id }}</div>
+                                    <div class="truncate font-mono text-[13px] font-medium text-gray-900 dark:text-white" v-tooltip.truncated="conversation.conversation_id">{{ conversation.conversation_id }}</div>
                                     <div class="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">Started {{ formatDateTime(conversation.started_at) }}</div>
                                 </td>
                                 <td>
@@ -270,10 +270,10 @@ onUnmounted(() => {
                                             v-for="model in conversation.models.slice(0, 3)"
                                             :key="model.provider + model.model"
                                             :provider="model.provider"
-                                            :title="model.model"
+                                            v-tooltip="model.model"
                                             class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full"
                                         />
-                                        <span class="truncate text-sm text-gray-600 dark:text-gray-300" :title="conversation.models.map((model) => model.model).join(', ')">
+                                        <span class="truncate text-sm text-gray-600 dark:text-gray-300" v-tooltip.truncated="conversation.models.map((model) => model.model).join(', ')">
                                             {{ conversation.models[0]?.model }}<template v-if="conversation.models.length > 1"> +{{ conversation.models.length - 1 }}</template>
                                         </span>
                                     </div>

@@ -290,7 +290,7 @@ onUnmounted(() => {
                 </template>
             </StatCard>
             <StatCard v-if="showTokens" label="Tokens" :loading="loading" skeleton-width="50%">
-                <div class="stat-value" :title="formatNumber(summary.total_tokens) + ' tokens'">{{ formatCompact(summary.total_tokens) }}</div>
+                <div class="stat-value" v-tooltip="formatNumber(summary.total_tokens) + ' tokens'">{{ formatCompact(summary.total_tokens) }}</div>
                 <template #footer>
                     <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">Input and output, text and embeddings</div>
                 </template>

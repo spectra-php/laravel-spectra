@@ -38,7 +38,7 @@ const errorClass = (rate) => {
                         <th class="text-right">p50</th>
                         <th class="text-right">p95</th>
                         <th class="text-right">p99</th>
-                        <th class="text-right" title="Median time to first token of streamed calls">First token</th>
+                        <th class="text-right" v-tooltip="'Median time to first token of streamed calls'">First token</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -47,15 +47,15 @@ const errorClass = (rate) => {
                             <div class="flex min-w-0 items-center gap-2.5">
                                 <ProviderLogo
                                     :provider="model.provider"
-                                    :title="model.provider"
+                                    v-tooltip="model.provider"
                                     class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full"
                                     aria-hidden="true"
                                 />
-                                <span class="truncate font-medium text-gray-900 dark:text-white" :title="model.model">{{ model.model }}</span>
+                                <span class="truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">{{ model.model }}</span>
                             </div>
                         </td>
                         <td class="text-right tabular-nums">{{ formatNumber(model.request_count) }}</td>
-                        <td class="text-right tabular-nums font-medium" :class="errorClass(model.error_rate)" :title="`${formatNumber(model.failed_count)} failed`">{{ errorRate(model.error_rate) }}</td>
+                        <td class="text-right tabular-nums font-medium" :class="errorClass(model.error_rate)" v-tooltip="`${formatNumber(model.failed_count)} failed`">{{ errorRate(model.error_rate) }}</td>
                         <td class="text-right tabular-nums">{{ latency(model.latency_p50) }}</td>
                         <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white">{{ latency(model.latency_p95) }}</td>
                         <td class="text-right tabular-nums">{{ latency(model.latency_p99) }}</td>

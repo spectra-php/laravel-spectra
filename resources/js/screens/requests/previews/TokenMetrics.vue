@@ -77,7 +77,7 @@ const width = (value, total) => (total > 0 ? (value / total) * 100 : 0) + '%';
                         :class="segment.class"
                         class="h-full first:rounded-l-full last:rounded-r-full"
                         :style="{ width: width(segment.value, group.data.total) }"
-                        :title="`${segment.label}: ${formatNumber(segment.value)}`"
+                        v-tooltip="`${segment.label}: ${formatNumber(segment.value)}`"
                     ></div>
                 </div>
 

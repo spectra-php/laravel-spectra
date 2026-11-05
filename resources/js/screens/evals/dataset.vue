@@ -80,7 +80,7 @@ onMounted(async () => {
                         <tbody>
                             <tr v-for="(example, index) in data.examples" :key="example.id" class="align-top">
                                 <td class="tabular-nums text-gray-400">{{ index + 1 }}</td>
-                                <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm" :title="text(example.input)">{{ text(example.input) }}</p></td>
+                                <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm" v-tooltip.truncated="text(example.input)">{{ text(example.input) }}</p></td>
                                 <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm text-gray-600 dark:text-gray-300">{{ text(example.expected) || '—' }}</p></td>
                                 <td class="text-right text-xs">
                                     <router-link v-if="example.source_request_id" :to="{ name: 'request-preview', params: { id: example.source_request_id } }" class="text-primary-600 hover:underline dark:text-primary-400">A call</router-link>

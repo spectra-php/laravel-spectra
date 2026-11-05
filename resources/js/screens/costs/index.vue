@@ -227,7 +227,7 @@ onUnmounted(() => {
                 </template>
             </StatCard>
             <StatCard label="Top model" :loading="loading">
-                <div class="mt-1.5 truncate text-xl font-semibold tracking-tight text-gray-900 dark:text-white" :title="topModel?.model">{{ topModel?.model || '—' }}</div>
+                <div class="mt-1.5 truncate text-xl font-semibold tracking-tight text-gray-900 dark:text-white" v-tooltip.truncated="topModel?.model">{{ topModel?.model || '—' }}</div>
                 <template #footer>
                     <div v-if="topModel" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
                         <Money :cents="topModel.cost" /> across {{ formatNumber(topModel.requests) }} requests
@@ -326,13 +326,13 @@ onUnmounted(() => {
                                         <div class="flex min-w-0 items-center gap-2.5">
                                             <ProviderLogo
                                                 :provider="model.provider"
-                                                :title="providerDisplayName(model.provider)"
+                                                v-tooltip="providerDisplayName(model.provider)"
                                                 class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full"
                                                 aria-hidden="true"
                                             />
                                             <div class="min-w-0 flex-1">
                                                 <div class="flex min-w-0 items-center gap-1.5">
-                                                    <span class="truncate font-medium text-gray-900 dark:text-white" :title="model.model">{{ model.model }}</span>
+                                                    <span class="truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">{{ model.model }}</span>
                                                     <span v-if="model.model_type && model.model_type !== 'text'" class="badge badge-secondary shrink-0">{{ model.model_type }}</span>
                                                 </div>
                                                 <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">

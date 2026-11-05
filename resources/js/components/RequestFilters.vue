@@ -297,7 +297,7 @@ onUnmounted(() => {
                 v-if="hasClearableFilters"
                 @click="emit('clear')"
                 class="btn btn-ghost px-3"
-                :title="clearTitle"
+                v-tooltip="clearTitle"
             >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

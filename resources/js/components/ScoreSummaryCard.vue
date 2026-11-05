@@ -25,7 +25,7 @@ const percent = (score) => Math.round(Number(score.average ?? 0) * 100);
         <ul class="grid grid-cols-1 gap-px bg-gray-100 sm:grid-cols-2 lg:grid-cols-3 dark:bg-gray-800/80">
             <li v-for="score in scores" :key="score.name + score.type" class="bg-white px-5 py-4 dark:bg-gray-900">
                 <div class="flex items-baseline justify-between gap-3">
-                    <span class="truncate text-sm font-medium text-gray-900 dark:text-white" :title="score.name">{{ score.name }}</span>
+                    <span class="truncate text-sm font-medium text-gray-900 dark:text-white" v-tooltip.truncated="score.name">{{ score.name }}</span>
                     <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">{{ formatNumber(score.count) }} {{ score.count === 1 ? 'score' : 'scores' }}</span>
                 </div>
 
@@ -35,7 +35,7 @@ const percent = (score) => Math.round(Number(score.average ?? 0) * 100);
                         <span class="text-2xl font-semibold tabular-nums text-gray-900 dark:text-white">{{ percent(score) }}%</span>
                         <span class="text-xs text-gray-500 dark:text-gray-400">yes</span>
                     </div>
-                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-red-100 dark:bg-red-950/50" :title="`${percent(score)}% yes, ${100 - percent(score)}% no`">
+                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-red-100 dark:bg-red-950/50" v-tooltip="`${percent(score)}% yes, ${100 - percent(score)}% no`">
                         <div class="h-full rounded-full bg-emerald-500" :style="{ width: percent(score) + '%' }"></div>
                     </div>
                 </div>

@@ -62,7 +62,7 @@ onUnmounted(() => {
     <span
         v-else
         class="tabular-nums"
-        :title="formattedExpiresAt"
+        v-tooltip="formattedExpiresAt"
     >
         {{ display }}
     </span>

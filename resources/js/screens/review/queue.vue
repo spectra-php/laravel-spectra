@@ -124,7 +124,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
             <!-- The trace: what each call was asked and answered -->
             <div class="min-w-0 space-y-4 lg:col-span-2">
                 <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span class="font-mono" :title="item.origin || ''">{{ item.origin || 'No origin recorded' }}</span>
+                    <span class="font-mono" v-tooltip="item.origin || ''">{{ item.origin || 'No origin recorded' }}</span>
                     <router-link :to="{ name: 'trace-detail', params: { traceId: item.trace_id } }" class="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">Open the trace</router-link>
                 </div>
 

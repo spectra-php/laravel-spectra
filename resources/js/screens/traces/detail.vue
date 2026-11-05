@@ -132,9 +132,9 @@ const copyTraceId = async () => {
             <!-- Header -->
             <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div class="min-w-0">
-                    <h1 class="truncate font-mono text-xl font-semibold tracking-tight text-gray-900 dark:text-white" :title="title">{{ title }}</h1>
+                    <h1 class="truncate font-mono text-xl font-semibold tracking-tight text-gray-900 dark:text-white" v-tooltip.truncated="title">{{ title }}</h1>
                     <p class="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-gray-500 dark:text-gray-400">
-                        <button class="font-mono text-xs hover:text-gray-900 dark:hover:text-white" :title="copied ? 'Copied' : 'Copy trace id'" @click="copyTraceId">
+                        <button class="font-mono text-xs hover:text-gray-900 dark:hover:text-white" v-tooltip="copied ? 'Copied' : 'Copy trace id'" @click="copyTraceId">
                             {{ trace.trace_id }}<span v-if="copied" class="ml-1 font-sans text-primary-600 dark:text-primary-400">copied</span>
                         </button>
                         <template v-if="startedAt"><span aria-hidden="true">·</span> {{ startedAt }}</template>
@@ -207,11 +207,11 @@ const copyTraceId = async () => {
                             <li v-for="model in trace.models" :key="model.provider + model.model" class="flex items-center gap-3 px-5 py-3">
                                 <ProviderLogo
                                     :provider="model.provider"
-                                    :title="model.provider_display_name || model.provider"
+                                    v-tooltip="model.provider_display_name || model.provider"
                                     class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full"
                                 />
                                 <div class="min-w-0 flex-1">
-                                    <div class="truncate text-sm font-medium text-gray-900 dark:text-white" :title="model.model">{{ model.model }}</div>
+                                    <div class="truncate text-sm font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">{{ model.model }}</div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         {{ formatNumber(model.request_count) }} {{ model.request_count === 1 ? 'call' : 'calls' }} · {{ formatNumber(model.total_tokens) }} tokens
                                     </div>
@@ -237,7 +237,7 @@ const copyTraceId = async () => {
                             <div v-if="origins.length">
                                 <dt class="text-xs text-gray-500 dark:text-gray-400">Origins</dt>
                                 <dd class="mt-0.5 space-y-0.5">
-                                    <div v-for="origin in origins" :key="origin" class="truncate font-mono text-xs text-gray-700 dark:text-gray-300" :title="origin">{{ origin }}</div>
+                                    <div v-for="origin in origins" :key="origin" class="truncate font-mono text-xs text-gray-700 dark:text-gray-300" v-tooltip.truncated="origin">{{ origin }}</div>
                                 </dd>
                             </div>
                             <div>
@@ -249,7 +249,7 @@ const copyTraceId = async () => {
                             </div>
                             <div v-if="trace.parent_span_id">
                                 <dt class="text-xs text-gray-500 dark:text-gray-400">Parent span</dt>
-                                <dd class="mt-0.5 font-mono text-xs text-gray-700 dark:text-gray-300" title="From the incoming traceparent header">{{ trace.parent_span_id }}</dd>
+                                <dd class="mt-0.5 font-mono text-xs text-gray-700 dark:text-gray-300" v-tooltip="'From the incoming traceparent header'">{{ trace.parent_span_id }}</dd>
                             </div>
                         </dl>
                     </div>

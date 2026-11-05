@@ -129,7 +129,7 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                     </div>
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h1 class="truncate text-xl font-semibold tracking-tight text-gray-900 dark:text-white" :title="request.model">{{ request.model }}</h1>
+                            <h1 class="truncate text-xl font-semibold tracking-tight text-gray-900 dark:text-white" v-tooltip.truncated="request.model">{{ request.model }}</h1>
                             <span class="badge badge-secondary">{{ modelTypeLabel }}</span>
                             <span v-if="request.is_streaming" class="badge badge-purple">Streamed</span>
                             <span v-if="request.pricing_tier && request.pricing_tier !== 'standard'" class="badge badge-info capitalize">{{ request.pricing_tier }}</span>
@@ -243,17 +243,17 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                         <dl class="kv px-5 py-1">
                             <div>
                                 <dt>Request ID</dt>
-                                <dd class="font-mono text-xs" :title="request.id">{{ request.id }}</dd>
+                                <dd class="font-mono text-xs" v-tooltip="request.id">{{ request.id }}</dd>
                             </div>
                             <div v-if="request.response_id">
                                 <dt>Response ID</dt>
                                 <dd class="flex items-center justify-end gap-1.5">
-                                    <span class="truncate font-mono text-xs" :title="request.response_id">{{ request.response_id }}</span>
+                                    <span class="truncate font-mono text-xs" v-tooltip.truncated="request.response_id">{{ request.response_id }}</span>
                                     <button
                                         type="button"
                                         class="shrink-0 rounded p-0.5 transition-colors"
                                         :class="copiedField === 'response_id' ? 'text-emerald-500' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
-                                        :title="copiedField === 'response_id' ? 'Copied' : 'Copy'"
+                                        v-tooltip="copiedField === 'response_id' ? 'Copied' : 'Copy'"
                                         @click="copyToClipboard(request.response_id, 'response_id')"
                                     >
                                         <svg v-if="copiedField !== 'response_id'" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" /></svg>
@@ -263,7 +263,7 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                             </div>
                             <div v-if="request.endpoint">
                                 <dt>Endpoint</dt>
-                                <dd class="font-mono text-xs" :title="request.endpoint">{{ request.endpoint }}</dd>
+                                <dd class="font-mono text-xs" v-tooltip="request.endpoint">{{ request.endpoint }}</dd>
                             </div>
                             <div v-if="request.finish_reason">
                                 <dt>Finish reason</dt>
@@ -282,12 +282,12 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                             <div v-if="request.trace_id">
                                 <dt>Trace</dt>
                                 <dd>
-                                    <router-link :to="{ name: 'trace-detail', params: { traceId: request.trace_id } }" class="font-mono text-xs text-primary-600 hover:underline dark:text-primary-400" :title="request.trace_id">{{ request.trace_id }}</router-link>
+                                    <router-link :to="{ name: 'trace-detail', params: { traceId: request.trace_id } }" class="font-mono text-xs text-primary-600 hover:underline dark:text-primary-400" v-tooltip="request.trace_id">{{ request.trace_id }}</router-link>
                                 </dd>
                             </div>
                             <div v-if="request.conversation_id">
                                 <dt>Conversation</dt>
-                                <dd class="font-mono text-xs"><router-link :to="{ name: 'conversation-detail', params: { conversationId: request.conversation_id } }" class="text-primary-600 hover:underline dark:text-primary-400" :title="request.conversation_id">{{ request.conversation_id }}</router-link><span v-if="request.conversation_turn" class="text-gray-400"> · turn {{ request.conversation_turn }}</span></dd>
+                                <dd class="font-mono text-xs"><router-link :to="{ name: 'conversation-detail', params: { conversationId: request.conversation_id } }" class="text-primary-600 hover:underline dark:text-primary-400" v-tooltip="request.conversation_id">{{ request.conversation_id }}</router-link><span v-if="request.conversation_turn" class="text-gray-400"> · turn {{ request.conversation_turn }}</span></dd>
                             </div>
                             <div v-if="request.prompt_name">
                                 <dt>Prompt</dt>
@@ -303,7 +303,7 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                             </div>
                             <div v-if="request.user_agent">
                                 <dt>User agent</dt>
-                                <dd class="text-xs" :title="request.user_agent">{{ request.user_agent }}</dd>
+                                <dd class="text-xs" v-tooltip="request.user_agent">{{ request.user_agent }}</dd>
                             </div>
                         </dl>
                     </div>

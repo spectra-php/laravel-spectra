@@ -168,7 +168,7 @@ if (typeof window !== 'undefined') {
                     type="button"
                     :class="actionClass(recordingPaused)"
                     :disabled="switchingRecording"
-                    :title="recordingPaused ? 'Resume recording' : 'Pause recording'"
+                    v-tooltip="recordingPaused ? 'Resume recording' : 'Pause recording'"
                     :aria-label="recordingPaused ? 'Resume recording' : 'Pause recording'"
                     :aria-pressed="recordingPaused"
                     @click="toggleRecording"
@@ -181,14 +181,14 @@ if (typeof window !== 'undefined') {
                     v-if="canManage"
                     :to="{ name: 'maintenance', hash: '#prune' }"
                     :class="actionClass()"
-                    title="Prune old data"
+                    v-tooltip="'Prune old data'"
                     aria-label="Prune old data"
                 >
                     <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" :d="ICONS.trash" />
                     </svg>
                 </router-link>
-                <button type="button" :class="actionClass()" class="hidden sm:inline-flex" title="Refresh" aria-label="Refresh" @click="refreshView">
+                <button type="button" :class="actionClass()" class="hidden sm:inline-flex" v-tooltip="'Refresh'" aria-label="Refresh" @click="refreshView">
                     <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" :d="ICONS.refresh" />
                     </svg>
@@ -197,7 +197,7 @@ if (typeof window !== 'undefined') {
                     v-if="reviewQueues"
                     :to="{ name: 'review' }"
                     :class="actionClass(isActive('review'))"
-                    :title="pendingReviews ? `Review: ${pendingReviews} waiting` : 'Review'"
+                    v-tooltip="pendingReviews ? `Review: ${pendingReviews} waiting` : 'Review'"
                     aria-label="Review"
                 >
                     <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
@@ -205,12 +205,12 @@ if (typeof window !== 'undefined') {
                     </svg>
                     <span v-if="pendingReviews" class="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full bg-primary-600 px-1 text-center text-[10px] font-semibold leading-[1.1rem] text-white">{{ pendingReviews > 99 ? '99+' : pendingReviews }}</span>
                 </router-link>
-                <router-link :to="{ name: 'maintenance' }" :class="actionClass(isActive('maintenance'))" class="hidden sm:inline-flex" title="Maintenance" aria-label="Maintenance">
+                <router-link :to="{ name: 'maintenance' }" :class="actionClass(isActive('maintenance'))" class="hidden sm:inline-flex" v-tooltip="'Maintenance'" aria-label="Maintenance">
                     <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" :d="ICONS.maintenance" />
                     </svg>
                 </router-link>
-                <button type="button" :class="actionClass()" :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'" :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'" @click="toggleDarkMode">
+                <button type="button" :class="actionClass()" v-tooltip="isDark ? 'Switch to light mode' : 'Switch to dark mode'" :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'" @click="toggleDarkMode">
                     <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" :d="isDark ? ICONS.sun : ICONS.moon" />
                     </svg>
@@ -250,7 +250,7 @@ if (typeof window !== 'undefined') {
                 :key="item.name"
                 :to="{ name: item.name }"
                 :class="linkClass(item)"
-                :title="collapsed ? item.label : undefined"
+                v-tooltip="collapsed ? item.label : undefined"
                 :aria-label="collapsed ? item.label : undefined"
             >
                 <span v-if="isActive(item.match)" class="spectrum-bar absolute inset-y-2 -left-3 w-[3px] rounded-r-full" aria-hidden="true"></span>
@@ -266,7 +266,7 @@ if (typeof window !== 'undefined') {
                 type="button"
                 :class="linkClass({ match: null })"
                 class="w-full"
-                :title="collapsed ? 'Expand the menu' : undefined"
+                v-tooltip="collapsed ? 'Expand the menu' : undefined"
                 :aria-label="collapsed ? 'Expand the menu' : 'Collapse the menu'"
                 :aria-expanded="!collapsed"
                 @click="toggleCollapsed"

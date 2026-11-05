@@ -97,7 +97,7 @@ const missingReply = computed(() => conversation.value?.stores_responses ? 'No r
             <!-- Header -->
             <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div class="min-w-0">
-                    <h1 class="truncate font-mono text-xl font-semibold tracking-tight text-gray-900 dark:text-white" :title="conversation.conversation_id">{{ conversation.conversation_id }}</h1>
+                    <h1 class="truncate font-mono text-xl font-semibold tracking-tight text-gray-900 dark:text-white" v-tooltip.truncated="conversation.conversation_id">{{ conversation.conversation_id }}</h1>
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         Started {{ formatDateTime(conversation.started_at) }}
                         <template v-if="conversation.last_activity_at !== conversation.started_at"> · last active {{ formatDateTime(conversation.last_activity_at) }}</template>
@@ -131,7 +131,7 @@ const missingReply = computed(() => conversation.value?.stores_responses ? 'No r
                 <div class="stat-card">
                     <div class="stat-label">Models</div>
                     <div class="stat-value !text-2xl">{{ conversation.models.length }}</div>
-                    <div class="mt-1 truncate text-xs text-gray-500 dark:text-gray-400" :title="conversation.models.map((model) => model.model).join(', ')">{{ conversation.models.map((model) => model.model).join(', ') }}</div>
+                    <div class="mt-1 truncate text-xs text-gray-500 dark:text-gray-400" v-tooltip.truncated="conversation.models.map((model) => model.model).join(', ')">{{ conversation.models.map((model) => model.model).join(', ') }}</div>
                 </div>
             </div>
 
@@ -181,7 +181,7 @@ const missingReply = computed(() => conversation.value?.stores_responses ? 'No r
                                 :class="call.is_error
                                     ? 'border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30'
                                     : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.04]'"
-                                :title="`${call.model} · ${formatNumber(call.total_tokens)} tokens`"
+                                v-tooltip="`${call.model} · ${formatNumber(call.total_tokens)} tokens`"
                             >
                                 <ProviderLogo
                                     :provider="call.provider"
@@ -212,11 +212,11 @@ const missingReply = computed(() => conversation.value?.stores_responses ? 'No r
                             <li v-for="model in conversation.models" :key="model.provider + model.model" class="flex items-center gap-3 px-5 py-3">
                                 <ProviderLogo
                                     :provider="model.provider"
-                                    :title="model.provider_display_name || model.provider"
+                                    v-tooltip="model.provider_display_name || model.provider"
                                     class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full"
                                 />
                                 <div class="min-w-0 flex-1">
-                                    <div class="truncate text-sm font-medium text-gray-900 dark:text-white" :title="model.model">{{ model.model }}</div>
+                                    <div class="truncate text-sm font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">{{ model.model }}</div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         {{ formatNumber(model.request_count) }} {{ model.request_count === 1 ? 'call' : 'calls' }} · {{ formatNumber(model.total_tokens) }} tokens
                                     </div>

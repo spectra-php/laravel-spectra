@@ -134,7 +134,7 @@ onMounted(async () => {
                                 <td class="text-right tabular-nums">{{ formatDuration(row.avg_latency_ms) }}</td>
                                 <td>
                                     <div class="flex flex-wrap gap-1.5">
-                                        <span v-for="score in row.scores" :key="score.name" class="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300" :title="`${formatNumber(score.count)} scores`">
+                                        <span v-for="score in row.scores" :key="score.name" class="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300" v-tooltip="`${formatNumber(score.count)} scores`">
                                             <span class="text-gray-500 dark:text-gray-400">{{ score.name }}</span>
                                             <span class="font-medium tabular-nums text-gray-900 dark:text-white">{{ scoreAverage(score) }}</span>
                                         </span>

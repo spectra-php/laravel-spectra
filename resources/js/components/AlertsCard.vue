@@ -27,7 +27,7 @@ const formatTime = (iso) => {
         <ul v-else class="grid grid-cols-1 gap-px bg-gray-100 sm:grid-cols-2 lg:grid-cols-3 dark:bg-gray-800/80">
             <li v-for="alert in alerts" :key="alert.name" class="bg-white px-5 py-4 dark:bg-gray-900">
                 <div class="flex items-start justify-between gap-3">
-                    <span class="truncate text-sm font-medium text-gray-900 dark:text-white" :title="alert.name">{{ alert.name }}</span>
+                    <span class="truncate text-sm font-medium text-gray-900 dark:text-white" v-tooltip.truncated="alert.name">{{ alert.name }}</span>
                     <span class="badge shrink-0" :class="alert.firing ? 'badge-danger' : 'badge-success'">{{ alert.firing ? 'Firing' : 'OK' }}</span>
                 </div>
                 <div class="mt-2 text-2xl font-semibold tabular-nums" :class="alert.firing ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'">{{ alert.value ?? '—' }}</div>

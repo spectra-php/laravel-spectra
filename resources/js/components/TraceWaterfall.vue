@@ -125,7 +125,7 @@ const nameColumn = computed(() => {
     <ol class="divide-y divide-gray-100 dark:divide-gray-800/80" :style="{ '--name-column': nameColumn }">
         <template v-for="row in rows" :key="row.key">
             <li v-if="row.startsLane" class="bg-gray-50/70 px-5 py-1.5 dark:bg-white/[0.02]">
-                <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400" :title="row.origin || 'No origin recorded'">{{ row.origin || 'No origin recorded' }}</span>
+                <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400" v-tooltip="row.origin || 'No origin recorded'">{{ row.origin || 'No origin recorded' }}</span>
             </li>
 
             <!-- A span: a Spectra::span() block, a tool, or the request, job or command -->
@@ -144,9 +144,9 @@ const nameColumn = computed(() => {
                     </span>
 
                     <span class="col-start-2 row-start-1 flex min-w-0 items-center gap-2 sm:col-start-auto sm:row-start-auto" :style="indent(row.depth)">
-                        <span class="truncate font-mono text-[13px] font-medium text-gray-700 dark:text-gray-200" :title="row.name">{{ row.name }}</span>
+                        <span class="truncate font-mono text-[13px] font-medium text-gray-700 dark:text-gray-200" v-tooltip.truncated="row.name">{{ row.name }}</span>
                         <span class="badge shrink-0 !px-1.5 !py-0 text-[10px]" :class="isTool(row) ? 'badge-warning' : 'badge-secondary'">{{ kindLabels[row.kind] || row.kind }}</span>
-                        <span v-if="row.is_error" class="badge badge-danger shrink-0 !px-1.5 !py-0 text-[11px]" :title="row.error_message || ''">Failed</span>
+                        <span v-if="row.is_error" class="badge badge-danger shrink-0 !px-1.5 !py-0 text-[11px]" v-tooltip="row.error_message || ''">Failed</span>
                     </span>
 
                     <span class="relative col-span-2 col-start-2 row-start-2 h-5 sm:col-span-1 sm:col-start-auto sm:row-start-auto">
@@ -203,13 +203,13 @@ const nameColumn = computed(() => {
                     <span class="col-start-2 row-start-1 flex min-w-0 items-center gap-2 sm:col-start-auto sm:row-start-auto" :style="indent(row.depth)">
                         <ProviderLogo
                             :provider="row.provider"
-                            :title="row.provider_display_name || row.provider"
+                            v-tooltip="row.provider_display_name || row.provider"
                             class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full"
                         />
                         <span
                             class="truncate text-sm"
                             :class="row.is_current ? 'font-semibold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-200'"
-                            :title="row.model"
+                            v-tooltip.truncated="row.model"
                         >{{ row.model }}</span>
                         <span v-if="row.is_error" class="badge badge-danger shrink-0 !px-1.5 !py-0 text-[11px]">
                             <svg class="mr-0.5 h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>

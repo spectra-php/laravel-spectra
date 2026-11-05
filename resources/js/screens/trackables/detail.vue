@@ -364,7 +364,7 @@ onUnmounted(() => {
                 </template>
             </StatCard>
             <StatCard v-if="showTokens" label="Tokens" :loading="loading" skeleton-width="50%">
-                <div class="stat-value" :title="formatNumber(trackable?.total_tokens || 0) + ' tokens'">{{ formatCompact(trackable?.total_tokens || 0) }}</div>
+                <div class="stat-value" v-tooltip="formatNumber(trackable?.total_tokens || 0) + ' tokens'">{{ formatCompact(trackable?.total_tokens || 0) }}</div>
             </StatCard>
             <StatCard label="Average latency" :loading="loading" skeleton-width="40%">
                 <template #action>
@@ -515,11 +515,11 @@ onUnmounted(() => {
                                         <div class="flex items-center gap-2 min-w-0">
                                             <ProviderLogo
                                                 :provider="model.provider"
-                                                :title="providerDisplayName(model.provider)"
+                                                v-tooltip="providerDisplayName(model.provider)"
                                                 class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                                 aria-hidden="true"
                                             />
-                                            <span class="max-w-[14rem] truncate font-medium text-gray-900 dark:text-white" :title="model.model">
+                                            <span class="max-w-[14rem] truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">
                                                 {{ model.model }}
                                             </span>
                                         </div>
@@ -589,13 +589,13 @@ onUnmounted(() => {
                                         <div class="flex items-center gap-2 min-w-0">
                                             <ProviderLogo
                                                 :provider="request.provider"
-                                                :title="providerDisplayName(request.provider)"
+                                                v-tooltip="providerDisplayName(request.provider)"
                                                 class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                                 aria-hidden="true"
                                             />
                                             <span
                                                 class="truncate font-medium text-gray-900 dark:text-white"
-                                                :title="request.model || ''"
+                                                v-tooltip.truncated="request.model || ''"
                                             >
                                                 {{ truncate(request.model, 32) }}
                                             </span>
@@ -733,11 +733,11 @@ onUnmounted(() => {
                                     <div class="flex items-center gap-2 min-w-0">
                                         <ProviderLogo
                                             :provider="model.provider"
-                                            :title="providerDisplayName(model.provider)"
+                                            v-tooltip="providerDisplayName(model.provider)"
                                             class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                             aria-hidden="true"
                                         />
-                                        <span class="max-w-[14rem] truncate font-medium text-gray-900 dark:text-white" :title="model.model">
+                                        <span class="max-w-[14rem] truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">
                                             {{ model.model }}
                                         </span>
                                     </div>

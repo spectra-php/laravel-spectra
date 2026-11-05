@@ -145,15 +145,15 @@ onMounted(async () => {
                                     <span class="flex items-center gap-2">
                                         <ProviderLogo :provider="group.provider" class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full" />
                                         <StatusCode :code="group.status_code" />
-                                        <span v-if="group.error_type" class="truncate font-mono text-[11px] text-gray-500 dark:text-gray-400" :title="group.error_type">{{ group.error_type.split('\\').pop() }}</span>
+                                        <span v-if="group.error_type" class="truncate font-mono text-[11px] text-gray-500 dark:text-gray-400" v-tooltip.truncated="group.error_type">{{ group.error_type.split('\\').pop() }}</span>
                                     </span>
-                                    <span class="mt-1.5 line-clamp-2 break-words text-sm text-gray-900 group-hover:text-primary-600 dark:text-gray-100 dark:group-hover:text-primary-400" :title="group.message || ''">
+                                    <span class="mt-1.5 line-clamp-2 break-words text-sm text-gray-900 group-hover:text-primary-600 dark:text-gray-100 dark:group-hover:text-primary-400" v-tooltip.truncated="group.message || ''">
                                         {{ group.message || `HTTP ${group.status_code ?? 'error'} with no message` }}
                                     </span>
                                 </router-link>
                             </td>
                             <td>
-                                <div class="flex h-8 items-end gap-[2px]" :title="`Last ${group.trend.length} days: ${group.trend.join(' · ')}`">
+                                <div class="flex h-8 items-end gap-[2px]" v-tooltip="`Last ${group.trend.length} days: ${group.trend.join(' · ')}`">
                                     <span
                                         v-for="(bar, index) in bars(group.trend)"
                                         :key="index"
@@ -169,14 +169,14 @@ onMounted(async () => {
                             </td>
                             <td>
                                 <div class="flex flex-col gap-0.5">
-                                    <span v-for="model in group.models" :key="model.model" class="truncate text-xs text-gray-600 dark:text-gray-300" :title="`${model.model}: ${formatNumber(model.count)}`">
+                                    <span v-for="model in group.models" :key="model.model" class="truncate text-xs text-gray-600 dark:text-gray-300" v-tooltip.truncated="`${model.model}: ${formatNumber(model.count)}`">
                                         {{ model.model }} <span class="tabular-nums text-gray-400 dark:text-gray-500">{{ formatNumber(model.count) }}</span>
                                     </span>
                                 </div>
                             </td>
                             <td class="text-right text-xs text-gray-500 dark:text-gray-400">
-                                <router-link :to="{ name: 'request-preview', params: { id: group.latest_request_id } }" class="whitespace-nowrap hover:text-primary-600 dark:hover:text-primary-400" :title="`${formatDate(group.last_seen_at)}: open the latest failure`">{{ ago(group.last_seen_at) }}</router-link>
-                                <span class="block whitespace-nowrap text-[11px] text-gray-400 dark:text-gray-500" :title="formatDate(group.first_seen_at)">since {{ ago(group.first_seen_at) }}</span>
+                                <router-link :to="{ name: 'request-preview', params: { id: group.latest_request_id } }" class="whitespace-nowrap hover:text-primary-600 dark:hover:text-primary-400" v-tooltip="`${formatDate(group.last_seen_at)}: open the latest failure`">{{ ago(group.last_seen_at) }}</router-link>
+                                <span class="block whitespace-nowrap text-[11px] text-gray-400 dark:text-gray-500" v-tooltip="formatDate(group.first_seen_at)">since {{ ago(group.first_seen_at) }}</span>
                             </td>
                         </tr>
                     </tbody>

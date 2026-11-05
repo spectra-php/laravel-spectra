@@ -264,11 +264,11 @@ onUnmounted(() => {
                                 @click="goToTrace(trace.trace_id)"
                             >
                                 <td class="max-w-sm">
-                                    <div class="truncate font-medium text-gray-900 dark:text-white" :title="trace.origin || trace.trace_id">
+                                    <div class="truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="trace.origin || trace.trace_id">
                                         <span v-if="trace.origin" class="font-mono text-[13px]">{{ trace.origin }}</span>
                                         <span v-else class="text-gray-500 dark:text-gray-400">Unnamed trace</span>
                                     </div>
-                                    <div class="mt-0.5 font-mono text-[11px] text-gray-400 dark:text-gray-500" :title="trace.trace_id">{{ shortTraceId(trace.trace_id) }}</div>
+                                    <div class="mt-0.5 font-mono text-[11px] text-gray-400 dark:text-gray-500" v-tooltip="trace.trace_id">{{ shortTraceId(trace.trace_id) }}</div>
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-1.5">
@@ -276,10 +276,10 @@ onUnmounted(() => {
                                             v-for="model in trace.models.slice(0, 3)"
                                             :key="model.provider + model.model"
                                             :provider="model.provider"
-                                            :title="model.model"
+                                            v-tooltip="model.model"
                                             class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full"
                                         />
-                                        <span class="truncate text-sm text-gray-600 dark:text-gray-300" :title="trace.models.map((model) => model.model).join(', ')">
+                                        <span class="truncate text-sm text-gray-600 dark:text-gray-300" v-tooltip.truncated="trace.models.map((model) => model.model).join(', ')">
                                             {{ trace.models[0]?.model }}<template v-if="trace.models.length > 1"> +{{ trace.models.length - 1 }}</template>
                                         </span>
                                     </div>

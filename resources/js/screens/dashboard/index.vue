@@ -311,7 +311,7 @@ onUnmounted(() => {
                 </template>
             </StatCard>
             <StatCard v-if="showTokens" label="Tokens" :loading="loading" skeleton-width="50%">
-                <div class="stat-value" :title="formatNumber(stats.total_tokens) + ' tokens'">{{ formatCompact(stats.total_tokens) }}</div>
+                <div class="stat-value" v-tooltip="formatNumber(stats.total_tokens) + ' tokens'">{{ formatCompact(stats.total_tokens) }}</div>
                 <template #footer>
                     <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">Input and output, text and embeddings</div>
                 </template>
@@ -438,12 +438,12 @@ onUnmounted(() => {
                                         <div class="flex min-w-0 items-center gap-2.5">
                                             <ProviderLogo
                                                 :provider="model.provider"
-                                                :title="providerDisplayName(model.provider)"
+                                                v-tooltip="providerDisplayName(model.provider)"
                                                 class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full"
                                                 aria-hidden="true"
                                             />
                                             <div class="min-w-0 flex-1">
-                                                <div class="truncate font-medium text-gray-900 dark:text-white" :title="model.model">{{ model.model }}</div>
+                                                <div class="truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">{{ model.model }}</div>
                                                 <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                                                     <div class="h-full rounded-full bg-primary-500/70" :style="{ width: (model.count / topModelMax) * 100 + '%' }"></div>
                                                 </div>
@@ -505,11 +505,11 @@ onUnmounted(() => {
                                         <div class="flex min-w-0 items-center gap-2.5">
                                             <ProviderLogo
                                                 :provider="request.provider"
-                                                :title="providerDisplayName(request.provider, request.provider_display_name)"
+                                                v-tooltip="providerDisplayName(request.provider, request.provider_display_name)"
                                                 class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full"
                                                 aria-hidden="true"
                                             />
-                                            <span class="truncate font-medium text-gray-900 dark:text-white" :title="request.model || ''">{{ truncate(request.model, 32) }}</span>
+                                            <span class="truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="request.model || ''">{{ truncate(request.model, 32) }}</span>
                                         </div>
                                     </td>
                                     <td class="text-right tabular-nums">{{ formatUsage(request) }}</td>

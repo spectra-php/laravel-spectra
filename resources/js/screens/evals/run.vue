@@ -130,11 +130,11 @@ const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dat
                         <tbody>
                             <tr v-for="(result, index) in results" :key="result.id" class="align-top">
                                 <td class="tabular-nums text-gray-400">{{ index + 1 }}</td>
-                                <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm" :title="text(result.input)">{{ text(result.input) }}</p></td>
-                                <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm text-gray-600 dark:text-gray-300" :title="text(result.expected)">{{ text(result.expected) || '—' }}</p></td>
+                                <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm" v-tooltip.truncated="text(result.input)">{{ text(result.input) }}</p></td>
+                                <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm text-gray-600 dark:text-gray-300" v-tooltip.truncated="text(result.expected)">{{ text(result.expected) || '—' }}</p></td>
                                 <td>
                                     <p v-if="result.error" class="line-clamp-4 break-words font-mono text-xs text-red-600 dark:text-red-400">{{ result.error }}</p>
-                                    <p v-else class="line-clamp-4 whitespace-pre-wrap break-words text-sm text-gray-900 dark:text-gray-100" :title="text(result.output)">{{ text(result.output) }}</p>
+                                    <p v-else class="line-clamp-4 whitespace-pre-wrap break-words text-sm text-gray-900 dark:text-gray-100" v-tooltip.truncated="text(result.output)">{{ text(result.output) }}</p>
                                     <p v-if="result.baseline" class="mt-2 line-clamp-3 whitespace-pre-wrap break-words border-l-2 border-gray-200 pl-2 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
                                         {{ result.baseline.error || text(result.baseline.output) }}
                                     </p>
@@ -146,7 +146,7 @@ const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dat
                                             :key="name"
                                             class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
                                             :class="[scoreClass(value), scoreChanged(result, name) ? 'ring-1 ring-amber-400' : '']"
-                                            :title="scoreChanged(result, name) ? `${name}: was ${scoreText(result.baseline.scores[name])}` : name"
+                                            v-tooltip="scoreChanged(result, name) ? `${name}: was ${scoreText(result.baseline.scores[name])}` : name"
                                         >
                                             <span class="font-mono opacity-70">{{ name }}</span> {{ scoreText(value) }}
                                         </span>

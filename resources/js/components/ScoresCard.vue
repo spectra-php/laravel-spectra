@@ -27,7 +27,7 @@ const formatTime = (iso) => {
         <ul class="divide-y divide-gray-100 dark:divide-gray-800/80">
             <li v-for="score in scores" :key="score.id" class="flex items-start gap-3 px-5 py-3">
                 <div class="min-w-0 flex-1">
-                    <div class="truncate text-sm font-medium text-gray-900 dark:text-white" :title="score.name">{{ score.name }}</div>
+                    <div class="truncate text-sm font-medium text-gray-900 dark:text-white" v-tooltip.truncated="score.name">{{ score.name }}</div>
                     <p v-if="score.comment" class="mt-0.5 line-clamp-3 text-sm text-gray-600 dark:text-gray-300">{{ score.comment }}</p>
                     <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         {{ score.source_label }} · {{ formatTime(score.created_at) }}
