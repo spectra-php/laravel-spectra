@@ -46,6 +46,7 @@ use Spectra\Testing\SpectraFake;
  * @method static \Spectra\Spectra withMetadata(array<string, mixed> $metadata)
  * @method static \Spectra\Spectra clearGlobals()
  * @method static \Spectra\Spectra forTrackable(Model $trackable)
+ * @method static \Spectra\Spectra forConversation(Model|string|int $conversation, ?int $turn = null)
  * @method static \Spectra\Spectra forUser(Model|int $user)
  * @method static RequestContext|null getCurrentContext()
  * @method static UsageQueryBuilder usage()

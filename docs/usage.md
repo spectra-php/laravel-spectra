@@ -180,6 +180,18 @@ $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($conversationI
 
 Give every call of one user message the same turn number, including tool calls and the embeddings you look up for it. The dashboard then shows them as one turn.
 
+**Calls tracked on their own.** Calls through the HTTP client, the OpenAI SDK, Laravel AI or Prism are tracked without `track()`, so there is no context to set. Set the conversation for the rest of the request or job instead, before the calls:
+
+```php
+use Spectra\Facades\Spectra;
+
+Spectra::forConversation($chat, turn: $chat->messages()->where('role', 'user')->count());
+
+$reply = $agent->prompt($message); // every call it makes is in the conversation, at this turn
+```
+
+`forConversation()` takes an id or a model (its key is used), and an optional turn number. It lasts until the request, job or command ends, or until `Spectra::clearGlobals()`. A call given its own conversation (the `conversation_id` option, or `$ctx->inConversation()`) keeps it.
+
 The **Conversations** screen lists one row per conversation: its turns and failed calls, the models it used, its trackable, its cost and its last activity. Above the list are totals for every conversation you filter for. The filters are the same as on the requests list, and search matches part of a conversation id.
 
 <img class="screenshot" src="/images/dashboard/conversations.png" alt="The conversations list" />

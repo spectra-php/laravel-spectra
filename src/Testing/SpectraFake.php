@@ -95,7 +95,7 @@ class SpectraFake extends Spectra
     }
 
     /**
-     * Start a request context with the global tags and metadata applied.
+     * Start a request context with the global tags, metadata and conversation applied.
      *
      * @param  array<string, mixed>  $options
      */
@@ -109,6 +109,8 @@ class SpectraFake extends Spectra
             'metadata' => array_merge($this->globalMetadata, $options['metadata'] ?? []),
             'prompt_name' => $options['prompt_name'] ?? $this->scopedPrompt['name'] ?? null,
             'prompt_version' => $options['prompt_version'] ?? $this->scopedPrompt['version'] ?? null,
+            'conversation_id' => $options['conversation_id'] ?? $this->globalConversationId,
+            'conversation_turn' => isset($options['conversation_id']) ? ($options['conversation_turn'] ?? null) : ($options['conversation_turn'] ?? $this->globalConversationTurn),
         ]);
     }
 

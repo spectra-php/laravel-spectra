@@ -66,6 +66,11 @@ class Spectra
 
     protected ?string $globalTrackableType = null;
 
+    /** The conversation, and turn, set by forConversation() for the calls tracked from then on. */
+    protected ?string $globalConversationId = null;
+
+    protected ?int $globalConversationTurn = null;
+
     protected string|int|null $globalTrackableId = null;
 
     protected ?string $globalPricingTier = null;
@@ -112,6 +117,9 @@ class Spectra
             'metadata' => array_merge($this->globalMetadata, $options['metadata'] ?? []),
             'trackable_type' => $options['trackable_type'] ?? $this->globalTrackableType,
             'trackable_id' => $options['trackable_id'] ?? $this->globalTrackableId,
+            // A conversation given for the call wins, with its own turn.
+            'conversation_id' => $options['conversation_id'] ?? $this->globalConversationId,
+            'conversation_turn' => isset($options['conversation_id']) ? ($options['conversation_turn'] ?? null) : ($options['conversation_turn'] ?? $this->globalConversationTurn),
             'trace_id' => $traceId,
             'parent_span_id' => $options['parent_span_id'] ?? $this->parentSpanIdFor($traceId, $options),
             'prompt_name' => $options['prompt_name'] ?? $this->scopedPrompt['name'] ?? null,
@@ -615,7 +623,7 @@ class Spectra
     }
 
     /**
-     * Forget the global tags, trackable, pricing tier, trace id and metadata.
+     * Forget the global tags, trackable, conversation, pricing tier, trace id and metadata.
      */
     public function clearGlobals(): self
     {
@@ -623,6 +631,8 @@ class Spectra
         TraceContext::forgetTags();
         $this->globalTrackableType = null;
         $this->globalTrackableId = null;
+        $this->globalConversationId = null;
+        $this->globalConversationTurn = null;
         $this->globalPricingTier = null;
 
         if ($this->globalTraceId !== null) {
@@ -642,6 +652,31 @@ class Spectra
     {
         $this->globalTrackableType = $trackable->getMorphClass();
         $this->globalTrackableId = $trackable->getKey();
+
+        return $this;
+    }
+
+    /**
+     * Put every AI call tracked from now on in this conversation, at this
+     * turn: one user message and the calls that answer it (tool calls and
+     * embeddings included) share a turn. A model stands for its key. The
+     * Conversations screen then shows the calls as one transcript.
+     *
+     *   Spectra::forConversation($chat, turn: $chat->messages()->where('role', 'user')->count());
+     *
+     * A conversation given to one call (its `conversation_id` option, or
+     * $context->inConversation()) wins over this one.
+     *
+     * @throws InvalidArgumentException when the id is empty
+     */
+    public function forConversation(Model|string|int $conversation, ?int $turn = null): self
+    {
+        $id = (string) ($conversation instanceof Model ? $conversation->getKey() : $conversation);
+
+        throw_if(Str::trim($id) === '', InvalidArgumentException::class, 'A conversation needs an id.');
+
+        $this->globalConversationId = $id;
+        $this->globalConversationTurn = $turn;
 
         return $this;
     }
