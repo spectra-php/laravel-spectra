@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\ShowConversationController;
@@ -179,7 +181,10 @@ it('makes each call without a turn number a turn of its own', function () {
 });
 
 it('lists nothing and says the trace migrations are missing until they run', function () {
-    $this->dropTraceColumns();
+    Schema::table('spectra_requests', function (Blueprint $table) {
+        $table->dropIndex('spectra_requests_trace_id_started_at_index');
+        $table->dropColumn(['started_at', 'origin', 'span_id']);
+    });
     Log::spy();
     Spectra::forConversation('chat-1', turn: 1);
     Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Hi']]]]);

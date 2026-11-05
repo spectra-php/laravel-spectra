@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
@@ -147,7 +149,10 @@ it('leaves failed calls out of a trace total cost', function () {
 });
 
 it('shows a request without its trace card and says the trace migrations are missing until they run', function () {
-    $this->dropTraceColumns();
+    Schema::table('spectra_requests', function (Blueprint $table) {
+        $table->dropIndex('spectra_requests_trace_id_started_at_index');
+        $table->dropColumn(['started_at', 'origin', 'span_id']);
+    });
     Log::spy();
     Spectra::withTraceId('0b6f3a52-6d47-4a5e-9a51-2a7c1f0e9d11');
     Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Hi']]]]);
