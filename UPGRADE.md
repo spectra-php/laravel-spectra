@@ -1,5 +1,86 @@
 # Upgrade Guide
 
+## From 3.x to 4.0
+
+Spectra 4.0 adds scores, alerts, redaction, payload sampling, prompt
+versions, tool spans, error grouping, review queues, evaluations and a
+maintenance screen. Most apps only need to run the installer once. Read the
+rest of this section if `spectra:install` runs in a deploy script, if
+others use your dashboard in production, or if your code reads
+`RequestContext::$id`.
+
+The full guide is at https://spectraphp.com/upgrade#from-3x-to-4.
+
+### 0. Requirements
+
+Unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Laravel 12 or 13.
+
+### 1. Run the installer (recommended)
+
+4.0 adds five migrations: `create_spectra_scores_table`,
+`add_prompt_columns_to_spectra_requests_table`,
+`add_error_fingerprint_to_spectra_requests_table`,
+`create_spectra_annotation_items_table` and
+`create_spectra_evaluation_tables`. The installer publishes only the ones
+your app doesn't have yet and offers to run them:
+
+```bash
+php artisan spectra:install
+```
+
+Nothing breaks if you upgrade first: until they run, calls are recorded as
+before, the new columns are skipped, `Spectra::score()` returns `null`, no
+trace is queued for review, and Spectra logs one warning per process. The
+dashboard's Prompts and Errors screens say which migration is missing.
+
+Then group the failures saved before the error fingerprint column existed:
+
+```bash
+php artisan spectra:group-errors
+```
+
+A published config doesn't need to be published again; the new keys
+(`alerts`, `annotations`, `storage.redaction`, `storage.sampling`,
+`tracking.tool_spans`, `dashboard.maintenance`) have defaults that keep 3.x
+behaviour.
+
+### 2. `spectra:install` in scripts no longer migrates
+
+Without a terminal (`--no-interaction`, a Composer script), the installer
+now publishes the new migrations and stops. Run `php artisan migrate` after
+it in your deploy script.
+
+### 3. Two new dashboard gates
+
+The Maintenance screen can prune data, pause recording and change prices,
+so its actions need the `manageSpectra` gate. Like `viewSpectra`, it allows
+only the `local` environment unless you define it:
+
+```php
+Gate::define('manageSpectra', fn ($user) => $user->isAdmin());
+```
+
+Reviewing traces and adding dataset examples from the dashboard need
+`annotateSpectra`, which allows whoever `viewSpectra` allows unless you
+define it. Set `dashboard.maintenance` to `false` to keep the maintenance
+actions on the command line.
+
+### 4. `RequestContext::$id` is the saved id
+
+`RequestContext::$id` is now the UUID the call is saved under, so code inside
+`Spectra::track()` can score the call before it is saved. It used to be a
+separate ULID that was never stored; if you kept it, it won't match any row.
+
+### 5. Other changes
+
+- `spectra:prune` also deletes scores and review queue items older than the
+  cutoff.
+- While recording is paused, scores aren't stored either.
+- A queued job whose parent request or job made no AI call now also saves
+  that parent's span, marked `spectra.inferred`, so a trace has no gaps.
+- A conversation turn's message and reply skip side calls such as
+  guardrails that ask for JSON and query rewriters.
+
 ## From 2.x to 3.0
 
 Spectra 3.0 adds traces, spans and conversations, fixes several billing and

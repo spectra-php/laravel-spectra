@@ -1,5 +1,67 @@
 # Upgrade Guide
 
+<a name="from-3x-to-4"></a>
+## From 3.x to 4.0
+
+Spectra 4.0 adds [scores](/scores), [alerts](/alerts), [redaction](/configuration#redaction), payload sampling, [prompt versions](/prompts), [tool spans](/tools), error grouping, [review queues](/annotations), [evaluations](/evaluations) and a [Maintenance screen](/dashboard#maintenance). Most apps only need to run the installer once. Read the rest of this section if `spectra:install` runs in a deploy script, if others use your dashboard in production, or if your code reads `RequestContext::$id`.
+
+The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Laravel 12 or 13.
+
+**Quick checklist:**
+
+1. [Run the installer](#v4-migrations) for the five new migrations, then `spectra:group-errors` (recommended).
+2. If `spectra:install` runs in a deploy script, [run `migrate` after it](#v4-install-scripts).
+3. If others use your dashboard in production, [define the new gates](#v4-gates).
+4. If you kept `RequestContext::$id`, [it is the saved id now](#v4-request-context).
+
+<a name="v4-migrations"></a>
+### Run the Installer (Recommended)
+
+4.0 adds [the scores migration](/migrations#scores-migration), [the prompt columns migration](/migrations#prompt-columns-migration), [the error fingerprint migration](/migrations#error-fingerprint-migration), [the annotation migration](/migrations#annotation-migration) and [the evaluation migration](/migrations#evaluation-migration). The installer publishes only the ones your app doesn't have yet, then asks if it should run them:
+
+```shell
+php artisan spectra:install
+```
+
+Nothing breaks if you upgrade first. Until they run, calls are recorded as before, the new columns are skipped, `Spectra::score()` returns `null`, no trace is queued for review, and Spectra logs one warning per process. The Prompts and Errors screens say which migration is missing.
+
+Then group the failures saved before the error fingerprint column existed:
+
+```shell
+php artisan spectra:group-errors
+```
+
+A published `config/spectra.php` doesn't need to be published again. The new keys (`alerts`, `annotations`, `storage.redaction`, `storage.sampling`, `tracking.tool_spans`, `dashboard.maintenance`) default to 3.x behaviour.
+
+<a name="v4-install-scripts"></a>
+### `spectra:install` in Scripts No Longer Migrates
+
+Without a terminal (`--no-interaction`, a Composer script), the installer now publishes the new migrations and stops, so it can sit in your `post-update-cmd` scripts. Run `php artisan migrate` after it in your deploy script. See [`spectra:install`](/commands).
+
+<a name="v4-gates"></a>
+### Two New Dashboard Gates
+
+The Maintenance screen can prune data, pause recording and change prices, so its actions need the `manageSpectra` gate. Like `viewSpectra`, it allows only the `local` environment unless you define it (see [Dashboard Authorization](/installation#dashboard-authorization)):
+
+```php
+Gate::define('manageSpectra', fn ($user) => $user->isAdmin());
+```
+
+Reviewing traces and adding dataset examples from the dashboard need `annotateSpectra`, which allows whoever `viewSpectra` allows unless you define it (see [Who Can Review](/annotations#who-can-review)). Set `dashboard.maintenance` to `false` to keep the maintenance actions on the command line.
+
+<a name="v4-request-context"></a>
+### `RequestContext::$id` Is the Saved Id
+
+`RequestContext::$id` is now the UUID the call is saved under, so code inside `Spectra::track()` can [score the call](/scores) before it is saved. It used to be a separate ULID that was never stored; if you kept it, it won't match any row.
+
+<a name="v4-other-changes"></a>
+### Other Changes
+
+- `spectra:prune` also deletes scores and review queue items older than the cutoff.
+- While recording is paused, scores aren't stored either.
+- A queued job whose parent request or job made no AI call now also saves that parent's span, marked `spectra.inferred`, so a trace has no gaps (see [Root spans](/usage#spans)).
+- A conversation turn's message and reply skip side calls, such as guardrails that ask for JSON and query rewriters.
+
 <a name="from-2x-to-3"></a>
 ## From 2.x to 3.0
 

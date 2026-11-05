@@ -2,20 +2,7 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
-## Unreleased
-
-#### Added
-
-- Dashboard: a Maintenance screen (the wrench icon) shows what is stored and runs the upkeep: prune old data with a count of what would be deleted before you confirm, pause and resume recording, rebuild the daily stats, and check prices with Firecrawl. Prunes, rebuilds and price checks run as queued jobs on Spectra's queue
-- Dashboard: a price check lists each scraped price that differs from the built-in catalog per model, and writes only the models you pick to the scraped prices file
-- The maintenance actions need the new `manageSpectra` gate (local-only by default) and the `dashboard.maintenance` option (`SPECTRA_DASHBOARD_MAINTENANCE`, on by default)
-- `spectra:pause` and `spectra:resume`: while paused, AI calls keep working but no request, span or media is stored
-
-#### Changed
-
-- `spectra:install` without a terminal (`--no-interaction`, a Composer script) publishes the new migrations and no longer runs them, so it can sit in your app's `post-update-cmd` scripts. (see the `spectra:install` docs)
-
-## v3.1.0 - 2026-11-04
+## v4.0.0 - Unreleased
 
 #### Added
 
@@ -34,10 +21,15 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Dashboard: the screens moved to a sidebar on the left that collapses to icons, and the top bar holds the actions: pause and resume recording, prune, refresh, review, maintenance and dark mode
 - Conversations: `Spectra::forConversation($chat, turn: 3)` puts every call tracked after it in the conversation and turn, however it is tracked (the HTTP client, the OpenAI SDK, Laravel AI, Prism), until the request or job ends. Before, only calls made with `Spectra::track()` or `Spectra::stream()` could be given a conversation
 - Dashboard: the Overview has an Alerts card (each rule's value now and whether it is firing) and a Performance card (each model's error rate and p50/p95/p99 latency, and median time to first token)
+- Dashboard: a Maintenance screen (the wrench icon) shows what is stored and runs the upkeep: prune old data with a count of what would be deleted before you confirm, pause and resume recording, rebuild the daily stats, and check prices with Firecrawl. Prunes, rebuilds and price checks run as queued jobs on Spectra's queue
+- Dashboard: a price check lists each scraped price that differs from the built-in catalog per model, and writes only the models you pick to the scraped prices file
+- The maintenance actions need the new `manageSpectra` gate (local-only by default) and the `dashboard.maintenance` option (`SPECTRA_DASHBOARD_MAINTENANCE`, on by default)
+- `spectra:pause` and `spectra:resume`: while paused, AI calls keep working but no request, span, score or media is stored. Each request or job reads the flag once, and a long-running process every 5 seconds
 
 #### Changed
 
 - `RequestContext::$id` is the id the call is saved under (a UUID), so code inside `Spectra::track()` can score the call before it is saved. It used to be a separate ULID that was never stored
+- `spectra:install` without a terminal (`--no-interaction`, a Composer script) publishes the new migrations and no longer runs them, so it can sit in your app's `post-update-cmd` scripts. (see the `spectra:install` docs)
 
 #### Upgrading
 
@@ -46,12 +38,16 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - And `add_error_fingerprint_to_spectra_requests_table`; then run `php artisan spectra:group-errors` once to group the failures saved before it
 - And `create_spectra_annotation_items_table`. Until it runs, no trace is queued for review and a warning is logged once per process
 - And `create_spectra_evaluation_tables`, for datasets and evaluation runs
+- `spectra:install` without a terminal no longer runs the migrations it publishes: run `php artisan migrate` after it in deploy scripts
+- The dashboard's maintenance actions need the new `manageSpectra` gate, which allows only the `local` environment unless you define it. Reviewing traces and adding dataset examples need `annotateSpectra`, which follows `viewSpectra` unless you define it
 
 #### Fixed
 
 - Dashboard: every price uses one format: two decimals from $1 (`$1,234.56`), four below (`$0.0579`, `$0.0007`), and `<$0.0001` for less, with the exact amount on hover. Tiny costs no longer show in e-notation (`$1.8e-8`), and the cost charts' axes and tooltips use the same format
 - Dashboard: hints and cut-off names (a trace's request URL, model names, error messages, ids) show in the dashboard's own tooltip instead of the browser's `title`, which was slow, unstyled and hard to read in dark mode. A name shows its tooltip only when it is cut off
 - Dashboard: the trace timeline keeps a sub-cent cost (`$0.0000054`) inside its column, and a call nested in a span shows its full model name
+- Conversations: a turn's message and reply come from the call the user saw, not from side calls made in the same turn. A guardrail or judge that asks for structured output (JSON schema or JSON mode on OpenAI, Anthropic, Gemini, Ollama and compatible APIs) and a query rewriter are passed over when the turn has a streamed call or one that offers tools, so a turn no longer shows the guardrail's prompt with the whole history and its JSON verdict
+- Spans: a queued job whose parent request or job made no AI call no longer hangs off a span that was never saved, which drew it as a second root of the trace and showed the missing parent as an incoming `traceparent`. The job now also saves the spans it came from (see Root spans in the usage docs)
 
 ## v3.0.0 - 2026-11-04
 
