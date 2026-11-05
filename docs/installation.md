@@ -73,7 +73,7 @@ Gate::define('viewSpectra', function ($user) {
 });
 ```
 
-The dashboard's [Maintenance screen](/dashboard#maintenance) can delete data, pause recording and change prices, so its actions need a second gate, `manageSpectra`. It also allows only the `local` environment by default, so allowing `viewSpectra` in production does not let viewers run them. Define it for the people who may:
+The dashboard's [Maintenance screen](/dashboard#maintenance) can delete data and pause recording, so its actions need a second gate, `manageSpectra`. It also allows only the `local` environment by default, so allowing `viewSpectra` in production does not let viewers run them. Define it for the people who may:
 
 ```php
 Gate::define('manageSpectra', function ($user) {

@@ -17,10 +17,6 @@ class MaintenanceHistory
 
     public const REBUILD_STATS = 'rebuild-stats';
 
-    public const PRICING_SCRAPE = 'pricing-scrape';
-
-    public const PRICING_APPLY = 'pricing-apply';
-
     /**
      * How long a queued task counts as pending when its job never reports back.
      */

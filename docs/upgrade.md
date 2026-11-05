@@ -41,7 +41,7 @@ Without a terminal (`--no-interaction`, a Composer script), the installer now pu
 <a name="v4-gates"></a>
 ### Two New Dashboard Gates
 
-The Maintenance screen can prune data, pause recording and change prices, so its actions need the `manageSpectra` gate. Like `viewSpectra`, it allows only the `local` environment unless you define it (see [Dashboard Authorization](/installation#dashboard-authorization)):
+The Maintenance screen can prune data and pause recording, so its actions need the `manageSpectra` gate. Like `viewSpectra`, it allows only the `local` environment unless you define it (see [Dashboard Authorization](/installation#dashboard-authorization)):
 
 ```php
 Gate::define('manageSpectra', fn ($user) => $user->isAdmin());

@@ -17,9 +17,6 @@ use Spectra\Http\Controllers\Api\Evaluations\AddDatasetExampleController;
 use Spectra\Http\Controllers\Api\Evaluations\EvalsController;
 use Spectra\Http\Controllers\Api\Evaluations\ShowDatasetController;
 use Spectra\Http\Controllers\Api\Evaluations\ShowEvalRunController;
-use Spectra\Http\Controllers\Api\Maintenance\ApplyPricingController;
-use Spectra\Http\Controllers\Api\Maintenance\CheckPricingController;
-use Spectra\Http\Controllers\Api\Maintenance\DismissPricingReviewController;
 use Spectra\Http\Controllers\Api\Maintenance\MaintenanceStatusController;
 use Spectra\Http\Controllers\Api\Maintenance\PricingStatusController;
 use Spectra\Http\Controllers\Api\Maintenance\PruneController;
@@ -85,9 +82,6 @@ Route::prefix('api')->group(function () {
     Route::post('/maintenance/rebuild-stats', RebuildStatsController::class);
     Route::post('/maintenance/recording', RecordingController::class);
     Route::get('/maintenance/pricing', PricingStatusController::class);
-    Route::post('/maintenance/pricing/check', CheckPricingController::class);
-    Route::post('/maintenance/pricing/apply', ApplyPricingController::class);
-    Route::delete('/maintenance/pricing/review', DismissPricingReviewController::class);
 });
 
 // SPA catch-all route. It skips api/ so an unknown or malformed API URL is a

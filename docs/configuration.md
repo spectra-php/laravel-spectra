@@ -236,7 +236,7 @@ Configure the built-in SPA dashboard.
 | `enabled` | `bool` | `true` | Enable or disable the web dashboard. Set to `false` for headless (API tracking only) mode. |
 | `path` | `string` | `spectra` | URI path where the dashboard is served. |
 | `middleware` | `array` | `['web']` | Middleware applied to dashboard routes. Add `'auth'` to require authentication. |
-| `maintenance` | `bool` | `true` | Allow the [Maintenance screen](/dashboard#maintenance) to prune, rebuild stats, pause recording and apply prices. Running them also needs the `manageSpectra` gate. When `false`, the screen is read-only. |
+| `maintenance` | `bool` | `true` | Allow the [Maintenance screen](/dashboard#maintenance) to prune, rebuild stats and pause recording. Running them also needs the `manageSpectra` gate. When `false`, the screen is read-only. |
 | `layout` | `string` | `full` | Which model types the dashboard displays. Options: `full`, `text`, `embedding`, `image`, `video`, `audio`. |
 | `date_format` | `string` | `M j, Y g:i:s A` | PHP date format string for timestamps in the dashboard. |
 

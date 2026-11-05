@@ -1,6 +1,6 @@
 # Artisan Commands
 
-Spectra provides Artisan commands for installation, data retention, statistics maintenance, pausing recording and pricing updates. The dashboard's [Maintenance screen](/dashboard#maintenance) runs the same prune, rebuild and price check.
+Spectra provides Artisan commands for installation, data retention, statistics maintenance, pausing recording and pricing updates. The dashboard's [Maintenance screen](/dashboard#maintenance) runs the same prune and rebuild; prices are checked and written only with `spectra:pricing-scrape`.
 
 <a name="spectra-install"></a>
 ## `spectra:install`
