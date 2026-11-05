@@ -320,7 +320,7 @@ class Spectra
      *   Spectra::score('sentiment', 'positive', conversationId: $chat->id);
      *
      * Returns the saved score, or null when it could not be saved (Spectra
-     * disabled, the scores migration not run yet, or a database error,
+     * disabled or recording paused, the scores migration not run yet, or a database error,
      * which is reported). A wrong argument throws an InvalidArgumentException.
      *
      * @param  SpectraRequest|string|null  $request  The call, or its id ($context->id inside Spectra::track())

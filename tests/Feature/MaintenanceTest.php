@@ -2,16 +2,19 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spectra\Actions\Maintenance\RebuildStats;
+use Spectra\Facades\Spectra;
 use Spectra\Jobs\PruneEntriesJob;
 use Spectra\Jobs\RebuildStatsJob;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraScore;
 use Spectra\Models\SpectraSpan;
 use Spectra\Support\Maintenance\MaintenanceHistory;
 use Spectra\Support\Tracking\RecordingSwitch;
@@ -271,6 +274,29 @@ describe('recording', function () {
 
         expect(SpectraRequest::query()->count())->toBe(0)
             ->and(Storage::disk('spectra-test')->allFiles())->toBe([]);
+    });
+
+    it('stores no score while paused', function () {
+        RecordingSwitch::pause();
+
+        expect(Spectra::score('helpful', true, traceId: (string) Str::uuid()))->toBeNull()
+            ->and(SpectraScore::query()->count())->toBe(0);
+    });
+
+    it('reads the flag once per request or job, and again when the dashboard asks', function () {
+        expect(RecordingSwitch::isPaused())->toBeFalse();
+
+        // Another server pauses recording.
+        Cache::forever(RecordingSwitch::CACHE_KEY, true);
+
+        expect(RecordingSwitch::isPaused())->toBeFalse()
+            ->and(RecordingSwitch::isPaused(fresh: true))->toBeTrue();
+
+        Cache::forget(RecordingSwitch::CACHE_KEY);
+        // The next job or request starts with a fresh read.
+        app()->forgetScopedInstances();
+
+        expect(RecordingSwitch::isPaused())->toBeFalse();
     });
 
     it('records again after resuming', function () {

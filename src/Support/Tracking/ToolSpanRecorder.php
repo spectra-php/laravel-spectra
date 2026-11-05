@@ -103,11 +103,11 @@ class ToolSpanRecorder
     {
         if ($id !== null) {
             $this->recorded[$traceId][$id] = true;
-
-            return;
+        } else {
+            $this->wrapped[$traceId][] = $name;
         }
 
-        $this->wrapped[$traceId][] = $name;
+        $this->forgetOldTraces();
     }
 
     /**
@@ -229,7 +229,8 @@ class ToolSpanRecorder
     }
 
     /**
-     * Keep the most recent traces only.
+     * Keep the most recent traces only. Each list is trimmed on its own: a
+     * trace whose tools ran here may have its next call somewhere else.
      */
     protected function forgetOldTraces(): void
     {
@@ -237,5 +238,8 @@ class ToolSpanRecorder
             $oldest = array_key_first($this->lastCallEndedAt);
             unset($this->lastCallEndedAt[$oldest], $this->recorded[$oldest], $this->wrapped[$oldest]);
         }
+
+        $this->recorded = array_slice($this->recorded, -self::MAX_TRACES, preserve_keys: true);
+        $this->wrapped = array_slice($this->wrapped, -self::MAX_TRACES, preserve_keys: true);
     }
 }

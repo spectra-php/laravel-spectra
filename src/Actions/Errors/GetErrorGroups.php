@@ -79,13 +79,13 @@ class GetErrorGroups
         }
 
         $fingerprints = $rows->pluck('error_fingerprint')->map(fn (mixed $fingerprint): string => (string) $fingerprint)->all();
+        $latestFailures = $this->latestFailures($dateRange, $fingerprints);
         $models = $this->models($dateRange, $fingerprints);
         $trends = $this->trends($dateRange, $fingerprints);
 
-        return $rows->map(function (stdClass $row) use ($dateRange, $failedCount, $models, $trends): ?ErrorGroup {
+        return $rows->map(function (stdClass $row) use ($failedCount, $latestFailures, $models, $trends): ?ErrorGroup {
             $fingerprint = (string) $row->error_fingerprint;
-            $latest = $this->failures($dateRange)->where('error_fingerprint', $fingerprint)->latest('created_at')
-                ->first(['id', 'provider', 'status_code', 'error_type', 'error_message']);
+            $latest = $latestFailures[$fingerprint] ?? null;
 
             if ($latest === null) {
                 return null;
@@ -106,6 +106,36 @@ class GetErrorGroups
                 trend: $trends[$fingerprint] ?? [],
             );
         })->filter()->values();
+    }
+
+    /**
+     * Each group's most recent failure in the period, in one query: the rows
+     * at their group's latest time (the last saved when two share it: ids
+     * are time-ordered).
+     *
+     * @param  array<int, string>  $fingerprints
+     * @return array<string, SpectraRequest>
+     */
+    private function latestFailures(DateRange $dateRange, array $fingerprints): array
+    {
+        $table = (new SpectraRequest)->getTable();
+
+        $latestTimes = $this->failures($dateRange)
+            ->whereIn('error_fingerprint', $fingerprints)
+            ->toBase()
+            ->select('error_fingerprint')
+            ->selectRaw('MAX(created_at) as latest_at')
+            ->groupBy('error_fingerprint');
+
+        return $this->failures($dateRange)
+            ->joinSub($latestTimes, 'latest', fn ($join) => $join
+                ->on("{$table}.error_fingerprint", '=', 'latest.error_fingerprint')
+                ->on("{$table}.created_at", '=', 'latest.latest_at'))
+            ->orderByDesc("{$table}.id")
+            ->get(["{$table}.id", "{$table}.provider", "{$table}.status_code", "{$table}.error_type", "{$table}.error_message", "{$table}.error_fingerprint"])
+            ->unique('error_fingerprint')
+            ->keyBy(fn (SpectraRequest $request): string => (string) $request->error_fingerprint)
+            ->all();
     }
 
     /**

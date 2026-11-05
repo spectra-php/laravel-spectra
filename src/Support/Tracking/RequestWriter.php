@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Events\RequestTracked;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Annotations\AnnotationQueues;
 use Spectra\Support\Budget\BudgetEnforcer;
 use Spectra\Support\RequestTransformer;
 use Spectra\Support\StatsAggregator;
@@ -71,19 +72,29 @@ class RequestWriter
     ) {}
 
     /**
-     * Save a tracked request, then update its tags, daily stats, budgets and integrations.
+     * Save a tracked request, then update its tags, review queues, daily
+     * stats, budgets and integrations.
      *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
      * @param  bool  $export  Whether to export to integrations synchronously (the
      *                        persister handles queued export itself).
+     * @param  list<string>  $reviewQueues  Review queues to put the call's trace in
      */
-    public function write(array $attributes, array $tags = [], bool $export = true): SpectraRequest
+    public function write(array $attributes, array $tags = [], bool $export = true, array $reviewQueues = []): SpectraRequest
     {
         [$request, $previous] = $this->save($attributes);
 
         if (filled($tags)) {
             $request->attachTags($tags);
+        }
+
+        if ($reviewQueues !== [] && filled($request->trace_id)) {
+            $queues = app(AnnotationQueues::class);
+
+            foreach ($reviewQueues as $queue) {
+                rescue(fn () => $queues->add($queue, $request->trace_id, (string) $request->getKey()));
+            }
         }
 
         if ($previous === null) {

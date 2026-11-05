@@ -41,12 +41,15 @@ class ReviewAnnotationItemController extends BaseApiController
         $reviewer = $request->user();
 
         try {
-            $input['action'] === 'skip'
+            $finished = $input['action'] === 'skip'
                 ? $queues->skip($item, $reviewer)
                 : $queues->review($item, (array) ($input['scores'] ?? []), $input['comment'] ?? null, $reviewer);
         } catch (InvalidArgumentException $e) {
             throw ValidationException::withMessages(['scores' => $e->getMessage()]);
         }
+
+        // Another reviewer finished it between the check above and now.
+        throw_unless($finished, ValidationException::withMessages(['action' => 'This trace was already reviewed.']));
 
         return new JsonResponse(['status' => $item->status->value]);
     }

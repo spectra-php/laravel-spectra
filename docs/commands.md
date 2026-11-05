@@ -178,7 +178,7 @@ php artisan spectra:pause
 php artisan spectra:resume
 ```
 
-While paused, AI calls keep working, but Spectra stores no request, span or media file. Their cost is not recorded, so it doesn't count toward [budgets](/budgets). The flag is kept in your default cache store, so every server and queue worker sees it when they share that store; `cache:clear` resumes recording. The dashboard's Maintenance screen has the same switch.
+While paused, AI calls keep working, but Spectra stores no request, span, score or media file. Their cost is not recorded, so it doesn't count toward [budgets](/budgets). The flag is kept in your default cache store, so every server and queue worker sees it when they share that store; `cache:clear` resumes recording. Each request or job reads the flag once when it first records something, and a long-running process reads it again every 5 seconds, so a pause reaches work already running within a few seconds. The dashboard's Maintenance screen has the same switch.
 
 <a name="spectra-check-alerts"></a>
 ## `spectra:check-alerts`

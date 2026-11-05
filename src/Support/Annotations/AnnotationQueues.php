@@ -31,6 +31,17 @@ class AnnotationQueues
     /** Whether the missing table was already reported (bound as a singleton). */
     protected bool $hasWarnedAboutMissingTable = false;
 
+    /** Queue and trace pairs this process already sampled, at most this many. */
+    protected const MAX_SAMPLED = 1000;
+
+    /**
+     * Queue and trace pairs this process already sampled, so the other calls
+     * of a trace don't try to queue it again.
+     *
+     * @var array<string, true>
+     */
+    protected array $sampled = [];
+
     /**
      * Create a new annotation queues instance.
      */
@@ -64,19 +75,33 @@ class AnnotationQueues
     }
 
     /**
-     * A call was recorded: put its trace in every queue that samples it.
+     * The queues that sample this call's trace and haven't been given it yet
+     * by this process. Decided from config alone, with no query, so the call
+     * can be queued for review when the request itself is written.
+     *
+     * @return list<string>
      */
-    public function callRecorded(RequestContext $context, bool $failed): void
+    public function sampling(RequestContext $context, bool $failed): array
     {
         if (blank($context->traceId) || config('spectra.annotations.queues', []) === []) {
-            return;
+            return [];
         }
 
+        $names = [];
+
         foreach ($this->all() as $queue) {
-            if ($queue->samples($context, $failed)) {
-                $this->add($queue->name, $context->traceId, $context->id);
+            $key = $queue->name.'|'.$context->traceId;
+
+            if (! isset($this->sampled[$key]) && $queue->samples($context, $failed)) {
+                $this->sampled[$key] = true;
+                $names[] = $queue->name;
             }
         }
+
+        // The oldest pairs go first: a trace's calls come close together.
+        $this->sampled = array_slice($this->sampled, -self::MAX_SAMPLED, preserve_keys: true);
+
+        return $names;
     }
 
     /**
@@ -112,17 +137,23 @@ class AnnotationQueues
     }
 
     /**
-     * Save a review: each value as an Annotation score on the trace, then
-     * mark the item reviewed by the reviewer.
+     * Save a review: mark the item reviewed by the reviewer, then save each
+     * value as an Annotation score on the trace. Returns false, saving
+     * nothing, when someone else reviewed or skipped the item first.
      *
      * @param  array<string, mixed>  $values  By score name; empty ones are left out
      */
-    public function review(SpectraAnnotationItem $item, array $values, ?string $comment = null, ?Model $reviewer = null): void
+    public function review(SpectraAnnotationItem $item, array $values, ?string $comment = null, ?Model $reviewer = null): bool
     {
         $queue = $this->find($item->queue);
         $scores = $queue->validate($values);
 
         throw_if($scores === [] && blank($comment), InvalidArgumentException::class, 'Give at least one score or a comment.');
+
+        // Claimed first, so two reviewers sent the same item never both score it.
+        if (! $this->finish($item, AnnotationStatus::Completed, $reviewer, $comment)) {
+            return false;
+        }
 
         foreach ($scores as $name => $value) {
             $this->scores->record(
@@ -136,29 +167,42 @@ class AnnotationQueues
             );
         }
 
-        $this->finish($item, AnnotationStatus::Completed, $reviewer, $comment);
+        return true;
     }
 
     /**
-     * Pass over an item; it leaves the pending list.
+     * Pass over an item; it leaves the pending list. Returns false when
+     * someone else reviewed or skipped it first.
      */
-    public function skip(SpectraAnnotationItem $item, ?Model $reviewer = null): void
+    public function skip(SpectraAnnotationItem $item, ?Model $reviewer = null): bool
     {
-        $this->finish($item, AnnotationStatus::Skipped, $reviewer);
+        return $this->finish($item, AnnotationStatus::Skipped, $reviewer);
     }
 
     /**
-     * Mark the item done with this status, by this reviewer.
+     * Mark the item done with this status, by this reviewer, if it is still
+     * pending. Returns whether this call was the one that finished it.
      */
-    protected function finish(SpectraAnnotationItem $item, AnnotationStatus $status, ?Model $reviewer, ?string $comment = null): void
+    protected function finish(SpectraAnnotationItem $item, AnnotationStatus $status, ?Model $reviewer, ?string $comment = null): bool
     {
-        $item->forceFill([
-            'status' => $status,
+        $values = [
+            'status' => $status->value,
             'comment' => filled($comment) ? $comment : null,
             'reviewer_type' => $reviewer?->getMorphClass(),
             'reviewer_id' => $reviewer !== null ? (string) $reviewer->getKey() : null,
             'reviewed_at' => Date::now(),
-        ])->save();
+        ];
+
+        $finished = SpectraAnnotationItem::query()
+            ->whereKey($item->getKey())
+            ->where('status', AnnotationStatus::Pending->value)
+            ->update($values) === 1;
+
+        if ($finished) {
+            $item->forceFill([...$values, 'status' => $status])->syncOriginal();
+        }
+
+        return $finished;
     }
 
     /**

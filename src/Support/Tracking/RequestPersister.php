@@ -48,8 +48,6 @@ class RequestPersister
 
         // The tools the model asked for before this call, when tool spans are on.
         rescue(fn () => app(ToolSpanRecorder::class)->callFinished($context));
-        // The review queues that sample this call's trace.
-        rescue(fn () => app(AnnotationQueues::class)->callRecorded($context, $this->isFailed($context)));
 
         try {
             return $this->store($context);
@@ -75,22 +73,26 @@ class RequestPersister
         }
 
         $tags = $context->tags;
+        // The review queues that sample this call's trace, picked now from
+        // config and written with the row, so the queue setting keeps that
+        // write off the request too.
+        $reviewQueues = rescue(fn () => app(AnnotationQueues::class)->sampling($context, $this->isFailed($context)), []);
 
         if (config('spectra.queue.enabled')) {
             // A retried job must update the row an earlier attempt saved,
             // not insert a second one and count the spend twice.
             $attributes['id'] ??= (new SpectraRequest)->newUniqueId();
 
-            return $this->persistViaQueue($attributes, $tags);
+            return $this->persistViaQueue($attributes, $tags, $reviewQueues);
         }
 
         if (config('spectra.queue.after_response') && ! app()->runningInConsole()) {
             $attributes['id'] ??= (new SpectraRequest)->newUniqueId();
 
-            return $this->persistAfterResponse($attributes, $tags);
+            return $this->persistAfterResponse($attributes, $tags, $reviewQueues);
         }
 
-        return $this->persistSync($attributes, $tags);
+        return $this->persistSync($attributes, $tags, $reviewQueues);
     }
 
     /**
@@ -223,10 +225,11 @@ class RequestPersister
      *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
+     * @param  list<string>  $reviewQueues  Review queues to put the call's trace in
      */
-    protected function persistSync(array $attributes, array $tags): SpectraRequest
+    protected function persistSync(array $attributes, array $tags, array $reviewQueues = []): SpectraRequest
     {
-        return $this->writer->write($attributes, $tags);
+        return $this->writer->write($attributes, $tags, reviewQueues: $reviewQueues);
     }
 
     /**
@@ -234,10 +237,11 @@ class RequestPersister
      *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
+     * @param  list<string>  $reviewQueues  Review queues to put the call's trace in
      */
-    protected function persistViaQueue(array $attributes, array $tags): SpectraRequest
+    protected function persistViaQueue(array $attributes, array $tags, array $reviewQueues = []): SpectraRequest
     {
-        $job = new PersistSpectraRequestJob($attributes, $tags);
+        $job = new PersistSpectraRequestJob($attributes, $tags, $reviewQueues);
 
         if ($connection = config('spectra.queue.connection')) {
             $job->onConnection($connection);
@@ -261,10 +265,11 @@ class RequestPersister
      *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
+     * @param  list<string>  $reviewQueues  Review queues to put the call's trace in
      */
-    protected function persistAfterResponse(array $attributes, array $tags): SpectraRequest
+    protected function persistAfterResponse(array $attributes, array $tags, array $reviewQueues = []): SpectraRequest
     {
-        $this->afterResponse(new PersistSpectraRequestJob($attributes, $tags));
+        $this->afterResponse(new PersistSpectraRequestJob($attributes, $tags, $reviewQueues));
 
         return new SpectraRequest($attributes);
     }

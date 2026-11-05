@@ -15,6 +15,7 @@ use Spectra\Events\ScoreRecorded;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
 use Spectra\Support\Redaction\Redactor;
+use Spectra\Support\Tracking\RecordingSwitch;
 use Throwable;
 
 /**
@@ -52,7 +53,7 @@ class ScoreRecorder
     ): ?SpectraScore {
         $attributes = $this->attributes($name, $value, $request, $traceId, $conversationId, $comment, $source, $author, $metadata);
 
-        if (! config('spectra.enabled', true)) {
+        if (! config('spectra.enabled', true) || RecordingSwitch::isPaused()) {
             return null;
         }
 

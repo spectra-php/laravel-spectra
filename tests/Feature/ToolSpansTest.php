@@ -262,6 +262,24 @@ it('exports a tool span as execute_tool, as the OpenTelemetry GenAI conventions 
         ]);
 });
 
+it('forgets the tools wrapped in old traces, so a long-running process does not grow', function () {
+    $recorder = app(ToolSpanRecorder::class);
+
+    // Tools whose next call happens in another process: no call here ever trims them by trace.
+    foreach (range(1, 150) as $trace) {
+        $recorder->toolWrapped("trace-{$trace}", 'get_weather', "call-{$trace}");
+        $recorder->toolWrapped("trace-{$trace}", 'get_time', null);
+    }
+
+    $recorded = (new ReflectionProperty($recorder, 'recorded'))->getValue($recorder);
+    $wrapped = (new ReflectionProperty($recorder, 'wrapped'))->getValue($recorder);
+
+    expect($recorded)->toHaveCount(100)
+        ->and($wrapped)->toHaveCount(100)
+        ->and(array_key_last($recorded))->toBe('trace-150')
+        ->and($recorded)->not->toHaveKey('trace-1');
+});
+
 it('remembers tool runs in the fake', function () {
     Spectra::fake();
 

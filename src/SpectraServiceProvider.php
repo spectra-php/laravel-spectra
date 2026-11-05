@@ -52,6 +52,7 @@ use Spectra\Support\Redaction\Redactor;
 use Spectra\Support\RequestTransformer;
 use Spectra\Support\Scoring\ScoreRecorder;
 use Spectra\Support\StatsAggregator;
+use Spectra\Support\Tracking\RecordingSwitch;
 use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\RequestWriter;
 use Spectra\Support\Tracking\SpanStack;
@@ -93,6 +94,7 @@ class SpectraServiceProvider extends ServiceProvider
         $this->app->scoped(TraceOrigin::class);
         $this->app->scoped(SpanStack::class);
         $this->app->scoped(ToolSpanRecorder::class);
+        $this->app->scoped(RecordingSwitch::class);
         $this->app->singleton(SpanWriter::class);
         $this->app->singleton(ScoreRecorder::class);
         $this->app->singleton(AnnotationQueues::class);

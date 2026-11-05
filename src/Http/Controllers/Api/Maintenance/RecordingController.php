@@ -27,6 +27,6 @@ class RecordingController extends BaseApiController
 
         filter_var($paused, FILTER_VALIDATE_BOOLEAN) ? RecordingSwitch::pause() : RecordingSwitch::resume();
 
-        return new JsonResponse(['recording_paused' => RecordingSwitch::isPaused()]);
+        return new JsonResponse(['recording_paused' => RecordingSwitch::isPaused(fresh: true)]);
     }
 }

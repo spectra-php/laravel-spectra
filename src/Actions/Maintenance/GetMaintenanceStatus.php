@@ -37,7 +37,7 @@ class GetMaintenanceStatus
         return new MaintenanceStatusResponse(
             enabled: MaintenanceAccess::enabled(),
             can_manage: MaintenanceAccess::allowed(),
-            recording_paused: RecordingSwitch::isPaused(),
+            recording_paused: RecordingSwitch::isPaused(fresh: true),
             totals: [
                 'requests' => SpectraRequest::query()->count(),
                 'spans' => PruneEntries::spansTableExists() ? SpectraSpan::query()->count() : 0,

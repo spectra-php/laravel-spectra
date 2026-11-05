@@ -10,12 +10,17 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Spectra\Enums\AnnotationStatus;
 use Spectra\Enums\ScoreSource;
 use Spectra\Facades\Spectra;
+use Spectra\Jobs\PersistSpectraRequestJob;
 use Spectra\Models\SpectraAnnotationItem;
+use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
+use Spectra\Support\Annotations\AnnotationQueues;
+use Spectra\Support\Tracking\RequestWriter;
 use Workbench\App\Models\User;
 
 beforeEach(function () {
@@ -69,6 +74,36 @@ it('samples only the configured share of traces', function () {
     }
 
     expect(SpectraAnnotationItem::query()->count())->toBeGreaterThan(60)->toBeLessThan(140);
+});
+
+it('queues the trace when the request is written, so the queue setting keeps it off the request', function () {
+    config()->set('spectra.queue.enabled', true);
+    Queue::fake();
+
+    trackReviewCall('support-answer');
+
+    expect(SpectraAnnotationItem::query()->count())->toBe(0);
+
+    Queue::pushed(PersistSpectraRequestJob::class)->each(fn (PersistSpectraRequestJob $job) => $job->handle(app(RequestWriter::class)));
+
+    $item = SpectraAnnotationItem::query()->sole();
+
+    expect($item->queue)->toBe('support-review')
+        ->and($item->request_id)->toBe(SpectraRequest::query()->sole()->id);
+});
+
+it('saves no scores when another reviewer finished the item first', function () {
+    trackReviewCall('support-answer');
+    $item = SpectraAnnotationItem::query()->sole();
+    $queues = app(AnnotationQueues::class);
+
+    // Both reviewers loaded the item while it was pending; the other one submits first.
+    $stale = SpectraAnnotationItem::query()->findOrFail($item->id);
+    expect($queues->skip($item))->toBeTrue();
+
+    expect($queues->review($stale, ['helpful' => true]))->toBeFalse()
+        ->and(SpectraScore::query()->count())->toBe(0)
+        ->and($item->fresh()->status)->toBe(AnnotationStatus::Skipped);
 });
 
 it('queues the current trace by hand, and rejects an unknown queue', function () {
