@@ -75,10 +75,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
 
         $first = $data[0]['embedding'];
         $dimensions = is_array($first) ? count($first) : null;
+        $count = count($data);
 
         return $dimensions === null
-            ? '[embeddings: '.count($data).']'
-            : '[embeddings: '.count($data).' × '.$dimensions.' dimensions]';
+            ? "[embeddings: {$count}]"
+            : "[embeddings: {$count} × {$dimensions} dimensions]";
     }
 
     /**

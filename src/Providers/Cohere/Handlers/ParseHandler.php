@@ -10,6 +10,7 @@ use Spectra\Contracts\MatchesResponseShape;
 use Spectra\Data\DocumentMetrics;
 use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Cohere Parse (`POST /v2/parse`), billed per page parsed.
@@ -49,7 +50,7 @@ class ParseHandler implements Handler, MatchesResponseShape
             ?? (is_array($responseData['pages'] ?? null) ? count($responseData['pages']) : 0);
 
         return new Metrics(
-            document: new DocumentMetrics(pages: (int) $pages),
+            document: new DocumentMetrics(pages: Payload::int($pages)),
         );
     }
 

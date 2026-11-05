@@ -61,9 +61,11 @@ class ChatHandler extends OpenAiCompatibleChatHandler
     }
 
     /**
-     * Adds image output tokens (`completion_tokens_details.image_tokens`),
-     * which image models such as Gemini Flash Image bill at a higher rate,
-     * and the 1-hour share of Anthropic cache writes (`cache_creation`).
+     * Get the token usage, adding image output tokens and 1-hour cache writes.
+     *
+     * Image output tokens (`completion_tokens_details.image_tokens`) are
+     * billed at a higher rate by image models such as Gemini Flash Image, and
+     * `cache_creation` holds the 1-hour share of Anthropic cache writes.
      *
      * @param  array<string, mixed>  $usage
      */
@@ -103,6 +105,8 @@ class ChatHandler extends OpenAiCompatibleChatHandler
     }
 
     /**
+     * Determine if the body is a chat completion.
+     *
      * OpenRouter responses don't always carry an `object` discriminator, so we
      * match on the presence of the OpenAI-shaped `choices` + `usage` keys.
      *

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\OpenAI;
 
 use Illuminate\Support\Facades\Date;
-use Throwable;
+use Spectra\Support\Payload;
 
 /**
  * Generation time of an async OpenAI job (background response, video) from
@@ -23,8 +23,8 @@ trait MeasuresJobLatency
      */
     public function extractProviderLatency(array $responseData): ?int
     {
-        $start = $this->timestampMs($responseData['created_at'] ?? null);
-        $end = $this->timestampMs($responseData['completed_at'] ?? null);
+        $start = $this->convertToMilliseconds($responseData['created_at'] ?? null);
+        $end = $this->convertToMilliseconds($responseData['completed_at'] ?? null);
 
         if ($start === null || $end === null || $end < $start) {
             return null;
@@ -34,22 +34,18 @@ trait MeasuresJobLatency
     }
 
     /**
-     * Unix seconds (OpenAI's format) or an ISO-8601 string, in milliseconds.
+     * Convert a timestamp in Unix seconds (OpenAI's format) or ISO-8601 to milliseconds.
      */
-    private function timestampMs(mixed $value): ?int
+    private function convertToMilliseconds(mixed $value): ?int
     {
         if (is_int($value) || is_float($value) || (is_string($value) && is_numeric($value))) {
-            return (int) round((float) $value * 1000);
+            return (int) round(Payload::float($value) * 1000);
         }
 
         if (blank($value)) {
             return null;
         }
 
-        try {
-            return Date::parse($value)->getTimestampMs();
-        } catch (Throwable) {
-            return null;
-        }
+        return rescue(fn () => Date::parse($value)->getTimestampMs(), null, false);
     }
 }

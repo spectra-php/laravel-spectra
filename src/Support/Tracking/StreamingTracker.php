@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Spectra\Support\Tracking;
 
 use Generator;
+use Illuminate\Support\Str;
+use JsonException;
 use OpenAI\Responses\StreamResponse;
 use Spectra\Contracts\StreamsResponse;
 use Spectra\Data\TokenMetrics;
 use Spectra\Models\SpectraRequest;
 use Spectra\Spectra as SpectraManager;
+use Spectra\Support\Payload;
 use Spectra\Support\ProviderRegistry;
 use Throwable;
 
@@ -105,7 +108,7 @@ class StreamingTracker
     ];
 
     /**
-     * Provider and model are optional - they will be auto-detected from the stream.
+     * Create a new streaming tracker; the provider and model are detected from the stream when not given.
      *
      * @param  array<string, mixed>  $options
      */
@@ -118,7 +121,7 @@ class StreamingTracker
     }
 
     /**
-     * A tracker bound to a request context the middleware already started.
+     * Create a tracker bound to a request context the middleware already started.
      */
     public static function forContext(RequestContext $context): self
     {
@@ -303,15 +306,15 @@ class StreamingTracker
                 return self::STREAM_CLASS_MAP[$className];
             }
 
-            // Partial match fallback
-            $classNameLower = strtolower($className);
-            if (str_contains($classNameLower, 'openai')) {
+            // Stream classes missing from the map still carry the provider's name.
+            $classNameLower = Str::lower($className);
+            if (Str::contains($classNameLower, 'openai')) {
                 return 'openai';
             }
-            if (str_contains($classNameLower, 'anthropic')) {
+            if (Str::contains($classNameLower, 'anthropic')) {
                 return 'anthropic';
             }
-            if (str_contains($classNameLower, 'google') || str_contains($classNameLower, 'gemini')) {
+            if (Str::contains($classNameLower, ['google', 'gemini'])) {
                 return 'google';
             }
         }
@@ -381,10 +384,14 @@ class StreamingTracker
     {
         if (is_array($chunk)) {
             $data = $chunk;
+        } elseif (is_object($chunk) && method_exists($chunk, 'toArray')) {
+            $data = $chunk->toArray();
         } elseif (is_object($chunk)) {
-            $data = method_exists($chunk, 'toArray')
-                ? $chunk->toArray()
-                : (($json = json_encode($chunk)) !== false ? (json_decode($json, true) ?? []) : []);
+            try {
+                $data = json_decode(json_encode($chunk, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR) ?? [];
+            } catch (JsonException) {
+                return [];
+            }
         } else {
             return [];
         }
@@ -492,7 +499,7 @@ class StreamingTracker
     }
 
     /**
-     * Usage data typically arrives in the final chunk of the stream.
+     * Extract the token usage of a chunk; it typically arrives in the final chunk of the stream.
      *
      * @param  array<string, mixed>  $data
      */
@@ -542,7 +549,6 @@ class StreamingTracker
             return;
         }
 
-        // Generic fallback
         if (isset($data['choices'][0]['finish_reason'])) {
             $this->finishReason = $data['choices'][0]['finish_reason'];
         }
@@ -566,7 +572,6 @@ class StreamingTracker
             return;
         }
 
-        // Generic fallback
         if (filled($data['model'] ?? null) && $this->model === null) {
             $this->model = $data['model'];
         }
@@ -592,7 +597,7 @@ class StreamingTracker
     }
 
     /**
-     * Whether finish() has already recorded this stream.
+     * Determine if finish() has already recorded this stream.
      */
     public function isFinished(): bool
     {
@@ -679,10 +684,8 @@ class StreamingTracker
         }
 
         $context->finishReason = $this->finishReason;
-        $reasoningTokens = $this->usage['reasoning_tokens'] ?? 0;
-        $context->reasoningTokens = is_numeric($reasoningTokens) ? (int) $reasoningTokens : 0;
+        $context->reasoningTokens = Payload::int($this->usage['reasoning_tokens'] ?? null);
 
-        // Detect tool calls from finish_reason
         if ($this->finishReason !== null && in_array($this->finishReason, ['tool_calls', 'tool_use'], true)) {
             $context->hasToolCalls = true;
         }
@@ -705,8 +708,8 @@ class StreamingTracker
     }
 
     /**
-     * The model type from the handler that matches the last chunk, or from
-     * the endpoint alone when no handler matches.
+     * Set the model type from the handler that matches the last chunk, or
+     * from the endpoint alone when no handler matches.
      */
     protected function resolveModelType(RequestContext $context): void
     {
@@ -769,11 +772,11 @@ class StreamingTracker
         $usage = $this->usage;
 
         if (isset($usage['reported_cost_in_cents']) && is_numeric($usage['reported_cost_in_cents'])) {
-            $this->context->reportedCostInCents = (float) $usage['reported_cost_in_cents'];
+            $this->context->reportedCostInCents = Payload::float($usage['reported_cost_in_cents']);
         }
 
         if (isset($usage['cost_multiplier']) && is_numeric($usage['cost_multiplier'])) {
-            $this->context->costMultiplier = (float) $usage['cost_multiplier'];
+            $this->context->costMultiplier = Payload::float($usage['cost_multiplier']);
         }
 
         if (filled($usage['pricing_tier'] ?? null) && $this->context->pricingTier === null) {
@@ -785,7 +788,7 @@ class StreamingTracker
 
             foreach ($usage['tool_calls'] as $type => $count) {
                 if (is_string($type) && is_numeric($count) && $count > 0) {
-                    $counts[$type] = max($counts[$type] ?? 0, (int) $count);
+                    $counts[$type] = max($counts[$type] ?? 0, Payload::int($count));
                 }
             }
 
@@ -841,7 +844,7 @@ class StreamingTracker
     }
 
     /**
-     * Manually set usage (useful when usage comes from a separate source).
+     * Set the usage manually, when it comes from a separate source.
      *
      * Accepts the TokenMetrics usage keys (prompt_tokens, completion_tokens,
      * cached_tokens, cache_write_tokens, reasoning_tokens, ...).
@@ -856,7 +859,7 @@ class StreamingTracker
     }
 
     /**
-     * Manually append content (useful for custom stream processing).
+     * Append content manually, for custom stream processing.
      */
     public function appendContent(string $text): self
     {

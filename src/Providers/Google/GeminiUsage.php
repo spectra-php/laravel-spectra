@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\Google;
 
+use Illuminate\Support\Str;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
 use Spectra\Support\Payload;
@@ -49,7 +50,7 @@ final class GeminiUsage
     }
 
     /**
-     * The usage metadata of a response, or an empty array.
+     * Get the usage metadata of a response, or an empty array.
      *
      * @param  array<string, mixed>  $response
      * @return array<string, mixed>
@@ -69,7 +70,7 @@ final class GeminiUsage
             return null;
         }
 
-        $tier = strtolower((string) preg_replace('/^SERVICE_TIER_/i', '', $serviceTier));
+        $tier = Str::of($serviceTier)->replaceMatches('/^SERVICE_TIER_/i', '')->lower()->toString();
 
         return match ($tier) {
             'flex' => PricingTier::Flex->value,
@@ -81,7 +82,7 @@ final class GeminiUsage
     }
 
     /**
-     * Grounding used by the response, keyed like Metrics::$toolCalls.
+     * Count the grounding used by the response, keyed like Metrics::$toolCalls.
      *
      * Search grounding is billed per search query on Gemini 3 and newer, and
      * per grounded prompt on Gemini 2.5, after a free allowance (per day or
@@ -120,7 +121,7 @@ final class GeminiUsage
     }
 
     /**
-     * Tokens of one modality in a `*TokensDetails` list.
+     * Sum the tokens of one modality in a `*TokensDetails` list.
      */
     public static function modality(mixed $details, string $modality): int
     {
@@ -131,7 +132,7 @@ final class GeminiUsage
         $total = 0;
 
         foreach ($details as $detail) {
-            if (is_array($detail) && strtoupper((string) ($detail['modality'] ?? '')) === $modality) {
+            if (is_array($detail) && Str::upper((string) ($detail['modality'] ?? '')) === $modality) {
                 $total += Payload::int($detail['tokenCount'] ?? null);
             }
         }
@@ -191,7 +192,7 @@ final class GeminiUsage
     }
 
     /**
-     * Whether a decoded body is a streamed array of response chunks.
+     * Determine if a decoded body is a streamed array of response chunks.
      */
     public static function isChunkList(mixed $data): bool
     {
@@ -209,8 +210,8 @@ final class GeminiUsage
     {
         $last = array_pop($parts);
 
-        $isPlainText = static fn (mixed $p): bool => is_array($p) && is_string($p['text'] ?? null)
-            && array_diff(array_keys($p), ['text', 'thought', 'thoughtSignature']) === [];
+        $isPlainText = static fn (mixed $streamedPart): bool => is_array($streamedPart) && is_string($streamedPart['text'] ?? null)
+            && array_diff(array_keys($streamedPart), ['text', 'thought', 'thoughtSignature']) === [];
 
         if (is_array($last) && is_array($part) && $isPlainText($part) && $isPlainText($last)
             && (bool) ($last['thought'] ?? false) === (bool) ($part['thought'] ?? false)) {
@@ -237,6 +238,6 @@ final class GeminiUsage
      */
     protected static function int(array $data, string $key): int
     {
-        return is_numeric($data[$key] ?? null) ? (int) $data[$key] : 0;
+        return Payload::int($data[$key] ?? null);
     }
 }

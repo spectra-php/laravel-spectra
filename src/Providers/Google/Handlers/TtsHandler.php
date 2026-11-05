@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\Google\Handlers;
 
+use Illuminate\Support\Str;
 use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromRequest;
 use Spectra\Contracts\ExtractsModelFromResponse;
@@ -17,6 +18,7 @@ use Spectra\Providers\Google\ExtractsModelFromGoogleEndpoint;
 use Spectra\Providers\Google\GeminiUsage;
 use Spectra\Providers\Google\ReadsGeminiParts;
 use Spectra\Support\MediaPersister;
+use Spectra\Support\Payload;
 
 /**
  * Gemini text-to-speech: `generateContent` responses with inline audio.
@@ -56,11 +58,10 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
     {
         $inputCharacters = null;
 
-        // Count input text characters from the request contents
         foreach ($requestData['contents'] ?? [] as $content) {
             foreach ($content['parts'] ?? [] as $part) {
                 if (isset($part['text'])) {
-                    $inputCharacters = ($inputCharacters ?? 0) + mb_strlen($part['text']);
+                    $inputCharacters = ($inputCharacters ?? 0) + Str::length($part['text']);
                 }
             }
         }
@@ -140,11 +141,7 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
      */
     private function parseSampleRate(string $mimeType): int
     {
-        if (preg_match('/rate=(\d+)/', $mimeType, $matches)) {
-            return (int) $matches[1];
-        }
-
-        return 24000;
+        return Payload::int(Str::match('/rate=(\d+)/', $mimeType), 24000);
     }
 
     /**
@@ -170,6 +167,6 @@ class TtsHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse,
             .'data'
             .pack('V', $dataSize);        // Subchunk2Size
 
-        return $header.$pcm;
+        return "{$header}{$pcm}";
     }
 }

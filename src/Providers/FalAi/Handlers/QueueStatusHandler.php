@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\FalAi\Handlers;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\ReturnsBinaryResponse;
 use Spectra\Contracts\SkipsResponse;
@@ -41,7 +42,7 @@ class QueueStatusHandler implements Handler, ReturnsBinaryResponse, SkipsRespons
      */
     public function matchesEndpoint(string $endpoint): bool
     {
-        return (bool) preg_match('#^/[^/]+/[^/]+(/[^/]+)*/requests/[^/]+/(status(/stream)?|cancel)$#', $endpoint);
+        return Str::isMatch('#^/[^/]+/[^/]+(/[^/]+)*/requests/[^/]+/(status(/stream)?|cancel)$#', $endpoint);
     }
 
     /**

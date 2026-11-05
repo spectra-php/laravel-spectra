@@ -46,6 +46,8 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
     }
 
     /**
+     * Get the Gemini handlers, with the response-shape specialists after the generic handler.
+     *
      * Order matters: when multiple handlers match the same endpoint,
      * specialists (MatchesResponseShape) are checked in reverse order.
      * GenerateContentHandler is the default fallback for shared endpoints.
@@ -117,9 +119,11 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
     }
 
     /**
-     * `serviceTier` on the request body (`service_tier` is accepted too, as
-     * the API takes both spellings). For Veo, a 1080p video is the `hd` tier
-     * where the model prices it differently.
+     * Get the pricing tier from the request body's `serviceTier` or video resolution.
+     *
+     * `service_tier` is accepted too, as the API takes both spellings. For
+     * Veo, a 1080p video is the `hd` tier where the model prices it
+     * differently.
      *
      * @param  array<string, mixed>  $requestData
      */
@@ -136,7 +140,7 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
             ?? null;
 
         // 4K has no tier of its own yet; it is left at the base price.
-        return is_string($resolution) && strtolower($resolution) === '1080p' ? PricingTier::Hd->value : null;
+        return is_string($resolution) && Str::lower($resolution) === '1080p' ? PricingTier::Hd->value : null;
     }
 
     /**

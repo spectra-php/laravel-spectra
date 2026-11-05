@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\Replicate;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsPricingTierFromResponse;
 use Spectra\Enums\PricingTier;
 use Spectra\Providers\Provider;
@@ -35,6 +36,8 @@ class Replicate extends Provider implements ExtractsPricingTierFromResponse
     }
 
     /**
+     * Get the handlers for Replicate image, text and video predictions.
+     *
      * All handlers share the prediction endpoints; the response decides
      * (model type, output files, token counts). ImageHandler comes first,
      * so it takes predictions nobody else claims.
@@ -49,6 +52,8 @@ class Replicate extends Provider implements ExtractsPricingTierFromResponse
     }
 
     /**
+     * Get the `hd` pricing tier for a 1080p prediction of a model with an `hd` price.
+     *
      * Video models such as Veo 3.1 Lite charge more for 1080p output. The
      * prediction echoes its input, so the resolution is known even for
      * polls. Only models with an `hd` price get the `hd` tier.
@@ -60,7 +65,7 @@ class Replicate extends Provider implements ExtractsPricingTierFromResponse
         $resolution = $responseData['input']['resolution'] ?? null;
         $model = $responseData['model'] ?? null;
 
-        if (! is_string($resolution) || strtolower($resolution) !== '1080p' || ! is_string($model)) {
+        if (! is_string($resolution) || Str::lower($resolution) !== '1080p' || ! is_string($model)) {
             return null;
         }
 

@@ -73,6 +73,8 @@ class RerankHandler implements ExtractsModelFromResponse, Handler
             return null;
         }
 
-        return '[rerank: '.count($results).' results]';
+        $count = count($results);
+
+        return "[rerank: {$count} results]";
     }
 }

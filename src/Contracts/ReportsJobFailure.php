@@ -15,7 +15,7 @@ namespace Spectra\Contracts;
 interface ReportsJobFailure
 {
     /**
-     * The provider's error message when the job failed, otherwise null.
+     * Get the provider's error message when the job failed, otherwise null.
      *
      * @param  array<string, mixed>  $responseData
      */

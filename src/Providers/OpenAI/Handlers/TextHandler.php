@@ -115,6 +115,8 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     }
 
     /**
+     * Get the finish reason of a Chat Completions or Responses API body.
+     *
      * Chat Completions: the first choice's finish reason. Responses API: why
      * an incomplete response stopped (`max_output_tokens`, `content_filter`,
      * ...), otherwise its status (`completed`, `failed`, `cancelled`).
@@ -174,7 +176,7 @@ class TextHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     }
 
     /**
-     * A `/v1/responses/compact` result: billed model usage without a `model` field.
+     * Determine if the body is a `/v1/responses/compact` result: billed model usage without a `model` field.
      *
      * @param  array<string, mixed>  $data
      */

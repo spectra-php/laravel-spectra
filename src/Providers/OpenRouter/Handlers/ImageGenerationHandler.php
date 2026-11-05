@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenRouter\Handlers;
 
+use Illuminate\Support\Str;
 use Spectra\Concerns\MatchesEndpoints;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasMedia;
@@ -129,7 +130,7 @@ class ImageGenerationHandler implements Handler, HasMedia, StreamsResponse
      */
     protected function extension(mixed $mediaType): string
     {
-        return match (is_string($mediaType) ? strtolower($mediaType) : null) {
+        return match (is_string($mediaType) ? Str::lower($mediaType) : null) {
             'image/jpeg', 'image/jpg' => 'jpg',
             'image/webp' => 'webp',
             'image/svg+xml' => 'svg',

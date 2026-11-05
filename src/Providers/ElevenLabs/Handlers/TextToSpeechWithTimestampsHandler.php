@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\ElevenLabs\Handlers;
 
+use Illuminate\Support\Str;
+use JsonException;
 use Spectra\Support\MediaPersister;
 
 /**
@@ -34,7 +36,7 @@ class TextToSpeechWithTimestampsHandler extends TextToSpeechHandler
      */
     public function matchesEndpoint(string $endpoint): bool
     {
-        return (bool) preg_match('#^/v1/text-to-speech/[^/]+(/stream)?/with-timestamps$#', $endpoint);
+        return Str::isMatch('#^/v1/text-to-speech/[^/]+(/stream)?/with-timestamps$#', $endpoint);
     }
 
     /**
@@ -56,9 +58,9 @@ class TextToSpeechWithTimestampsHandler extends TextToSpeechHandler
     public function storeMedia(string $requestId, array $responseData, ?string $rawBody = null): array
     {
         $body = trim((string) $rawBody);
-        $whole = json_decode($body, true);
-        $chunks = is_array($whole) ? [$whole] : collect(preg_split('/\r?\n/', $body) ?: [])
-            ->map(fn (string $line) => json_decode($line, true))
+        $whole = $this->decodeJson($body);
+        $chunks = is_array($whole) ? [$whole] : Str::of($body)->split('/\r?\n/')
+            ->map(fn (string $line) => $this->decodeJson($line))
             ->all();
 
         $audio = '';
@@ -74,5 +76,17 @@ class TextToSpeechWithTimestampsHandler extends TextToSpeechHandler
         }
 
         return [app(MediaPersister::class)->store($requestId, 0, $audio, 'mp3')];
+    }
+
+    /**
+     * Decode a JSON document, or return null when it is malformed.
+     */
+    private function decodeJson(string $json): mixed
+    {
+        try {
+            return json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
     }
 }

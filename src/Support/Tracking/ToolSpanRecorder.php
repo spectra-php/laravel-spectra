@@ -6,6 +6,7 @@ namespace Spectra\Support\Tracking;
 
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Support\Str;
 use JsonSerializable;
 use Spectra\Enums\SpanKind;
 use Stringable;
@@ -72,7 +73,7 @@ class ToolSpanRecorder
     ) {}
 
     /**
-     * An AI call ended: record the tools whose results it sent back, then
+     * Record the tools whose results a finished AI call sent back, then
      * remember when it ended for the next call of its trace.
      */
     public function callFinished(RequestContext $context): void
@@ -96,8 +97,8 @@ class ToolSpanRecorder
     }
 
     /**
-     * A Spectra::tool() block ran, so the call that sends its result back
-     * doesn't record it again.
+     * Remember a Spectra::tool() block that ran, so the call that sends its
+     * result back doesn't record it again.
      */
     public function toolWrapped(string $traceId, string $name, ?string $id): void
     {
@@ -111,7 +112,7 @@ class ToolSpanRecorder
     }
 
     /**
-     * The attributes a tool span stores: its name and id, and its arguments
+     * Get the attributes a tool span stores: its name and id, and its arguments
      * and result when the trace's payloads are stored (`store_prompts` and
      * payload sampling), cut to MAX_CONTENT_LENGTH characters.
      *
@@ -202,8 +203,8 @@ class ToolSpanRecorder
     }
 
     /**
-     * A tool's argument or result as stored: arrays and scalars as they are,
-     * objects as their array or string form, cut to MAX_CONTENT_LENGTH.
+     * Prepare a tool's argument or result for storage: arrays and scalars as
+     * they are, objects as their array or string form, cut to MAX_CONTENT_LENGTH.
      */
     protected function content(mixed $value): mixed
     {
@@ -216,13 +217,13 @@ class ToolSpanRecorder
         };
 
         if (is_string($value)) {
-            return mb_strlen($value) > self::MAX_CONTENT_LENGTH ? mb_substr($value, 0, self::MAX_CONTENT_LENGTH).'…' : $value;
+            return Str::length($value) > self::MAX_CONTENT_LENGTH ? Str::substr($value, 0, self::MAX_CONTENT_LENGTH).'…' : $value;
         }
 
         if (is_array($value)) {
             $json = (string) json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
 
-            return mb_strlen($json) > self::MAX_CONTENT_LENGTH ? mb_substr($json, 0, self::MAX_CONTENT_LENGTH).'…' : $value;
+            return Str::length($json) > self::MAX_CONTENT_LENGTH ? Str::substr($json, 0, self::MAX_CONTENT_LENGTH).'…' : $value;
         }
 
         return $value;

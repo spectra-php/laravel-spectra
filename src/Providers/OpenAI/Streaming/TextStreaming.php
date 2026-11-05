@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenAI\Streaming;
 
+use Illuminate\Support\Str;
 use Spectra\Providers\OpenAI\Handlers\TextHandler;
 use Spectra\Providers\OpenAI\OpenAI;
 use Spectra\Providers\OpenAI\OpenAiUsage;
@@ -118,7 +119,7 @@ class TextStreaming extends StreamHandler
         if (in_array($type, self::TERMINAL_EVENTS, true)) {
             $response = is_array($data['response'] ?? null) ? $data['response'] : [];
 
-            return TextHandler::responseFinishReason($response) ?? substr($type, strlen('response.'));
+            return TextHandler::responseFinishReason($response) ?? Str::after($type, 'response.');
         }
 
         return null;
@@ -143,20 +144,20 @@ class TextStreaming extends StreamHandler
                 return null;
             }
 
-            $result = array_filter([
+            $result = collect([
                 'model' => is_string($response['model'] ?? null) ? $response['model'] : null,
                 'id' => is_string($response['id'] ?? null) ? $response['id'] : null,
-            ]);
+            ])->filter()->all();
 
-            return $result !== [] ? $result : null;
+            return filled($result) ? $result : null;
         }
 
-        $result = array_filter([
+        $result = collect([
             'model' => is_string($data['model'] ?? null) ? $data['model'] : null,
             'id' => is_string($data['id'] ?? null) ? $data['id'] : null,
-        ]);
+        ])->filter()->all();
 
-        return $result !== [] ? $result : null;
+        return filled($result) ? $result : null;
     }
 
     /**

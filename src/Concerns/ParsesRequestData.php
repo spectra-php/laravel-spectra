@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Concerns;
 
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Str;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamInterface;
 
@@ -33,20 +34,20 @@ trait ParsesRequestData
 
             $contentType = $request->getHeaderLine('Content-Type');
 
-            if (str_contains($contentType, 'multipart/form-data')) {
+            if (Str::contains($contentType, 'multipart/form-data')) {
                 return static::parseMultipartStream($body, $contentType);
             }
 
             $contents = (string) $body;
             $body->rewind();
 
-            if (str_contains($contentType, 'application/x-www-form-urlencoded')) {
+            if (Str::contains($contentType, 'application/x-www-form-urlencoded')) {
                 parse_str($contents, $fields);
 
                 return $fields; // @phpstan-ignore return.type
             }
 
-            $decoded = json_decode($contents, true);
+            $decoded = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
 
             return is_array($decoded) ? $decoded : [];
         } catch (\Throwable) {
@@ -55,16 +56,16 @@ trait ParsesRequestData
     }
 
     /**
-     * Text fields of a multipart body. Only the first and last 64 KB are read:
-     * text fields sit before or after the uploaded file, and the file itself
+     * Get the text fields of a multipart body, reading only its first and last 64 KB.
+     *
+     * Text fields sit before or after the uploaded file, and the file itself
      * can be large.
      *
      * @return array<string, mixed>
      */
     protected static function parseMultipartStream(StreamInterface $body, string $contentType): array
     {
-        preg_match('/boundary=(.+?)(?:;|$)/', $contentType, $matches);
-        $boundary = trim($matches[1] ?? '', '"');
+        $boundary = trim(Str::match('/boundary=(.+?)(?:;|$)/', $contentType), '"');
 
         if (blank($boundary)) {
             return [];
@@ -103,10 +104,10 @@ trait ParsesRequestData
     {
         $fields = [];
 
-        foreach (explode('--'.$boundary, $body) as $part) {
+        foreach (explode("--{$boundary}", $body) as $part) {
             $part = ltrim($part, "\r\n");
 
-            if (blank($part) || str_starts_with($part, '--') || str_contains($part, 'filename=')) {
+            if (blank($part) || Str::startsWith($part, '--') || Str::contains($part, 'filename=')) {
                 continue;
             }
 
@@ -132,20 +133,19 @@ trait ParsesRequestData
      */
     protected static function parseRequestData($request): array
     {
-        try {
+        return rescue(function () use ($request): array {
             if ($request->isMultipart()) {
                 return static::parseMultipartRequestData($request);
             }
 
             $body = $request->body();
 
-            if ($body) {
-                return json_decode($body, true) ?? [];
+            if (filled($body)) {
+                return json_decode($body, true, 512, JSON_THROW_ON_ERROR) ?? [];
             }
-        } catch (\Throwable) {
-        }
 
-        return [];
+            return [];
+        }, [], false);
     }
 
     /**
@@ -168,12 +168,10 @@ trait ParsesRequestData
                 return $data; // @phpstan-ignore return.type
             }
 
-            // Fall back to raw body parsing if data() is empty
             $psr = $request->toPsrRequest();
             $contentType = $psr->getHeaderLine('Content-Type');
 
-            preg_match('/boundary=(.+?)(?:;|$)/', $contentType, $matches);
-            $boundary = trim($matches[1] ?? '', '"');
+            $boundary = trim(Str::match('/boundary=(.+?)(?:;|$)/', $contentType), '"');
 
             if (blank($boundary)) {
                 return [];
@@ -183,16 +181,16 @@ trait ParsesRequestData
             $psr->getBody()->rewind();
 
             $fields = [];
-            $parts = explode('--'.$boundary, $body);
+            $parts = explode("--{$boundary}", $body);
 
             foreach ($parts as $part) {
                 $part = ltrim($part, "\r\n");
 
-                if (blank($part) || $part === '--' || str_starts_with($part, '--')) {
+                if (blank($part) || $part === '--' || Str::startsWith($part, '--')) {
                     continue;
                 }
 
-                if (str_contains($part, 'filename=')) {
+                if (Str::contains($part, 'filename=')) {
                     continue;
                 }
 

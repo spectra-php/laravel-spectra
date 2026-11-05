@@ -137,6 +137,8 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
     }
 
     /**
+     * Determine if the response is still running and should not be recorded yet.
+     *
      * A response that is still running has no final usage yet.
      *
      * @param  array<string, mixed>  $responseData

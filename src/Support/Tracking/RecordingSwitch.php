@@ -63,7 +63,7 @@ class RecordingSwitch
     }
 
     /**
-     * The switch of the current request or job.
+     * Get the switch of the current request or job.
      */
     protected static function current(): self
     {
@@ -71,7 +71,7 @@ class RecordingSwitch
     }
 
     /**
-     * The flag, read from the cache when it hasn't been yet, is stale, or $fresh is asked for.
+     * Get the flag, reading the cache when it hasn't been read yet, is stale, or $fresh is asked for.
      */
     protected function read(bool $fresh): bool
     {

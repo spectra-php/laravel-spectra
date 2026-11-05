@@ -86,7 +86,7 @@ class EmbeddingHandler implements ExtractsModelFromRequest, Handler, MatchesResp
     {
         $model = $requestData['_spectra_model'] ?? null;
 
-        if (! $model) {
+        if (blank($model)) {
             return null;
         }
 

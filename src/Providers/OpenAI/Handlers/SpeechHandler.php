@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenAI\Handlers;
 
+use Illuminate\Support\Str;
 use Spectra\Concerns\MatchesEndpoints;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasMedia;
@@ -53,7 +54,7 @@ class SpeechHandler implements Handler, HasMedia, ReturnsBinaryResponse
     {
         return new Metrics(
             audio: new AudioMetrics(
-                inputCharacters: is_string($requestData['input'] ?? null) ? mb_strlen($requestData['input']) : null,
+                inputCharacters: is_string($requestData['input'] ?? null) ? Str::length($requestData['input']) : null,
             ),
         );
     }

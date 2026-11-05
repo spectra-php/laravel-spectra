@@ -38,6 +38,8 @@ class ChatHandler extends OpenAiCompatibleChatHandler
     }
 
     /**
+     * Get the usage object of a response or stream chunk.
+     *
      * Streamed Responses events carry usage under `response.usage`.
      *
      * @param  array<string, mixed>  $data

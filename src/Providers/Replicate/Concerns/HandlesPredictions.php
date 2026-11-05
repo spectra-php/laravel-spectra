@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Spectra\Providers\Replicate\Concerns;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Str;
 use Spectra\Concerns\MatchesParametricEndpoints;
+use Spectra\Support\Payload;
 use Spectra\Support\Pricing\PricingLookup;
 use Throwable;
 
@@ -40,6 +42,8 @@ trait HandlesPredictions
     }
 
     /**
+     * Determine if the response is a running prediction or not a prediction at all.
+     *
      * `starting` and `processing` predictions are still running; the poll
      * that sees them finish is recorded instead. Bodies without a status are
      * not predictions (e.g. the prediction list, `GET /v1/predictions`).
@@ -64,9 +68,10 @@ trait HandlesPredictions
     }
 
     /**
-     * The model named in the request path (official models) or in a
-     * `version` of the form `owner/model:version`. Deployments and polls
-     * only learn the model from the response.
+     * Get the model named in the request path (official models) or in a
+     * `version` of the form `owner/model:version`.
+     *
+     * Deployments and polls only learn the model from the response.
      *
      * @param  array<string, mixed>  $requestData
      */
@@ -78,15 +83,15 @@ trait HandlesPredictions
 
         $version = $requestData['version'] ?? null;
 
-        if ($endpoint === '/v1/predictions' && is_string($version) && str_contains($version, '/')) {
-            return explode(':', $version, 2)[0];
+        if ($endpoint === '/v1/predictions' && is_string($version) && Str::contains($version, '/')) {
+            return Str::before($version, ':');
         }
 
         return null;
     }
 
     /**
-     * A prediction that ended `failed` or `canceled` (still HTTP 200).
+     * Get the failure message of a prediction that ended `failed` or `canceled` (still HTTP 200).
      *
      * @param  array<string, mixed>  $responseData
      */
@@ -114,9 +119,10 @@ trait HandlesPredictions
     }
 
     /**
-     * How long the model ran: `completed_at` minus `started_at` (or
-     * `created_at`), else `metrics.predict_time`. The HTTP call that fetched
-     * the result only measured a poll.
+     * Get how long the model ran: `completed_at` minus `started_at` (or
+     * `created_at`), else `metrics.predict_time`.
+     *
+     * The HTTP call that fetched the result only measured a poll.
      *
      * @param  array<string, mixed>  $responseData
      */
@@ -132,11 +138,11 @@ trait HandlesPredictions
 
         $predictTime = $responseData['metrics']['predict_time'] ?? null;
 
-        return is_numeric($predictTime) ? (int) round((float) $predictTime * 1000) : null;
+        return is_numeric($predictTime) ? (int) round(Payload::float($predictTime) * 1000) : null;
     }
 
     /**
-     * Which kind of output a prediction produced: 'text', 'image' or
+     * Get the kind of output a prediction produced: 'text', 'image' or
      * 'video', or null when it can't tell (the first handler then takes it).
      *
      * Token counts mean text. Otherwise the catalog type of the model wins,
@@ -184,7 +190,7 @@ trait HandlesPredictions
     }
 
     /**
-     * The output URLs of a prediction (a single URL or a list of them).
+     * Get the output URLs of a prediction (a single URL or a list of them).
      *
      * @param  array<string, mixed>  $data
      * @return array<int, string>
@@ -198,8 +204,10 @@ trait HandlesPredictions
     }
 
     /**
-     * The prediction input: echoed in every response, so it is also there
-     * for polls, which send no body.
+     * Get the prediction input.
+     *
+     * The input is echoed in every response, so it is also there for polls,
+     * which send no body.
      *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
@@ -212,11 +220,13 @@ trait HandlesPredictions
         return is_array($input) ? $input : [];
     }
 
-    /** 'image', 'video', 'audio' or null, from the URL's file extension. */
+    /**
+     * Get the file kind of a URL ('image', 'video', 'audio' or null) from its extension.
+     */
     protected function fileKind(string $url): ?string
     {
         $path = parse_url($url, PHP_URL_PATH);
-        $extension = is_string($path) ? strtolower(pathinfo($path, PATHINFO_EXTENSION)) : '';
+        $extension = is_string($path) ? Str::lower(pathinfo($path, PATHINFO_EXTENSION)) : '';
 
         return match ($extension) {
             'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp', 'tif', 'tiff', 'avif', 'heic' => 'image',

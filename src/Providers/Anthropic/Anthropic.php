@@ -50,8 +50,10 @@ class Anthropic extends Provider implements ExtractsCostMultiplier, ExtractsPric
     }
 
     /**
-     * What the request asked for. Only used when the response doesn't say,
-     * because a response always reports the speed and tier it really got.
+     * Get the pricing tier the request asked for.
+     *
+     * Only used when the response doesn't say, because a response always
+     * reports the speed and tier it really got.
      *
      * @param  array<string, mixed>  $requestData
      */
@@ -91,13 +93,15 @@ class Anthropic extends Provider implements ExtractsCostMultiplier, ExtractsPric
 
         // The response reports where inference ran; the request is only a
         // fallback for bodies without usage (e.g. a recorded stream summary).
-        $geo = $usage['inference_geo'] ?? ($usage === [] ? ($requestData['inference_geo'] ?? null) : null);
+        if (blank($usage)) {
+            return self::costMultiplierForGeo($requestData['inference_geo'] ?? null);
+        }
 
-        return self::costMultiplierForGeo($geo);
+        return self::costMultiplierForGeo($usage['inference_geo'] ?? null);
     }
 
     /**
-     * The tier a usage object says the request was served at.
+     * Get the pricing tier a usage object says the request was served at.
      *
      * Fast mode is reported in `speed`; Priority Tier and batch in
      * `service_tier`. `standard` / `default` mean standard prices, whatever
@@ -120,9 +124,13 @@ class Anthropic extends Provider implements ExtractsCostMultiplier, ExtractsPric
             default => null,
         };
 
+        if ($tier !== null) {
+            return $tier;
+        }
+
         // Fast mode can be silently served at standard speed (Claude Opus
         // 4.6); `speed: standard` then means standard prices.
-        return $tier ?? ($speed === 'standard' ? PricingTier::Standard->value : null);
+        return $speed === 'standard' ? PricingTier::Standard->value : null;
     }
 
     /**
@@ -134,8 +142,8 @@ class Anthropic extends Provider implements ExtractsCostMultiplier, ExtractsPric
     }
 
     /**
-     * The usage object of a message, or of a message inside a batch result
-     * line (`result.message.usage`).
+     * Get the usage object of a message, or of a message inside a batch
+     * result line (`result.message.usage`).
      *
      * @param  array<string, mixed>  $responseData
      * @return array<string, mixed>

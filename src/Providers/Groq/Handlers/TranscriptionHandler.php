@@ -82,8 +82,8 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
     }
 
     /**
-     * The audio length the response reports: `duration` (verbose_json) or a
-     * duration-type `usage.seconds`.
+     * Get the audio length the response reports: `duration` (verbose_json) or
+     * a duration-type `usage.seconds`.
      *
      * @param  array<string, mixed>  $responseData
      * @param  array<string, mixed>  $usage
@@ -91,11 +91,11 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
     protected function audioSeconds(array $responseData, array $usage): ?float
     {
         if (is_numeric($responseData['duration'] ?? null)) {
-            return (float) $responseData['duration'];
+            return Payload::float($responseData['duration']);
         }
 
         if (($usage['type'] ?? null) === 'duration' && is_numeric($usage['seconds'] ?? null)) {
-            return (float) $usage['seconds'];
+            return Payload::float($usage['seconds']);
         }
 
         return null;

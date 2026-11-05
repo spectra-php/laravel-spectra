@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers;
 
+use JsonException;
 use Spectra\Contracts\ExtractsModelFromRequest;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -39,7 +40,7 @@ abstract class Provider
     abstract public function getHosts(): array;
 
     /**
-     * Handlers for this provider's endpoints, generic handlers first.
+     * Get the handlers for this provider's endpoints, generic handlers first.
      *
      * When several handlers match the same endpoint, resolution walks this
      * list in REVERSE and picks the first whose matchesResponse() accepts the
@@ -140,11 +141,11 @@ abstract class Provider
             return $this->resolveHandler($endpoint, $this->toArray($response));
         }
 
-        $data = $this->toArray($response);
+        $responseData = $this->toArray($response);
 
         // Check specialists (later entries) first
         foreach (array_reverse($this->resolvedHandlers()) as $handler) {
-            if ($handler instanceof MatchesResponseShape && $handler->matchesResponse($data)) {
+            if ($handler instanceof MatchesResponseShape && $handler->matchesResponse($responseData)) {
                 return $handler;
             }
         }
@@ -183,15 +184,17 @@ abstract class Provider
             }
         }
 
-        $data = $this->toArray($response);
+        $responseData = $this->toArray($response);
 
-        if (blank($data)) {
+        if (blank($responseData)) {
             return null;
         }
 
-        $encoded = json_encode($data);
-
-        return is_string($encoded) ? $encoded : null;
+        try {
+            return json_encode($responseData, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
     }
 
     /**
@@ -277,12 +280,11 @@ abstract class Provider
                 return $response->toArray();
             }
 
-            $encoded = json_encode($response);
-            if (! is_string($encoded)) {
+            try {
+                $decoded = json_decode(json_encode($response, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
                 return [];
             }
-
-            $decoded = json_decode($encoded, true);
 
             return is_array($decoded) ? $decoded : [];
         }

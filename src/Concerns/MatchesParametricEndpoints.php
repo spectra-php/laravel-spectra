@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Concerns;
 
+use Illuminate\Support\Str;
+
 /**
  * Matches endpoints that contain {placeholder} segments.
  *
@@ -18,9 +20,9 @@ trait MatchesParametricEndpoints
     public function matchesEndpoint(string $endpoint): bool
     {
         foreach ($this->endpoints() as $pattern) {
-            $regex = '#^'.preg_replace('/\\\{[^}]+\\\}/', '[^/]+', preg_quote($pattern, '#')).'$#';
+            $patternRegex = Str::replaceMatches('/\\\{[^}]+\\\}/', '[^/]+', preg_quote($pattern, '#'));
 
-            if (preg_match($regex, $endpoint)) {
+            if (Str::isMatch("#^{$patternRegex}\$#", $endpoint)) {
                 return true;
             }
         }

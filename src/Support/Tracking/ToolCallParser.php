@@ -29,7 +29,7 @@ use Illuminate\Support\Str;
 class ToolCallParser
 {
     /**
-     * The tool results at the end of the request body.
+     * Get the tool results at the end of the request body.
      *
      * @param  array<array-key, mixed>  $body
      * @return list<array{id: ?string, name: ?string, arguments: mixed, result: mixed, is_error: bool}>
@@ -45,9 +45,10 @@ class ToolCallParser
     }
 
     /**
-     * Tool calls the model asked for in a Responses API reply, by call id:
-     * a request that continues it with `previous_response_id` sends only
-     * the results, so the names come from here.
+     * Get the tool calls the model asked for in a Responses API reply, by call id.
+     *
+     * A request that continues the reply with `previous_response_id` sends
+     * only the results, so the names come from here.
      *
      * @param  array<array-key, mixed>  $response
      * @return array<string, array{name: ?string, arguments: mixed}>
@@ -66,7 +67,7 @@ class ToolCallParser
     }
 
     /**
-     * Chat Completions `role: tool` messages, or Anthropic `tool_result` blocks.
+     * Read the tool results from Chat Completions `role: tool` messages, or Anthropic `tool_result` blocks.
      *
      * @param  list<mixed>  $messages
      * @return list<array{id: ?string, name: ?string, arguments: mixed, result: mixed, is_error: bool}>
@@ -110,7 +111,7 @@ class ToolCallParser
     }
 
     /**
-     * Anthropic `tool_result` blocks in the last user message.
+     * Read the tool results from Anthropic `tool_result` blocks in the last user message.
      *
      * @param  list<mixed>  $messages
      * @return list<array{id: ?string, name: ?string, arguments: mixed, result: mixed, is_error: bool}>
@@ -148,7 +149,7 @@ class ToolCallParser
     }
 
     /**
-     * Responses API `function_call_output` items at the end of the input.
+     * Read the tool results from Responses API `function_call_output` items at the end of the input.
      *
      * @param  list<mixed>  $input
      * @return list<array{id: ?string, name: ?string, arguments: mixed, result: mixed, is_error: bool}>
@@ -186,7 +187,7 @@ class ToolCallParser
     }
 
     /**
-     * Gemini `functionResponse` parts in the last content.
+     * Read the tool results from Gemini `functionResponse` parts in the last content.
      *
      * @param  list<mixed>  $contents
      * @return list<array{id: ?string, name: ?string, arguments: mixed, result: mixed, is_error: bool}>
@@ -257,7 +258,7 @@ class ToolCallParser
     }
 
     /**
-     * The key of the call a result answers, among the calls not yet paired.
+     * Find the key of the call a result answers, among the calls not yet paired.
      *
      * @param  array<int, array{id: ?string, name: ?string, arguments: mixed}>  $calls
      * @param  array{id: ?string, name: ?string, result: mixed, is_error: bool}  $result
@@ -287,7 +288,7 @@ class ToolCallParser
     }
 
     /**
-     * Anthropic tool result content: a string, or blocks whose text is joined.
+     * Get the content of an Anthropic tool result: a string, or blocks whose text is joined.
      */
     protected function anthropicContent(mixed $content): mixed
     {
@@ -303,7 +304,7 @@ class ToolCallParser
     }
 
     /**
-     * A JSON string decoded to its value; any other value as it is.
+     * Decode a JSON string to its value, returning any other value as it is.
      */
     protected function decode(mixed $value): mixed
     {
@@ -311,11 +312,11 @@ class ToolCallParser
             return $value;
         }
 
-        return json_decode($value, true);
+        return json_decode($value, true, 512, JSON_THROW_ON_ERROR);
     }
 
     /**
-     * A non-empty string, or null.
+     * Get the value when it is a non-empty string, or null.
      */
     protected function string(mixed $value): ?string
     {

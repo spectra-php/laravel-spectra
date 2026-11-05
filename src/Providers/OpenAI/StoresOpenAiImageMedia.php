@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\OpenAI;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Support\MediaPersister;
 
 /**
@@ -54,18 +55,18 @@ trait StoresOpenAiImageMedia
 
         $items = $responseData['data'] ?? null;
 
-        foreach (is_array($items) ? $items : [] as $i => $item) {
-            $b64 = data_get($item, 'b64_json');
+        foreach (is_array($items) ? $items : [] as $index => $item) {
+            $encodedImage = data_get($item, 'b64_json');
             $url = data_get($item, 'url');
 
-            if (filled($b64)) {
-                $content = base64_decode($b64, true);
+            if (filled($encodedImage)) {
+                $content = base64_decode($encodedImage, true);
 
                 if ($content === false || blank($content)) {
                     continue;
                 }
 
-                $stored[] = $persister->store($requestId, $i, $content, 'png');
+                $stored[] = $persister->store($requestId, $index, $content, 'png');
 
                 continue;
             }
@@ -75,7 +76,7 @@ trait StoresOpenAiImageMedia
             }
 
             // One image that fails to download or store must not lose the others.
-            $path = rescue(function () use ($persister, $requestId, $i, $url) {
+            $path = rescue(function () use ($persister, $requestId, $index, $url) {
                 $response = Http::withoutAITracking()->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)->get($url);
 
                 if (! $response->successful()) {
@@ -84,7 +85,7 @@ trait StoresOpenAiImageMedia
 
                 return $persister->store(
                     $requestId,
-                    $i,
+                    $index,
                     $response->body(),
                     $this->resolveImageExtension($url, $response->header('Content-Type')),
                 );
@@ -122,7 +123,7 @@ trait StoresOpenAiImageMedia
         }
 
         $path = parse_url($url, PHP_URL_PATH);
-        $extension = strtolower(pathinfo(is_string($path) ? $path : '', PATHINFO_EXTENSION));
+        $extension = Str::lower(pathinfo(is_string($path) ? $path : '', PATHINFO_EXTENSION));
         $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif', 'heic', 'heif'];
 
         if (in_array($extension, $allowed, true)) {
@@ -141,8 +142,6 @@ trait StoresOpenAiImageMedia
             return null;
         }
 
-        $parts = explode(';', $contentType, 2);
-
-        return strtolower(trim($parts[0]));
+        return Str::lower(trim(Str::before($contentType, ';')));
     }
 }

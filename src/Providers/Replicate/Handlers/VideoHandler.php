@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\Replicate\Handlers;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsModelFromRequest;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -19,6 +20,7 @@ use Spectra\Data\VideoMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Replicate\Concerns\HandlesPredictions;
 use Spectra\Support\MediaPersister;
+use Spectra\Support\Payload;
 
 /**
  * Replicate predictions that produce a video.
@@ -94,9 +96,9 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         $persister = app(MediaPersister::class);
         $stored = [];
 
-        foreach ($this->outputUrls($responseData) as $i => $url) {
+        foreach ($this->outputUrls($responseData) as $index => $url) {
             // One video that fails to download or store must not lose the others.
-            $path = rescue(function () use ($persister, $requestId, $i, $url) {
+            $path = rescue(function () use ($persister, $requestId, $index, $url) {
                 $response = Http::withoutAITracking()->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)->get($url);
 
                 if (! $response->successful()) {
@@ -105,7 +107,7 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
 
                 $extension = $this->resolveExtensionFromContentType($response->header('Content-Type'));
 
-                return $persister->store($requestId, $i, $response->body(), $extension);
+                return $persister->store($requestId, $index, $response->body(), $extension);
             });
 
             if ($path !== null) {
@@ -117,8 +119,8 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     }
 
     /**
-     * Seconds of video the input asked for, or null when it doesn't say
-     * (the model then used its own default length).
+     * Get the seconds of video the input asked for, or null when it doesn't
+     * say (the model then used its own default length).
      *
      * @param  array<string, mixed>  $input
      */
@@ -131,15 +133,15 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
             $duration = rtrim(trim($duration), 's');
         }
 
-        if (is_numeric($duration) && (float) $duration > 0) {
-            return (float) $duration;
+        if (is_numeric($duration) && Payload::float($duration) > 0) {
+            return Payload::float($duration);
         }
 
         $frames = $input['num_frames'] ?? null;
         $fps = $input['frames_per_second'] ?? $input['fps'] ?? null;
 
-        if (is_numeric($frames) && is_numeric($fps) && (float) $fps > 0) {
-            return (float) $frames / (float) $fps;
+        if (is_numeric($frames) && is_numeric($fps) && Payload::float($fps) > 0) {
+            return Payload::float($frames) / Payload::float($fps);
         }
 
         return null;
@@ -151,7 +153,7 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     private function resolveExtensionFromContentType(?string $contentType): string
     {
         if (filled($contentType)) {
-            $mime = strtolower(trim(explode(';', $contentType, 2)[0]));
+            $mime = Str::lower(trim(Str::before($contentType, ';')));
 
             return match ($mime) {
                 'video/mp4' => 'mp4',

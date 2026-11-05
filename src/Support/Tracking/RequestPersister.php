@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Enums\ModelType;
 use Spectra\Events\RequestTracked;
@@ -157,7 +158,7 @@ class RequestPersister
             'prompt_cost' => $cost['prompt_cost'] ?? 0,
             'completion_cost' => $cost['completion_cost'] ?? 0,
             'total_cost_in_cents' => $cost['total_cost_in_cents'],
-            'currency' => strtoupper((string) config('spectra.costs.currency', 'USD')),
+            'currency' => Str::upper((string) config('spectra.costs.currency', 'USD')),
             // Async jobs report their own generation time; the HTTP call that
             // fetched the result only measured a status poll.
             'latency_ms' => $context->providerLatencyMs ?? $context->latencyMs,
@@ -292,10 +293,8 @@ class RequestPersister
     {
         $data = $this->transformer->transform($request);
 
-        // Dispatch event for custom listeners
         RequestTracked::dispatch($data);
 
-        // Export to OpenTelemetry (or whichever RequestExporter is bound)
         if (! config('spectra.integrations.opentelemetry.enabled')) {
             return;
         }
@@ -330,7 +329,7 @@ class RequestPersister
     }
 
     /**
-     * Minimal attributes for the unsaved model returned when saving failed.
+     * Get the minimal attributes for the unsaved model returned when saving failed.
      *
      * @return array<string, mixed>
      */
@@ -351,7 +350,7 @@ class RequestPersister
      */
     protected function truncate(?string $value, int $length): ?string
     {
-        return $value !== null && mb_strlen($value) > $length ? mb_substr($value, 0, $length) : $value;
+        return $value !== null && Str::length($value) > $length ? Str::substr($value, 0, $length) : $value;
     }
 
     /**
@@ -367,7 +366,6 @@ class RequestPersister
             return $response;
         }
 
-        // Strip embedding vectors (large float arrays) when store_embeddings is disabled
         if ($context->modelType === ModelType::Embedding->value && ! config('spectra.storage.store_embeddings', false)) {
             // OpenAI / Mistral: data[].embedding
             if (is_array($response['data'] ?? null)) {

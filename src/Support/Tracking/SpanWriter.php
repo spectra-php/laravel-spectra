@@ -7,6 +7,7 @@ namespace Spectra\Support\Tracking;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExportsSpans;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Jobs\PersistSpectraSpanJob;
@@ -123,7 +124,7 @@ class SpanWriter
     }
 
     /**
-     * Whether the span is a stand-in a job saved for the unit that dispatched it.
+     * Determine if the span is a stand-in a job saved for the unit that dispatched it.
      */
     protected function isInferred(mixed $attributes): bool
     {
@@ -131,7 +132,7 @@ class SpanWriter
     }
 
     /**
-     * The span's columns with dates as dates and enums as their values.
+     * Get the span's columns with dates as dates and enums as their values.
      *
      * @return array<string, mixed>
      */
@@ -175,6 +176,8 @@ class SpanWriter
     }
 
     /**
+     * Determine if the query failed because the spans table doesn't exist.
+     *
      * Checked by error code, not message: Postgres quotes the failed SQL.
      */
     protected function isMissingTable(Throwable $e): bool
@@ -183,7 +186,7 @@ class SpanWriter
 
         // MySQL, MariaDB and SQL Server use 42S02, Postgres 42P01; SQLite only says so in words.
         return in_array($code, ['42S02', '42P01'], true)
-            || ($e instanceof QueryException && str_contains((string) ($e->errorInfo[2] ?? ''), 'no such table'));
+            || ($e instanceof QueryException && Str::contains((string) ($e->errorInfo[2] ?? ''), 'no such table'));
     }
 
     /**

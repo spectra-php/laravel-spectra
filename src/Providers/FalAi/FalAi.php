@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\FalAi;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsCostMultiplierForModel;
 use Spectra\Pricing\FalAiPricing;
 use Spectra\Providers\FalAi\Handlers\ImageHandler;
@@ -33,6 +34,8 @@ class FalAi extends Provider implements ExtractsCostMultiplierForModel
     }
 
     /**
+     * Get the handlers for fal.ai image and video results and queue calls.
+     *
      * Image and video results share every path; the response shape decides,
      * and ImageHandler takes anything else.
      */
@@ -46,13 +49,17 @@ class FalAi extends Provider implements ExtractsCostMultiplierForModel
     }
 
     /**
+     * Get the request id from the result path, or from the body's `request_id`.
+     *
      * A queued result is fetched from `.../requests/{id}`, so the request id
      * in the path identifies the job; repeated fetches update one row.
      */
     public function extractResponseId(mixed $response, string $endpoint = ''): ?string
     {
-        if (preg_match('#/requests/([^/]+)(/response)?$#', $endpoint, $matches)) {
-            return $matches[1];
+        $pathRequestId = Str::match('#/requests/([^/]+)(/response)?$#', $endpoint);
+
+        if (filled($pathRequestId)) {
+            return $pathRequestId;
         }
 
         $id = $this->toArray($response)['request_id'] ?? null;
@@ -61,6 +68,8 @@ class FalAi extends Provider implements ExtractsCostMultiplierForModel
     }
 
     /**
+     * Get the cost multiplier a fal.ai request's options put on the model's catalog price.
+     *
      * Video models cost more or less than their catalog price with another
      * resolution or without audio ({@see FalAiPricing::VIDEO_PRICES}).
      *
@@ -83,6 +92,6 @@ class FalAi extends Provider implements ExtractsCostMultiplierForModel
 
         $style = $requestData['style'] ?? null;
 
-        return is_string($style) && str_starts_with($style, 'vector_illustration') ? 2.0 : null;
+        return is_string($style) && Str::startsWith($style, 'vector_illustration') ? 2.0 : null;
     }
 }

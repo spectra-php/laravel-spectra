@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Illuminate\Support\Str;
+use JsonException;
+
 /**
  * Incremental parser for streamed provider responses.
  *
@@ -49,8 +52,8 @@ class StreamEventParser
     public function __construct(?string $contentType = null)
     {
         $this->format = match (true) {
-            $contentType !== null && str_contains($contentType, 'text/event-stream') => self::SSE,
-            $contentType !== null && (str_contains($contentType, 'ndjson') || str_contains($contentType, 'jsonl')) => self::NDJSON,
+            $contentType !== null && Str::contains($contentType, 'text/event-stream') => self::SSE,
+            $contentType !== null && Str::contains($contentType, ['ndjson', 'jsonl']) => self::NDJSON,
             default => null,
         };
     }
@@ -295,7 +298,11 @@ class StreamEventParser
             return null;
         }
 
-        $decoded = json_decode($json, true);
+        try {
+            $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
 
         return is_array($decoded) ? $decoded : null;
     }

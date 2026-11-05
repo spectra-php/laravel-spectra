@@ -6,6 +6,8 @@ namespace Spectra\Support\Tracking;
 
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use JsonException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Spectra\Concerns\ParsesRequestData;
@@ -82,7 +84,7 @@ class GuzzleMiddleware
     }
 
     /**
-     * Middleware that detects the provider from the request host.
+     * Create the middleware that detects the provider from the request host.
      */
     public static function auto(): callable
     {
@@ -288,7 +290,12 @@ class GuzzleMiddleware
             $context->rawResponseBody = $rawBody;
             $body = [];
         } else {
-            $decoded = json_decode($rawBody, true);
+            try {
+                $decoded = json_decode($rawBody, true, 512, JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                $decoded = null;
+            }
+
             $body = is_array($decoded) ? $decoded : [];
         }
 
@@ -323,11 +330,12 @@ class GuzzleMiddleware
             return;
         }
 
-        try {
+        // Without a cache the poll keeps whatever it can see.
+        rescue(function () use ($context, $jobId): void {
             $job = $this->rememberedJob($context->provider, $jobId);
             $model = $context->model;
 
-            if (filled($model) && $model !== 'unknown' && ! str_starts_with($job['model'] ?? '', rtrim($model, '/').'/')) {
+            if (filled($model) && $model !== 'unknown' && ! Str::startsWith($job['model'] ?? '', rtrim($model, '/').'/')) {
                 $job['model'] = $model;
             }
 
@@ -340,9 +348,7 @@ class GuzzleMiddleware
             if ($job !== []) {
                 Cache::put($this->jobModelKey($context->provider, $jobId), $job, now()->addDay());
             }
-        } catch (Throwable) {
-            // Without a cache the poll keeps whatever it can see.
-        }
+        }, report: false);
     }
 
     /**
@@ -366,7 +372,7 @@ class GuzzleMiddleware
         $remembered = $job['model'] ?? null;
 
         if ($remembered !== null && $remembered !== $context->model
-            && ($context->model === 'unknown' || blank($context->model) || str_starts_with($remembered, rtrim($context->model, '/').'/'))) {
+            && ($context->model === 'unknown' || blank($context->model) || Str::startsWith($remembered, rtrim($context->model, '/').'/'))) {
             $context->model = $remembered;
         }
 
@@ -380,7 +386,9 @@ class GuzzleMiddleware
     }
 
     /**
-     * Earlier versions cached only the model, as a string.
+     * Get the model and request body remembered for an async job.
+     *
+     * Entries cached by earlier versions hold only the model, as a string.
      *
      * @return array{model?: string, request?: array<string, mixed>}
      */
@@ -396,7 +404,7 @@ class GuzzleMiddleware
     }
 
     /**
-     * The request body without inline files (data URIs), which can be
+     * Remove inline files (data URIs) from the request body: they can be
      * megabytes and say nothing about the price.
      *
      * @param  array<mixed>  $data
@@ -407,7 +415,7 @@ class GuzzleMiddleware
         foreach ($data as $key => $value) {
             if (is_array($value)) {
                 $data[$key] = $this->withoutInlineFiles($value);
-            } elseif (is_string($value) && str_starts_with($value, 'data:')) {
+            } elseif (is_string($value) && Str::startsWith($value, 'data:')) {
                 unset($data[$key]);
             }
         }
@@ -420,7 +428,9 @@ class GuzzleMiddleware
      */
     protected function jobModelKey(string $provider, string $jobId): string
     {
-        return 'spectra:job-model:'.$provider.':'.sha1($jobId);
+        $hash = sha1($jobId);
+
+        return "spectra:job-model:{$provider}:{$hash}";
     }
 
     /**
@@ -432,7 +442,7 @@ class GuzzleMiddleware
     }
 
     /**
-     * The provider's error message from an error body, falling back to the raw body.
+     * Get the provider's error message from an error body, falling back to the raw body.
      */
     public static function errorMessage(string $body, int $status): string
     {
@@ -444,16 +454,22 @@ class GuzzleMiddleware
 
         $body = trim($body);
 
-        return filled($body) ? mb_substr($body, 0, 2000) : "HTTP {$status}";
+        return filled($body) ? Str::substr($body, 0, 2000) : "HTTP {$status}";
     }
 
     /**
-     * The message field of a JSON error body. A message of another type fails
-     * the return type, and errorMessage() falls back to the raw body.
+     * Get the message field of a JSON error body.
+     *
+     * A message of another type fails the return type, and errorMessage()
+     * falls back to the raw body.
      */
     protected static function providerErrorMessage(string $body): ?string
     {
-        $decoded = json_decode($body, true);
+        try {
+            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
 
         if (! is_array($decoded)) {
             return null;

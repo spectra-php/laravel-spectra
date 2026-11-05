@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenAI\Handlers;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\HasProviderLatency;
 use Spectra\Data\Metrics;
 use Spectra\Providers\OpenAI\MeasuresJobLatency;
@@ -46,11 +47,13 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
      */
     public function matchesEndpoint(string $endpoint): bool
     {
-        if (! preg_match('#^/v1/responses/([^/]+)(?:/cancel)?$#', $endpoint, $matches)) {
+        $pattern = '#^/v1/responses/([^/]+)(?:/cancel)?$#';
+
+        if (! Str::isMatch($pattern, $endpoint)) {
             return false;
         }
 
-        return ! in_array($matches[1], self::RESERVED_PATHS, true);
+        return ! in_array(Str::match($pattern, $endpoint), self::RESERVED_PATHS, true);
     }
 
     /**
@@ -86,8 +89,10 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
     }
 
     /**
-     * Never claim a response by its shape alone: without an endpoint every
-     * Responses API body would look like a background poll.
+     * Determine if the body alone identifies a background response, which it never does.
+     *
+     * Without an endpoint every Responses API body would look like a
+     * background poll.
      *
      * @param  array<string, mixed>  $data
      */

@@ -43,6 +43,8 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
     }
 
     /**
+     * Get the token usage and server tool calls of a message.
+     *
      * Anthropic's `input_tokens` counts only the uncached part of the prompt;
      * cache reads and cache writes are reported beside it. They are added back
      * so promptTokens is the full prompt, as TokenMetrics requires.
@@ -75,11 +77,11 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
         $cacheWrite1h = Payload::int($usage['cache_creation']['ephemeral_1h_input_tokens'] ?? null);
 
         // Already-normalised usage (e.g. from manual tracking) carries prompt_tokens as the total.
-        $prompt = isset($usage['input_tokens'])
-            ? (int) $usage['input_tokens'] + $cacheRead + $cacheWrite
+        $promptTokens = isset($usage['input_tokens'])
+            ? Payload::int($usage['input_tokens']) + $cacheRead + $cacheWrite
             : Payload::int($usage['prompt_tokens'] ?? null);
 
-        $completion = Payload::int($usage['output_tokens'] ?? $usage['completion_tokens'] ?? null);
+        $completionTokens = Payload::int($usage['output_tokens'] ?? $usage['completion_tokens'] ?? null);
 
         // With server-side compaction the top-level counts leave out the
         // compaction step, which is billed too: add those iterations back.
@@ -87,16 +89,16 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
             $iterationRead = Payload::int($iteration['cache_read_input_tokens'] ?? null);
             $iterationWrite = Payload::int($iteration['cache_creation_input_tokens'] ?? null);
 
-            $prompt += Payload::int($iteration['input_tokens'] ?? null) + $iterationRead + $iterationWrite;
-            $completion += Payload::int($iteration['output_tokens'] ?? null);
+            $promptTokens += Payload::int($iteration['input_tokens'] ?? null) + $iterationRead + $iterationWrite;
+            $completionTokens += Payload::int($iteration['output_tokens'] ?? null);
             $cacheRead += $iterationRead;
             $cacheWrite += $iterationWrite;
             $cacheWrite1h += Payload::int($iteration['cache_creation']['ephemeral_1h_input_tokens'] ?? null);
         }
 
         return new TokenMetrics(
-            promptTokens: $prompt,
-            completionTokens: $completion,
+            promptTokens: $promptTokens,
+            completionTokens: $completionTokens,
             cachedTokens: $cacheRead,
             cacheWriteTokens: $cacheWrite,
             cacheWrite1hTokens: min($cacheWrite1h, $cacheWrite),
@@ -104,7 +106,7 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
     }
 
     /**
-     * Server tool usage, keyed like AnthropicPricing::toolCallPricing().
+     * Get the server tool calls of a usage object, keyed like AnthropicPricing::toolCallPricing().
      *
      * Web search is billed per search. Web fetch is free and code execution
      * is billed per container-hour, which a response can't tell us; both are
@@ -128,7 +130,7 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
      * Get the compaction iterations of a usage object, which the top-level counts leave out.
      *
      * @param  array<string, mixed>  $usage
-     * @return list<array<string, mixed>>
+     * @return array<int, array<mixed>>
      */
     protected static function compactionIterations(array $usage): array
     {
@@ -136,10 +138,10 @@ class MessageHandler implements ExtractsModelFromResponse, Handler, HasFinishRea
             return [];
         }
 
-        return array_values(array_filter(
-            $usage['iterations'],
-            fn ($iteration) => is_array($iteration) && ($iteration['type'] ?? null) === 'compaction',
-        ));
+        return collect($usage['iterations'])
+            ->filter(fn (mixed $iteration) => is_array($iteration) && ($iteration['type'] ?? null) === 'compaction')
+            ->values()
+            ->all();
     }
 
     /**

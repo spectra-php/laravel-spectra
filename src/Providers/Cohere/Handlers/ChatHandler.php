@@ -59,9 +59,10 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     }
 
     /**
-     * Billed tokens from a v2 `usage` object (also used by the stream's
-     * `message-end` event). `cached_tokens` are prompt tokens that hit
-     * Cohere's cache; Cohere publishes no separate price for them.
+     * Build the billed tokens of a v2 `usage` object, also used by the stream's `message-end` event.
+     *
+     * `cached_tokens` are prompt tokens that hit Cohere's cache; Cohere
+     * publishes no separate price for them.
      *
      * @param  array<string, mixed>  $usage
      */

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Illuminate\Support\Str;
+use JsonException;
 use Spectra\Contracts\ExtractsCostMultiplier;
 use Spectra\Contracts\ExtractsCostMultiplierForModel;
 use Spectra\Contracts\ExtractsPricingTierFromResponse;
@@ -323,10 +325,10 @@ class ResponseProcessor
     }
 
     /**
-     * Count tool calls by type from the response body.
+     * Count the tool calls in a response body by type, for the per-call tool surcharge.
      *
-     * Returns an associative array of tool call type => count.
-     * Returns empty array if no tool calls are found.
+     * Returns an associative array of tool call type => count, empty when
+     * no tool calls are found.
      *
      * Supported output item types:
      * - function_call: User-defined function/tool calls (OpenAI Responses API)
@@ -343,9 +345,6 @@ class ResponseProcessor
      * - local_shell_call: Local shell tool calls (OpenAI)
      * - mcp_approval_request: MCP approval requests (OpenAI)
      * - functionCall: Google Gemini function calls
-     */
-    /**
-     * Count the tool calls in a response body by type, for the per-call tool surcharge.
      *
      * @param  array<string, mixed>  $body
      * @return array<string, int>
@@ -448,13 +447,10 @@ class ResponseProcessor
     }
 
     /**
-     * Detect reasoning output blocks in the response body.
+     * Determine if a response body holds reasoning or thinking output.
      *
      * OpenAI Responses API includes output items with type "reasoning"
      * even when reasoning_tokens is reported as 0 in usage.
-     */
-    /**
-     * Determine if a response body holds reasoning or thinking output.
      *
      * @param  array<string, mixed>  $body
      */
@@ -482,7 +478,7 @@ class ResponseProcessor
     }
 
     /**
-     * Extract reasoning effort from the request data or response body.
+     * Extract the reasoning effort or thinking budget a request asked for, in each provider's format.
      *
      * Checks request data first (explicit user configuration), then falls back
      * to the response body (echoed by the Responses API).
@@ -496,9 +492,6 @@ class ResponseProcessor
      * - Google: generationConfig.thinkingConfig.thinkingBudget
      * - Ollama: think (boolean or effort string)
      * - Mistral: prompt_mode ("reasoning")
-     */
-    /**
-     * Extract the reasoning effort or thinking budget a request asked for, in each provider's format.
      *
      * @param  array<string, mixed>  $requestData
      * @param  array<string, mixed>  $responseData
@@ -597,9 +590,11 @@ class ResponseProcessor
                 return $response->toArray();
             }
 
-            $json = json_encode($response);
-
-            return $json !== false ? (json_decode($json, true) ?? []) : [];
+            try {
+                return json_decode(json_encode($response, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR) ?? [];
+            } catch (JsonException) {
+                return [];
+            }
         }
 
         return [];
@@ -646,29 +641,23 @@ class ResponseProcessor
         $canAudio = $modelData['can_generate_audio'];
         $canText = $modelData['can_generate_text'];
 
-        // TTS: generates audio but not text
         if ($canAudio && ! $canText) {
             return ModelType::Tts;
         }
 
-        // STT: generates text but not audio
         if ($canText && ! $canAudio) {
             return ModelType::Stt;
         }
 
-        // Both or neither — fall back to slug-based detection
         return ModelType::fromAudioSlug($modelSlug);
     }
 
     /**
-     * Strip base64-encoded binary data from the response before DB storage.
+     * Replace base64 images and audio in a response body before it is stored.
      *
-     * Replaces inline image/audio data with lightweight placeholders so the
+     * Inline image/audio data becomes a lightweight placeholder so the
      * response column stays small. Media files are persisted separately via
      * the HasMedia contract when media storage is enabled.
-     */
-    /**
-     * Replace base64 images and audio in a response body before it is stored.
      *
      * @param  array<string, mixed>  $body
      * @return array<string, mixed>
@@ -695,10 +684,10 @@ class ResponseProcessor
 
         // Google Gemini: candidates[].content.parts[].inlineData.data (images/audio)
         if (is_array($body['candidates'] ?? null)) {
-            foreach ($body['candidates'] as $ci => $candidate) {
-                foreach ($candidate['content']['parts'] ?? [] as $pi => $part) {
+            foreach ($body['candidates'] as $candidateIndex => $candidate) {
+                foreach ($candidate['content']['parts'] ?? [] as $partIndex => $part) {
                     if (isset($part['inlineData']['data'])) {
-                        $body['candidates'][$ci]['content']['parts'][$pi]['inlineData']['data'] = '[stripped]';
+                        $body['candidates'][$candidateIndex]['content']['parts'][$partIndex]['inlineData']['data'] = '[stripped]';
                     }
                 }
             }
@@ -720,11 +709,11 @@ class ResponseProcessor
 
         // OpenRouter image generation: choices[].message.images[].image_url.url (base64 data URLs)
         if (is_array($body['choices'] ?? null)) {
-            foreach ($body['choices'] as $ci => $choice) {
-                foreach ($choice['message']['images'] ?? [] as $ii => $image) {
+            foreach ($body['choices'] as $choiceIndex => $choice) {
+                foreach ($choice['message']['images'] ?? [] as $imageIndex => $image) {
                     $url = $image['image_url']['url'] ?? null;
-                    if (is_string($url) && str_starts_with($url, 'data:') && strlen($url) > 1000) {
-                        $body['choices'][$ci]['message']['images'][$ii]['image_url']['url'] = '[stripped]';
+                    if (is_string($url) && Str::startsWith($url, 'data:') && strlen($url) > 1000) {
+                        $body['choices'][$choiceIndex]['message']['images'][$imageIndex]['image_url']['url'] = '[stripped]';
                     }
                 }
             }

@@ -79,11 +79,11 @@ class OpenAiCompatibleStreaming extends StreamHandler
      */
     public function model(array $data): ?array
     {
-        $result = array_filter([
+        $result = collect([
             'model' => is_string($data['model'] ?? null) ? $data['model'] : null,
             'id' => is_string($data['id'] ?? null) ? $data['id'] : null,
-        ]);
+        ])->filter()->all();
 
-        return $result !== [] ? $result : null;
+        return filled($result) ? $result : null;
     }
 }

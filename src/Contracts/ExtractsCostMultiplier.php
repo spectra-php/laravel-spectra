@@ -11,7 +11,7 @@ namespace Spectra\Contracts;
 interface ExtractsCostMultiplier
 {
     /**
-     * Multiplier applied to the whole request cost, or null for none.
+     * Get the multiplier applied to the whole request cost, or null for none.
      *
      * @param  array<string, mixed>  $responseData
      * @param  array<string, mixed>  $requestData

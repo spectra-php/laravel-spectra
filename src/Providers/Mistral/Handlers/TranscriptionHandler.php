@@ -49,21 +49,37 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
     {
         $usage = $responseData['usage'] ?? [];
 
-        // Voxtral transcription bills per minute; the API reports the audio
-        // length as usage.prompt_audio_seconds.
-        $duration = isset($usage['prompt_audio_seconds'])
-            ? (float) $usage['prompt_audio_seconds']
-            : (isset($responseData['duration']) ? (float) $responseData['duration'] : null);
-
         return new Metrics(
             tokens: new TokenMetrics(
                 promptTokens: Payload::int($usage['prompt_tokens'] ?? null),
                 completionTokens: Payload::int($usage['completion_tokens'] ?? null),
             ),
             audio: new AudioMetrics(
-                durationSeconds: $duration,
+                durationSeconds: $this->audioSeconds($responseData),
             ),
         );
+    }
+
+    /**
+     * Get the billed audio length: `usage.prompt_audio_seconds`, or the
+     * response's `duration` without it.
+     *
+     * Voxtral transcription bills per minute, and the API reports the audio
+     * length as `usage.prompt_audio_seconds`.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
+    private function audioSeconds(array $responseData): ?float
+    {
+        if (isset($responseData['usage']['prompt_audio_seconds'])) {
+            return Payload::float($responseData['usage']['prompt_audio_seconds']);
+        }
+
+        if (isset($responseData['duration'])) {
+            return Payload::float($responseData['duration']);
+        }
+
+        return null;
     }
 
     /**

@@ -8,6 +8,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Events\RequestTracked;
 use Spectra\Models\SpectraRequest;
@@ -213,7 +214,7 @@ class RequestWriter
     }
 
     /**
-     * The optional columns the requests table doesn't have.
+     * Get the optional columns the requests table doesn't have.
      *
      * @return array<int, string>
      */
@@ -226,9 +227,10 @@ class RequestWriter
     }
 
     /**
-     * Whether the insert failed on a column the table doesn't have. Checked by
-     * error code, not message: Postgres quotes the failed SQL, which names
-     * every column.
+     * Determine if the insert failed on a column the table doesn't have.
+     *
+     * Checked by error code, not message: Postgres quotes the failed SQL,
+     * which names every column.
      */
     protected function isMissingColumn(QueryException $e): bool
     {
@@ -236,7 +238,7 @@ class RequestWriter
 
         // MySQL, MariaDB and SQL Server use 42S22, Postgres 42703; SQLite only says so in words.
         return in_array($code, ['42S22', '42703'], true)
-            || str_contains((string) ($e->errorInfo[2] ?? ''), 'has no column named');
+            || Str::contains((string) ($e->errorInfo[2] ?? ''), 'has no column named');
     }
 
     /**

@@ -17,6 +17,7 @@ use Spectra\Data\VideoMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\FalAi\Concerns\HandlesFalRequests;
 use Spectra\Support\MediaPersister;
+use Spectra\Support\Payload;
 
 /**
  * fal.ai video models (Kling, Veo, Seedance, MiniMax, ...), whose results
@@ -97,7 +98,7 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
         $persister = app(MediaPersister::class);
         $stored = [];
 
-        foreach ($this->videos($responseData) as $i => $video) {
+        foreach ($this->videos($responseData) as $index => $video) {
             $url = $video['url'] ?? null;
 
             if (! is_string($url)) {
@@ -105,7 +106,7 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
             }
 
             // One video that fails to download or store must not lose the others.
-            $path = rescue(function () use ($persister, $requestId, $i, $url, $video) {
+            $path = rescue(function () use ($persister, $requestId, $index, $url, $video) {
                 $response = Http::withoutAITracking()->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)->get($url);
 
                 if (! $response->successful()) {
@@ -120,7 +121,7 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
                     default => 'mp4',
                 };
 
-                return $persister->store($requestId, $i, $response->body(), $extension);
+                return $persister->store($requestId, $index, $response->body(), $extension);
             });
 
             if ($path !== null) {
@@ -165,12 +166,14 @@ class VideoHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
             $duration = rtrim(trim($duration), 's');
         }
 
-        if (is_numeric($duration) && (float) $duration > 0) {
-            return (float) $duration;
+        $seconds = Payload::float($duration);
+
+        if ($seconds > 0) {
+            return $seconds;
         }
 
-        $frames = $requestData['num_frames'] ?? null;
+        $frames = Payload::float($requestData['num_frames'] ?? null);
 
-        return is_numeric($frames) && (float) $frames > 0 ? (float) $frames / self::BILLED_FPS : null;
+        return $frames > 0 ? $frames / self::BILLED_FPS : null;
     }
 }

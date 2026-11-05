@@ -6,6 +6,7 @@ namespace Spectra\Support\Tracking;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Str;
 use Spectra\Enums\SpanKind;
 use Spectra\Enums\SpanStatus;
 use Throwable;
@@ -72,8 +73,8 @@ class SpanStack
     ) {}
 
     /**
-     * A request, job or command began; it becomes a root span if an AI call
-     * or span happens inside it.
+     * Start a unit of work (a request, job or command); it becomes a root
+     * span if an AI call or span happens inside it.
      */
     public function startUnit(string $key, SpanKind $kind, string $name, ?CarbonInterface $startedAt = null): void
     {
@@ -95,7 +96,7 @@ class SpanStack
     }
 
     /**
-     * A request, job or command ended: save its span if anything inside used it.
+     * Finish a unit of work (a request, job or command), saving its span if anything inside used it.
      */
     public function finishUnit(string $key, ?Throwable $error = null): void
     {
@@ -131,8 +132,8 @@ class SpanStack
     }
 
     /**
-     * An Artisan command began. Only the command the user ran gets a span;
-     * commands it calls run inside it.
+     * Start the unit of an Artisan command. Only the command the user ran
+     * gets a span; commands it calls run inside it.
      */
     public function startCommand(?string $command): void
     {
@@ -158,7 +159,7 @@ class SpanStack
     }
 
     /**
-     * The HTTP request ended (the app is terminating).
+     * Finish the HTTP request's unit once the app is terminating.
      */
     public function finishRequest(): void
     {
@@ -252,14 +253,14 @@ class SpanStack
 
         if ($errorMessage !== null) {
             $row['status'] = SpanStatus::Error->value;
-            $row['error_message'] = mb_substr($errorMessage, 0, 10_000);
+            $row['error_message'] = Str::substr($errorMessage, 0, 10_000);
         }
 
         $this->writer->record($row);
     }
 
     /**
-     * The parent of a new AI call or span in the given trace: the innermost
+     * Get the parent of a new AI call or span in the given trace: the innermost
      * open span, else the current unit of work (which then gets saved),
      * else the span the work came from.
      */
@@ -269,7 +270,7 @@ class SpanStack
     }
 
     /**
-     * The span a queued job dispatched now runs under. Asking does not save
+     * Get the span a queued job dispatched now runs under. Asking does not save
      * the unit of work: a request that only dispatches jobs stores no span.
      */
     public function parentForDispatch(?string $traceId, ?string $upstreamParentSpanId): ?string
@@ -278,7 +279,7 @@ class SpanStack
     }
 
     /**
-     * The spans a queued job dispatched now must save with its own, outermost
+     * Get the spans a queued job dispatched now must save with its own, outermost
      * first: the current unit's, when nothing has saved it yet, after the ones
      * that unit was handed. Ask after {@see parentForDispatch()}, which gives
      * the unit its span id.
@@ -349,10 +350,10 @@ class SpanStack
             $unit['span_id'] = $this->newSpanId();
             $unit['trace_id'] = $traceId;
             $unit['parent_span_id'] = $upstreamParentSpanId;
-            $unit['pending'] = array_values(array_filter(
-                TraceContext::pendingSpans(),
-                fn (array $pending): bool => $pending['trace_id'] === $traceId,
-            ));
+            $unit['pending'] = collect(TraceContext::pendingSpans())
+                ->filter(fn (array $pending): bool => $pending['trace_id'] === $traceId)
+                ->values()
+                ->all();
         }
 
         if ($unit['trace_id'] !== $traceId) {
@@ -369,8 +370,9 @@ class SpanStack
     }
 
     /**
-     * Save the unit, and the outer unit it runs under: a synchronous job's
-     * span points at the request's span, so that one must be saved too.
+     * Mark the unit, and the outer units it runs under, as used so their spans
+     * are saved: a synchronous job's span points at the request's span, so
+     * that one must be saved too.
      */
     protected function markUsed(string $key): void
     {
@@ -383,7 +385,7 @@ class SpanStack
         }
     }
 
-    /** The key of the open unit whose span has this id. */
+    /** Get the key of the open unit whose span has this id. */
     protected function unitKeyOf(?string $spanId): ?string
     {
         foreach ($this->units as $key => $unit) {
@@ -396,9 +398,9 @@ class SpanStack
     }
 
     /**
-     * The innermost open unit. An HTTP request has no start event in the
-     * package, so its unit opens on first use, from the request's own start
-     * time when the server gives one.
+     * Get the key of the innermost open unit. An HTTP request has no start
+     * event in the package, so its unit opens on first use, from the
+     * request's own start time when the server gives one.
      */
     protected function currentUnitKey(): ?string
     {
@@ -430,7 +432,7 @@ class SpanStack
         return Date::now();
     }
 
-    /** Where the current work came from, unless the app turned origins off. */
+    /** Get where the current work came from, unless the app turned origins off. */
     protected function origin(): ?string
     {
         return config('spectra.tracking.capture_origin', true) ? app(TraceOrigin::class)->current() : null;
@@ -468,15 +470,15 @@ class SpanStack
             'trace_id' => $traceId,
             'span_id' => $spanId,
             'parent_span_id' => $parentSpanId,
-            'name' => mb_substr($name, 0, 255),
+            'name' => Str::substr($name, 0, 255),
             'kind' => $kind->value,
-            'origin' => $origin === null ? null : mb_substr($origin, 0, 255),
+            'origin' => $origin === null ? null : Str::substr($origin, 0, 255),
             'started_at' => $startedAt,
             'ended_at' => $endedAt,
             'duration_ms' => max(0, (int) round($startedAt->diffInMilliseconds($endedAt))),
             'status' => ($error === null ? SpanStatus::Ok : SpanStatus::Error)->value,
             'error_type' => $error === null ? null : $error::class,
-            'error_message' => $error === null ? null : mb_substr($error->getMessage(), 0, 10_000),
+            'error_message' => $error === null ? null : Str::substr($error->getMessage(), 0, 10_000),
             'attributes' => $attributes === [] ? null : $attributes,
         ];
     }

@@ -11,6 +11,7 @@ use Spectra\Contracts\SkipsResponse;
 use Spectra\Data\AudioMetrics;
 use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * ElevenLabs speech to text (Scribe), `POST /v1/speech-to-text`, billed per
@@ -104,7 +105,7 @@ class SpeechToTextHandler implements ExtractsModelFromRequest, Handler, SkipsRes
     protected function durationSeconds(array $response): ?float
     {
         if (is_numeric($response['audio_duration_secs'] ?? null)) {
-            return (float) $response['audio_duration_secs'];
+            return Payload::float($response['audio_duration_secs']);
         }
 
         $transcripts = is_array($response['transcripts'] ?? null) ? $response['transcripts'] : [$response];
@@ -112,14 +113,14 @@ class SpeechToTextHandler implements ExtractsModelFromRequest, Handler, SkipsRes
 
         foreach ($transcripts as $transcript) {
             if (is_array($transcript) && is_numeric($transcript['audio_duration_secs'] ?? null)) {
-                $end = max($end ?? 0.0, (float) $transcript['audio_duration_secs']);
+                $end = max($end ?? 0.0, Payload::float($transcript['audio_duration_secs']));
 
                 continue;
             }
 
             foreach (is_array($transcript['words'] ?? null) ? $transcript['words'] : [] as $word) {
                 if (is_array($word) && is_numeric($word['end'] ?? null)) {
-                    $end = max($end ?? 0.0, (float) $word['end']);
+                    $end = max($end ?? 0.0, Payload::float($word['end']));
                 }
             }
         }

@@ -30,6 +30,8 @@ class ChatHandler extends OpenAiCompatibleChatHandler
     }
 
     /**
+     * Get the token usage of a Mistral completion, including its cache hits.
+     *
      * Mistral reports cache hits as `prompt_tokens_details.cached_tokens`;
      * some responses use `prompt_token_details` or `num_cached_tokens`.
      *
@@ -69,8 +71,8 @@ class ChatHandler extends OpenAiCompatibleChatHandler
     }
 
     /**
-     * The answer text of a message `content`, which is a plain string or a
-     * list of `text` / `thinking` chunks.
+     * Get the answer text of a message `content`, which is a plain string or
+     * a list of `text` / `thinking` chunks.
      */
     public static function answerText(mixed $content): ?string
     {

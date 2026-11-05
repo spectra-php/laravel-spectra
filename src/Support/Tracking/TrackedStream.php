@@ -254,11 +254,8 @@ class TrackedStream implements StreamInterface
         try {
             $callback(...$arguments);
         } catch (Throwable $e) {
-            try {
-                report($e);
-            } catch (Throwable) {
-                // The application may be shutting down; tracking is best effort.
-            }
+            // The application may be shutting down; tracking is best effort.
+            rescue(fn () => report($e), report: false);
         }
     }
 }

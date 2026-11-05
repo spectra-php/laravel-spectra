@@ -12,7 +12,7 @@ namespace Spectra\Contracts;
 interface HasProviderLatency
 {
     /**
-     * Generation time in milliseconds, or null when the response doesn't say.
+     * Get the generation time in milliseconds, or null when the response doesn't say.
      *
      * @param  array<string, mixed>  $responseData
      */

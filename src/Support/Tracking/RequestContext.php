@@ -258,7 +258,7 @@ class RequestContext implements Arrayable
                 continue;
             }
 
-            // A list passed as null (the type before these became arrays) is empty.
+            // A list passed as null is left empty, as callers may still pass null for one.
             if ($value === null && in_array($property, self::LIST_PROPERTIES, true)) {
                 continue;
             }
@@ -277,8 +277,11 @@ class RequestContext implements Arrayable
         if (config('spectra.tracking.capture_request_id') && app()->has('request')) {
             $headerValue = request()->header('X-Request-ID');
             $serverValue = request()->server('REQUEST_ID');
-            $this->laravelRequestId = is_string($headerValue) ? $headerValue
-                : (is_string($serverValue) ? $serverValue : (string) Str::uuid());
+            $this->laravelRequestId = match (true) {
+                is_string($headerValue) => $headerValue,
+                is_string($serverValue) => $serverValue,
+                default => (string) Str::uuid(),
+            };
         }
 
         // In queued jobs and commands the bound request is a placeholder
@@ -456,8 +459,10 @@ class RequestContext implements Arrayable
     }
 
     /**
-     * Type and id to store for a trackable. Eloquent models use their morph
-     * alias, so apps with a morph map can still query their requests.
+     * Get the type and id to store for a trackable.
+     *
+     * Eloquent models use their morph alias, so apps with a morph map can
+     * still query their requests.
      *
      * @return array{0: string, 1: mixed}
      */
@@ -472,7 +477,7 @@ class RequestContext implements Arrayable
     }
 
     /**
-     * The usage recorded so far, in the normalised TokenMetrics shape.
+     * Get the usage recorded so far, in the normalised TokenMetrics shape.
      */
     public function tokens(): TokenMetrics
     {
@@ -637,6 +642,8 @@ class RequestContext implements Arrayable
     }
 
     /**
+     * Get the raw request body with the system prompt and tool storage switches applied.
+     *
      * The raw body is where system prompts and tools are stored, so their
      * switches are applied to it.
      *
@@ -648,7 +655,7 @@ class RequestContext implements Arrayable
             return null;
         }
 
-        $filter = new RequestDataFilter;
+        $filter = app(RequestDataFilter::class);
         $data = $this->requestData;
 
         if (! config('spectra.storage.store_system_prompts', true)) {

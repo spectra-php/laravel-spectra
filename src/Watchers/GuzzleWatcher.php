@@ -53,7 +53,6 @@ class GuzzleWatcher implements Watcher
             });
         }
 
-        // Auto-detects provider from the request host
         app()->singleton('spectra.guzzle.handler', function () {
             $stack = HandlerStack::create();
             $stack->push(GuzzleMiddleware::create('auto'), 'spectra');

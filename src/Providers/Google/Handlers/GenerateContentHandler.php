@@ -48,6 +48,8 @@ class GenerateContentHandler implements ExtractsModelFromRequest, ExtractsModelF
     }
 
     /**
+     * Build the token usage and grounding calls of a Gemini response.
+     *
      * Thinking and tool-use prompt tokens are reported beside the prompt and
      * candidate counts and billed too; GeminiUsage folds them in.
      *

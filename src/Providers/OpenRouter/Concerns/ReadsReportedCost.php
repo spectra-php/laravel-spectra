@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenRouter\Concerns;
 
+use Spectra\Support\Payload;
+
 /**
  * Reads the cost OpenRouter reports in every response's `usage` object.
  *
@@ -28,7 +30,7 @@ trait ReadsReportedCost
             return null;
         }
 
-        $total = (float) $cost;
+        $total = Payload::float($cost);
 
         // Non-BYOK responses leave the upstream cost null (it is already
         // inside `cost`); older BYOK responses omit `is_byok`, so only an
@@ -38,7 +40,7 @@ trait ReadsReportedCost
             : null;
 
         if (($usage['is_byok'] ?? null) !== false && is_numeric($upstream)) {
-            $total += (float) $upstream;
+            $total += Payload::float($upstream);
         }
 
         return $total * 100;
