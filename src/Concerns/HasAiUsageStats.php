@@ -66,16 +66,20 @@ trait HasAiUsageStats
             ')
             ->first();
 
+        $requestCount = (int) $stats->request_count;
+        $successfulCount = (int) $stats->successful_count;
+        $totalCostInCents = (float) $stats->total_cost_in_cents;
+
         return new UsageStats(
-            requestCount: (int) $stats->request_count,
-            successfulCount: (int) $stats->successful_count,
+            requestCount: $requestCount,
+            successfulCount: $successfulCount,
             failedCount: (int) $stats->failed_count,
-            successRate: $stats->request_count > 0
-                ? round(($stats->successful_count / $stats->request_count) * 100, 2)
+            successRate: $requestCount > 0
+                ? round(($successfulCount / $requestCount) * 100, 2)
                 : 0,
             totalTokens: (int) $stats->tokens_sum,
-            totalCostInCents: (float) $stats->total_cost_in_cents,
-            totalCost: round((float) $stats->total_cost_in_cents / 100, 4),
+            totalCostInCents: $totalCostInCents,
+            totalCost: round($totalCostInCents / 100, 4),
             avgLatencyMs: round((float) $stats->avg_latency_ms, 2),
         );
     }

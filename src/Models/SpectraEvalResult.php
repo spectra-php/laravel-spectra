@@ -32,8 +32,6 @@ class SpectraEvalResult extends Model
 
     public $timestamps = false;
 
-    protected $table = 'spectra_eval_results';
-
     protected $guarded = [];
 
     /**

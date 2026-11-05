@@ -32,8 +32,6 @@ class SpectraEvalRun extends Model
 
     public $timestamps = false;
 
-    protected $table = 'spectra_eval_runs';
-
     protected $guarded = [];
 
     /**

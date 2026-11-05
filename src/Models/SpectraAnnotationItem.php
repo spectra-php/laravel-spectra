@@ -31,8 +31,6 @@ class SpectraAnnotationItem extends Model
 
     public const UPDATED_AT = null;
 
-    protected $table = 'spectra_annotation_items';
-
     protected $guarded = [];
 
     /**

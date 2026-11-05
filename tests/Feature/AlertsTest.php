@@ -12,6 +12,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Spectra\Events\AlertResolved;
 use Spectra\Events\AlertTriggered;
 use Spectra\Http\Controllers\Api\AlertsController;
@@ -56,7 +57,7 @@ it('fires once, notifies every channel, and stays quiet within the cooldown', fu
     Event::assertDispatched(AlertTriggered::class, fn (AlertTriggered $event) => $event->value === 0.4);
     Mail::assertSent(AlertMail::class, fn (AlertMail $mail) => $mail->hasTo('ops@example.com') && $mail->hasTo('cto@example.com') && ! $mail->resolved);
     Http::assertSentCount(2);
-    Http::assertSent(fn ($request) => $request->url() === 'https://hooks.slack.test/T1' && str_contains($request['text'], 'High error rate: 40%'));
+    Http::assertSent(fn ($request) => $request->url() === 'https://hooks.slack.test/T1' && Str::contains($request['text'], 'High error rate: 40%'));
     Http::assertSent(fn ($request) => $request->url() === 'https://alerts.example.test/spectra' && $request['status'] === 'firing' && $request['value'] === 0.4);
 });
 

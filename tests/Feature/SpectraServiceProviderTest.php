@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Str;
 use Spectra\Pricing\OpenAIPricing;
 use Spectra\Providers\Groq\Groq;
 use Spectra\Providers\OpenAI\OpenAI;
@@ -58,5 +59,5 @@ it('reports a watcher class that does not exist and keeps booting', function () 
 
     (new SpectraServiceProvider($this->app))->boot();
 
-    Exceptions::assertReported(fn (InvalidArgumentException $e) => str_contains($e->getMessage(), 'App\\Watchers\\Misspelled'));
+    Exceptions::assertReported(fn (InvalidArgumentException $e) => Str::contains($e->getMessage(), 'App\\Watchers\\Misspelled'));
 });

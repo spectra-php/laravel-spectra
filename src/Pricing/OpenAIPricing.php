@@ -778,6 +778,7 @@ class OpenAIPricing extends ProviderPricing
             ->tier('standard', inputPrice: 10, outputPrice: 0)
             ->tier('batch', inputPrice: 5, outputPrice: 0));
 
+        // OpenAI gives moderation away, so it is priced 0 on purpose.
         $this->model('omni-moderation-latest', fn ($model) => $model
             ->displayName('Omni Moderation')
             ->tier('standard', inputPrice: 0, outputPrice: 0));

@@ -133,8 +133,7 @@ class EvaluationRunner
                 ['eval_run' => $run->id, 'example' => $example->id],
             ));
         } catch (Throwable $e) {
-            $exceptionClass = $e::class;
-            $error = "{$exceptionClass}: {$e->getMessage()}";
+            $error = $e::class.": {$e->getMessage()}";
         }
 
         $latencyMs = (int) round((hrtime(true) - $started) / 1_000_000);
@@ -243,9 +242,7 @@ class EvaluationRunner
         };
 
         if (is_string($output) && Str::length($output) > self::MAX_OUTPUT_LENGTH) {
-            $truncated = Str::substr($output, 0, self::MAX_OUTPUT_LENGTH);
-
-            return "{$truncated}…";
+            return Str::substr($output, 0, self::MAX_OUTPUT_LENGTH).'…';
         }
 
         return $output;

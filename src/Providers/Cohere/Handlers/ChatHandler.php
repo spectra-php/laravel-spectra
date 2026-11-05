@@ -68,13 +68,13 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
      */
     public static function tokensFromUsage(array $usage): TokenMetrics
     {
-        $billed = is_array($usage['billed_units'] ?? null) ? $usage['billed_units'] : [];
-        $prompt = Payload::int($billed['input_tokens'] ?? null);
+        $billedUnits = is_array($usage['billed_units'] ?? null) ? $usage['billed_units'] : [];
+        $promptTokens = Payload::int($billedUnits['input_tokens'] ?? null);
 
         return new TokenMetrics(
-            promptTokens: $prompt,
-            completionTokens: Payload::int($billed['output_tokens'] ?? null),
-            cachedTokens: min($prompt, Payload::int($usage['cached_tokens'] ?? null)),
+            promptTokens: $promptTokens,
+            completionTokens: Payload::int($billedUnits['output_tokens'] ?? null),
+            cachedTokens: min($promptTokens, Payload::int($usage['cached_tokens'] ?? null)),
         );
     }
 

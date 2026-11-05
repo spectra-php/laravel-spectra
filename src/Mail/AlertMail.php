@@ -41,7 +41,7 @@ class AlertMail extends Mailable
         $state = $this->resolved ? 'is back to normal' : 'is firing';
 
         return new Content(htmlString: '<p><strong>'.e($this->rule->name)."</strong> {$state}.</p>"
-            .'<p>'.e($this->rule->describe()).'<br>Now: '.$value.'</p>'
+            .'<p>'.e($this->rule->describe())."<br>Now: {$value}</p>"
             .'<p><a href="'.e($this->dashboardUrl).'">Open the Spectra dashboard</a></p>');
     }
 }

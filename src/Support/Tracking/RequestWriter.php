@@ -122,12 +122,12 @@ class RequestWriter
      */
     public function export(SpectraRequest $request): void
     {
-        $data = $this->transformer->transform($request);
+        $payload = $this->transformer->transform($request);
 
-        RequestTracked::dispatch($data);
+        RequestTracked::dispatch($payload);
 
         if (config('spectra.integrations.opentelemetry.enabled')) {
-            $this->exporter->export($data);
+            $this->exporter->export($payload);
         }
     }
 
@@ -232,13 +232,13 @@ class RequestWriter
      * Checked by error code, not message: Postgres quotes the failed SQL,
      * which names every column.
      */
-    protected function isMissingColumn(QueryException $e): bool
+    protected function isMissingColumn(QueryException $exception): bool
     {
-        $code = (string) ($e->errorInfo[0] ?? $e->getCode());
+        $code = (string) ($exception->errorInfo[0] ?? $exception->getCode());
 
         // MySQL, MariaDB and SQL Server use 42S22, Postgres 42703; SQLite only says so in words.
         return in_array($code, ['42S22', '42703'], true)
-            || Str::contains((string) ($e->errorInfo[2] ?? ''), 'has no column named');
+            || Str::contains((string) ($exception->errorInfo[2] ?? ''), 'has no column named');
     }
 
     /**

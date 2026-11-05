@@ -103,7 +103,7 @@ class RequestPersister
      */
     public function buildAttributes(RequestContext $context): array
     {
-        $data = $context->toArray();
+        $columns = $context->toArray();
 
         $pricingTier = $context->pricingTier
             ?? app(PricingLookup::class)->defaultTier($context->provider)->value;
@@ -114,14 +114,14 @@ class RequestPersister
 
         // Raw payloads are only present in toArray() when the matching storage
         // switch allows it; never fall back to the context, which always has them.
-        $requestData = $data['request_data'] ?? null;
-        $response = $data['response'] ?? null;
+        $requestData = $columns['request_data'] ?? null;
+        $response = $columns['response'] ?? null;
         $keepsPayload = $this->keepsPayload($context);
 
         return [
             'id' => $context->id,
-            'batch_id' => $data['batch_id'] ?? null,
-            'trace_id' => $data['trace_id'] ?? null,
+            'batch_id' => $columns['batch_id'] ?? null,
+            'trace_id' => $columns['trace_id'] ?? null,
             'parent_span_id' => $context->parentSpanId,
             'span_id' => $context->spanId,
             'response_id' => $context->responseId,
@@ -291,16 +291,16 @@ class RequestPersister
      */
     public function exportToIntegrations(SpectraRequest $request): void
     {
-        $data = $this->transformer->transform($request);
+        $payload = $this->transformer->transform($request);
 
-        RequestTracked::dispatch($data);
+        RequestTracked::dispatch($payload);
 
         if (! config('spectra.integrations.opentelemetry.enabled')) {
             return;
         }
 
         if (config('spectra.queue.enabled')) {
-            $job = new ExportTrackedRequestJob($data);
+            $job = new ExportTrackedRequestJob($payload);
 
             if ($connection = config('spectra.queue.connection')) {
                 $job->onConnection($connection);
@@ -320,12 +320,12 @@ class RequestPersister
         }
 
         if (config('spectra.queue.after_response') && ! app()->runningInConsole()) {
-            $this->afterResponse(new ExportTrackedRequestJob($data));
+            $this->afterResponse(new ExportTrackedRequestJob($payload));
 
             return;
         }
 
-        $this->exporter->export($data);
+        $this->exporter->export($payload);
     }
 
     /**

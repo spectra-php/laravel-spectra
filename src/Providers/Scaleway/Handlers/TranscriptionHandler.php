@@ -61,7 +61,7 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
                 completionTokens: $completionTokens,
             ),
             audio: new AudioMetrics(
-                durationSeconds: $this->audioSeconds($responseData),
+                durationSeconds: $this->resolveAudioSeconds($responseData),
             ),
         );
     }
@@ -71,7 +71,7 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
      *
      * @param  array<string, mixed>  $responseData
      */
-    private function audioSeconds(array $responseData): ?float
+    private function resolveAudioSeconds(array $responseData): ?float
     {
         if (isset($responseData['duration'])) {
             return Payload::float($responseData['duration']);

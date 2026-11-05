@@ -23,8 +23,6 @@ class SpectraDataset extends Model
 {
     use HasUuids;
 
-    protected $table = 'spectra_datasets';
-
     protected $guarded = [];
 
     /**

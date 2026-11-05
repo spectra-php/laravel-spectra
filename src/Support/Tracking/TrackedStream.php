@@ -73,6 +73,7 @@ class TrackedStream implements StreamInterface
         while (! $this->stream->eof()) {
             $chunk = $this->read(8192);
 
+            // Raw bytes: only an empty read ends the loop; whitespace is still body.
             if ($chunk === '') {
                 break;
             }
@@ -222,6 +223,7 @@ class TrackedStream implements StreamInterface
         $start = $this->position;
         $this->position += strlen($bytes);
 
+        // Raw bytes: a whitespace-only chunk is still part of the body.
         if ($bytes === '' || $this->position <= $this->fed) {
             return;
         }

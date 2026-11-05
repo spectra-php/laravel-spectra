@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\Google;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
@@ -179,7 +180,7 @@ final class GeminiUsage
                 $parts = self::appendPart($parts, $part);
             }
 
-            $candidate = array_replace($candidate, array_diff_key($first, ['content' => true]));
+            $candidate = array_replace($candidate, Arr::except($first, 'content'));
             $candidate['content']['role'] = $first['content']['role'] ?? $candidate['content']['role'] ?? 'model';
         }
 
@@ -211,7 +212,7 @@ final class GeminiUsage
         $last = array_pop($parts);
 
         $isPlainText = static fn (mixed $streamedPart): bool => is_array($streamedPart) && is_string($streamedPart['text'] ?? null)
-            && array_diff(array_keys($streamedPart), ['text', 'thought', 'thoughtSignature']) === [];
+            && Arr::except($streamedPart, ['text', 'thought', 'thoughtSignature']) === [];
 
         if (is_array($last) && is_array($part) && $isPlainText($part) && $isPlainText($last)
             && (bool) ($last['thought'] ?? false) === (bool) ($part['thought'] ?? false)) {

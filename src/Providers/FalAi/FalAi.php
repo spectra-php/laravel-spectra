@@ -84,10 +84,10 @@ class FalAi extends Provider implements ExtractsCostMultiplierForModel
      */
     public function extractCostMultiplierForModel(string $model, array $responseData, array $requestData): ?float
     {
-        $video = FalAiPricing::videoCostMultiplier($model, $requestData);
+        $videoMultiplier = FalAiPricing::videoCostMultiplier($model, $requestData);
 
-        if ($video !== null) {
-            return $video;
+        if ($videoMultiplier !== null) {
+            return $videoMultiplier;
         }
 
         $style = $requestData['style'] ?? null;

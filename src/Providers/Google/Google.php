@@ -101,20 +101,20 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
      */
     public function extractResponseId(mixed $response, string $endpoint = ''): ?string
     {
-        $data = $this->toArray($response);
+        $responseData = $this->toArray($response);
 
         // A Veo job is identified by its operation name, from the submit
         // response (running, no `done` yet) to the poll that finishes it, so
         // the submit's request is remembered for that poll and repeated polls
         // of the same job update one row.
-        $operation = $data['name'] ?? null;
+        $operation = $responseData['name'] ?? null;
 
         if (filled($operation) && Str::contains($operation, '/operations/')) {
             return $operation;
         }
 
-        return filled($data['responseId'] ?? null)
-            ? $data['responseId']
+        return filled($responseData['responseId'] ?? null)
+            ? $responseData['responseId']
             : parent::extractResponseId($response, $endpoint);
     }
 
@@ -150,9 +150,9 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
      */
     public function extractPricingTierFromResponse(array $responseData): ?string
     {
-        $data = $this->normalise($responseData);
+        $response = $this->normalise($responseData);
 
-        return GeminiUsage::pricingTier($data['usageMetadata']['serviceTier'] ?? $data['serviceTier'] ?? null);
+        return GeminiUsage::pricingTier($response['usageMetadata']['serviceTier'] ?? $response['serviceTier'] ?? null);
     }
 
     /**

@@ -15,13 +15,13 @@ paths:
 Each model lists every column as `@property`, and every accessor and `withCount()` alias as `@property-read`. When a migration adds a column, add it here in the same change, so PHPStan stays clean.
 
 ## Cast every typed column
-Declare casts in `casts()`: `integer`, `boolean`, `json` (the package's spelling of `array`), `datetime`. Type-hint dates as `CarbonInterface`, never `Illuminate\Support\Carbon`: apps may switch to `CarbonImmutable` with `Date::use()` (`ImmutableDatesTest`). Use the package's existing style: `$guarded = []` and an explicit `$table`; the Laravel 13 model attributes are not available on Laravel 12.
+Declare casts in `casts()`: `integer`, `boolean`, `json` (the package's spelling of `array`), `datetime`. Type-hint dates as `CarbonInterface`, never `Illuminate\Support\Carbon`: apps may switch to `CarbonImmutable` with `Date::use()` (`ImmutableDatesTest`). Use the package's existing style: `$guarded = []` (`SpectraTag` keeps `$fillable = ['name']`, so tags can only be created by name), and no `$table`: name the model so Laravel's inferred table is the `spectra_` one (`SpectraRequest` → `spectra_requests`). The Laravel 13 model attributes are not available on Laravel 12.
 
 ## Accessors derive; they don't query
-Write accessors as `protected function name(): Attribute`, never `getNameAttribute()`. They only derive a value from the model's own columns: no queries.
+Write accessors and mutators as `protected function name(): Attribute`, never `getNameAttribute()` / `setNameAttribute()`. They only derive a value from the model's own columns: no queries. The public `get…Attribute()` / `set…Attribute()` methods on `SpectraBudget`, `SpectraDailyStat` and `SpectraTag` are public API and stay, as `.ai/rules/src.md` § "Name things for what they hold and do" says for other public names.
 
 ## Models hold data, not workflows
-No tracking, pricing or budget logic in a model; those belong in `Support/`. Expose state questions as predicates. Keep `request` and `response` in `$hidden` on `SpectraRequest`, so list queries and integrations stay light.
+No tracking, pricing or budget logic in a model; those belong in `Support/`. `SpectraDailyStat`'s public static `record()`, `accumulate()` and aggregate readers predate this and are public API; don't add more. Expose state questions as predicates. Keep `request` and `response` in `$hidden` on `SpectraRequest`, so list queries and integrations stay light.
 
 ## Write SQL every driver runs
 Users run SQLite, MySQL, MariaDB and PostgreSQL. Prefer the query builder; when raw SQL is needed, branch on the driver (`CostQueryBuilder::monthlyPeriodExpression()` uses `strftime` / `TO_CHAR` / `DATE_FORMAT`). Never use `EXTRACT()`, `ILIKE`, JSON operators or `::` casts without a per-driver branch. Compare dates with `whereDate()`: SQLite stores date casts as `Y-m-d 00:00:00`.

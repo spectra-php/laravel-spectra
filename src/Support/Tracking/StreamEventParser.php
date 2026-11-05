@@ -65,6 +65,7 @@ class StreamEventParser
      */
     public function push(string $bytes): array
     {
+        // Raw bytes: a whitespace-only chunk can still end an event, so only '' is skipped.
         if ($bytes === '') {
             return [];
         }
@@ -103,6 +104,7 @@ class StreamEventParser
             $events = [];
         }
 
+        // Raw bytes: a whitespace-only last line still ends a server-sent event.
         if ($this->format !== self::JSON_ARRAY && $this->buffer !== '') {
             $events = [...$events, ...$this->line($this->buffer)];
             $this->buffer = '';

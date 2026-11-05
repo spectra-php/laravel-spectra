@@ -97,10 +97,10 @@ final class PageText
                 continue;
             }
 
-            $own = $this->extractNumbers($rest);
+            $ownNumbers = $this->extractNumbers($rest);
 
-            if ($this->isTableRow($line) && $own !== []) {
-                if ($this->contains($own, $amount)) {
+            if ($this->isTableRow($line) && $ownNumbers !== []) {
+                if ($this->contains($ownNumbers, $amount)) {
                     return $line;
                 }
 
@@ -113,7 +113,7 @@ final class PageText
                 continue;
             }
 
-            if ($this->contains($own, $amount)) {
+            if ($this->contains($ownNumbers, $amount)) {
                 return $line;
             }
 

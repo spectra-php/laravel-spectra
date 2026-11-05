@@ -82,33 +82,33 @@ class CostCalculator
         $cached = $take($tokens->cachedTokens);
         $writes = $take($tokens->cacheWriteTokens);
         $writes1h = min(max(0, $tokens->cacheWrite1hTokens), $writes);
-        $audioIn = $take($tokens->audioInputTokens);
-        $imageIn = $take($tokens->imageInputTokens);
-        $regularIn = $remaining;
+        $audioInputTokens = $take($tokens->audioInputTokens);
+        $imageInputTokens = $take($tokens->imageInputTokens);
+        $regularInputTokens = $remaining;
 
         $input = $pricing['input'];
         $cacheWrite5m = $pricing['cache_write_5m'] ?? $input;
 
         $promptCost = (
-            $regularIn * $input
+            $regularInputTokens * $input
             + $cached * ($pricing['cached_input'] ?? $input)
             + ($writes - $writes1h) * $cacheWrite5m
             + $writes1h * ($pricing['cache_write_1h'] ?? $cacheWrite5m)
-            + $audioIn * ($pricing['audio_input'] ?? $input)
-            + $imageIn * ($pricing['image_input'] ?? $input)
+            + $audioInputTokens * ($pricing['audio_input'] ?? $input)
+            + $imageInputTokens * ($pricing['image_input'] ?? $input)
         ) / 1_000_000;
 
         $outputTotal = max(0, $tokens->completionTokens);
-        $audioOut = min(max(0, $tokens->audioOutputTokens), $outputTotal);
-        $imageOut = min(max(0, $tokens->imageOutputTokens), $outputTotal - $audioOut);
-        $regularOut = $outputTotal - $audioOut - $imageOut;
+        $audioOutputTokens = min(max(0, $tokens->audioOutputTokens), $outputTotal);
+        $imageOutputTokens = min(max(0, $tokens->imageOutputTokens), $outputTotal - $audioOutputTokens);
+        $regularOutputTokens = $outputTotal - $audioOutputTokens - $imageOutputTokens;
 
         $output = $pricing['output'];
 
         $completionCost = (
-            $regularOut * $output
-            + $audioOut * ($pricing['audio_output'] ?? $output)
-            + $imageOut * ($pricing['image_output'] ?? $output)
+            $regularOutputTokens * $output
+            + $audioOutputTokens * ($pricing['audio_output'] ?? $output)
+            + $imageOutputTokens * ($pricing['image_output'] ?? $output)
         ) / 1_000_000;
 
         return [

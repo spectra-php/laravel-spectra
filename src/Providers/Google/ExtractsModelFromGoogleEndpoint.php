@@ -7,8 +7,9 @@ namespace Spectra\Providers\Google;
 use Illuminate\Support\Str;
 
 /**
- * Gemini puts the model in the URL (`/v1beta/models/{model}:generateContent`),
- * not in the request body.
+ * Reads the model of a Gemini request from its endpoint, since Gemini puts
+ * the model in the URL (`/v1beta/models/{model}:generateContent`), not in
+ * the request body.
  */
 trait ExtractsModelFromGoogleEndpoint
 {

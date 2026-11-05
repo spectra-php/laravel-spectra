@@ -251,22 +251,7 @@ A failed request has the error status, with the provider's error message.
 <a name="attribute-changes"></a>
 ### Changes from 1.x
 
-Spectra 2.0 renamed several attributes to follow the current conventions:
-
-| 1.x | 2.0 |
-| --- | --- |
-| span name `ai.{provider}.{model}` | `{operation} {model}`, e.g. `chat gpt-4o` |
-| `gen_ai.system` | `gen_ai.provider.name` (`gcp.gemini` for Google, `x_ai` for xAI) |
-| `gen_ai.operation.name` = endpoint path | `gen_ai.operation.name` = `chat`, `embeddings`, `generate_content`, ...; the path moved to `spectra.endpoint` |
-| `gen_ai.usage.prompt_tokens` | `gen_ai.usage.input_tokens` |
-| `gen_ai.usage.completion_tokens` | `gen_ai.usage.output_tokens` |
-| `gen_ai.usage.total_tokens` | removed (input + output) |
-| `gen_ai.usage.reasoning_tokens` | `gen_ai.usage.reasoning.output_tokens` |
-| `gen_ai.response.finish_reason` | `gen_ai.response.finish_reasons` (array) |
-| `spectra.is_streaming` | `gen_ai.request.stream` |
-| None (new in 2.0) | `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_write.input_tokens`, `gen_ai.conversation.id`, `error.type`, `spectra.currency`, `spectra.model` |
-
-If your dashboards or alerts use the old names, update them. Or extend `DefaultSpanBuilder` and override `attributes()` or `spanName()` to keep the old names (see below).
+The attribute names follow the current conventions since Spectra 2.0. If your dashboards or alerts use the 1.x names, see [OpenTelemetry Attribute Names](/upgrade#opentelemetry) in the upgrade guide for the old and new names, and how to keep the old ones.
 
 <a name="customizing-spans"></a>
 ## Customizing Spans

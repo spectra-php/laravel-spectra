@@ -196,6 +196,7 @@ class OpenRouterPricing extends ProviderPricing
             ->canGenerateImages()
             ->tier('standard', pricePerUnit: 3));
 
+        // OpenRouter gives `:free` variants away, so this one is priced 0 on purpose.
         $this->model('google/gemini-2.5-flash-image-preview:free', fn ($model) => $model
             ->displayName('Gemini 2.5 Flash Image Preview Free')
             ->type('image')

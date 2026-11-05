@@ -363,11 +363,8 @@ class GuzzleMiddleware
             return;
         }
 
-        try {
-            $job = $this->rememberedJob($context->provider, $jobId);
-        } catch (Throwable) {
-            return;
-        }
+        // Without a cache the poll keeps whatever it can see.
+        $job = rescue(fn () => $this->rememberedJob($context->provider, $jobId), [], report: false);
 
         $remembered = $job['model'] ?? null;
 
@@ -428,9 +425,7 @@ class GuzzleMiddleware
      */
     protected function jobModelKey(string $provider, string $jobId): string
     {
-        $hash = sha1($jobId);
-
-        return "spectra:job-model:{$provider}:{$hash}";
+        return "spectra:job-model:{$provider}:".sha1($jobId);
     }
 
     /**

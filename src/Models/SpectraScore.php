@@ -37,8 +37,6 @@ class SpectraScore extends Model
 
     public const UPDATED_AT = null;
 
-    protected $table = 'spectra_scores';
-
     protected $guarded = [];
 
     /**

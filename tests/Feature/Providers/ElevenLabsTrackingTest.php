@@ -53,7 +53,7 @@ it('bills text to speech with timestamps without storing the base64 audio', func
     expect($record->model)->toBe('Eleven v3')
         ->and($record->input_characters)->toBe(5)
         ->and($record->total_cost_in_cents)->toEqualWithDelta(0.04, 0.000001)
-        ->and(json_encode($record->response))->not->toContain('SUQzBAAAAAAAI1RTU0');
+        ->and(json_encode($record->response, JSON_THROW_ON_ERROR))->not->toContain('SUQzBAAAAAAAI1RTU0');
 });
 
 it('bills speech to text per minute of audio', function () {

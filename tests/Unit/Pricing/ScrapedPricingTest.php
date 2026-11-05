@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Spectra\Pricing\ScrapedPricing;
 use Spectra\SpectraServiceProvider;
 use Spectra\Support\Pricing\PricingLookup;
@@ -112,7 +113,7 @@ it('falls back to the built-in prices when the file is missing', function () {
 
     expect(app(PricingLookup::class)->get('openai', 'gpt-x')['input'])->toBe(100);
 
-    Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => str_contains($message, "doesn't exist"));
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => Str::contains($message, "doesn't exist"));
 });
 
 it('falls back to the built-in prices when the file is not valid JSON', function () {
@@ -123,7 +124,7 @@ it('falls back to the built-in prices when the file is not valid JSON', function
 
     expect(app(PricingLookup::class)->get('openai', 'gpt-x')['input'])->toBe(100);
 
-    Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => str_contains($message, 'not valid JSON'));
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => Str::contains($message, 'not valid JSON'));
 });
 
 it('skips a provider whose currency differs from its built-in catalog', function () {
@@ -137,7 +138,7 @@ it('skips a provider whose currency differs from its built-in catalog', function
     expect($lookup->get('openai', 'gpt-x')['input'])->toBe(100)
         ->and($lookup->currency('openai'))->toBe('USD');
 
-    Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => str_contains($message, 'in EUR'));
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => Str::contains($message, 'in EUR'));
 });
 
 it('skips a broken model and loads the others', function (array $broken, string $reason) {
@@ -151,7 +152,7 @@ it('skips a broken model and loads the others', function (array $broken, string 
     expect($lookup->get('openai', 'gpt-x')['input'])->toBe(90)
         ->and($lookup->get('openai', 'gpt-y')['input'])->toBe(30);
 
-    Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => str_contains($message, "'gpt-y'") && str_contains($message, $reason));
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => Str::contains($message, "'gpt-y'") && Str::contains($message, $reason));
 })->with([
     'no tiers' => [['tiers' => []], 'no tiers'],
     'unknown tier' => [['tiers' => [['tier' => 'gold', 'input_price' => 1]]], "unknown tier 'gold'"],

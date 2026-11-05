@@ -41,4 +41,4 @@ Built-in providers are listed in `config('spectra.providers')` and their pricing
 When a handler fetches something itself (a generated file, a token count), call `Http::withoutAITracking()`, so Spectra never records or bills its own requests.
 
 ## Fixtures are real responses
-Fixtures in `tests/responses/{provider}/` are real response bodies (trimmed, with secrets and long content cut), loaded with `loadMockResponse()`. Keep stream fixtures byte-exact: `.gitattributes` keeps their line endings (Gemini SSE uses CRLF).
+Fixtures in `tests/responses/{provider}/` are real response bodies (trimmed, with secrets and long content cut), loaded with `loadMockResponse()`. Keep stream fixtures byte-exact. `.gitattributes` marks `tests/responses/**/*.sse` and `tests/responses/google/streams/*` as `-text`, so their line endings survive (Gemini SSE uses CRLF); the `.txt` streams are LF under `text=auto`. Add a pattern there for a new stream fixture whose line endings matter.

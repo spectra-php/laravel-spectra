@@ -25,9 +25,11 @@ it('records a background response once, when a poll returns it finished', functi
     ]);
 
     Http::post('https://api.openai.com/v1/responses', ['model' => 'gpt-5.5-pro', 'background' => true, 'input' => 'Prove the bound.']);
+
     expect(SpectraRequest::query()->count())->toBe(0);
 
     Http::get('https://api.openai.com/v1/responses/resp_bg_7a6b5c4d3e2f1a0b');
+
     expect(SpectraRequest::query()->count())->toBe(0);
 
     Http::get('https://api.openai.com/v1/responses/resp_bg_7a6b5c4d3e2f1a0b');
@@ -167,7 +169,7 @@ it('bills whisper on the seconds in the usage', function () {
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.11, 1e-9);
 });
 
-it('does not fail on plain-text transcription formats', function () {
+it('records a plain-text transcription at zero cost without altering its body', function () {
     Http::fake(['api.openai.com/*' => Http::response("Hello world\n", 200, ['Content-Type' => 'text/plain; charset=utf-8'])]);
 
     $response = Http::attach('file', 'RIFF....WAVEfmt ', 'speech.wav')

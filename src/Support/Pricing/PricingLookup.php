@@ -355,14 +355,14 @@ class PricingLookup
     {
         $this->resolve();
 
-        $result = [];
-        foreach ($this->models as $key => $data) {
-            if ($data[$field]) {
-                $result[] = Str::after($key, '|');
+        $modelIds = [];
+        foreach ($this->models as $key => $modelData) {
+            if ($modelData[$field]) {
+                $modelIds[] = Str::after($key, '|');
             }
         }
 
-        return collect($result)->uniqueStrict()->values()->all();
+        return collect($modelIds)->uniqueStrict()->values()->all();
     }
 
     /**

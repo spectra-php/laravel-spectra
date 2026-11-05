@@ -250,7 +250,7 @@ return [
         | Laravel filesystem disk before the URLs expire.
         |
         | `disk` is the filesystem disk the files are stored on (null uses your
-        | default disk) and `path` the folder on that disk, 'spectra' by default.
+        | default disk) and `path` the folder on that disk.
         |
         | Docs: https://spectraphp.com/configuration#media-persistence
         |
@@ -1001,7 +1001,7 @@ return [
     | `provider` and `model` narrow a rule to one provider or model.
     |
     | A firing rule notifies once, then again after `cooldown` minutes
-    | (default 60) while it keeps firing, and once more when it recovers. It
+    | while it keeps firing, and once more when it recovers. It
     | also dispatches the AlertTriggered and AlertResolved events.
     |
     | `notify` lists the channels: email addresses, a Slack incoming webhook
@@ -1271,7 +1271,7 @@ return [
             'resource_attributes' => [],
 
             /*
-            | Timeout in seconds for OTLP HTTP requests. Default: 10.
+            | Timeout in seconds for OTLP HTTP requests.
             |
             | Docs: https://spectraphp.com/opentelemetry#configuration-options
             */

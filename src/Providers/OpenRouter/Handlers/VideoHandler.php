@@ -90,7 +90,7 @@ class VideoHandler implements Handler, HasFinishReason, ReportsJobFailure, Skips
     {
         $urls = $this->outputUrls($response);
 
-        if ($urls !== []) {
+        if (filled($urls)) {
             return implode("\n", $urls);
         }
 

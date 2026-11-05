@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Str;
 use Spectra\Pricing\ProviderPricing;
 use Spectra\Support\Pricing\Scraping\CatalogShape;
 use Spectra\Support\Pricing\Scraping\PageText;
@@ -162,11 +163,11 @@ it('keeps the page line that confirms each change, for the review', function () 
 });
 
 it('cuts a long confirming line for the review', function () {
-    $page = '| long-x | $2.50 | $12.00 | '.str_repeat('notes ', 50).'|';
+    $page = '| long-x | $2.50 | $12.00 | '.Str::repeat('notes ', 50).'|';
 
     $change = ($this->map)([['model_id' => 'long-x', 'tier' => 'standard', 'input' => 2.5]], $page)->changes[0];
 
-    expect(mb_strlen((string) $change->pageLine))->toBe(ScrapedPriceMapper::MAX_PAGE_LINE_LENGTH + 1)
+    expect(Str::length((string) $change->pageLine))->toBe(ScrapedPriceMapper::MAX_PAGE_LINE_LENGTH + 1)
         ->and($change->pageLine)->toStartWith('| long-x | $2.50 | $12.00 |')->toEndWith('…');
 });
 
@@ -264,7 +265,7 @@ describe('PageText', function () {
     it('does not count numbers in the model name or in prose', function () {
         $page = new PageText(implode("\n", [
             '| gpt-6-astra | $10.00 |',
-            str_repeat('Search content tokens for gpt-5 are billed as 8,000 input tokens per call, with a 5-minute minimum. ', 6),
+            Str::repeat('Search content tokens for gpt-5 are billed as 8,000 input tokens per call, with a 5-minute minimum. ', 6),
         ]));
 
         expect($page->confirms(['gpt-6-astra'], 6))->toBeFalse()

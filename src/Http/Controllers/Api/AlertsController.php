@@ -24,9 +24,9 @@ class AlertsController extends BaseApiController
         try {
             $statuses = $monitor->statuses(now());
         } catch (InvalidArgumentException $e) {
-            return new AlertsResponse([], $e->getMessage());
+            return new AlertsResponse(alerts: [], error: $e->getMessage());
         }
 
-        return new AlertsResponse(collect($statuses)->map(fn (AlertStatus $status) => AlertEntry::fromStatus($status))->all());
+        return new AlertsResponse(alerts: collect($statuses)->map(fn (AlertStatus $status) => AlertEntry::fromStatus($status))->all());
     }
 }

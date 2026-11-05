@@ -11,6 +11,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Spectra\Enums\ScoreSource;
 use Spectra\Enums\ScoreType;
 use Spectra\Events\ScoreRecorded;
@@ -48,6 +49,7 @@ it('scores a call by the context id it gets inside track(), its stored id', func
     }, ['conversation_id' => 'chat-9']);
 
     $call = SpectraRequest::query()->sole();
+
     Spectra::score('accuracy', 0.82, request: $call, source: 'model');
 
     $score = SpectraScore::query()->sole();
@@ -96,7 +98,7 @@ it('skips scores with one warning until the scores migration runs', function () 
     expect(Spectra::score('helpful', true, traceId: 't'))->toBeNull()
         ->and(Spectra::score('helpful', false, traceId: 't'))->toBeNull();
 
-    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => str_contains($message, 'spectra_scores'));
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => Str::contains($message, 'spectra_scores'));
 });
 
 it('dispatches ScoreRecorded with the saved score', function () {

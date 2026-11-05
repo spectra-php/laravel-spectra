@@ -113,7 +113,7 @@ class ResponsesHandler implements ExtractsModelFromResponse, Handler, HasFinishR
             }
         }
 
-        return $texts !== [] ? implode("\n", $texts) : null;
+        return filled($texts) ? implode("\n", $texts) : null;
     }
 
     /**

@@ -40,11 +40,11 @@ class GetFilteredConversations
     public function __invoke(Request $request, DateRange $dateRange): LengthAwarePaginator
     {
         $sortBy = self::SORTABLE[(string) $request->input('sort_by')] ?? 'last_started_at';
-        $sortDir = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
+        $sortDirection = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
         $perPage = min(max((int) $request->input('per_page', 25), 1), 100);
 
         return ($this->buildConversationQuery)($request, $dateRange)
-            ->orderBy($sortBy, $sortDir)
+            ->orderBy($sortBy, $sortDirection)
             ->orderBy('conversation_id')
             ->paginate($perPage);
     }

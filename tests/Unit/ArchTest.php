@@ -14,7 +14,7 @@ arch('data transfer objects are readonly')
     ->expect('Spectra\Data')
     ->toBeReadonly();
 
-arch('enums are enums')
+arch('everything in Spectra\Enums is an enum')
     ->expect('Spectra\Enums')
     ->toBeEnums();
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Arr;
 use Spectra\Support\Pricing\Scraping\PriceChange;
 use Spectra\Support\Pricing\Scraping\ScrapedPriceMapper;
 use Spectra\Tests\Fixtures\FakeOpenAIPricing;
@@ -209,7 +210,7 @@ it('updates the dated row in effect, not a future one', function () {
         ['model_id' => 'gpt-d', 'tier' => 'standard', 'input' => 0.7],
     ], '2026-10-31');
 
-    expect(array_column($result->models['gpt-d']['tiers'], 'input_price'))->toEqual([100.0, 70.0, 60.0]);
+    expect(Arr::pluck($result->models['gpt-d']['tiers'], 'input_price'))->toEqual([100.0, 70.0, 60.0]);
 });
 
 it('starts each map with no leftover changes', function () {

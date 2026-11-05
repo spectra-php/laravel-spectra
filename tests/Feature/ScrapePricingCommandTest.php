@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Pricing\ScrapedPricesFile;
@@ -81,7 +82,7 @@ it('saves the changed and new models to the scraped prices file', function () {
         && $request['formats'][0] === 'markdown'
         && $request['formats'][1]['type'] === 'json'
         && $request['formats'][1]['schema']['properties']['models']['items']['properties']['tier']['enum'] === ['batch', 'standard', 'hd']
-        && str_contains($request['formats'][1]['prompt'], 'gpt-x, gpt-y, image-x (per image)'));
+        && Str::contains($request['formats'][1]['prompt'], 'gpt-x, gpt-y, image-x (per image)'));
 });
 
 it('prices requests from the saved file once scraped prices are on', function () {

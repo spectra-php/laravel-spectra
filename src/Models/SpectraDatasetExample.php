@@ -27,8 +27,6 @@ class SpectraDatasetExample extends Model
 
     public const UPDATED_AT = null;
 
-    protected $table = 'spectra_dataset_examples';
-
     protected $guarded = [];
 
     /**

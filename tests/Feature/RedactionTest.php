@@ -64,7 +64,7 @@ it('uses only the chosen patterns, custom patterns and the callback', function (
         ->toBe(['note' => '[REDACTED:email] [REDACTED:account] [REDACTED:codename] from 10.0.0.1']);
 });
 
-it('masks span attributes and error messages, and score comments', function () {
+it('masks span attributes and score comments', function () {
     Spectra::span('lookup', fn () => null, ['customer_email' => 'ada@example.com']);
     Spectra::score('helpful', false, traceId: 't', comment: 'Reach me at +44 20 7946 0958');
 
@@ -80,7 +80,7 @@ it('masks a request before it goes on the queue', function () {
         'request_data' => ['messages' => [['role' => 'user', 'content' => 'Card 4242424242424242']]],
     ]);
 
-    Queue::assertPushed(PersistSpectraRequestJob::class, fn (PersistSpectraRequestJob $job) => ! str_contains(serialize($job), '4242424242424242'));
+    Queue::assertPushed(PersistSpectraRequestJob::class, fn (PersistSpectraRequestJob $job) => ! Str::contains(serialize($job), '4242424242424242'));
 });
 
 it('stores everything as sent when redaction is off', function () {

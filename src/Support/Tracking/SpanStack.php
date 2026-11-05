@@ -422,11 +422,12 @@ class SpanStack
      */
     protected function requestStartedAt(): CarbonInterface
     {
-        $startedAt = request()->server('REQUEST_TIME_FLOAT');
+        $serverTime = request()->server('REQUEST_TIME_FLOAT');
+        $startedAt = is_numeric($serverTime) ? (float) $serverTime : null;
 
         // Octane workers serve many requests per process; trust only a recent start.
-        if (is_numeric($startedAt) && microtime(true) - (float) $startedAt < 3600) {
-            return Date::createFromTimestamp((float) $startedAt, date_default_timezone_get());
+        if ($startedAt !== null && microtime(true) - $startedAt < 3600) {
+            return Date::createFromTimestamp($startedAt, date_default_timezone_get());
         }
 
         return Date::now();

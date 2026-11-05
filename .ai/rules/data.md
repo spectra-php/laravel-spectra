@@ -15,7 +15,7 @@ Write `readonly class X extends DataTransferObject` (`tests/Unit/ArchTest.php` c
 Dashboard answers go in `Data/Responses` with a `…Response` suffix (`CostsResponse`, `RequestDetailsResponse`). Everything else sits flat in `Data/`, named for what it holds: metrics (`TokenMetrics`, `AudioMetrics`), rows (`CostByProvider`, `TopModel`) and budget values (`BudgetStatus`, `RemainingBudget`).
 
 ## Property names follow the wire
-Internal DTOs (metrics, budgets, and Action results that never become JSON, such as `MediaContent`) use camelCase properties. Dashboard responses and the row DTOs inside them use snake_case, because their properties are the JSON keys the Vue screens read. Never mix both in one class, and never add a name mapper.
+Internal DTOs (metrics, budgets, and Action results that never become JSON) use camelCase properties. `MediaContent::$mime_type` is the one snake_case exception; it is public and stays. Dashboard responses and the row DTOs inside them use snake_case, because their properties are the JSON keys the Vue screens read. Never mix both in one class, and never add a name mapper.
 
 ## Build with named arguments and named constructors
 Create DTOs with named arguments: `new CostByProvider(provider: …, cost: …)`. A DTO built from another source gets a static constructor named for it: `fromCollection()`, `fromArray()`, `fromModel()`. `fromArray()` on provider data accepts every key spelling handlers meet (`prompt_tokens` or `input_tokens`).

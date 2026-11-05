@@ -300,7 +300,7 @@ it('keeps recording calls when the spans table does not exist yet', function () 
 
     expect(SpectraRequest::query()->count())->toBe(1);
 
-    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => str_contains($message, 'spectra_spans'));
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => Str::contains($message, 'spectra_spans'));
 });
 
 it('exports a call with its stored span id and a span with its kind and parent', function () {

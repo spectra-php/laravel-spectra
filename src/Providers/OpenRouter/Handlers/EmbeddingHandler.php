@@ -67,15 +67,15 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
      */
     public function extractResponse(array $response): ?string
     {
-        $data = $response['data'] ?? null;
+        $embeddings = $response['data'] ?? null;
 
-        if (! is_array($data) || ! isset($data[0]['embedding'])) {
+        if (! is_array($embeddings) || ! isset($embeddings[0]['embedding'])) {
             return null;
         }
 
-        $first = $data[0]['embedding'];
-        $dimensions = is_array($first) ? count($first) : null;
-        $count = count($data);
+        $firstEmbedding = $embeddings[0]['embedding'];
+        $dimensions = is_array($firstEmbedding) ? count($firstEmbedding) : null;
+        $count = count($embeddings);
 
         return $dimensions === null
             ? "[embeddings: {$count}]"

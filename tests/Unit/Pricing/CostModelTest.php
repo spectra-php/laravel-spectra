@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
 use Spectra\Pricing\ProviderPricing;
@@ -246,7 +247,7 @@ it('bills an unknown default tier at standard and warns once', function () {
     // 100K × 100 (standard input) / 1M
     expect($first['prompt_cost'])->toEqualWithDelta(10.0, 1e-9)
         ->and(app(PricingLookup::class)->defaultTier('acme'))->toBe(PricingTier::Standard);
-    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => str_contains($message, "'turbo'"));
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => Str::contains($message, "'turbo'"));
 });
 
 it('bills a valid default tier from config', function () {

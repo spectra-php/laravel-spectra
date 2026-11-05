@@ -56,7 +56,7 @@ class FirecrawlPriceScraper
     {
         $shape = CatalogShape::of($pricing);
         $pageTimeout = min($this->timeout * 1000, self::MAX_PAGE_TIMEOUT_MS);
-        $baseUrl = rtrim($this->baseUrl, '/');
+        $baseUrl = Str::rtrim($this->baseUrl, '/');
 
         try {
             $response = Http::withToken($this->apiKey)
@@ -156,7 +156,7 @@ class FirecrawlPriceScraper
      */
     protected function buildPrompt(ProviderPricing $pricing, CatalogShape $shape): string
     {
-        $known = [];
+        $knownModels = [];
         foreach ($pricing->models() as $definition) {
             $model = $definition->toModelArray();
 
@@ -164,7 +164,7 @@ class FirecrawlPriceScraper
                 continue;
             }
 
-            $known[] = $model['pricing_unit'] === PricingUnit::Tokens->value
+            $knownModels[] = $model['pricing_unit'] === PricingUnit::Tokens->value
                 ? $definition->getInternalName()
                 : "{$definition->getInternalName()} (per {$model['pricing_unit']})";
         }
@@ -194,8 +194,8 @@ class FirecrawlPriceScraper
             'model_id must be the id used in API requests.',
         ];
 
-        if ($known !== []) {
-            $knownList = implode(', ', $known);
+        if ($knownModels !== []) {
+            $knownList = implode(', ', $knownModels);
             $lines[] = "When the page lists one of these models, use exactly this id: {$knownList}.";
         }
 

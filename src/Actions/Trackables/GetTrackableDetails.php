@@ -6,7 +6,6 @@ namespace Spectra\Actions\Trackables;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Http\Request;
 use Spectra\Data\ModelTypeLatency;
 use Spectra\Data\Responses\TrackableDetailsResponse;
 use Spectra\Models\SpectraRequest;
@@ -33,14 +32,8 @@ class GetTrackableDetails
     /**
      * Get the trackable's stats, breakdowns, name and latest requests.
      */
-    public function __invoke(Request $request, string $id): TrackableDetailsResponse
+    public function __invoke(string $type, string $id, DateRange $dateRange): TrackableDetailsResponse
     {
-        $type = $request->input('type');
-
-        abort_unless((bool) $type, 400, 'Missing type parameter.');
-
-        $dateRange = DateRange::fromRequest($request);
-
         $stats = ($this->getStats)($type, $id, $dateRange);
 
         $trackableData = [

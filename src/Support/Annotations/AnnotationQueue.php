@@ -44,6 +44,7 @@ readonly class AnnotationQueue
             $definition = is_string($definition) ? ['type' => $definition] : (array) $definition;
             $type = (string) ($definition['type'] ?? '');
 
+            // A config name is checked as written: filled() would also turn away a whitespace-only name.
             throw_unless(is_string($score) && $score !== '', InvalidArgumentException::class, "The scores of the Spectra annotation queue [{$name}] need names as keys.");
             throw_unless(in_array($type, ['boolean', 'numeric', 'categorical'], true), InvalidArgumentException::class, "The score [{$score}] of the Spectra annotation queue [{$name}] needs a type: boolean, numeric or categorical.");
             throw_if($type === 'categorical' && blank($definition['options'] ?? null), InvalidArgumentException::class, "The categorical score [{$score}] of the Spectra annotation queue [{$name}] needs options.");
@@ -61,8 +62,7 @@ readonly class AnnotationQueue
 
         $filter = (array) ($config['filter'] ?? []);
         $unknown = collect($filter)->keys()->diff(self::FILTERS);
-        $filters = implode(', ', self::FILTERS);
-        throw_if($unknown->isNotEmpty(), InvalidArgumentException::class, "The Spectra annotation queue [{$name}] has an unknown filter [{$unknown->implode(', ')}]. Use {$filters}.");
+        throw_if($unknown->isNotEmpty(), InvalidArgumentException::class, "The Spectra annotation queue [{$name}] has an unknown filter [{$unknown->implode(', ')}]. Use ".implode(', ', self::FILTERS).'.');
 
         return new self(
             name: $name,
@@ -101,6 +101,8 @@ readonly class AnnotationQueue
         foreach ($this->scores as $score) {
             $value = $values[$score['name']] ?? null;
 
+            // Reviewer input before validation: only a missing or empty value is left out,
+            // so whitespace or an empty list still reaches the score's own check below.
             if ($value === null || $value === '') {
                 continue;
             }
@@ -174,8 +176,7 @@ readonly class AnnotationQueue
      */
     protected function option(array $score, mixed $value): string
     {
-        $options = implode(', ', $score['options']);
-        throw_unless(is_string($value) && in_array($value, $score['options'], true), InvalidArgumentException::class, "The score [{$score['name']}] takes one of: {$options}.");
+        throw_unless(is_string($value) && in_array($value, $score['options'], true), InvalidArgumentException::class, "The score [{$score['name']}] takes one of: ".implode(', ', $score['options']).'.');
 
         return $value;
     }

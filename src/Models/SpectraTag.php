@@ -28,8 +28,6 @@ class SpectraTag extends Model
 
     protected $appends = ['slug'];
 
-    protected $table = 'spectra_tags';
-
     protected $fillable = ['name'];
 
     /**

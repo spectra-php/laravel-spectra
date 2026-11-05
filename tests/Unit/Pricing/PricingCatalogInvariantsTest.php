@@ -48,21 +48,13 @@ it('uses only supported pricing units', function () {
     $valid = Arr::map(PricingUnit::cases(), fn (PricingUnit $u) => $u->value);
 
     foreach (spectraCatalogRows() as [$provider, $name, $model, $tiers]) {
-        Assert::assertContains(
-            $model['pricing_unit'],
-            $valid,
-            "{$provider}/{$name} uses unsupported pricing unit '{$model['pricing_unit']}'"
-        );
+        expect($model['pricing_unit'])->toBeIn($valid, "{$provider}/{$name} uses unsupported pricing unit '{$model['pricing_unit']}'");
     }
 });
 
 it('gives every model a standard tier', function () {
     foreach (spectraCatalogRows() as [$provider, $name, $model, $tiers]) {
-        Assert::assertContains(
-            'standard',
-            array_column($tiers, 'tier'),
-            "{$provider}/{$name} has no 'standard' tier (cost calculation falls back to standard)"
-        );
+        expect('standard')->toBeIn(Arr::pluck($tiers, 'tier'), "{$provider}/{$name} has no 'standard' tier (cost calculation falls back to standard)");
     }
 });
 
@@ -83,10 +75,7 @@ it('gives per-unit models a billable price on the standard tier', function () {
 
         $standard = collect($tiers)->firstWhere('tier', 'standard');
 
-        Assert::assertNotNull(
-            $standard['price_per_unit'] ?? null,
-            "{$provider}/{$name} is priced per {$model['pricing_unit']} but its standard tier has no price_per_unit (would always bill 0)"
-        );
+        expect($standard['price_per_unit'] ?? null)->not->toBeNull("{$provider}/{$name} is priced per {$model['pricing_unit']} but its standard tier has no price_per_unit (would always bill 0)");
     }
 });
 
@@ -98,8 +87,8 @@ it('gives token-based models numeric input/output prices on the standard tier', 
 
         $standard = collect($tiers)->firstWhere('tier', 'standard');
 
-        Assert::assertIsNumeric($standard['input_price'], "{$provider}/{$name} standard tier input_price");
-        Assert::assertIsNumeric($standard['output_price'], "{$provider}/{$name} standard tier output_price");
+        expect($standard['input_price'])->toBeNumeric("{$provider}/{$name} standard tier input_price")
+            ->and($standard['output_price'])->toBeNumeric("{$provider}/{$name} standard tier output_price");
     }
 });
 
@@ -107,8 +96,8 @@ it('names every tier with a PricingTier value', function () {
     $valid = Arr::map(PricingTier::cases(), fn (PricingTier $tier) => $tier->value);
 
     foreach (spectraCatalogRows() as [$provider, $name, $model, $tiers]) {
-        foreach (array_unique(array_column($tiers, 'tier')) as $tier) {
-            Assert::assertContains($tier, $valid, "{$provider}/{$name} uses unknown tier '{$tier}' (it would bill at standard)");
+        foreach (collect($tiers)->pluck('tier')->unique() as $tier) {
+            expect($tier)->toBeIn($valid, "{$provider}/{$name} uses unknown tier '{$tier}' (it would bill at standard)");
         }
     }
 });
@@ -117,7 +106,7 @@ it('uses only catalog types the model type resolution knows', function () {
     $valid = ['text', 'embedding', 'image', 'audio', 'video'];
 
     foreach (spectraCatalogRows() as [$provider, $name, $model, $tiers]) {
-        Assert::assertContains($model['type'], $valid, "{$provider}/{$name} uses unknown type '{$model['type']}'");
+        expect($model['type'])->toBeIn($valid, "{$provider}/{$name} uses unknown type '{$model['type']}'");
     }
 });
 
@@ -139,7 +128,7 @@ it('prices every fal.ai video model in the catalog at its default VIDEO_PRICES e
     foreach (FalAiPricing::VIDEO_PRICES as $model => $resolutions) {
         $definition = $catalog->get($model);
 
-        Assert::assertNotNull($definition, "{$model} is in VIDEO_PRICES but not in the catalog");
+        expect($definition)->not->toBeNull("{$model} is in VIDEO_PRICES but not in the catalog");
 
         $standard = collect($definition->toTiersArray())->firstWhere('tier', PricingTier::Standard->value);
 

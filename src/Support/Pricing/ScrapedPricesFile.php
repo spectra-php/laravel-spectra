@@ -74,16 +74,16 @@ class ScrapedPricesFile
         }
 
         try {
-            $data = json_decode(File::get($this->path), true, flags: JSON_THROW_ON_ERROR);
+            $scrapedPrices = json_decode(File::get($this->path), true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             throw new RuntimeException("{$this->path} is not valid JSON: {$e->getMessage()}", $e->getCode(), previous: $e);
         }
 
-        if (! is_array($data) || ! is_array($data['providers'] ?? null)) {
+        if (! is_array($scrapedPrices) || ! is_array($scrapedPrices['providers'] ?? null)) {
             throw new RuntimeException("{$this->path} has no \"providers\" object.");
         }
 
-        return $data;
+        return $scrapedPrices;
     }
 
     /**

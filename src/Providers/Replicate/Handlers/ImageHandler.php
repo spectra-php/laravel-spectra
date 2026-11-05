@@ -70,7 +70,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     {
         $urls = $this->outputUrls($response);
 
-        return $urls !== [] ? implode("\n", $urls) : null;
+        return filled($urls) ? implode("\n", $urls) : null;
     }
 
     /**

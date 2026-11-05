@@ -237,6 +237,7 @@ class StreamingTracker
             foreach ($stream as $chunk) {
                 $text = $this->ingest($chunk);
 
+                // A whitespace-only delta is real text, so only '' is held back.
                 if ($text !== null && $text !== '') {
                     yield $text;
                 }
@@ -357,6 +358,7 @@ class StreamingTracker
 
         $text = rescue(fn () => $this->extractText($data));
 
+        // A whitespace-only delta is the first token too.
         if ($text !== null && $text !== '' && $this->firstTokenTime === null) {
             $this->firstTokenTime = microtime(true);
             $ttft = (int) (($this->firstTokenTime - $this->startTime) * 1000);
@@ -612,7 +614,8 @@ class StreamingTracker
         $manager = app(SpectraManager::class);
 
         // Nothing streamed, nothing set manually, no error: skip recording
-        // instead of persisting an all-zero request row.
+        // instead of persisting an all-zero request row. Content is compared
+        // with '' because whitespace-only streamed text still counts.
         if (! $this->contextInitialized
             && $this->error === null
             && ! $this->sawStreamData
@@ -863,6 +866,7 @@ class StreamingTracker
      */
     public function appendContent(string $text): self
     {
+        // Whitespace-only text is still the first token, so only '' is ignored.
         if ($this->firstTokenTime === null && $text !== '') {
             $this->firstTokenTime = microtime(true);
 

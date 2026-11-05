@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 
 /**
@@ -128,8 +129,8 @@ it('tracks Orpheus text to speech per character', function () {
     expect($row->provider)->toBe('groq')
         ->and($row->model)->toBe('Orpheus V1 English')
         ->and($row->model_type)->toBe('tts')
-        ->and($row->input_characters)->toBe(mb_strlen($input))
-        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(mb_strlen($input) * 2200 / 1_000_000, 1e-12);
+        ->and($row->input_characters)->toBe(Str::length($input))
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(Str::length($input) * 2200 / 1_000_000, 1e-12);
 });
 
 /**

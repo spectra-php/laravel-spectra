@@ -65,8 +65,6 @@ class SpectraDailyStat extends Model
 {
     use HasUuids;
 
-    protected $table = 'spectra_daily_stats';
-
     protected $guarded = [];
 
     /**

@@ -69,12 +69,12 @@ class OcrHandler implements ExtractsModelFromResponse, Handler, MatchesResponseS
             return null;
         }
 
-        $markdown = collect($response['pages'])
+        $markdownPages = collect($response['pages'])
             ->map(fn (mixed $page) => is_array($page) && is_string($page['markdown'] ?? null) ? $page['markdown'] : null)
             ->filter()
             ->all();
 
-        return $markdown !== [] ? implode("\n\n", $markdown) : null;
+        return $markdownPages !== [] ? implode("\n\n", $markdownPages) : null;
     }
 
     /**

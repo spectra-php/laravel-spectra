@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Spectra\Enums\AnnotationStatus;
 use Spectra\Enums\ScoreSource;
 use Spectra\Facades\Spectra;
@@ -204,7 +205,7 @@ it('keeps tracking without the annotation table, and warns once', function () {
 
     expect(Spectra::queueForReview('manual'))->toBeFalse();
     $this->getJson('/spectra/api/annotations')->assertOk()->assertJsonPath('migrated', false);
-    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => str_contains($message, 'spectra_annotation_items'));
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => Str::contains($message, 'spectra_annotation_items'));
 });
 
 it('prunes old review items with the requests', function () {

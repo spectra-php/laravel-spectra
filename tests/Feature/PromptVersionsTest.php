@@ -12,6 +12,7 @@ declare(strict_types=1);
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\PromptsController;
 use Spectra\Http\Controllers\Api\RequestsController;
@@ -103,7 +104,7 @@ it('saves calls without the prompt columns, keeping the trace columns, until the
 
     expect(SpectraRequest::query()->count())->toBe(2)
         ->and(SpectraRequest::query()->whereNull('started_at')->count())->toBe(0);
-    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => str_contains($message, 'prompt_name, prompt_version'));
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => Str::contains($message, 'prompt_name, prompt_version'));
 });
 
 it('lists no versions and says the migration is missing until it runs', function () {

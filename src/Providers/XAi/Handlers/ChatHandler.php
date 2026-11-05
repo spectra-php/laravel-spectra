@@ -111,7 +111,7 @@ class ChatHandler extends OpenAiCompatibleChatHandler implements SkipsResponse
     public function shouldSkipResponse(array $responseData): bool
     {
         return ! isset($responseData['choices'])
-            && ($responseData === [] || isset($responseData['request_id']));
+            && (blank($responseData) || isset($responseData['request_id']));
     }
 
     /**

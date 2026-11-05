@@ -96,7 +96,7 @@ it('fails with new findings and passes once they are in the baseline', function 
 
     $this->artisan('spectra:pricing-drift', [...$options, '--update-baseline' => true])->assertSuccessful();
 
-    expect(json_decode((string) file_get_contents($this->baseline), true))->toBe([
+    expect(json_decode(File::get($this->baseline), true, 512, JSON_THROW_ON_ERROR))->toBe([
         'openai|gpt-new|model' => null,
         'openai|gpt-x|cached_input above 200000' => 30.0,
         'openai|gpt-x|input above 200000' => 300.0,
@@ -125,7 +125,7 @@ it('writes a markdown report and downloads models.dev by default', function () {
 
     $this->artisan('spectra:pricing-drift', ['--baseline' => $this->baseline, '--markdown' => $markdown])->assertFailed();
 
-    expect(file_get_contents($markdown))
+    expect(File::get($markdown))
         ->toContain('| openai | `gpt-x` | output | 400 | 450 |')
         ->toContain('| openai | `gpt-new` | 200 | 800 |');
 

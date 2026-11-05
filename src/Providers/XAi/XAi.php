@@ -88,11 +88,11 @@ class XAi extends Provider implements ExtractsPricingTierFromRequest, ExtractsPr
      */
     public function extractResponseId(mixed $response, string $endpoint = ''): ?string
     {
-        $data = $this->toArray($response);
+        $responseData = $this->toArray($response);
 
         foreach (['id', 'request_id'] as $key) {
-            if (filled($data[$key] ?? null)) {
-                return $data[$key];
+            if (filled($responseData[$key] ?? null)) {
+                return $responseData[$key];
             }
         }
 

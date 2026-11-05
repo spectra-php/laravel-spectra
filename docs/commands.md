@@ -93,13 +93,7 @@ Schedule::command('spectra:prune --hours=168 --stats-days=365')->daily();
 <a name="spectra-rebuild-stats"></a>
 ## `spectra:rebuild-stats`
 
-Rebuilds the `spectra_daily_stats` table from the raw `spectra_requests` records. Run it after upgrading to Spectra 2.0, after data migrations, manual database edits, or bulk imports, or whenever the dashboard stats look out of sync with the requests.
-
-Run it once after upgrading from 1.x. Spectra 1.x counted each poll of an async job (for example, video generation) in the daily stats, so some totals are too high:
-
-```shell
-php artisan spectra:rebuild-stats
-```
+Rebuilds the `spectra_daily_stats` table from the raw `spectra_requests` records. Run it after data migrations, manual database edits, or bulk imports, or whenever the dashboard stats look out of sync with the requests. An upgrade from 1.x needs one rebuild; see [Rebuild the Daily Stats](/upgrade#rebuild-daily-stats).
 
 The command deletes the existing daily stats for the date range, then rebuilds them from scratch, grouped by date, provider, model, model type, and trackable entity.
 

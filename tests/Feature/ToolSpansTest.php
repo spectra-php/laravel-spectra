@@ -21,11 +21,7 @@ use Spectra\Models\SpectraSpan;
 use Spectra\Support\Tracking\ToolSpanRecorder;
 
 beforeEach(function () {
-    Date::setTestNow('2026-11-04 10:00:00.000');
-});
-
-afterEach(function () {
-    Date::setTestNow();
+    $this->travelTo('2026-11-04 10:00:00.000');
 });
 
 /**
@@ -69,7 +65,7 @@ function chatWithToolResults(): array
 
 it('runs a tool as a tool span with its arguments and result, under the current span', function () {
     $result = Spectra::span('agent', fn () => Spectra::tool('get_weather', function () {
-        Date::setTestNow(Date::now()->addMilliseconds(250));
+        $this->travel(250)->milliseconds();
 
         return ['celsius' => 18];
     }, ['city' => 'Paris'], id: 'call_1'));
@@ -118,7 +114,7 @@ it('stores a tool\'s arguments and result only with store_prompts on and the tra
 it('cuts a long result to 10,000 characters', function () {
     Spectra::tool('fetch_page', fn () => Str::repeat('a', 12_000));
 
-    expect(mb_strlen(toolSpans()->sole()->attributes['gen_ai.tool.call.result']))->toBe(ToolSpanRecorder::MAX_CONTENT_LENGTH + 1);
+    expect(Str::length(toolSpans()->sole()->attributes['gen_ai.tool.call.result']))->toBe(ToolSpanRecorder::MAX_CONTENT_LENGTH + 1);
 });
 
 it('records no tool spans from requests while tool_spans is off', function () {
@@ -160,7 +156,7 @@ describe('with tool_spans on', function () {
         Http::fake(['api.openai.com/*' => fn () => Http::response([...$completion, 'id' => 'chatcmpl-'.bin2hex(random_bytes(6))])]);
 
         Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o', 'messages' => [['role' => 'user', 'content' => 'Weather?']]]);
-        Date::setTestNow(Date::now()->addSecond());
+        $this->travel(1)->seconds();
         Http::post('https://api.openai.com/v1/chat/completions', chatWithToolResults());
 
         expect(toolSpans()->pluck('name')->all())->toBe(['get_weather', 'get_weather'])

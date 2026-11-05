@@ -10,9 +10,9 @@ declare(strict_types=1);
  * migration ran.
  */
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Spectra\Actions\Errors\GetErrorGroups;
 use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\RequestsController;
@@ -75,10 +75,10 @@ it('saves a fingerprint on failed calls only', function () {
 });
 
 it('lists the groups with the most failures first, with their models, latest message and trend', function () {
-    Date::setTestNow('2026-11-04 12:00:00');
+    $this->travelTo('2026-11-04 12:00:00');
 
     trackFailure('Rate limit reached. Please try again in 2s.', model: 'gpt-4o');
-    Date::setTestNow('2026-11-04 12:05:00');
+    $this->travelTo('2026-11-04 12:05:00');
     trackFailure('Rate limit reached. Please try again in 9s.', model: 'gpt-4o-mini');
     $latest = trackFailure('Rate limit reached. Please try again in 1s.', model: 'gpt-4o');
     trackFailure('The server had an error.', 500);
@@ -101,8 +101,6 @@ it('lists the groups with the most failures first, with their models, latest mes
         ->and($rateLimits->trend)->toHaveCount(14)
         ->and(array_sum($rateLimits->trend))->toBe(3)
         ->and($rateLimits->trend[13])->toBe(3);
-
-    Date::setTestNow();
 });
 
 it('filters the requests list by error group', function () {
@@ -142,6 +140,6 @@ it('saves failures and says the migration is missing until it runs', function ()
         ->and($response->migrated)->toBeFalse()
         ->and($response->failed_count)->toBe(1)
         ->and($response->groups)->toBeEmpty();
-    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => str_contains($message, 'error_fingerprint'));
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => Str::contains($message, 'error_fingerprint'));
     $this->artisan('spectra:group-errors')->assertFailed();
 });

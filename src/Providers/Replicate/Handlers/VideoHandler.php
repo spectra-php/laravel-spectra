@@ -53,7 +53,7 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
      */
     public function extractMetrics(array $requestData, array $responseData): Metrics
     {
-        $succeeded = ($responseData['status'] ?? null) === 'succeeded' && $this->outputUrls($responseData) !== [];
+        $succeeded = ($responseData['status'] ?? null) === 'succeeded' && filled($this->outputUrls($responseData));
 
         return new Metrics(
             video: new VideoMetrics(
@@ -72,7 +72,7 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     {
         $urls = $this->outputUrls($response);
 
-        return $urls !== [] ? implode("\n", $urls) : null;
+        return filled($urls) ? implode("\n", $urls) : null;
     }
 
     /**
@@ -138,10 +138,10 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         }
 
         $frames = $input['num_frames'] ?? null;
-        $fps = $input['frames_per_second'] ?? $input['fps'] ?? null;
+        $framesPerSecond = $input['frames_per_second'] ?? $input['fps'] ?? null;
 
-        if (is_numeric($frames) && is_numeric($fps) && Payload::float($fps) > 0) {
-            return Payload::float($frames) / Payload::float($fps);
+        if (is_numeric($frames) && is_numeric($framesPerSecond) && Payload::float($framesPerSecond) > 0) {
+            return Payload::float($frames) / Payload::float($framesPerSecond);
         }
 
         return null;

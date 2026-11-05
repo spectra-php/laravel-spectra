@@ -552,7 +552,7 @@ class RequestContext implements Arrayable
      */
     public function toArray(): array
     {
-        $data = [
+        $columns = [
             'id' => $this->id,
             'trace_id' => $this->traceId,
             'span_id' => $this->spanId,
@@ -614,31 +614,31 @@ class RequestContext implements Arrayable
         ];
 
         if (config('spectra.storage.store_prompts', true)) {
-            $data['prompt'] = $this->prompt;
-            $data['messages'] = $this->messages ?: null;
+            $columns['prompt'] = $this->prompt;
+            $columns['messages'] = $this->messages ?: null;
         }
 
         if (config('spectra.storage.store_system_prompts', true)) {
-            $data['system_prompt'] = $this->systemPrompt;
+            $columns['system_prompt'] = $this->systemPrompt;
         }
 
         if (config('spectra.storage.store_responses', true)) {
-            $data['response'] = $this->response;
-            $data['tool_calls'] = $this->toolCalls ?: null;
+            $columns['response'] = $this->response;
+            $columns['tool_calls'] = $this->toolCalls ?: null;
         }
 
         if (config('spectra.storage.store_tools', true)) {
-            $data['tools'] = $this->tools ?: null;
+            $columns['tools'] = $this->tools ?: null;
         }
 
         // Raw request parameters are broader than prompt content, so they get
         // their own switch; it falls back to store_prompts for installs that
         // disabled prompt storage before this key existed.
         if (config('spectra.storage.store_request_data') ?? config('spectra.storage.store_prompts', true)) {
-            $data['request_data'] = $this->filteredRequestData();
+            $columns['request_data'] = $this->filteredRequestData();
         }
 
-        return $data;
+        return $columns;
     }
 
     /**
@@ -656,16 +656,16 @@ class RequestContext implements Arrayable
         }
 
         $filter = app(RequestDataFilter::class);
-        $data = $this->requestData;
+        $requestData = $this->requestData;
 
         if (! config('spectra.storage.store_system_prompts', true)) {
-            $data = $filter->withoutSystemPrompts($data);
+            $requestData = $filter->withoutSystemPrompts($requestData);
         }
 
         if (! config('spectra.storage.store_tools', true)) {
-            $data = $filter->withoutTools($data);
+            $requestData = $filter->withoutTools($requestData);
         }
 
-        return $data;
+        return $requestData;
     }
 }
