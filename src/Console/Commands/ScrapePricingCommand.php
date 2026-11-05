@@ -57,9 +57,9 @@ class ScrapePricingCommand extends Command
         $file = $this->option('path') ? new ScrapedPricesFile($this->option('path')) : PricingCatalog::scrapedPricesFile();
 
         try {
-            $data = $file->read();
+            $fileContents = $file->read();
         } catch (RuntimeException $e) {
-            $this->components->error($e->getMessage().' Fix or delete it, then run the command again.');
+            $this->components->error("{$e->getMessage()} Fix or delete it, then run the command again.");
 
             return self::FAILURE;
         }
@@ -74,7 +74,7 @@ class ScrapePricingCommand extends Command
             try {
                 $scrape = $scrapePrices($pricing, $urls);
             } catch (RuntimeException $e) {
-                $this->components->error($e->getMessage().' Kept the current file entries for '.$provider.'.');
+                $this->components->error("{$e->getMessage()} Kept the current file entries for {$provider}.");
 
                 continue;
             }
@@ -84,12 +84,12 @@ class ScrapePricingCommand extends Command
             $this->report($mapper, $result, $scrape->rows);
 
             if ($result->models === []) {
-                unset($data['providers'][$provider]);
+                unset($fileContents['providers'][$provider]);
 
                 continue;
             }
 
-            $data['providers'][$provider] = $scrape->fileSection($result->models);
+            $fileContents['providers'][$provider] = $scrape->fileSection($result->models);
         }
 
         if ($scraped === 0) {
@@ -106,8 +106,8 @@ class ScrapePricingCommand extends Command
             return self::SUCCESS;
         }
 
-        ksort($data['providers']);
-        $file->write(['generated_at' => now()->toIso8601String(), 'providers' => $data['providers']]);
+        ksort($fileContents['providers']);
+        $file->write(['generated_at' => now()->toIso8601String(), 'providers' => $fileContents['providers']]);
 
         $this->components->info("Saved to {$file->path()}. Review the changes before you deploy them.");
 
@@ -119,7 +119,7 @@ class ScrapePricingCommand extends Command
     }
 
     /**
-     * The providers to scrape, so a run only spends Firecrawl credits on the
+     * Get the providers to scrape, so a run only spends Firecrawl credits on the
      * providers you use: the ones named on the command line, else
      * `spectra.costs.firecrawl.providers`, else the providers Spectra has
      * tracked requests for. Every provider only with --all.

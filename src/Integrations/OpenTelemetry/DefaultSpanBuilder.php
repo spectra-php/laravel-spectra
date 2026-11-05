@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Integrations\OpenTelemetry;
 
 use Carbon\CarbonInterface;
+use Illuminate\Support\Str;
 use Spectra\Contracts\SpanBuilder;
 use Spectra\Enums\ModelType;
 use Spectra\Support\Payload;
@@ -20,6 +21,12 @@ use Spectra\Support\Payload;
  */
 class DefaultSpanBuilder implements SpanBuilder
 {
+    private const SPAN_KIND_CLIENT = 3;
+
+    private const STATUS_CODE_OK = 1;
+
+    private const STATUS_CODE_ERROR = 2;
+
     /**
      * Build the OTLP client span for a tracked AI request.
      *
@@ -34,7 +41,7 @@ class DefaultSpanBuilder implements SpanBuilder
             // Set when the incoming request's `traceparent` started this trace.
             'parentSpanId' => (string) ($data['parent_span_id'] ?? ''),
             'name' => $this->spanName($data),
-            'kind' => 3, // SPAN_KIND_CLIENT
+            'kind' => self::SPAN_KIND_CLIENT,
             'startTimeUnixNano' => $this->toNano($data['started_at']),
             'endTimeUnixNano' => $this->toNano($data['completed_at']),
             'attributes' => $this->attributes($data),
@@ -62,7 +69,7 @@ class DefaultSpanBuilder implements SpanBuilder
      */
     protected function spanName(array $data): string
     {
-        return trim($this->operationName($data).' '.$this->requestModel($data));
+        return trim("{$this->operationName($data)} {$this->requestModel($data)}");
     }
 
     /**
@@ -177,7 +184,7 @@ class DefaultSpanBuilder implements SpanBuilder
     }
 
     /**
-     * `gen_ai.operation.name`: a well-known value where one applies.
+     * Get the `gen_ai.operation.name` value: a well-known one where one applies.
      *
      * @param  array<string, mixed>  $data
      */
@@ -187,9 +194,9 @@ class DefaultSpanBuilder implements SpanBuilder
 
         return match (true) {
             ($data['model_type'] ?? null) === ModelType::Embedding->value => 'embeddings',
-            str_contains($endpoint, 'rerank') => 'rerank',
-            str_contains($endpoint, 'generateContent') || str_contains($endpoint, 'GenerateContent') => 'generate_content',
-            (bool) preg_match('#/v1/completions$#', $endpoint) => 'text_completion',
+            Str::contains($endpoint, 'rerank') => 'rerank',
+            Str::contains($endpoint, ['generateContent', 'GenerateContent']) => 'generate_content',
+            Str::isMatch('#/v1/completions$#', $endpoint) => 'text_completion',
             in_array($data['model_type'] ?? null, [ModelType::Image->value, ModelType::Video->value, ModelType::Tts->value], true) => 'generate_content',
             ($data['model_type'] ?? null) === ModelType::Stt->value => 'transcription',
             default => 'chat',
@@ -197,7 +204,7 @@ class DefaultSpanBuilder implements SpanBuilder
     }
 
     /**
-     * The model id the request ran on. The `model` column holds the catalog
+     * Get the model id the request ran on. The `model` column holds the catalog
      * display name, so the provider's model id (snapshot) is preferred.
      *
      * @param  array<string, mixed>  $data
@@ -247,13 +254,13 @@ class DefaultSpanBuilder implements SpanBuilder
     {
         if ($data['is_failed'] ?? false) {
             return [
-                'code' => 2, // STATUS_CODE_ERROR
+                'code' => self::STATUS_CODE_ERROR,
                 'message' => (string) ($data['error_message'] ?? null ?: 'Request failed'),
             ];
         }
 
         return [
-            'code' => 1, // STATUS_CODE_OK
+            'code' => self::STATUS_CODE_OK,
         ];
     }
 
@@ -273,7 +280,7 @@ class DefaultSpanBuilder implements SpanBuilder
      */
     protected function generateTraceId(?string $uuid): string
     {
-        return str_replace('-', '', $uuid ?? '');
+        return Str::replace('-', '', $uuid ?? '');
     }
 
     /**

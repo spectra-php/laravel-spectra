@@ -73,13 +73,13 @@ class EvalCommand extends Command
     }
 
     /**
-     * The evaluation class for a class name, or a name in App\Evals.
+     * Resolve the evaluation class from a class name, or a name in App\Evals.
      *
      * @return class-string<Evaluation>|null
      */
     protected function resolveClass(string $name): ?string
     {
-        foreach ([$name, 'App\\Evals\\'.$name] as $candidate) {
+        foreach ([$name, "App\\Evals\\{$name}"] as $candidate) {
             if (class_exists($candidate) && is_subclass_of($candidate, Evaluation::class)) {
                 return $candidate;
             }

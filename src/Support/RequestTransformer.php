@@ -53,7 +53,7 @@ class RequestTransformer
     }
 
     /**
-     * Fields to exclude from the transformer output.
+     * Get the fields to exclude from the transformer output.
      *
      * Override in a custom transformer to control what gets exported.
      *

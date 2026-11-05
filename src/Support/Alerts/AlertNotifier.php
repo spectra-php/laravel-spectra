@@ -51,17 +51,18 @@ class AlertNotifier
     }
 
     /**
-     * The one-line message for chat: "🔴 High error rate: 23.5% (error rate above 10% over 15 minutes)".
+     * Build the one-line message for chat: "🔴 High error rate: 23.5% (error rate above 10% over 15 minutes)".
      */
     protected function text(AlertRule $rule, ?float $value, bool $resolved, string $dashboardUrl): string
     {
-        $now = $value !== null ? $rule->metric->format($value) : 'not enough calls to measure';
+        $currentValue = $value !== null ? $rule->metric->format($value) : 'not enough calls to measure';
+        $prefix = $resolved ? '✅ Resolved: ' : '🔴 ';
 
-        return ($resolved ? '✅ Resolved: ' : '🔴 ')."{$rule->name}: {$now} ({$rule->describe()}) <{$dashboardUrl}|Open Spectra>";
+        return "{$prefix}{$rule->name}: {$currentValue} ({$rule->describe()}) <{$dashboardUrl}|Open Spectra>";
     }
 
     /**
-     * Email addresses from a comma-separated string or a list.
+     * Get the email addresses from a comma-separated string or a list.
      *
      * @return array<int, string>
      */

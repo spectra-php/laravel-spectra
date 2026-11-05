@@ -42,17 +42,17 @@ class ErrorFingerprint
     ];
 
     /**
-     * The fingerprint of a failure: 16 hex characters.
+     * Get the fingerprint of a failure: 16 hex characters.
      *
      * @param  array<int, string|null>  $models  The call's model names (id and display name), taken out of the message
      */
     public function for(string $provider, ?int $statusCode, ?string $errorType, ?string $message, array $models = []): string
     {
-        return mb_substr(hash('sha256', implode('|', [$provider, $statusCode ?? '', $errorType ?? '', $this->normalize($message, $models)])), 0, 16);
+        return Str::substr(hash('sha256', implode('|', [$provider, $statusCode ?? '', $errorType ?? '', $this->normalize($message, $models)])), 0, 16);
     }
 
     /**
-     * The message with the parts that change between calls replaced.
+     * Normalize the message by replacing the parts that change between calls.
      *
      * @param  array<int, string|null>  $models
      */
@@ -61,7 +61,7 @@ class ErrorFingerprint
         $normalized = (string) $message;
 
         // Longest first, so "gpt-4o-mini" isn't left as "<model>-mini".
-        foreach (collect($models)->filter()->unique()->sortByDesc(fn (string $model) => mb_strlen($model)) as $model) {
+        foreach (collect($models)->filter()->unique()->sortByDesc(fn (string $model) => Str::length($model)) as $model) {
             $normalized = str_ireplace($model, '<model>', $normalized);
         }
 
@@ -69,6 +69,6 @@ class ErrorFingerprint
             $normalized = Str::replaceMatches($pattern, $replacement, $normalized) ?? $normalized;
         }
 
-        return mb_substr(trim($normalized), 0, self::MESSAGE_LENGTH);
+        return Str::substr(trim($normalized), 0, self::MESSAGE_LENGTH);
     }
 }

@@ -58,7 +58,7 @@ class EvaluationRunner
         $examples = $this->examples($evaluation, $limit);
 
         $run = SpectraEvalRun::query()->create([
-            'evaluation' => mb_substr($evaluation->name(), 0, 100),
+            'evaluation' => Str::substr($evaluation->name(), 0, 100),
             'dataset' => $evaluation->dataset(),
             'status' => EvalRunStatus::Running,
             'example_count' => $examples->count(),
@@ -95,7 +95,7 @@ class EvaluationRunner
     }
 
     /**
-     * The dataset's examples to run, oldest first.
+     * Get the dataset's examples to run, oldest first.
      *
      * @return Collection<int, SpectraDatasetExample>
      */
@@ -133,7 +133,8 @@ class EvaluationRunner
                 ['eval_run' => $run->id, 'example' => $example->id],
             ));
         } catch (Throwable $e) {
-            $error = $e::class.': '.$e->getMessage();
+            $exceptionClass = $e::class;
+            $error = "{$exceptionClass}: {$e->getMessage()}";
         }
 
         $latencyMs = (int) round((hrtime(true) - $started) / 1_000_000);
@@ -147,14 +148,14 @@ class EvaluationRunner
             'expected' => $example->expected,
             'output' => $this->storable($output),
             'scores' => $scores === [] ? null : $scores,
-            'error' => $error === null ? null : mb_substr($error, 0, 10_000),
+            'error' => $error === null ? null : Str::substr($error, 0, 10_000),
             'latency_ms' => max(0, $latencyMs),
             'created_at' => Date::now(),
         ]);
     }
 
     /**
-     * Each scorer's value for the output; also saved as scores on the trace.
+     * Score the output with each scorer, also saving every value as a score on the trace.
      *
      * @return array<string, bool|int|float|string>
      */
@@ -198,8 +199,8 @@ class EvaluationRunner
     }
 
     /**
-     * Each scorer over the run: the share of yes, the average, or the count
-     * per category.
+     * Summarize each scorer over the run: the share of yes, the average, or
+     * the count per category.
      *
      * @param  Collection<int, SpectraEvalResult>  $results
      * @return array<string, array{type: string, count: int, average: float|null, labels?: array<string, int>}>
@@ -221,15 +222,15 @@ class EvaluationRunner
                 return ['type' => 'categorical', 'count' => count($values), 'average' => null, 'labels' => collect($values)->countBy()->sortDesc()->all()];
             }
 
-            $numbers = collect($values)->map(fn (mixed $value) => is_bool($value) ? (float) $value : (is_numeric($value) ? (float) $value : null))->filter(fn (?float $value) => $value !== null);
+            $numbers = collect($values)->map(fn (mixed $value) => is_bool($value) || is_numeric($value) ? (float) $value : null)->filter(fn (?float $value) => $value !== null);
 
             return ['type' => is_bool($first) ? 'boolean' : 'numeric', 'count' => count($values), 'average' => $numbers->isEmpty() ? null : round((float) $numbers->avg(), 4)];
         })->all();
     }
 
     /**
-     * An output as it can be stored: arrays and scalars as they are, objects
-     * as their array or string form, long strings cut.
+     * Convert an output to a form that can be stored: arrays and scalars as
+     * they are, objects as their array or string form, long strings cut.
      */
     protected function storable(mixed $output): mixed
     {
@@ -241,8 +242,12 @@ class EvaluationRunner
             default => $output,
         };
 
-        return is_string($output) && mb_strlen($output) > self::MAX_OUTPUT_LENGTH
-            ? mb_substr($output, 0, self::MAX_OUTPUT_LENGTH).'…'
-            : $output;
+        if (is_string($output) && Str::length($output) > self::MAX_OUTPUT_LENGTH) {
+            $truncated = Str::substr($output, 0, self::MAX_OUTPUT_LENGTH);
+
+            return "{$truncated}…";
+        }
+
+        return $output;
     }
 }

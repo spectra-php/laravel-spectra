@@ -481,7 +481,7 @@ class SpectraServiceProvider extends ServiceProvider
     }
 
     /**
-     * The package's own config file, read once per boot.
+     * Get the package's own config file, read once per boot.
      *
      * @return array<string, mixed>
      */
@@ -491,6 +491,8 @@ class SpectraServiceProvider extends ServiceProvider
     }
 
     /**
+     * Determine if the app's config is cached.
+     *
      * A cached config was merged when it was cached, so it is used as is.
      */
     protected function configurationIsCached(): bool

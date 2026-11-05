@@ -50,7 +50,7 @@ class AnnotationQueues
     ) {}
 
     /**
-     * Every configured queue, by name.
+     * Get every configured queue, by name.
      *
      * @return array<string, AnnotationQueue>
      */
@@ -63,7 +63,7 @@ class AnnotationQueues
     }
 
     /**
-     * The queue with this name, or an exception naming the configured ones.
+     * Find the queue with this name, or throw when none is configured under it.
      */
     public function find(string $name): AnnotationQueue
     {
@@ -75,8 +75,8 @@ class AnnotationQueues
     }
 
     /**
-     * The queues that sample this call's trace and haven't been given it yet
-     * by this process. Decided from config alone, with no query, so the call
+     * Get the names of the queues that sample this call's trace and haven't
+     * been given it yet by this process. Decided from config alone, with no query, so the call
      * can be queued for review when the request itself is written.
      *
      * @return list<string>
@@ -90,7 +90,7 @@ class AnnotationQueues
         $names = [];
 
         foreach ($this->all() as $queue) {
-            $key = $queue->name.'|'.$context->traceId;
+            $key = "{$queue->name}|{$context->traceId}";
 
             if (! isset($this->sampled[$key]) && $queue->samples($context, $failed)) {
                 $this->sampled[$key] = true;
@@ -193,25 +193,27 @@ class AnnotationQueues
             'reviewed_at' => Date::now(),
         ];
 
-        $finished = SpectraAnnotationItem::query()
+        $isFinished = SpectraAnnotationItem::query()
             ->whereKey($item->getKey())
             ->where('status', AnnotationStatus::Pending->value)
             ->update($values) === 1;
 
-        if ($finished) {
+        if ($isFinished) {
             $item->forceFill([...$values, 'status' => $status])->syncOriginal();
         }
 
-        return $finished;
+        return $isFinished;
     }
 
     /**
+     * Determine if the query failed because the annotation table is missing.
+     *
      * Checked by error code, not message: Postgres quotes the failed SQL.
      */
     protected function isMissingTable(QueryException $e): bool
     {
         return in_array((string) ($e->errorInfo[0] ?? $e->getCode()), ['42S02', '42P01'], true)
-            || str_contains((string) ($e->errorInfo[2] ?? ''), 'no such table');
+            || Str::contains((string) ($e->errorInfo[2] ?? ''), 'no such table');
     }
 
     /**

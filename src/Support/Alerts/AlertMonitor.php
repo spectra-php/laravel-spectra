@@ -76,25 +76,25 @@ class AlertMonitor
     protected function checkRule(AlertRule $rule, CarbonInterface $now): AlertStatus
     {
         $value = $this->evaluator->measure($rule, $now);
-        $breached = $value !== null && $rule->isBreachedBy($value);
-        ['firing' => $firing, 'since' => $since, 'notified_at' => $notifiedAt] = $this->state($rule);
+        $isBreached = $value !== null && $rule->isBreachedBy($value);
+        ['firing' => $isFiring, 'since' => $since, 'notified_at' => $notifiedAt] = $this->state($rule);
 
-        if ($breached) {
+        if ($isBreached) {
             $cooldown = (int) config('spectra.alerts.cooldown', 60);
-            $due = ! $firing || $notifiedAt === null || $notifiedAt->copy()->addMinutes($cooldown)->lessThanOrEqualTo($now);
+            $isDue = ! $isFiring || $notifiedAt === null || $notifiedAt->copy()->addMinutes($cooldown)->lessThanOrEqualTo($now);
 
-            if ($due) {
+            if ($isDue) {
                 event(new AlertTriggered($rule, $value));
                 $this->notifier->send($rule, $value, resolved: false);
                 $notifiedAt = $now;
             }
 
-            $this->store($rule, true, $firing ? $since : $now, $notifiedAt);
+            $this->store($rule, true, $isFiring ? $since : $now, $notifiedAt);
 
-            return new AlertStatus($rule, $value, true, $firing ? $since : $now, $notifiedAt);
+            return new AlertStatus($rule, $value, true, $isFiring ? $since : $now, $notifiedAt);
         }
 
-        if ($firing) {
+        if ($isFiring) {
             event(new AlertResolved($rule, $value));
             $this->notifier->send($rule, $value, resolved: true);
         }
@@ -105,7 +105,7 @@ class AlertMonitor
     }
 
     /**
-     * The rule's stored state.
+     * Get the rule's stored state.
      *
      * @return array{firing: bool, since: ?CarbonInterface, notified_at: ?CarbonInterface}
      */

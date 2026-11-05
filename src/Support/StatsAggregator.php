@@ -30,12 +30,12 @@ class StatsAggregator
      */
     public function recordChange(SpectraRequest $current, SpectraRequest $previous): void
     {
-        $now = $this->amounts($current);
-        $before = $this->amounts($previous);
+        $currentAmounts = $this->amounts($current);
+        $previousAmounts = $this->amounts($previous);
 
         $delta = [];
-        foreach ($now as $column => $value) {
-            $change = $value - ($before[$column] ?? 0);
+        foreach ($currentAmounts as $column => $value) {
+            $change = $value - ($previousAmounts[$column] ?? 0);
 
             // Usage only grows as a job progresses; a smaller number means a
             // poll returned less detail, not that usage went away. Only the
@@ -60,14 +60,14 @@ class StatsAggregator
      */
     protected function amounts(SpectraRequest $request): array
     {
-        $successful = $request->isSuccessful();
+        $isSuccessful = $request->isSuccessful();
         $promptTokens = $request->prompt_tokens ?? 0;
         $completionTokens = $request->completion_tokens ?? 0;
 
         return [
             'request_count' => 1,
-            'successful_count' => $successful ? 1 : 0,
-            'failed_count' => $successful ? 0 : 1,
+            'successful_count' => $isSuccessful ? 1 : 0,
+            'failed_count' => $isSuccessful ? 0 : 1,
             'prompt_tokens' => $promptTokens,
             'completion_tokens' => $completionTokens,
             'total_tokens' => $promptTokens + $completionTokens,
@@ -114,6 +114,9 @@ class StatsAggregator
     }
 
     /**
+     * Rebuild the daily stats from the stored requests, optionally between two
+     * dates, and return how many requests were counted.
+     *
      * Useful for backfilling or fixing stat inconsistencies.
      */
     public function rebuild(?CarbonInterface $startDate = null, ?CarbonInterface $endDate = null): int

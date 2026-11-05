@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Data;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Spectra\Enums\ModelType;
 use Spectra\Models\SpectraRequest;
 
@@ -39,8 +40,8 @@ readonly class CostByModelType extends DataTransferObject
     {
         return $items->map(fn (SpectraRequest $item) => new self(
             model_type: $item->model_type ?? 'unknown',
-            label: $item->model_type
-                ? (ModelType::tryFrom($item->model_type)?->label() ?? ucfirst($item->model_type))
+            label: filled($item->model_type)
+                ? (ModelType::tryFrom($item->model_type)?->label() ?? Str::ucfirst($item->model_type))
                 : 'Unknown',
             requests: $item->requests,
             tokens: $item->tokens_sum,

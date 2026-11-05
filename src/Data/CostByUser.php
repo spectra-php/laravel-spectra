@@ -37,13 +37,13 @@ readonly class CostByUser extends DataTransferObject
     public static function fromCollection(Collection $items, array $metadata = []): Collection
     {
         return $items->map(function (SpectraRequest $item) use ($metadata) {
-            $meta = $metadata["{$item->trackable_type}:{$item->trackable_id}"] ?? [];
+            $trackableMetadata = $metadata["{$item->trackable_type}:{$item->trackable_id}"] ?? [];
 
             return new self(
                 user_id: (string) $item->trackable_id,
                 requests: $item->requests,
                 cost: $item->cost,
-                user_name: $meta['name'] ?? null,
+                user_name: $trackableMetadata['name'] ?? null,
                 trackable_type: $item->trackable_type,
             );
         });

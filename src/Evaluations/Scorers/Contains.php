@@ -33,7 +33,11 @@ class Contains
      */
     public function __invoke(mixed $output, mixed $expected): ?bool
     {
-        $needles = $this->needles !== [] ? $this->needles : (is_string($expected) ? [$expected] : []);
+        $needles = $this->needles;
+
+        if ($needles === [] && is_string($expected)) {
+            $needles = [$expected];
+        }
 
         if ($needles === [] || ! is_string($output) && ! $output instanceof Stringable) {
             return null;

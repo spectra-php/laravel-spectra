@@ -33,6 +33,6 @@ readonly class TrackablesResponse extends PaginatedResponse
         public TrackablesSummaryResponse $summary,
         public Collection $latency_by_model_type,
     ) {
-        parent::__construct($data, $current_page, $last_page, $total);
+        parent::__construct(data: $data, current_page: $current_page, last_page: $last_page, total: $total);
     }
 }

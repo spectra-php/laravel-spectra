@@ -80,23 +80,23 @@ class BudgetEnforcer
         $usage = $this->getUsage($budgetable);
         $limits = $this->getLimits($budget);
 
-        $providerAllowed = $budget->isProviderAllowed($provider);
-        $modelAllowed = $budget->isModelAllowed($model);
+        $isProviderAllowed = $budget->isProviderAllowed($provider);
+        $isModelAllowed = $budget->isModelAllowed($model);
 
         $maxPercentage = $this->calculateMaxPercentage($usage, $limits);
 
-        $allowed = $providerAllowed
-            && $modelAllowed
+        $isAllowed = $isProviderAllowed
+            && $isModelAllowed
             && ($maxPercentage < 100 || ! $budget->hard_limit);
 
         return new BudgetStatus(
-            allowed: $allowed,
+            allowed: $isAllowed,
             budget: $budget,
             usage: $usage,
             limits: $limits,
             percentage: $maxPercentage,
-            providerAllowed: $providerAllowed,
-            modelAllowed: $modelAllowed,
+            providerAllowed: $isProviderAllowed,
+            modelAllowed: $isModelAllowed,
         );
     }
 
@@ -149,10 +149,12 @@ class BudgetEnforcer
     }
 
     /**
-     * Post-persist pass for a tracked request. Pre-flight enforcement can only
-     * see spend from previous requests, so the request that actually crosses a
-     * limit is detected here and announced via BudgetExceeded — without ever
-     * blocking the already-completed request.
+     * Announce the thresholds and cost limits a recorded request has crossed.
+     *
+     * Pre-flight enforcement can only see spend from previous requests, so
+     * the request that actually crosses a limit is detected here and
+     * announced via BudgetExceeded — without ever blocking the
+     * already-completed request.
      */
     public function reportRecordedRequest(SpectraRequest $request): void
     {
@@ -573,8 +575,9 @@ class BudgetEnforcer
     }
 
     /**
-     * True the first time this budget / limit / level is reached in the
-     * current period; false after that until the period or the limit changes.
+     * Mark this budget / limit / level as announced for the current period,
+     * returning true the first time it is reached and false after that until
+     * the period or the limit changes.
      */
     protected function fireOnce(SpectraBudget $budget, string $limitType, string $level, int $limit): bool
     {
@@ -603,6 +606,8 @@ class BudgetEnforcer
     }
 
     /**
+     * Convert a cost to whole cents, rounding up.
+     *
      * Budgets are enforced in whole cents, rounding up so fractional usage
      * always counts against the limit (a 0.2-cent request consumes 1 cent).
      * The sum is first rounded to the storage precision (6 decimals) so float

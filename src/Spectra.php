@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use InvalidArgumentException;
+use JsonException;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ScoreSource;
 use Spectra\Enums\SpanKind;
@@ -347,7 +348,7 @@ class Spectra
     }
 
     /**
-     * A dataset of examples to run evaluations over, made the first time
+     * Get a dataset of examples to run evaluations over, made the first time
      * something is added to it.
      *
      *   Spectra::dataset('refund-questions')->add(['question' => 'Can I get my money back?'], expected: 'Yes, within 30 days.');
@@ -358,7 +359,7 @@ class Spectra
     {
         $name = Str::trim($name);
 
-        throw_if($name === '' || mb_strlen($name) > 100, InvalidArgumentException::class, 'A dataset needs a name of 1 to 100 characters.');
+        throw_if(blank($name) || Str::length($name) > 100, InvalidArgumentException::class, 'A dataset needs a name of 1 to 100 characters.');
 
         return new Dataset($name);
     }
@@ -475,7 +476,7 @@ class Spectra
     }
 
     /**
-     * The tags a request tracked right now would get: the inherited, global
+     * Get the tags a request tracked right now would get: the inherited, global
      * and scoped tags. Queued jobs dispatched now inherit them.
      *
      * @return array<int, string>
@@ -486,8 +487,8 @@ class Spectra
     }
 
     /**
-     * Headers that carry the current trace and tags to another of your own
-     * services, which continues them with the `spectra.trace` middleware:
+     * Get the headers that carry the current trace and tags to another of your own
+     * services, which continues them with the `spectra.trace` middleware.
      *
      *   Http::withHeaders(Spectra::propagationHeaders())->post($internalUrl, $payload);
      *
@@ -503,7 +504,7 @@ class Spectra
     }
 
     /**
-     * The inherited, global and scoped tags, then the request's own, without repeats.
+     * Merge the inherited, global and scoped tags, then the request's own, without repeats.
      *
      * @param  array<int, string>  $tags
      * @return array<int, string>
@@ -545,7 +546,7 @@ class Spectra
     }
 
     /**
-     * The trace id shared by the current request, job, or command.
+     * Get the trace id shared by the current request, job, or command.
      */
     public function currentTraceId(): ?string
     {
@@ -576,7 +577,7 @@ class Spectra
     }
 
     /**
-     * The span a new AI call or span of the given trace belongs to: the open
+     * Get the span a new AI call or span of the given trace belongs to: the open
      * Spectra::span() block or unit of work (see SpanStack), else the span
      * the work came from.
      *
@@ -596,7 +597,7 @@ class Spectra
     }
 
     /**
-     * The incoming `traceparent` span (or the span that dispatched this job),
+     * Get the incoming `traceparent` span (or the span that dispatched this job),
      * when this call belongs to that trace.
      *
      * @param  array<string, mixed>  $options
@@ -673,7 +674,7 @@ class Spectra
     {
         $id = (string) ($conversation instanceof Model ? $conversation->getKey() : $conversation);
 
-        throw_if(Str::trim($id) === '', InvalidArgumentException::class, 'A conversation needs an id.');
+        throw_if(blank(Str::trim($id)), InvalidArgumentException::class, 'A conversation needs an id.');
 
         $this->globalConversationId = $id;
         $this->globalConversationTurn = $turn;
@@ -779,9 +780,11 @@ class Spectra
         }
 
         if (is_object($result)) {
-            $json = json_encode($result);
-
-            return $json !== false ? json_decode($json, true) : null;
+            try {
+                return json_decode(json_encode($result, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                return null;
+            }
         }
 
         return $result;

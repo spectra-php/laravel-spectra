@@ -40,7 +40,8 @@ readonly class AlertRule
         $metric = AlertMetric::tryFrom((string) ($config['metric'] ?? ''));
 
         throw_if(blank($name) || ! is_string($name), InvalidArgumentException::class, 'Every Spectra alert rule needs a name.');
-        throw_if($metric === null, InvalidArgumentException::class, "The Spectra alert [{$name}] has an unknown metric. Use one of: ".collect(AlertMetric::cases())->pluck('value')->implode(', ').'.');
+        $metrics = collect(AlertMetric::cases())->pluck('value')->implode(', ');
+        throw_if($metric === null, InvalidArgumentException::class, "The Spectra alert [{$name}] has an unknown metric. Use one of: {$metrics}.");
         throw_if(isset($config['above']) === isset($config['below']), InvalidArgumentException::class, "The Spectra alert [{$name}] needs either `above` or `below`.");
 
         $threshold = $config['above'] ?? $config['below'];
@@ -72,9 +73,10 @@ readonly class AlertRule
     public function describe(): string
     {
         $scope = collect([$this->provider, $this->model])->filter()->implode(' / ');
+        $direction = $this->above ? 'above' : 'below';
+        $sentence = "{$this->metric->label()} {$direction} {$this->metric->format($this->threshold)} over {$this->window()}";
 
-        return $this->metric->label().' '.($this->above ? 'above' : 'below').' '.$this->metric->format($this->threshold)
-            .' over '.$this->window().($scope !== '' ? " ({$scope})" : '');
+        return filled($scope) ? "{$sentence} ({$scope})" : $sentence;
     }
 
     /**
@@ -96,6 +98,8 @@ readonly class AlertRule
      */
     public function stateKey(): string
     {
-        return 'spectra:alerts:'.sha1($this->name);
+        $nameHash = sha1($this->name);
+
+        return "spectra:alerts:{$nameHash}";
     }
 }

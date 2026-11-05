@@ -31,6 +31,6 @@ readonly class ConversationsResponse extends PaginatedResponse
         public array $available_finish_reasons,
         public array $available_reasoning_efforts,
     ) {
-        parent::__construct($data, $current_page, $last_page, $total);
+        parent::__construct(data: $data, current_page: $current_page, last_page: $last_page, total: $total);
     }
 }

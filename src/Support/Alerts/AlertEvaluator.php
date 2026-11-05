@@ -28,7 +28,7 @@ class AlertEvaluator
      */
     public function measure(AlertRule $rule, CarbonInterface $now): ?float
     {
-        $calls = $this->window($rule, $now);
+        $calls = $this->buildWindowQuery($rule, $now);
         $count = $calls->clone()->count();
 
         if ($rule->metric->needsVolume() && $count < $rule->minRequests) {
@@ -39,19 +39,19 @@ class AlertEvaluator
 
         return match ($rule->metric) {
             AlertMetric::ErrorRate => ($count - $successful->count()) / $count,
-            AlertMetric::LatencyP95 => $this->latencyP95($successful),
-            AlertMetric::LatencyAverage => $this->number($successful->avg('latency_ms')),
+            AlertMetric::LatencyP95 => $this->measureLatencyP95($successful),
+            AlertMetric::LatencyAverage => $this->castToFloat($successful->avg('latency_ms')),
             AlertMetric::Cost => (float) $successful->sum('total_cost_in_cents'),
             AlertMetric::Requests => (float) $count,
         };
     }
 
     /**
-     * The rule's calls created in the window that ends now.
+     * Get the rule's calls created in the window that ends now.
      *
      * @return Builder<SpectraRequest>
      */
-    private function window(AlertRule $rule, CarbonInterface $now): Builder
+    private function buildWindowQuery(AlertRule $rule, CarbonInterface $now): Builder
     {
         return SpectraRequest::query()
             ->where('created_at', '>', $now->copy()->subMinutes($rule->windowMinutes))
@@ -63,11 +63,11 @@ class AlertEvaluator
     }
 
     /**
-     * The 95th percentile of the successful calls' latency.
+     * Measure the 95th percentile of the successful calls' latency.
      *
      * @param  Builder<SpectraRequest>  $successful
      */
-    private function latencyP95(Builder $successful): ?float
+    private function measureLatencyP95(Builder $successful): ?float
     {
         $p95 = $this->percentiles->of($successful, 'latency_ms', [95])['p95'];
 
@@ -75,9 +75,9 @@ class AlertEvaluator
     }
 
     /**
-     * A database aggregate as a float, or null when there was nothing to aggregate.
+     * Cast a database aggregate to a float, or null when there was nothing to aggregate.
      */
-    private function number(mixed $value): ?float
+    private function castToFloat(mixed $value): ?float
     {
         return is_numeric($value) ? (float) $value : null;
     }

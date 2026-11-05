@@ -48,18 +48,18 @@ class Dataset
     {
         $request = $request instanceof SpectraRequest ? $request : SpectraRequest::query()->findOrFail($request);
         $request->makeVisible(['request', 'response']);
-        $messages = app(MessageTextExtractor::class);
+        $textExtractor = app(MessageTextExtractor::class);
 
         return $this->add(
-            input: ['prompt' => $messages->prompt($request->request)],
-            expected: $replyIsExpected ? $messages->reply($request) : null,
+            input: ['prompt' => $textExtractor->prompt($request->request)],
+            expected: $replyIsExpected ? $textExtractor->reply($request) : null,
             metadata: ['model' => $request->snapshot ?? $request->model, 'provider' => $request->provider],
             sourceRequestId: $request->id,
         );
     }
 
     /**
-     * The dataset's examples, oldest first.
+     * Get the dataset's examples, oldest first.
      *
      * @return Collection<int, SpectraDatasetExample>
      */
@@ -69,7 +69,7 @@ class Dataset
     }
 
     /**
-     * The dataset row, made when missing.
+     * Get the dataset row, creating it when missing.
      */
     public function model(): SpectraDataset
     {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Annotations;
 
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Spectra\Support\Tracking\RequestContext;
 
@@ -37,7 +38,7 @@ readonly class AnnotationQueue
      */
     public static function fromConfig(string $name, array $config): self
     {
-        throw_if(mb_strlen($name) > 100, InvalidArgumentException::class, "The Spectra annotation queue [{$name}] needs a name of at most 100 characters.");
+        throw_if(Str::length($name) > 100, InvalidArgumentException::class, "The Spectra annotation queue [{$name}] needs a name of at most 100 characters.");
 
         $scores = collect((array) ($config['scores'] ?? []))->map(function (mixed $definition, int|string $score) use ($name): array {
             $definition = is_string($definition) ? ['type' => $definition] : (array) $definition;
@@ -60,7 +61,8 @@ readonly class AnnotationQueue
 
         $filter = (array) ($config['filter'] ?? []);
         $unknown = collect($filter)->keys()->diff(self::FILTERS);
-        throw_if($unknown->isNotEmpty(), InvalidArgumentException::class, "The Spectra annotation queue [{$name}] has an unknown filter [{$unknown->implode(', ')}]. Use ".implode(', ', self::FILTERS).'.');
+        $filters = implode(', ', self::FILTERS);
+        throw_if($unknown->isNotEmpty(), InvalidArgumentException::class, "The Spectra annotation queue [{$name}] has an unknown filter [{$unknown->implode(', ')}]. Use {$filters}.");
 
         return new self(
             name: $name,
@@ -82,7 +84,7 @@ readonly class AnnotationQueue
             return false;
         }
 
-        return $this->sample >= 1.0 || (crc32($this->name.'|'.$context->traceId) % 10_000) < $this->sample * 10_000;
+        return $this->sample >= 1.0 || (crc32("{$this->name}|{$context->traceId}") % 10_000) < $this->sample * 10_000;
     }
 
     /**
@@ -119,7 +121,7 @@ readonly class AnnotationQueue
     protected function matches(RequestContext $context, bool $failed): bool
     {
         foreach ($this->filter as $key => $expected) {
-            $matches = match ($key) {
+            $isMatch = match ($key) {
                 'provider' => in_array($context->provider, (array) $expected, true),
                 'model' => in_array($context->model, (array) $expected, true) || in_array($context->snapshot, (array) $expected, true),
                 'prompt_name' => in_array($context->promptName, (array) $expected, true),
@@ -130,7 +132,7 @@ readonly class AnnotationQueue
                 default => false,
             };
 
-            if (! $matches) {
+            if (! $isMatch) {
                 return false;
             }
         }
@@ -139,7 +141,7 @@ readonly class AnnotationQueue
     }
 
     /**
-     * A yes/no value.
+     * Parse the reviewer's value as yes or no.
      */
     protected function boolean(string $name, mixed $value): bool
     {
@@ -150,7 +152,7 @@ readonly class AnnotationQueue
     }
 
     /**
-     * A number within the score's range.
+     * Parse the reviewer's value as a number within the score's range.
      *
      * @param  array{name: string, type: string, min: float|null, max: float|null, options: array<int, string>}  $score
      */
@@ -166,19 +168,20 @@ readonly class AnnotationQueue
     }
 
     /**
-     * One of the score's options.
+     * Check that the reviewer's value is one of the score's options.
      *
      * @param  array{name: string, type: string, min: float|null, max: float|null, options: array<int, string>}  $score
      */
     protected function option(array $score, mixed $value): string
     {
-        throw_unless(is_string($value) && in_array($value, $score['options'], true), InvalidArgumentException::class, "The score [{$score['name']}] takes one of: ".implode(', ', $score['options']).'.');
+        $options = implode(', ', $score['options']);
+        throw_unless(is_string($value) && in_array($value, $score['options'], true), InvalidArgumentException::class, "The score [{$score['name']}] takes one of: {$options}.");
 
         return $value;
     }
 
     /**
-     * The queue as the dashboard reads it.
+     * Get the queue as the dashboard reads it.
      *
      * @return array{name: string, description: string|null, scores: array<int, array<string, mixed>>, sample: float, filter: array<string, mixed>}
      */

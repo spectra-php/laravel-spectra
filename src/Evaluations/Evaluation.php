@@ -38,7 +38,7 @@ use Spectra\Models\SpectraDatasetExample;
 abstract class Evaluation
 {
     /**
-     * The name of the dataset to run over.
+     * Get the name of the dataset to run over.
      */
     abstract public function dataset(): string;
 
@@ -48,7 +48,7 @@ abstract class Evaluation
     abstract public function run(mixed $input, SpectraDatasetExample $example): mixed;
 
     /**
-     * The scorers, by score name. Each gets the output, the expected output
+     * Get the scorers, by score name. Each gets the output, the expected output
      * and the input, and returns true or false, a number, a category, or
      * null to give no score.
      *
@@ -57,7 +57,7 @@ abstract class Evaluation
     abstract public function scorers(): array;
 
     /**
-     * The evaluation's name on the dashboard: the class name in kebab case
+     * Get the evaluation's name on the dashboard: the class name in kebab case
      * ("SupportAnswerEval" is "support-answer-eval").
      */
     public function name(): string

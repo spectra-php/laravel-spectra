@@ -40,39 +40,15 @@ readonly class DateRange
             return new self(null, null);
         }
 
-        if ($period === 'custom' && $request->filled('start_date') && $request->filled('end_date')) {
-            try {
-                $start = Date::parse((string) $request->input('start_date'))->startOfDay();
-                $end = Date::parse((string) $request->input('end_date'))->endOfDay();
-
-                if ($end->lt($start)) {
-                    [$start, $end] = [
-                        $end->copy()->startOfDay(),
-                        $start->copy()->endOfDay(),
-                    ];
-                }
-
-                return new self($start, $end);
-            } catch (\Throwable) {
-                // Fallback to preset period handling.
-            }
-        }
-
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            try {
-                $start = Date::parse((string) $request->input('start_date'))->startOfDay();
-                $end = Date::parse((string) $request->input('end_date'))->endOfDay();
+            // Dates that don't parse fall back to the preset period below.
+            $range = rescue(
+                fn () => self::fromDates((string) $request->input('start_date'), (string) $request->input('end_date')),
+                report: false,
+            );
 
-                if ($end->lt($start)) {
-                    [$start, $end] = [
-                        $end->copy()->startOfDay(),
-                        $start->copy()->endOfDay(),
-                    ];
-                }
-
-                return new self($start, $end);
-            } catch (\Throwable) {
-                // Fallback to preset period handling.
+            if ($range !== null) {
+                return $range;
             }
         }
 
@@ -84,6 +60,25 @@ readonly class DateRange
         };
 
         return new self($start, null);
+    }
+
+    /**
+     * Create a date range covering the whole days from start to end, swapping
+     * the two when they are given backwards.
+     */
+    private static function fromDates(string $startDate, string $endDate): self
+    {
+        $start = Date::parse($startDate)->startOfDay();
+        $end = Date::parse($endDate)->endOfDay();
+
+        if ($end->lt($start)) {
+            [$start, $end] = [
+                $end->copy()->startOfDay(),
+                $start->copy()->endOfDay(),
+            ];
+        }
+
+        return new self($start, $end);
     }
 
     /**
@@ -109,7 +104,7 @@ readonly class DateRange
     }
 
     /**
-     * The end bound as a moment in time: a date-only string ("2026-01-31")
+     * Get the end bound as a moment in time: a date-only string ("2026-01-31")
      * means the end of that day, since a plain parse would stop at midnight
      * and drop the whole last day.
      */

@@ -8,6 +8,10 @@ use Illuminate\Support\Collection;
 use Spectra\Data\DataTransferObject;
 use Spectra\Data\ModelTypeCost;
 use Spectra\Data\ModelTypeLatency;
+use Spectra\Data\RequestByDate;
+use Spectra\Data\RequestByProvider;
+use Spectra\Data\TopModel;
+use Spectra\Models\SpectraRequest;
 
 /**
  * The overview screen: headline totals, cost and latency by model type, top
@@ -19,10 +23,10 @@ readonly class StatsResponse extends DataTransferObject
      * Create a new stats response instance.
      *
      * @param  array<string, float>  $cost_by_model_type
-     * @param  Collection<int, mixed>  $top_models
-     * @param  Collection<int, mixed>  $recent_requests
-     * @param  Collection<int, mixed>  $requests_by_date
-     * @param  Collection<int, mixed>  $requests_by_provider
+     * @param  Collection<int, TopModel>  $top_models
+     * @param  Collection<int, SpectraRequest>  $recent_requests
+     * @param  Collection<int, RequestByDate>  $requests_by_date
+     * @param  Collection<int, RequestByProvider>  $requests_by_provider
      * @param  Collection<int, ModelTypeLatency>  $latency_by_model_type
      * @param  Collection<int, ModelTypeCost>|null  $stats_by_model_type
      */

@@ -39,7 +39,7 @@ class AudioDurationExtractor
         }
 
         try {
-            if (file_put_contents($tempFile, $rawAudioData) === false) {
+            if (File::put($tempFile, $rawAudioData) === false) {
                 return null;
             }
 

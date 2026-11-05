@@ -402,7 +402,7 @@ class SpectraFake extends Spectra
      */
     public function getSuccessful(): array
     {
-        return Arr::where($this->recorded, fn ($r) => $r['type'] === 'success');
+        return Arr::where($this->recorded, fn ($record) => $record['type'] === 'success');
     }
 
     /**
@@ -412,7 +412,7 @@ class SpectraFake extends Spectra
      */
     public function getFailed(): array
     {
-        return Arr::where($this->recorded, fn ($r) => $r['type'] === 'failure');
+        return Arr::where($this->recorded, fn ($record) => $record['type'] === 'failure');
     }
 
     /**
@@ -445,7 +445,7 @@ class SpectraFake extends Spectra
      */
     public function assertProviderUsed(string $provider): void
     {
-        $this->assertTracked(fn ($r) => $r['context']->provider === $provider);
+        $this->assertTracked(fn ($record) => $record['context']->provider === $provider);
     }
 
     /**
@@ -453,7 +453,7 @@ class SpectraFake extends Spectra
      */
     public function assertModelUsed(string $model): void
     {
-        $this->assertTracked(fn ($r) => $r['context']->model === $model);
+        $this->assertTracked(fn ($record) => $record['context']->model === $model);
     }
 
     /**
@@ -463,9 +463,9 @@ class SpectraFake extends Spectra
      */
     public function assertTrackedWithTags(array $tags): void
     {
-        $this->assertTracked(function ($r) use ($tags) {
+        $this->assertTracked(function ($record) use ($tags) {
             foreach ($tags as $key => $value) {
-                if (! isset($r['context']->tags[$key]) || $r['context']->tags[$key] !== $value) {
+                if (! isset($record['context']->tags[$key]) || $record['context']->tags[$key] !== $value) {
                     return false;
                 }
             }
@@ -481,9 +481,9 @@ class SpectraFake extends Spectra
      */
     public function assertTrackedWithMetadata(array $metadata): void
     {
-        $this->assertTracked(function ($r) use ($metadata) {
+        $this->assertTracked(function ($record) use ($metadata) {
             foreach ($metadata as $key => $value) {
-                if (! array_key_exists($key, $r['context']->metadata) || $r['context']->metadata[$key] !== $value) {
+                if (! array_key_exists($key, $record['context']->metadata) || $record['context']->metadata[$key] !== $value) {
                     return false;
                 }
             }
@@ -531,7 +531,7 @@ class SpectraFake extends Spectra
     public function assertTotalTokens(int $expectedTokens): void
     {
         $actualTokens = collect($this->recorded)
-            ->sum(fn ($r) => $r['context']->promptTokens + $r['context']->completionTokens);
+            ->sum(fn ($record) => $record['context']->promptTokens + $record['context']->completionTokens);
 
         Assert::assertEquals(
             $expectedTokens,
@@ -541,7 +541,7 @@ class SpectraFake extends Spectra
     }
 
     /**
-     * Forget the recorded requests and spans.
+     * Forget the recorded requests, spans and scores.
      */
     public function reset(): self
     {

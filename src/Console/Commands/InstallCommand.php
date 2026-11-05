@@ -6,6 +6,7 @@ namespace Spectra\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 use function Laravel\Prompts\confirm;
@@ -83,7 +84,7 @@ class InstallCommand extends Command
             }
 
             $stamp = $stamp->addSecond();
-            File::copy($file->getPathname(), $target.'/'.$stamp->format('Y_m_d_His').'_'.$name);
+            File::copy($file->getPathname(), "{$target}/{$stamp->format('Y_m_d_His')}_{$name}");
             $published++;
         }
 
@@ -95,6 +96,6 @@ class InstallCommand extends Command
      */
     protected function withoutDatePrefix(string $filename): string
     {
-        return (string) preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', $filename);
+        return (string) Str::replaceMatches('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', $filename);
     }
 }

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Str;
 use Spectra\Pricing\AnthropicPricing;
 use Spectra\Pricing\CoherePricing;
 use Spectra\Pricing\ElevenLabsPricing;
@@ -247,6 +248,9 @@ return [
         | expire after ~1 hour, Sora videos have an expires_at timestamp). When
         | enabled, Spectra will download and persist generated media files to a
         | Laravel filesystem disk before the URLs expire.
+        |
+        | `disk` is the filesystem disk the files are stored on (null uses your
+        | default disk) and `path` the folder on that disk, 'spectra' by default.
         |
         | Docs: https://spectraphp.com/configuration#media-persistence
         |
@@ -881,6 +885,9 @@ return [
         |
         | Commit the file, so every environment bills the same prices.
         |
+        | `scraped_prices_path` is where the file is saved and read, by default
+        | resources/spectra/scraped-prices.json.
+        |
         | Docs: https://spectraphp.com/pricing#scraped-prices
         |
         */
@@ -913,7 +920,7 @@ return [
             'api_key' => env('SPECTRA_FIRECRAWL_API_KEY', env('FIRECRAWL_API_KEY')),
             'url' => env('SPECTRA_FIRECRAWL_API_URL', env('FIRECRAWL_API_URL', 'https://api.firecrawl.dev/v2')),
             'timeout' => (int) env('SPECTRA_FIRECRAWL_TIMEOUT', env('FIRECRAWL_TIMEOUT', 180)),
-            'providers' => array_values(array_filter(array_map('trim', explode(',', (string) env('SPECTRA_SCRAPE_PROVIDERS', ''))))),
+            'providers' => Str::of((string) env('SPECTRA_SCRAPE_PROVIDERS', ''))->explode(',')->map(fn (string $provider): string => trim($provider))->filter()->values()->all(),
         ],
 
     ],
@@ -986,15 +993,19 @@ return [
     |
     | Rules `php artisan spectra:check-alerts` checks over the stored calls.
     | Schedule the command every few minutes. Each rule watches one metric
-    | over a window of minutes: error_rate (0-1), latency_p95 or latency_avg
-    | (milliseconds, successful calls), cost (cents) or requests (count),
-    | and fires when it goes `above` or `below` its threshold. Rate and
-    | latency rules wait for `min_requests` calls in the window (default 10).
+    | over a `window` of minutes (default 15): error_rate (0-1), latency_p95
+    | or latency_avg (milliseconds, successful calls), cost (cents) or
+    | requests (count), and fires when it goes `above` or `below` its
+    | threshold. Rate and latency rules wait for `min_requests` calls in the
+    | window (default 10).
     | `provider` and `model` narrow a rule to one provider or model.
     |
-    | A firing rule notifies once, then again after `cooldown` minutes while
-    | it keeps firing, and once more when it recovers. It also dispatches the
-    | AlertTriggered and AlertResolved events.
+    | A firing rule notifies once, then again after `cooldown` minutes
+    | (default 60) while it keeps firing, and once more when it recovers. It
+    | also dispatches the AlertTriggered and AlertResolved events.
+    |
+    | `notify` lists the channels: email addresses, a Slack incoming webhook
+    | URL and a webhook URL. Leave a channel null to skip it.
     |
     */
 

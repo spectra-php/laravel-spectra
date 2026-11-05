@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support;
 
+use Illuminate\Support\Str;
 use Spectra\Providers\Provider;
 
 /**
@@ -53,7 +54,7 @@ class ProviderRegistry
     }
 
     /**
-     * Normalize config values to the structured format.
+     * Normalize the providers config into each provider's class, name, hosts and endpoints.
      *
      * Config supports two formats:
      *   - Flat: 'openai' => OpenAI::class
@@ -61,11 +62,6 @@ class ProviderRegistry
      *
      * Each provider class is instantiated to extract hosts and endpoints.
      * Custom endpoint URLs are resolved and appended as additional hosts.
-     *
-     * @return array<string, array{class: string, name: string, hosts: array<string>, endpoints: array<string>}>
-     */
-    /**
-     * Normalize the providers config into each provider's class, name, hosts and endpoints.
      *
      * @param  array<string, mixed>  $config
      * @return array<string, array{class: string, name: string, hosts: array<string>, endpoints: array<string>}>
@@ -77,7 +73,6 @@ class ProviderRegistry
         // filter() drops providers turned off with false (and empty entries)
         // before class_exists() sees them.
         foreach (collect($config)->filter() as $slug => $providerConfig) {
-            // Support both flat (class string) and structured (array) formats
             if (is_array($providerConfig)) {
                 $providerClass = $providerConfig['class'] ?? null;
                 $configName = $providerConfig['name'] ?? null;
@@ -105,7 +100,7 @@ class ProviderRegistry
 
             $normalized[$slug] = [
                 'class' => $providerClass,
-                'name' => $configName ?? ucfirst($slug),
+                'name' => $configName ?? Str::ucfirst($slug),
                 'hosts' => $hosts,
                 'endpoints' => $instance->getEndpoints(),
             ];
@@ -124,8 +119,7 @@ class ProviderRegistry
     {
         $patterns = $this->getHostPatterns();
 
-        return \array_find_key($patterns, fn (array $regexes) => \array_any($regexes, fn (string $regex) => (bool) preg_match($regex, $host)));
-
+        return \array_find_key($patterns, fn (array $regexes) => \array_any($regexes, fn (string $regex) => Str::isMatch($regex, $host)));
     }
 
     /**
@@ -144,7 +138,7 @@ class ProviderRegistry
         }
 
         foreach ($patterns[$provider] as $regex) {
-            if (preg_match($regex, $path)) {
+            if (Str::isMatch($regex, $path)) {
                 return true;
             }
         }
@@ -171,7 +165,7 @@ class ProviderRegistry
      */
     public function displayName(string $provider): string
     {
-        return $this->providers[$provider]['name'] ?? ucfirst($provider);
+        return $this->providers[$provider]['name'] ?? Str::ucfirst($provider);
     }
 
     /**
@@ -261,9 +255,9 @@ class ProviderRegistry
     protected function hostPatternToRegex(string $pattern): string
     {
         $escaped = preg_quote($pattern, '/');
-        $regex = preg_replace('/\\\{[^}]+\\\}/', '[^.]+', $escaped);
+        $regex = Str::replaceMatches('/\\\{[^}]+\\\}/', '[^.]+', $escaped);
 
-        return '/^'.$regex.'$/';
+        return "/^{$regex}$/";
     }
 
     /**
@@ -276,8 +270,8 @@ class ProviderRegistry
     protected function endpointPatternToRegex(string $pattern): string
     {
         $escaped = preg_quote($pattern, '#');
-        $regex = preg_replace('/\\\{[^}]+\\\}/', '[^/]+', $escaped);
+        $regex = Str::replaceMatches('/\\\{[^}]+\\\}/', '[^/]+', $escaped);
 
-        return '#^'.$regex.'$#';
+        return "#^{$regex}$#";
     }
 }

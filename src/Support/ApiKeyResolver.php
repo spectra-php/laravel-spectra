@@ -138,12 +138,10 @@ class ApiKeyResolver
             return null;
         }
 
-        $host = $parsed['host'];
-
         if (isset($parsed['port'])) {
-            $host .= ':'.$parsed['port'];
+            return "{$parsed['host']}:{$parsed['port']}";
         }
 
-        return $host;
+        return $parsed['host'];
     }
 }

@@ -84,16 +84,20 @@ class Redactor
 
         foreach ($patterns as $name => $pattern) {
             // A pattern that fails on this input (bad UTF-8, backtracking limit) leaves it unchanged.
-            $value = ($name === 'credit_card'
-                ? Str::replaceMatches($pattern, fn (array $match) => $this->isCardNumber($match[0]) ? '[REDACTED:credit_card]' : $match[0], $value)
-                : Str::replaceMatches($pattern, "[REDACTED:{$name}]", $value)) ?? $value;
+            if ($name === 'credit_card') {
+                $value = Str::replaceMatches($pattern, fn (array $match) => $this->isCardNumber($match[0]) ? '[REDACTED:credit_card]' : $match[0], $value) ?? $value;
+
+                continue;
+            }
+
+            $value = Str::replaceMatches($pattern, "[REDACTED:{$name}]", $value) ?? $value;
         }
 
         return $this->callback !== null ? (string) ($this->callback)($value) : $value;
     }
 
     /**
-     * The built-in patterns named in config, then the custom ones.
+     * Get the built-in patterns named in config, then the custom ones.
      *
      * @return array<string, string>
      */
@@ -101,15 +105,17 @@ class Redactor
     {
         $names = (array) config('spectra.storage.redaction.patterns', collect(self::PATTERNS)->keys()->all());
         $patterns = [];
+        $builtInNames = collect(self::PATTERNS)->keys()->implode(', ');
 
         foreach ($names as $name) {
-            throw_unless(is_string($name) && isset(self::PATTERNS[$name]), InvalidArgumentException::class, 'Unknown Spectra redaction pattern ['.(is_scalar($name) ? $name : gettype($name)).']. Use '.collect(self::PATTERNS)->keys()->implode(', ').', or add your own under redaction.custom.');
+            $shownName = is_scalar($name) ? $name : gettype($name);
+            throw_unless(is_string($name) && isset(self::PATTERNS[$name]), InvalidArgumentException::class, "Unknown Spectra redaction pattern [{$shownName}]. Use {$builtInNames}, or add your own under redaction.custom.");
 
             $patterns[$name] = self::PATTERNS[$name];
         }
 
         foreach ((array) config('spectra.storage.redaction.custom', []) as $name => $pattern) {
-            if (is_string($name) && is_string($pattern) && $pattern !== '') {
+            if (is_string($name) && is_string($pattern) && filled($pattern)) {
                 $patterns[$name] = $pattern;
             }
         }

@@ -42,17 +42,17 @@ class DashboardAssets
         $tags = [];
 
         foreach ($icons as $icon) {
-            $filePath = $distPath.'/'.$icon['file'];
+            $filePath = "{$distPath}/{$icon['file']}";
 
             if (! File::exists($filePath)) {
                 continue;
             }
 
-            $content = File::get($filePath);
+            $encodedContent = base64_encode(File::get($filePath));
 
-            $href = 'data:'.$icon['type'].';base64,'.base64_encode($content);
-            $sizes = $icon['sizes'] ? ' sizes="'.$icon['sizes'].'"' : '';
-            $tags[] = '<link rel="'.$icon['rel'].'" type="'.$icon['type'].'"'.$sizes.' href="'.$href.'">';
+            $href = "data:{$icon['type']};base64,{$encodedContent}";
+            $sizes = filled($icon['sizes']) ? " sizes=\"{$icon['sizes']}\"" : '';
+            $tags[] = "<link rel=\"{$icon['rel']}\" type=\"{$icon['type']}\"{$sizes} href=\"{$href}\">";
         }
 
         return new HtmlString(implode("\n", $tags));

@@ -93,8 +93,10 @@ class ScoreRecorder
     ): array {
         $name = Str::trim($name);
 
+        $maxLength = self::MAX_NAME_LENGTH;
+
         throw_if(blank($name), InvalidArgumentException::class, 'A score needs a name.');
-        throw_if(Str::length($name) > self::MAX_NAME_LENGTH, InvalidArgumentException::class, 'A score name is at most '.self::MAX_NAME_LENGTH.' characters.');
+        throw_if(Str::length($name) > $maxLength, InvalidArgumentException::class, "A score name is at most {$maxLength} characters.");
         throw_if(is_float($value) && ! is_finite($value), InvalidArgumentException::class, 'A score value must be a finite number.');
         throw_if(is_string($value) && blank($value), InvalidArgumentException::class, 'A score label cannot be empty.');
 
@@ -134,6 +136,8 @@ class ScoreRecorder
     }
 
     /**
+     * Determine if the query failed because the scores table is missing.
+     *
      * Checked by error code, not message: Postgres quotes the failed SQL.
      */
     protected function isMissingTable(QueryException $e): bool
@@ -142,7 +146,7 @@ class ScoreRecorder
 
         // MySQL, MariaDB and SQL Server use 42S02, Postgres 42P01; SQLite only says so in words.
         return in_array($code, ['42S02', '42P01'], true)
-            || str_contains((string) ($e->errorInfo[2] ?? ''), 'no such table');
+            || Str::contains((string) ($e->errorInfo[2] ?? ''), 'no such table');
     }
 
     /**

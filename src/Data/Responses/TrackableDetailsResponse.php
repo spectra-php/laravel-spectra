@@ -6,6 +6,7 @@ namespace Spectra\Data\Responses;
 
 use Illuminate\Support\Collection;
 use Spectra\Data\DataTransferObject;
+use Spectra\Models\SpectraRequest;
 
 /**
  * The trackable detail screen: the trackable's stats and breakdowns, and its
@@ -17,7 +18,7 @@ readonly class TrackableDetailsResponse extends DataTransferObject
      * Create a new trackable details response instance.
      *
      * @param  array<string, mixed>  $trackable
-     * @param  Collection<int, mixed>  $requests
+     * @param  Collection<int, SpectraRequest>  $requests
      */
     public function __construct(
         public array $trackable,

@@ -17,7 +17,9 @@ enum SpanKind: string
     case Command = 'command';
     case Tool = 'tool';
 
-    /** OTLP span kind: 1 internal, 2 server, 5 consumer. */
+    /**
+     * Get the OTLP span kind the span is exported as: 1 internal, 2 server, 5 consumer.
+     */
     public function otlpKind(): int
     {
         return match ($this) {
