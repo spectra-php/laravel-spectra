@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import PeriodRangePicker from '@/components/PeriodRangePicker.vue';
+import DocsLink from '@/components/DocsLink.vue';
 
 const props = defineProps({
     title: {
@@ -8,6 +9,10 @@ const props = defineProps({
         required: true,
     },
     subtitle: {
+        type: String,
+        default: null,
+    },
+    docs: {
         type: String,
         default: null,
     },
@@ -55,7 +60,10 @@ const endDateModel = computed({
 <template>
     <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div class="min-w-0">
-            <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ title }}</h1>
+            <div class="flex items-center gap-2">
+                <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ title }}</h1>
+                <DocsLink v-if="docs" :page="docs" />
+            </div>
             <p v-if="subtitle" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
             <slot name="subtitle" />
         </div>

@@ -62,6 +62,7 @@ onMounted(async () => {
     <div>
         <PageRangeHeader
             title="Prompts"
+            docs="prompts"
             :subtitle="`Compare prompt versions · ${periodLabel}`"
             v-model:period="period"
             v-model:start-date="startDate"
@@ -83,6 +84,10 @@ onMounted(async () => {
                 <p class="empty-state-description">
                     Wrap calls in <code class="font-mono">Spectra::withPrompt('support-answer', 'v3', fn () => ...)</code> to compare prompt versions here.
                 </p>
+                <a href="https://spectraphp.com/prompts" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
+                    Read the docs
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 14.78a.75.75 0 0 0 1.06 0l7.22-7.22v5.69a.75.75 0 0 0 1.5 0v-7.5a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0 0 1.5h5.69l-7.22 7.22a.75.75 0 0 0 0 1.06Z" clip-rule="evenodd" /></svg>
+                </a>
             </div>
         </div>
 

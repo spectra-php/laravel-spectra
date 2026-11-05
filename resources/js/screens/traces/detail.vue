@@ -80,6 +80,25 @@ const startedAt = computed(() => {
 // Origins in the order the trace reached them: the request, then the jobs it dispatched.
 const origins = computed(() => [...new Set((trace.value?.requests || []).map((step) => step.origin).filter(Boolean))]);
 
+// The request, job or command span at the top of the tree, when it is the only root and carries the
+// trace's own name: the heading already says what it is, so the timeline leaves its row out and the
+// Duration card shows its time instead.
+const ROOT_KINDS = ['request', 'job', 'command'];
+const rootSpan = computed(() => {
+    const spans = trace.value?.spans || [];
+    if (!spans.length) return null;
+
+    const nodes = [...spans, ...(trace.value.requests || [])];
+    const ids = new Set(nodes.map((node) => node.span_id).filter(Boolean));
+    const roots = nodes.filter((node) => !(node.parent_span_id && ids.has(node.parent_span_id) && node.parent_span_id !== node.span_id));
+    const [root] = roots;
+
+    return roots.length === 1 && spans.includes(root) && ROOT_KINDS.includes(root.kind) && root.name === trace.value.origin ? root : null;
+});
+
+// Spans drawn in the timeline: the hidden root is not one of them.
+const shownSpanCount = computed(() => (trace.value?.spans?.length ?? 0) - (rootSpan.value ? 1 : 0));
+
 const successfulCount = computed(() => (trace.value?.request_count ?? 0) - (trace.value?.failed_count ?? 0));
 
 const trackableRoute = computed(() => {
@@ -163,8 +182,14 @@ const copyTraceId = async () => {
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Duration</div>
-                    <div class="stat-value !text-2xl">{{ formatDuration(trace.duration_ms) }}</div>
-                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">First call start to last call end</div>
+                    <template v-if="rootSpan">
+                        <div class="stat-value !text-2xl">{{ formatDuration(rootSpan.duration_ms) }}</div>
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Whole {{ rootSpan.kind }} · calls {{ formatDuration(trace.duration_ms) }}</div>
+                    </template>
+                    <template v-else>
+                        <div class="stat-value !text-2xl">{{ formatDuration(trace.duration_ms) }}</div>
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">First call start to last call end</div>
+                    </template>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Calls</div>
@@ -188,10 +213,10 @@ const copyTraceId = async () => {
                         <div class="card-header">
                             <h3>Timeline</h3>
                             <span class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ trace.spans?.length ? `${trace.spans.length} ${trace.spans.length === 1 ? 'span' : 'spans'} · ${trace.request_count} calls` : (origins.length > 1 ? `${origins.length} origins` : 'In the order the calls started') }}
+                                {{ shownSpanCount ? `${shownSpanCount} ${shownSpanCount === 1 ? 'span' : 'spans'} · ${trace.request_count} calls` : (origins.length > 1 ? `${origins.length} origins` : 'In the order the calls started') }}
                             </span>
                         </div>
-                        <TraceWaterfall :requests="trace.requests" :spans="trace.spans || []" :duration-ms="trace.timeline_ms || trace.duration_ms" :show-origins="origins.length > 0" />
+                        <TraceWaterfall :requests="trace.requests" :spans="trace.spans || []" :duration-ms="trace.timeline_ms || trace.duration_ms" :show-origins="origins.length > 0" :hidden-span-id="rootSpan?.span_id ?? null" />
                         <div v-if="trace.truncated" class="border-t border-gray-100 px-5 py-2.5 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
                             Showing the first {{ trace.requests.length }} of {{ formatNumber(trace.request_count) }} calls.
                             <router-link :to="{ name: 'requests', query: { trace_id: trace.trace_id, period: 'all' } }" class="font-medium text-primary-600 hover:underline dark:text-primary-400">See all</router-link>

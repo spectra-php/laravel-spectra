@@ -13,6 +13,8 @@ const props = defineProps({
     durationMs: { type: Number, default: 0 },
     // Without spans: start a new lane, headed by its origin, whenever the origin changes (request → job).
     showOrigins: { type: Boolean, default: false },
+    // A span left out of the tree, its children drawn in its place: the root span when the page already names it.
+    hiddenSpanId: { type: String, default: null },
 });
 
 const { formatDuration } = useHelpers();
@@ -99,8 +101,9 @@ const rows = computed(() => {
         for (const entry of [...entries].sort(byStart)) {
             if (seen.has(entry)) continue;
             seen.add(entry);
-            out.push(entry.isSpan ? spanRow(entry.node, depth) : callRow(entry.node, depth, false));
-            if (entry.node.span_id && children.has(entry.node.span_id)) walk(children.get(entry.node.span_id), depth + 1);
+            const hidden = entry.isSpan && props.hiddenSpanId && entry.node.span_id === props.hiddenSpanId;
+            if (!hidden) out.push(entry.isSpan ? spanRow(entry.node, depth) : callRow(entry.node, depth, false));
+            if (entry.node.span_id && children.has(entry.node.span_id)) walk(children.get(entry.node.span_id), hidden ? depth : depth + 1);
         }
     };
     walk(roots, 0);

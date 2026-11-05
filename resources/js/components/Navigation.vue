@@ -16,16 +16,36 @@ const route = useRoute();
 const mobileMenuOpen = ref(false);
 const { apiRequest, alertSuccess, alertError } = useHelpers();
 
-const items = [
-    { name: 'dashboard', match: 'dashboard', label: 'Overview', icon: 'M3.75 13.5h4.5v6.75h-4.5zM9.75 3.75h4.5v16.5h-4.5zM15.75 9h4.5v11.25h-4.5z' },
-    { name: 'requests', match: 'request', label: 'Requests', icon: 'M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h10.5' },
-    { name: 'traces', match: 'trace', label: 'Traces', icon: 'M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244' },
-    { name: 'conversations', match: 'conversation', label: 'Conversations', icon: 'M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z' },
-    { name: 'prompts', match: 'prompts', label: 'Prompts', icon: 'M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z' },
-    { name: 'errors', match: 'errors', label: 'Errors', icon: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z' },
-    { name: 'evals', match: 'eval', label: 'Evals', icon: 'M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5' },
-    { name: 'costs', match: 'costs', label: 'Costs', icon: 'M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
-    { name: 'trackables', match: 'trackable', label: 'Trackables', icon: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z' },
+const groups = [
+    {
+        label: null,
+        items: [
+            { name: 'dashboard', match: 'dashboard', label: 'Overview', icon: 'M3.75 13.5h4.5v6.75h-4.5zM9.75 3.75h4.5v16.5h-4.5zM15.75 9h4.5v11.25h-4.5z' },
+        ],
+    },
+    {
+        label: 'Observe',
+        items: [
+            { name: 'requests', match: 'request', label: 'Requests', icon: 'M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h10.5' },
+            { name: 'traces', match: 'trace', label: 'Traces', icon: 'M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244' },
+            { name: 'conversations', match: 'conversation', label: 'Conversations', icon: 'M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z' },
+            { name: 'errors', match: 'errors', label: 'Errors', icon: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z' },
+        ],
+    },
+    {
+        label: 'Improve',
+        items: [
+            { name: 'prompts', match: 'prompts', label: 'Prompts', icon: 'M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z' },
+            { name: 'evals', match: 'eval', label: 'Evals', icon: 'M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5' },
+        ],
+    },
+    {
+        label: 'Usage',
+        items: [
+            { name: 'costs', match: 'costs', label: 'Costs', icon: 'M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
+            { name: 'trackables', match: 'trackable', label: 'Trackables', icon: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z' },
+        ],
+    },
 ];
 
 const isActive = (match) => {
@@ -219,23 +239,30 @@ if (typeof window !== 'undefined') {
         </div>
 
         <!-- Narrow screens: the screens, from the menu button -->
-        <nav v-show="mobileMenuOpen" class="space-y-0.5 border-t border-gray-200/70 px-4 py-2 lg:hidden dark:border-gray-800/80" aria-label="Main">
-            <router-link
-                v-for="item in items"
-                :key="item.name"
-                :to="{ name: item.name }"
-                :class="[
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
-                    isActive(item.match)
-                        ? 'bg-gray-100 text-gray-900 dark:bg-white/[0.07] dark:text-white'
-                        : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/[0.04]',
-                ]"
-            >
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" :d="item.icon" />
-                </svg>
-                {{ item.label }}
-            </router-link>
+        <nav v-show="mobileMenuOpen" class="border-t border-gray-200/70 px-4 py-2 lg:hidden dark:border-gray-800/80" aria-label="Main">
+            <div v-for="(group, index) in groups" :key="group.label ?? 'main'" :class="index > 0 ? 'mt-2 border-t border-gray-200/70 pt-2 dark:border-gray-800/80' : ''">
+                <p v-if="group.label" class="mb-1 px-3 pt-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    {{ group.label }}
+                </p>
+                <div class="space-y-0.5">
+                    <router-link
+                        v-for="item in group.items"
+                        :key="item.name"
+                        :to="{ name: item.name }"
+                        :class="[
+                            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
+                            isActive(item.match)
+                                ? 'bg-gray-100 text-gray-900 dark:bg-white/[0.07] dark:text-white'
+                                : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/[0.04]',
+                        ]"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" :d="item.icon" />
+                        </svg>
+                        {{ item.label }}
+                    </router-link>
+                </div>
+            </div>
         </nav>
     </header>
 
@@ -244,21 +271,28 @@ if (typeof window !== 'undefined') {
         class="fixed bottom-0 left-0 top-16 z-30 hidden flex-col border-r border-gray-200/70 bg-white/60 backdrop-blur-md transition-[width] duration-200 lg:flex dark:border-gray-800/80 dark:bg-gray-950/60"
         :class="collapsed ? 'w-16' : 'w-56'"
     >
-        <nav class="flex-1 space-y-0.5 overflow-y-auto px-3 py-4" aria-label="Main">
-            <router-link
-                v-for="item in items"
-                :key="item.name"
-                :to="{ name: item.name }"
-                :class="linkClass(item)"
-                v-tooltip="collapsed ? item.label : undefined"
-                :aria-label="collapsed ? item.label : undefined"
-            >
-                <span v-if="isActive(item.match)" class="spectrum-bar absolute inset-y-2 -left-3 w-[3px] rounded-r-full" aria-hidden="true"></span>
-                <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" :d="item.icon" />
-                </svg>
-                <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
-            </router-link>
+        <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Main">
+            <div v-for="(group, index) in groups" :key="group.label ?? 'main'" :class="index > 0 ? 'mt-3 border-t border-gray-200/70 pt-3 dark:border-gray-800/80' : ''">
+                <p v-if="group.label && !collapsed" class="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    {{ group.label }}
+                </p>
+                <div class="space-y-0.5">
+                    <router-link
+                        v-for="item in group.items"
+                        :key="item.name"
+                        :to="{ name: item.name }"
+                        :class="linkClass(item)"
+                        v-tooltip="collapsed ? item.label : undefined"
+                        :aria-label="collapsed ? item.label : undefined"
+                    >
+                        <span v-if="isActive(item.match)" class="spectrum-bar absolute inset-y-2 -left-3 w-[3px] rounded-r-full" aria-hidden="true"></span>
+                        <svg class="h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" :d="item.icon" />
+                        </svg>
+                        <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
+                    </router-link>
+                </div>
+            </div>
         </nav>
 
         <div class="border-t border-gray-200/70 px-3 py-3 dark:border-gray-800/80">

@@ -4,6 +4,7 @@ import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
 import { useEvalFormat } from '@/composables/useEvalFormat';
 import Skeleton from '@/components/Skeleton.vue';
+import DocsLink from '@/components/DocsLink.vue';
 
 // Evaluations and their runs, and the datasets they run over.
 const { formatNumber, formatDuration, apiRequest } = useHelpers();
@@ -31,7 +32,10 @@ onMounted(async () => {
 <template>
     <div>
         <div class="mb-6">
-            <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Evals</h1>
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Evals</h1>
+                <DocsLink page="evaluations" />
+            </div>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Run your AI code over a dataset and compare the runs</p>
         </div>
 
@@ -48,6 +52,10 @@ onMounted(async () => {
                     Add examples with <code class="font-mono">Spectra::dataset('refund-questions')->add($input, $expected)</code>, write a class that extends
                     <code class="font-mono">Spectra\Evaluations\Evaluation</code>, and run it with <code class="font-mono">php artisan spectra:eval</code>.
                 </p>
+                <a href="https://spectraphp.com/evaluations" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
+                    Read the docs
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 14.78a.75.75 0 0 0 1.06 0l7.22-7.22v5.69a.75.75 0 0 0 1.5 0v-7.5a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0 0 1.5h5.69l-7.22 7.22a.75.75 0 0 0 0 1.06Z" clip-rule="evenodd" /></svg>
+                </a>
             </div>
         </div>
 
