@@ -8,6 +8,7 @@ declare(strict_types=1);
  * scores, or skipped. Writing needs the annotateSpectra gate.
  */
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
@@ -46,7 +47,7 @@ beforeEach(function () {
  */
 function trackReviewCall(?string $prompt = null, string $question = 'Where is my order?'): void
 {
-    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['role' => 'assistant', 'content' => 'It shipped today.']]]], array_filter([
+    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['role' => 'assistant', 'content' => 'It shipped today.']]]], Arr::whereNotNull([
         'prompt_name' => $prompt,
         'endpoint' => '/v1/chat/completions',
         'request_data' => ['model' => 'gpt-4o', 'messages' => [['role' => 'user', 'content' => $question]]],

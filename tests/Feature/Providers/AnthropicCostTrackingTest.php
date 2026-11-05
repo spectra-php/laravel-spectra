@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Providers\Anthropic\Anthropic;
@@ -16,7 +18,7 @@ use Spectra\Providers\Anthropic\Anthropic;
  */
 function anthropicStream(string $name): string
 {
-    return (string) file_get_contents(__DIR__.'/../../responses/claude/streams/'.$name);
+    return File::get(__DIR__.'/../../responses/claude/streams/'.$name);
 }
 
 function fakeAnthropic(array|string $body, array $headers = []): void
@@ -145,6 +147,7 @@ it('ignores the configured default tier when the response says standard', functi
 
     postAnthropic(['model' => 'claude-opus-4-8']);
 
+    // Opus 4.8 standard, as in the prompt-caching test: 2.564¢
     expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('standard')
         ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(2.564, 0.000001);
 });
@@ -178,8 +181,8 @@ it('bills standard speed when fast mode was requested but not served', function 
 
 it('lets an explicitly chosen tier win over the response', function () {
     fakeAnthropic($this->loadMockResponse('claude/message-prompt-caching.json'));
-
     Spectra::withPricingTier('batch');
+
     postAnthropic(['model' => 'claude-opus-4-8']);
 
     // Opus 4.8 batch: (2048×250 + 1800×25 + 148×312.5 + 100×500 + 503×1250) / 1M = 1.282¢
@@ -250,11 +253,12 @@ it('reads fast mode, US-only inference and cache usage from a stream', function 
 });
 
 it('uses the requested tier for a stream that does not report one', function () {
-    $stream = str_replace([',"service_tier":"standard"', ',"speed":"fast"', ',"inference_geo":"us"'], '', anthropicStream('fast-mode-us.txt'));
+    $stream = Str::replace([',"service_tier":"standard"', ',"speed":"fast"', ',"inference_geo":"us"'], '', anthropicStream('fast-mode-us.txt'));
     fakeAnthropic($stream, ['Content-Type' => 'text/event-stream']);
 
     postAnthropic(['model' => 'claude-opus-5-5', 'stream' => true, 'speed' => 'fast'])->body();
 
+    // Same tokens as the fast-mode test without the US surcharge: 6.16¢
     expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('fast')
         ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(6.16, 0.000001);
 });

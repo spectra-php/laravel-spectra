@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Spectra\Enums\PricingUnit;
@@ -63,7 +64,7 @@ beforeEach(function () {
     $this->source = tempnam(sys_get_temp_dir(), 'models-dev');
     $this->baseline = tempnam(sys_get_temp_dir(), 'drift-baseline');
     File::delete($this->baseline);
-    file_put_contents($this->source, json_encode($this->catalog));
+    File::put($this->source, json_encode($this->catalog, JSON_THROW_ON_ERROR));
 
     $this->app->make(Kernel::class)->registerCommand($this->app->make(PricingDriftCommand::class));
 });
@@ -74,8 +75,8 @@ afterEach(function () {
 });
 
 it('reports differing prices and missing models, as Spectra bills them', function () {
-    $findings = array_map(fn (DriftFinding $f) => [$f->kind, $f->model, $f->field, $f->spectra, $f->modelsDev],
-        app(ModelsDevDrift::class)->compare($this->catalog));
+    $findings = Arr::map(app(ModelsDevDrift::class)->compare($this->catalog),
+        fn (DriftFinding $f) => [$f->kind, $f->model, $f->field, $f->spectra, $f->modelsDev]);
 
     expect($findings)->toBe([
         ['price', 'gpt-x', 'output', 400.0, 450.0],
@@ -108,9 +109,9 @@ it('fails with new findings and passes once they are in the baseline', function 
 });
 
 it('reports a baselined price again when models.dev changes it', function () {
-    file_put_contents($this->baseline, json_encode(['openai|gpt-x|output' => 450.0, 'openai|gone|model' => null]));
+    File::put($this->baseline, json_encode(['openai|gpt-x|output' => 450.0, 'openai|gone|model' => null], JSON_THROW_ON_ERROR));
     $this->catalog['openai']['models']['gpt-x']['cost']['output'] = 5;
-    file_put_contents($this->source, json_encode($this->catalog));
+    File::put($this->source, json_encode($this->catalog, JSON_THROW_ON_ERROR));
 
     $this->artisan('spectra:pricing-drift', ['--source' => $this->source, '--baseline' => $this->baseline])
         ->expectsOutputToContain('4 new findings')

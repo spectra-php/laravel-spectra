@@ -183,7 +183,7 @@ it('filters aggregated stats by model type', function () {
             ['model' => 'gpt-4o', 'model_type' => 'text', 'prompt_tokens' => 100, 'completion_tokens' => 50, 'total_cost_in_cents' => 200],
             ['model' => 'dall-e-3', 'model_type' => 'image', 'image_count' => 1, 'total_cost_in_cents' => 400],
         ))
-        ->create(['response' => json_encode([])])
+        ->create(['response' => json_encode([], JSON_THROW_ON_ERROR)])
         ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $textStats = SpectraDailyStat::getAggregatedStats(

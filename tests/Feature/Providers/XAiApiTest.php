@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
 
@@ -11,7 +12,9 @@ use Spectra\Models\SpectraRequest;
  */
 function xaiSse(array ...$events): string
 {
-    return implode('', array_map(fn (array $event) => 'data: '.json_encode($event)."\n\n", $events))."data: [DONE]\n\n";
+    return collect($events)
+        ->map(fn (array $event) => 'data: '.json_encode($event, JSON_THROW_ON_ERROR)."\n\n")
+        ->implode('')."data: [DONE]\n\n";
 }
 
 it('bills reasoning tokens on top of completion tokens and uses the reported cost', function () {
@@ -117,7 +120,7 @@ it('uses the reported cost, which includes the US endpoint surcharge', function 
 });
 
 it('tracks streamed chat completions with the final reported cost', function () {
-    $chunk = fn (array $delta, ?array $usage = null, ?array $choices = null) => array_filter([
+    $chunk = fn (array $delta, ?array $usage = null, ?array $choices = null) => Arr::where([
         'id' => 'chatcmpl-stream-1', 'object' => 'chat.completion.chunk', 'created' => 1760536800, 'model' => 'grok-4.3',
         'choices' => $choices ?? [['index' => 0, 'delta' => $delta]],
         'usage' => $usage,
@@ -158,10 +161,10 @@ it('tracks streamed chat completions with the final reported cost', function () 
 it('records a streamed Responses API call at its reported cost', function () {
     $completed = $this->loadMockResponse('xai/responses-tools.json');
 
-    $sse = 'event: response.created'."\n".'data: '.json_encode(['type' => 'response.created', 'sequence_number' => 0, 'response' => ['id' => $completed['id'], 'object' => 'response', 'model' => 'grok-4.7', 'status' => 'in_progress', 'output' => []]])."\n\n"
-        .'event: response.output_text.delta'."\n".'data: '.json_encode(['type' => 'response.output_text.delta', 'sequence_number' => 1, 'item_id' => 'msg_1', 'output_index' => 4, 'content_index' => 0, 'delta' => 'SpaceXSI released '])."\n\n"
-        .'event: response.output_text.delta'."\n".'data: '.json_encode(['type' => 'response.output_text.delta', 'sequence_number' => 2, 'item_id' => 'msg_1', 'output_index' => 4, 'content_index' => 0, 'delta' => 'Grok 4.7 this week.'])."\n\n"
-        .'event: response.completed'."\n".'data: '.json_encode(['type' => 'response.completed', 'sequence_number' => 3, 'response' => $completed])."\n\n";
+    $sse = 'event: response.created'."\n".'data: '.json_encode(['type' => 'response.created', 'sequence_number' => 0, 'response' => ['id' => $completed['id'], 'object' => 'response', 'model' => 'grok-4.7', 'status' => 'in_progress', 'output' => []]], JSON_THROW_ON_ERROR)."\n\n"
+        .'event: response.output_text.delta'."\n".'data: '.json_encode(['type' => 'response.output_text.delta', 'sequence_number' => 1, 'item_id' => 'msg_1', 'output_index' => 4, 'content_index' => 0, 'delta' => 'SpaceXSI released '], JSON_THROW_ON_ERROR)."\n\n"
+        .'event: response.output_text.delta'."\n".'data: '.json_encode(['type' => 'response.output_text.delta', 'sequence_number' => 2, 'item_id' => 'msg_1', 'output_index' => 4, 'content_index' => 0, 'delta' => 'Grok 4.7 this week.'], JSON_THROW_ON_ERROR)."\n\n"
+        .'event: response.completed'."\n".'data: '.json_encode(['type' => 'response.completed', 'sequence_number' => 3, 'response' => $completed], JSON_THROW_ON_ERROR)."\n\n";
 
     Http::fake(['api.x.ai/*' => Http::response($sse, 200, ['Content-Type' => 'text/event-stream'])]);
 
@@ -252,6 +255,7 @@ it('records a deferred chat completion when its result is fetched', function () 
 
     $row = SpectraRequest::query()->sole();
 
+    // Reported: 2,912,000 ticks = 0.02912 cents.
     expect($row->model)->toBe('Grok 4.3')
         ->and($row->completion_tokens)->toBe(103)
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.02912, 1e-9);

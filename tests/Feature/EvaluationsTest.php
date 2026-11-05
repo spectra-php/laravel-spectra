@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Spectra\Enums\EvalRunStatus;
 use Spectra\Enums\ScoreSource;
 use Spectra\Evaluations\Scorers\Contains;
@@ -40,7 +41,7 @@ it('adds examples to a dataset made on first use', function () {
 
     expect(SpectraDataset::query()->sole()->name)->toBe('capitals')
         ->and(Spectra::dataset('capitals')->examples()->pluck('expected')->all())->toBe(['Paris', 'Rome', 'Madrid', 'Poseidonia'])
-        ->and(fn () => Spectra::dataset(str_repeat('x', 101)))->toThrow(InvalidArgumentException::class);
+        ->and(fn () => Spectra::dataset(Str::repeat('x', 101)))->toThrow(InvalidArgumentException::class);
 });
 
 it('adds a tracked call as an example, with its reply as expected when asked', function () {

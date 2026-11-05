@@ -315,7 +315,7 @@ it('exports a call with its stored span id and a span with its kind and parent',
     $call = SpectraRequest::query()->sole();
     $span = SpectraSpan::query()->sole();
     $exported = collect(Http::recorded())
-        ->filter(fn ($pair) => str_contains($pair[0]->url(), '4318'))
+        ->filter(fn ($pair) => Str::contains($pair[0]->url(), '4318'))
         ->map(fn ($pair) => $pair[0]->data()['resourceSpans'][0]['scopeSpans'][0]['spans'][0])
         ->keyBy('name');
 

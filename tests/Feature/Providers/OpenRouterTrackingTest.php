@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraDailyStat;
@@ -125,7 +126,7 @@ it('prices the served model when openrouter/auto reports no cost', function () {
 });
 
 it('records a streamed chat completion with the cost from the last chunk', function () {
-    $sse = file_get_contents(__DIR__.'/../../responses/openrouter/chat-stream.txt');
+    $sse = File::get(__DIR__.'/../../responses/openrouter/chat-stream.txt');
 
     Http::fake(['openrouter.ai/*' => Http::response($sse, 200, ['Content-Type' => 'text/event-stream'])]);
 
@@ -212,7 +213,7 @@ it('records a video job once, when it finishes, however often it is polled', fun
 });
 
 it('records a streamed image api call from its completed event', function () {
-    $sse = file_get_contents(__DIR__.'/../../responses/openrouter/images-stream.txt');
+    $sse = File::get(__DIR__.'/../../responses/openrouter/images-stream.txt');
 
     Http::fake(['openrouter.ai/*' => Http::response($sse, 200, ['Content-Type' => 'text/event-stream'])]);
 

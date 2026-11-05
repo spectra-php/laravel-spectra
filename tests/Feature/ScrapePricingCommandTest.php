@@ -42,7 +42,7 @@ beforeEach(function () {
         ]]),
     ]);
 
-    $this->readFile = fn () => json_decode(File::get($this->path), true);
+    $this->readFile = fn () => json_decode(File::get($this->path), true, 512, JSON_THROW_ON_ERROR);
 });
 
 afterEach(function () {

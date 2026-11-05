@@ -45,7 +45,7 @@ it('defines a non-empty catalog for every configured provider', function () {
 });
 
 it('uses only supported pricing units', function () {
-    $valid = array_map(fn (PricingUnit $u) => $u->value, PricingUnit::cases());
+    $valid = Arr::map(PricingUnit::cases(), fn (PricingUnit $u) => $u->value);
 
     foreach (spectraCatalogRows() as [$provider, $name, $model, $tiers]) {
         Assert::assertContains(
@@ -104,7 +104,7 @@ it('gives token-based models numeric input/output prices on the standard tier', 
 });
 
 it('names every tier with a PricingTier value', function () {
-    $valid = array_map(fn (PricingTier $tier) => $tier->value, PricingTier::cases());
+    $valid = Arr::map(PricingTier::cases(), fn (PricingTier $tier) => $tier->value);
 
     foreach (spectraCatalogRows() as [$provider, $name, $model, $tiers]) {
         foreach (array_unique(array_column($tiers, 'tier')) as $tier) {

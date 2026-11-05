@@ -47,7 +47,7 @@ it('prunes requests when the spans table does not exist yet', function () {
         ->and(SpectraDailyStat::query()->count())->toBe(0);
 });
 
-it('prunes scores older than the cutoff, and works before the scores migration runs', function () {
+it('prunes scores older than the cutoff, and still succeeds before the scores migration runs', function () {
     SpectraScore::query()->create(['name' => 'helpful', 'type' => 'boolean', 'value' => 1, 'source' => 'user', 'trace_id' => 't1', 'created_at' => now()->subDays(3)]);
     $recent = SpectraScore::query()->create(['name' => 'helpful', 'type' => 'boolean', 'value' => 0, 'source' => 'user', 'trace_id' => 't2']);
 

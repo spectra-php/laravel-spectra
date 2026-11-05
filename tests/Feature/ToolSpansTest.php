@@ -11,6 +11,7 @@ declare(strict_types=1);
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Enums\SpanKind;
 use Spectra\Enums\SpanStatus;
 use Spectra\Facades\Spectra;
@@ -115,7 +116,7 @@ it('stores a tool\'s arguments and result only with store_prompts on and the tra
 });
 
 it('cuts a long result to 10,000 characters', function () {
-    Spectra::tool('fetch_page', fn () => str_repeat('a', 12_000));
+    Spectra::tool('fetch_page', fn () => Str::repeat('a', 12_000));
 
     expect(mb_strlen(toolSpans()->sole()->attributes['gen_ai.tool.call.result']))->toBe(ToolSpanRecorder::MAX_CONTENT_LENGTH + 1);
 });

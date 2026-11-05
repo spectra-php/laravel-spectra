@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\ShowRequestController;
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
@@ -21,7 +22,7 @@ function useIncomingRequest(array $headers): void
     $server = [];
 
     foreach ($headers as $name => $value) {
-        $server['HTTP_'.strtoupper(str_replace('-', '_', $name))] = $value;
+        $server['HTTP_'.Str::upper(Str::replace('-', '_', $name))] = $value;
     }
 
     app()->instance('request', Request::create('/chat', 'POST', server: $server));

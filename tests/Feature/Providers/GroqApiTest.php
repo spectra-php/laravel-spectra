@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
 
@@ -11,7 +12,9 @@ use Spectra\Models\SpectraRequest;
  */
 function groqSse(array ...$events): string
 {
-    return implode('', array_map(fn (array $event) => 'data: '.json_encode($event)."\n\n", $events))."data: [DONE]\n\n";
+    return collect($events)
+        ->map(fn (array $event) => 'data: '.json_encode($event, JSON_THROW_ON_ERROR)."\n\n")
+        ->implode('')."data: [DONE]\n\n";
 }
 
 it('prices prefixed production ids with cached input at half price', function () {
@@ -34,7 +37,7 @@ it('prices prefixed production ids with cached input at half price', function ()
 });
 
 it('reads streamed usage from x_groq.usage', function () {
-    $chunk = fn (array $delta, ?string $finish = null, ?array $xGroq = null) => array_filter([
+    $chunk = fn (array $delta, ?string $finish = null, ?array $xGroq = null) => Arr::where([
         'id' => 'chatcmpl-groq-stream', 'object' => 'chat.completion.chunk', 'created' => 1760536800, 'model' => 'openai/gpt-oss-20b',
         'system_fingerprint' => 'fp_a09bde29de',
         'choices' => [['index' => 0, 'delta' => $delta, 'logprobs' => null, 'finish_reason' => $finish]],
@@ -164,8 +167,8 @@ it('bills a flex Responses API call like on-demand', function () {
 });
 
 it('records a streamed Responses API call from its completed event', function () {
-    $sse = 'event: response.output_text.delta'."\n".'data: '.json_encode(['type' => 'response.output_text.delta', 'delta' => 'Models learn from examples.'])."\n\n"
-        .'event: response.completed'."\n".'data: '.json_encode(['type' => 'response.completed', 'response' => array_merge(groqResponse(), ['id' => 'resp_streamed'])])."\n\n";
+    $sse = 'event: response.output_text.delta'."\n".'data: '.json_encode(['type' => 'response.output_text.delta', 'delta' => 'Models learn from examples.'], JSON_THROW_ON_ERROR)."\n\n"
+        .'event: response.completed'."\n".'data: '.json_encode(['type' => 'response.completed', 'response' => array_merge(groqResponse(), ['id' => 'resp_streamed'])], JSON_THROW_ON_ERROR)."\n\n";
 
     Http::fake(['api.groq.com/*' => Http::response($sse, 200, ['Content-Type' => 'text/event-stream'])]);
 

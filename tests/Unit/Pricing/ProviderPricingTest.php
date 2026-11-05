@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Arr;
 use Spectra\Pricing\ProviderPricing;
 
 /**
@@ -31,7 +32,7 @@ it('merges define and populate models in that order', function () {
         }
     };
 
-    $names = array_map(fn ($m) => $m->getInternalName(), $pricing->models());
+    $names = Arr::map($pricing->models(), fn ($m) => $m->getInternalName());
 
     expect($names)->toBe(['built-in-model', 'custom-model']);
 });

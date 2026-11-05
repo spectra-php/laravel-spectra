@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
 
@@ -18,7 +19,7 @@ beforeEach(function () {
 
 function geminiStream(string $name): string
 {
-    return (string) file_get_contents(__DIR__.'/../../responses/google/streams/'.$name);
+    return File::get(__DIR__.'/../../responses/google/streams/'.$name);
 }
 
 function postGemini(string $model, array $body = [], string $action = 'generateContent', string $query = ''): Response
@@ -217,6 +218,8 @@ it('records a streamed JSON array (streamGenerateContent without alt=sse)', func
 
     $row = SpectraRequest::query()->sole();
 
+    // Same usage as the server-sent-events stream, Gemini 3.8 Flash flex:
+    // (800×37.5 + (200 + 500)×187.5) / 1M = 0.16125¢
     expect($row->model)->toBe('Gemini 3.8 Flash')
         ->and($row->response_id)->toBe('s9_vaMHeB4yR7M8Pq-i3wQo')
         ->and($row->prompt_tokens)->toBe(800)

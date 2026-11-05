@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
@@ -77,7 +78,7 @@ it('counts euro prices one to one when no exchange rate is set', function () {
 });
 
 it('records a streamed chat completion with cached tokens', function () {
-    $sse = file_get_contents(__DIR__.'/../../responses/scaleway/chat-stream.txt');
+    $sse = File::get(__DIR__.'/../../responses/scaleway/chat-stream.txt');
 
     Http::fake(['api.scaleway.ai/*' => Http::response($sse, 200, ['Content-Type' => 'text/event-stream'])]);
 
@@ -103,7 +104,7 @@ it('records a streamed chat completion with cached tokens', function () {
 });
 
 it('records a streamed responses api call from its completed event', function () {
-    $sse = file_get_contents(__DIR__.'/../../responses/scaleway/responses-stream.txt');
+    $sse = File::get(__DIR__.'/../../responses/scaleway/responses-stream.txt');
 
     Http::fake(['api.scaleway.ai/*' => Http::response($sse, 200, ['Content-Type' => 'text/event-stream'])]);
 

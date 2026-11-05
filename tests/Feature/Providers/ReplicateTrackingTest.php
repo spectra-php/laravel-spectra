@@ -72,6 +72,7 @@ it('records deployment predictions with the model from the response', function (
 
     Http::post('https://api.replicate.com/v1/deployments/acme/flux-pro-eu/predictions', ['input' => ['prompt' => 'x']]);
 
+    // flux-1.1-pro is $0.04 per image.
     expect(SpectraRequest::query()->sole()->model)->toBe('FLUX 1.1 Pro')
         ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(4.0, 0.000001);
 });

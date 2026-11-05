@@ -67,7 +67,7 @@ it('returns a 429 json error when a hard limit is exceeded', function () {
     expect($response->getStatusCode())->toBe(429)
         ->and($response->headers->get('Content-Type'))->toContain('json');
 
-    $payload = json_decode((string) $response->getContent(), true);
+    $payload = json_decode((string) $response->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
     expect($payload['error'])->toBe('budget_exceeded')
         ->and($payload['limit_type'])->toBe('daily')

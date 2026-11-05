@@ -74,7 +74,7 @@ it('prices the models added in the 2026-11-01 review', function () {
     expect($calculator->forTokens('google', 'gemini-robotics-er-2-streaming-preview', $tokens, at: CarbonImmutable::parse('2026-11-01'))['total_cost_in_cents'])->toEqual(600)
         ->and($calculator->forTokens('google', 'gemini-robotics-er-2-streaming-preview', $tokens, at: CarbonImmutable::parse('2027-01-01'))['total_cost_in_cents'])->toEqual(1200);
 
-    // Voxtral 3: TTS $13 / 1M chars; transcription per minute.
+    // Voxtral 3: TTS 1300 cents per 1M characters × (1M / 1M); transcription 0.35, 0.8 and 0.4 cents/minute × (600s / 60).
     expect($calculator->calculateByCharacters('mistral', 'voxtral-mini-tts-3-0', 1_000_000)['total_cost_in_cents'])->toEqual(1300)
         ->and($calculator->calculateByDuration('mistral', 'voxtral-mini-transcribe-latest', 600)['total_cost_in_cents'])->toEqualWithDelta(3.5, 1e-9)
         ->and($calculator->calculateByDuration('mistral', 'voxtral-mini-transcribe-realtime-3', 600)['total_cost_in_cents'])->toEqualWithDelta(8.0, 1e-9)

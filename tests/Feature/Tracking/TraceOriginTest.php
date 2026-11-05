@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\RequestPersister;
@@ -128,7 +129,7 @@ it('captures no origin when capture_origin is off', function () {
 });
 
 it('caps the origin at the column length', function () {
-    app(TraceOrigin::class)->startCommand(str_repeat('a', 400));
+    app(TraceOrigin::class)->startCommand(Str::repeat('a', 400));
 
     expect(mb_strlen((string) app(TraceOrigin::class)->current()))->toBe(255);
 });

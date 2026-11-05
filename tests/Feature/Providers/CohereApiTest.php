@@ -11,10 +11,9 @@ use Spectra\Models\SpectraRequest;
  */
 function cohereSse(array ...$events): string
 {
-    return implode('', array_map(
-        fn (array $event) => 'event: '.$event['type']."\n".'data: '.json_encode($event)."\n\n",
-        $events,
-    ));
+    return collect($events)
+        ->map(fn (array $event) => 'event: '.$event['type']."\n".'data: '.json_encode($event, JSON_THROW_ON_ERROR)."\n\n")
+        ->implode('');
 }
 
 it('bills a v2 chat on its billed tokens, with cached tokens at the input rate', function () {

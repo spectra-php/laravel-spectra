@@ -45,6 +45,7 @@ it('includes 3xx requests in the trackables error filter', function () {
         }
     };
     $query = SpectraRequest::query();
+
     $filter->applyTrackableFilters($query, new Request(['status' => 'error']));
 
     expect($query->pluck('status_code')->all())->toBe([302]);

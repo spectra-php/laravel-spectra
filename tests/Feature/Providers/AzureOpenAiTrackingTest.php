@@ -87,6 +87,7 @@ it('records requests to a custom azure domain configured through laravel-ai', fu
 
     $row = SpectraRequest::query()->sole();
 
+    // gpt-4.1 standard: in 200, out 800. (1000*200 + 200*800) / 1M = 0.36
     expect($row->provider)->toBe('openai')
         ->and($row->endpoint)->toBe('/v1/chat/completions')
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.36, 1e-9);

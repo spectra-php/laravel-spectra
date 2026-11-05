@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
@@ -146,7 +147,7 @@ it('bills flux pro ultra per image whatever its size', function () {
 function runQueuedFalVideo(string $model, array $input, array $result): void
 {
     $id = '01a17cef-1744-7083-8396-43b1be6d649c';
-    $app = implode('/', array_slice(explode('/', $model), 0, 2));
+    $app = Str::of($model)->explode('/')->take(2)->implode('/');
     $base = "https://queue.fal.run/{$app}/requests/{$id}";
 
     Http::fake([
@@ -212,12 +213,13 @@ it('bills a direct video call from its own request body', function () {
 });
 
 it('keeps inline files out of the remembered submit body', function () {
-    $image = 'data:image/png;base64,'.str_repeat('A', 4000);
+    $image = 'data:image/png;base64,'.Str::repeat('A', 4000);
 
     runQueuedFalVideo('fal-ai/kling-video/v3/pro/text-to-video', ['prompt' => 'animate this', 'duration' => '5', 'image_url' => $image, 'elements' => [['image_url' => $image, 'label' => 'cat']]], $this->loadMockResponse('falai/queue-result-video.json'));
 
     $remembered = Cache::get('spectra:job-model:falai:'.sha1('01a17cef-1744-7083-8396-43b1be6d649c'));
 
+    // Kling 3.0 Pro with audio (the default): $0.168 per second × 5 s.
     expect($remembered['model'])->toBe('fal-ai/kling-video/v3/pro/text-to-video')
         ->and($remembered['request'])->toBe(['prompt' => 'animate this', 'duration' => '5', 'elements' => [['label' => 'cat']]])
         ->and((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(84.0, 1e-6);

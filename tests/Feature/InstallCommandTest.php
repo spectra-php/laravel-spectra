@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 /**
  * spectra:install publishes only migrations the app doesn't have yet, so it is
@@ -37,7 +38,7 @@ it('publishes only the missing migrations when run again', function () {
         ->assertSuccessful();
 
     $names = collect(File::files($this->databasePath.'/migrations'))
-        ->map(fn ($file) => preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', $file->getFilename()))
+        ->map(fn ($file) => Str::replaceMatches('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', $file->getFilename()))
         ->sort()->values()->all();
 
     expect($names)->toBe([

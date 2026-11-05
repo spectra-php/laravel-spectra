@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 use Spectra\Spectra;
 
@@ -32,7 +33,7 @@ it('bills a voxtral transcription per minute of audio', function () {
 it('bills voxtral speech per input character without storing the audio', function () {
     $manager = app(Spectra::class);
 
-    $input = str_repeat('a', 1000);
+    $input = Str::repeat('a', 1000);
 
     $context = $manager->startRequest('mistral', 'voxtral-mini-tts-latest', [
         'endpoint' => '/v1/audio/speech',

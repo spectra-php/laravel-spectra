@@ -8,6 +8,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
@@ -22,7 +23,7 @@ use Workbench\App\Models\User;
  */
 function openAiChunk(array $data): string
 {
-    return 'data: '.json_encode($data)."\n\n";
+    return 'data: '.json_encode($data, JSON_THROW_ON_ERROR)."\n\n";
 }
 
 function openAiStreamBody(): string
@@ -100,8 +101,8 @@ it('records a stream once when the app also wraps it in Spectra::stream()', func
 });
 
 it('tracks newline-delimited JSON streams (Ollama)', function () {
-    $ndjson = json_encode(['model' => 'llama3', 'message' => ['role' => 'assistant', 'content' => 'Hi'], 'done' => false])."\n"
-        .json_encode(['model' => 'llama3', 'message' => ['role' => 'assistant', 'content' => ''], 'done' => true, 'done_reason' => 'stop', 'prompt_eval_count' => 7, 'eval_count' => 3])."\n";
+    $ndjson = json_encode(['model' => 'llama3', 'message' => ['role' => 'assistant', 'content' => 'Hi'], 'done' => false], JSON_THROW_ON_ERROR)."\n"
+        .json_encode(['model' => 'llama3', 'message' => ['role' => 'assistant', 'content' => ''], 'done' => true, 'done_reason' => 'stop', 'prompt_eval_count' => 7, 'eval_count' => 3], JSON_THROW_ON_ERROR)."\n";
 
     fakeOneShotResponse($ndjson, 'application/x-ndjson');
 
@@ -127,7 +128,7 @@ it('records a stream error event as a failure', function () {
 });
 
 it('reads one-pass JSON bodies only as the app reads them', function () {
-    fakeOneShotResponse((string) json_encode($this->loadMockResponse('openai/completion.json')), 'application/json');
+    fakeOneShotResponse(json_encode($this->loadMockResponse('openai/completion.json'), JSON_THROW_ON_ERROR), 'application/json');
 
     $response = Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4.1']);
 
@@ -260,7 +261,7 @@ it('resets global settings between queued jobs', function () {
 it('reads the model from multipart bodies even when the file comes first', function () {
     Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/transcription_duration_usage.json'))]);
 
-    Http::attach('file', str_repeat('A', 300_000), 'audio.mp3')
+    Http::attach('file', Str::repeat('A', 300_000), 'audio.mp3')
         ->post('https://api.openai.com/v1/audio/transcriptions', ['model' => 'whisper-1']);
 
     expect(SpectraRequest::query()->sole()->model)->not->toBe('unknown');
@@ -270,7 +271,7 @@ it('tracks Gemini streamed JSON arrays as streams', function () {
     $body = json_encode([
         ['candidates' => [['content' => ['parts' => [['text' => 'Hel']], 'role' => 'model']]], 'modelVersion' => 'gemini-2.5-flash', 'responseId' => 'g-1'],
         ['candidates' => [['content' => ['parts' => [['text' => 'lo']], 'role' => 'model'], 'finishReason' => 'STOP']], 'usageMetadata' => ['promptTokenCount' => 9, 'candidatesTokenCount' => 2, 'thoughtsTokenCount' => 5, 'totalTokenCount' => 16], 'modelVersion' => 'gemini-2.5-flash', 'responseId' => 'g-1'],
-    ]);
+    ], JSON_THROW_ON_ERROR);
 
     fakeOneShotResponse($body, 'application/json');
 

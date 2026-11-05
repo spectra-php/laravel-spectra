@@ -167,7 +167,7 @@ it('round-trips every built-in model through its JSON form', function () {
 
     foreach ($classes as $class) {
         foreach ((new $class)->models() as $definition) {
-            $json = json_decode(json_encode(ScrapedPricing::definitionToArray($definition)), true);
+            $json = json_decode(json_encode(ScrapedPricing::definitionToArray($definition), JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
             $copy = ScrapedPricing::definitionFromArray($definition->getInternalName(), $json);
 
             expect($copy->toTiersArray())->toEqual($definition->toTiersArray(), "{$class}: {$definition->getInternalName()}")

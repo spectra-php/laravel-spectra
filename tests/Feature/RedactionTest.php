@@ -10,6 +10,7 @@ declare(strict_types=1);
  */
 
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Spectra\Facades\Spectra;
 use Spectra\Jobs\PersistSpectraRequestJob;
 use Spectra\Models\SpectraRequest;
@@ -57,7 +58,7 @@ it('masks the stored request and response but keeps the payload\'s shape and the
 it('uses only the chosen patterns, custom patterns and the callback', function () {
     config()->set('spectra.storage.redaction.patterns', ['email']);
     config()->set('spectra.storage.redaction.custom', ['account' => '/ACC-\d{8}/']);
-    Spectra::redactUsing(fn (string $text) => str_replace('Project Falcon', '[REDACTED:codename]', $text));
+    Spectra::redactUsing(fn (string $text) => Str::replace('Project Falcon', '[REDACTED:codename]', $text));
 
     expect(app(Redactor::class)->redact(['note' => 'ada@example.com ACC-12345678 Project Falcon from 10.0.0.1']))
         ->toBe(['note' => '[REDACTED:email] [REDACTED:account] [REDACTED:codename] from 10.0.0.1']);
