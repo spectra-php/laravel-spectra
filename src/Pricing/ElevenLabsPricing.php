@@ -53,14 +53,14 @@ class ElevenLabsPricing extends ProviderPricing
         $this->textToSpeech('eleven_turbo_v2', 'Eleven Turbo v2', 4000);
 
         // Speech to text: $0.22 per hour of audio.
-        $this->model('scribe_v2', fn ($m) => $m
+        $this->model('scribe_v2', fn ($model) => $model
             ->displayName('Scribe v2')
             ->type('audio')
             ->pricingUnit('minute')
             ->canGenerateText()
             ->tier('standard', pricePerUnit: 22 / 60));
 
-        $this->model('scribe_v2_medical', fn ($m) => $m
+        $this->model('scribe_v2_medical', fn ($model) => $model
             ->displayName('Scribe v2 Medical')
             ->type('audio')
             ->pricingUnit('minute')
@@ -68,7 +68,7 @@ class ElevenLabsPricing extends ProviderPricing
             ->tier('standard', pricePerUnit: 22 / 60));
 
         // Sound effects: $0.12 per minute.
-        $this->model('eleven_text_to_sound_v2', fn ($m) => $m
+        $this->model('eleven_text_to_sound_v2', fn ($model) => $model
             ->displayName('Eleven Sound Effects v2')
             ->type('audio')
             ->pricingUnit('minute')
@@ -77,7 +77,7 @@ class ElevenLabsPricing extends ProviderPricing
 
         // Music: $0.15 per minute.
         foreach (['music_v1' => 'Eleven Music v1', 'music_v2' => 'Eleven Music v2', 'music_v2_5' => 'Eleven Music v2.5'] as $id => $name) {
-            $this->model($id, fn ($m) => $m
+            $this->model($id, fn ($model) => $model
                 ->displayName($name)
                 ->type('audio')
                 ->pricingUnit('minute')
@@ -93,7 +93,7 @@ class ElevenLabsPricing extends ProviderPricing
      */
     protected function textToSpeech(string $id, string $displayName, float $centsPerMillionCharacters): void
     {
-        $this->model($id, fn ($m) => $m
+        $this->model($id, fn ($model) => $model
             ->displayName($displayName)
             ->type('audio')
             ->pricingUnit('characters')

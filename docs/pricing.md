@@ -18,7 +18,7 @@ Pricing is defined by classes that extend `ProviderPricing`. Each class register
 ],
 ```
 
-On first access, `PricingLookup` resolves all pricing classes and builds an in-memory index. No database tables or migrations are involved.
+On first access, Spectra resolves all pricing classes and builds an in-memory index. No database tables or migrations are involved.
 
 All prices are in **cents** of the catalog's currency (US cents unless the class says otherwise, see [Currency](#currency)). Token prices are cents per 1M tokens. Unit prices are cents per unit.
 
@@ -27,6 +27,7 @@ All prices are in **cents** of the catalog's currency (US cents unless the class
 
 The callback passed to `$this->model()` receives a `ModelDefinition` instance with the following methods:
 
+<a name="model-properties"></a>
 ### Model Properties
 
 | Method | Description |
@@ -37,6 +38,7 @@ The callback passed to `$this->model()` receives a `ModelDefinition` instance wi
 | `aliases(string ...)` | Other model ids that bill exactly like this model: `-latest` aliases, dated snapshots, provider-prefixed ids, or old ids that now redirect |
 | `retiredOn(string)` | The date (`Y-m-d`) the provider shut the model down. The model stays in the catalog, so older requests keep their prices. |
 
+<a name="capability-flags"></a>
 ### Capability Flags
 
 | Method | Description |
@@ -62,6 +64,7 @@ The callback passed to `$this->model()` receives a `ModelDefinition` instance wi
 | `page` | Document page (for example, OCR) |
 | `request` | Successful request (a flat price per call) |
 
+<a name="tier-pricing"></a>
 ### Tier Pricing
 
 The `tier()` method defines the prices for one pricing tier. Call it more than once for more tiers:
@@ -412,9 +415,10 @@ SPECTRA_SCRAPED_PRICES_PATH=/path/to/scraped-prices.json
 Because the built-in catalog fills the gaps, the file only needs the models you want to change. Commit the file, so every environment bills the same prices.
 
 ::: info Nothing changes until you opt in
-With `use_scraped_prices` off, Spectra prices requests exactly as before: the file is never read, and tracking never calls Firecrawl. You don't need to publish the config again either. If your `config/spectra.php` was published before these options existed, Spectra adds `use_scraped_prices`, `scraped_prices_path` and `firecrawl` with their defaults, so `SPECTRA_USE_SCRAPED_PRICES` and `FIRECRAWL_API_KEY` work right away. Every class in `costs.pricing` is still used, including two classes for the same provider.
+With `use_scraped_prices` off, Spectra prices requests with the pricing classes only: the file is never read, and tracking never calls Firecrawl. You don't need to publish the config again either. If your published `config/spectra.php` doesn't have these options, Spectra adds `use_scraped_prices`, `scraped_prices_path` and `firecrawl` with their defaults, so `SPECTRA_USE_SCRAPED_PRICES` and `FIRECRAWL_API_KEY` work right away. Every class in `costs.pricing` is still used, including two classes for the same provider.
 :::
 
+<a name="scraped-prices-file-format"></a>
 ### File Format
 
 The file is JSON. Models are keyed by id and use the same fields as the [Model Definition API](#model-definition-api), in `snake_case`. Prices are cents, like the PHP catalog: cents per 1M tokens, or cents per unit.
@@ -500,6 +504,7 @@ Each page costs Firecrawl credits, so the command only scrapes the providers you
 
 If none of these gives a provider with pricing pages (a new app that hasn't tracked anything yet), the command stops without calling Firecrawl. Pass `--all` to scrape every provider.
 
+<a name="firecrawl-how-it-works"></a>
 ### How It Works
 
 1. For each provider, Firecrawl renders the pages from the pricing class's `sources()` method. Its [JSON extraction](https://docs.firecrawl.dev/features/llm-extract) fills a schema with one row per model, tier and long-context threshold, and the same call returns the page text. The schema only offers the tiers and price fields the provider's catalog uses, and the prompt lists the catalog's model ids, so the page's names map to API ids.
@@ -520,6 +525,7 @@ LLM extraction makes mistakes: on real pricing pages it copies prices from the n
 
 The checks favour skipping a real change over saving a wrong one, so a run can miss some changes. Run it again later, or add them to the file by hand. Review the printed changes, and the file diff, before you deploy it. Each change prints the page line it was confirmed on, so you can check that the price sits in the right column and tier without opening the page; the checks above can't tell a batch price from a standard one printed on the same row. New models get a type and capabilities guessed from their pricing unit.
 
+<a name="firecrawl-options"></a>
 ### Options
 
 | Option | Description |
@@ -530,6 +536,7 @@ The checks favour skipping a real change over saving a wrong one, so a run can m
 | `--path=` | Read and write this file instead of `spectra.costs.scraped_prices_path`. |
 | `--dry-run` | Print the changes without writing the file. |
 
+<a name="pricing-pages"></a>
 ### Pricing Pages
 
 Each built-in pricing class lists its pages in `sources()`. They are the pages in the [table below](#keeping-prices-current). OpenRouter has none, because it reports each request's cost itself. To scrape other pages, or a provider of your own, override `sources()`:
@@ -575,6 +582,7 @@ When reviewing, check each provider's official pricing page and update the match
 | Scaleway | https://www.scaleway.com/en/pricing/model-as-a-service/ |
 | ElevenLabs | https://elevenlabs.io/pricing/api |
 
+<a name="drift-check-against-models-dev"></a>
 ### Drift Check Against models.dev
 
 To spot prices that need a review, the repository has a maintainer command (not shipped with the package) that compares the catalog with the community-maintained [models.dev](https://models.dev) catalog:

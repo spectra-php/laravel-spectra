@@ -27,12 +27,12 @@ abstract class ProviderPricing implements Arrayable
     protected bool $resolved = false;
 
     /**
-     * The provider slug (e.g. 'openai', 'anthropic').
+     * Get the provider slug (e.g. 'openai', 'anthropic').
      */
     abstract public function provider(): string;
 
     /**
-     * ISO 4217 code of the currency this catalog's prices are written in.
+     * Get the ISO 4217 code of the currency this catalog's prices are written in.
      *
      * Costs are converted to `spectra.costs.currency` with the rates in
      * `spectra.costs.exchange_rates` when the two differ.
@@ -43,7 +43,7 @@ abstract class ProviderPricing implements Arrayable
     }
 
     /**
-     * The pricing pages `spectra:pricing-scrape` reads for this provider.
+     * Get the pricing pages `spectra:pricing-scrape` reads for this provider.
      *
      * Return an empty array to leave the provider out of scraping.
      *
@@ -128,10 +128,10 @@ abstract class ProviderPricing implements Arrayable
         return [
             'provider' => $this->provider(),
             'currency' => $this->currency(),
-            'models' => collect($this->models())->map(fn (ModelDefinition $def) => [
-                'internal_name' => $def->getInternalName(),
-                'model' => $def->toModelArray(),
-                'tiers' => $def->toTiersArray(),
+            'models' => collect($this->models())->map(fn (ModelDefinition $definition) => [
+                'internal_name' => $definition->getInternalName(),
+                'model' => $definition->toModelArray(),
+                'tiers' => $definition->toTiersArray(),
             ])->all(),
         ];
     }

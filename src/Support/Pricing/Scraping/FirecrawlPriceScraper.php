@@ -6,6 +6,7 @@ namespace Spectra\Support\Pricing\Scraping;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Spectra\Enums\PricingUnit;
 use Spectra\Pricing\ProviderPricing;
@@ -47,7 +48,7 @@ class FirecrawlPriceScraper
     }
 
     /**
-     * The price rows Firecrawl extracted from the page, with the page text.
+     * Scrape the price rows Firecrawl extracts from the page, with the page text.
      *
      * @throws RuntimeException When Firecrawl fails or returns no prices.
      */
@@ -55,18 +56,19 @@ class FirecrawlPriceScraper
     {
         $shape = CatalogShape::of($pricing);
         $pageTimeout = min($this->timeout * 1000, self::MAX_PAGE_TIMEOUT_MS);
+        $baseUrl = rtrim($this->baseUrl, '/');
 
         try {
             $response = Http::withToken($this->apiKey)
                 ->acceptJson()
                 ->timeout(intdiv($pageTimeout, 1000) + 30)
-                ->post(rtrim($this->baseUrl, '/').'/scrape', [
+                ->post("{$baseUrl}/scrape", [
                     'url' => $url,
                     'formats' => [
                         'markdown',
                         [
                             'type' => 'json',
-                            'prompt' => $this->prompt($pricing, $shape),
+                            'prompt' => $this->buildPrompt($pricing, $shape),
                             'schema' => static::schema($shape),
                         ],
                     ],
@@ -78,8 +80,9 @@ class FirecrawlPriceScraper
 
         if ($response->failed() || $response->json('success') !== true) {
             $error = $response->json('error');
+            $reason = is_string($error) ? $error : "HTTP {$response->status()}";
 
-            throw new RuntimeException("Firecrawl couldn't read {$url}: ".(is_string($error) ? $error : "HTTP {$response->status()}"));
+            throw new RuntimeException("Firecrawl couldn't read {$url}: {$reason}");
         }
 
         $models = $response->json('data.json.models');
@@ -91,8 +94,9 @@ class FirecrawlPriceScraper
     }
 
     /**
-     * The JSON schema Firecrawl fills, one entry per model, tier and
+     * Build the JSON schema Firecrawl fills, one entry per model, tier and
      * prompt-size threshold, with the tiers and prices the catalog uses.
+     *
      * Amounts are copied as printed; ScrapedPriceMapper converts them with
      * `priced_per`, because the LLM is unreliable at arithmetic.
      *
@@ -150,7 +154,7 @@ class FirecrawlPriceScraper
     /**
      * Build the extraction prompt, naming the catalog's tiers, currency and known model ids.
      */
-    protected function prompt(ProviderPricing $pricing, CatalogShape $shape): string
+    protected function buildPrompt(ProviderPricing $pricing, CatalogShape $shape): string
     {
         $known = [];
         foreach ($pricing->models() as $definition) {
@@ -175,13 +179,14 @@ class FirecrawlPriceScraper
             'hd' => '"hd" for HD quality media',
         ], $shape->tierLabels());
 
-        $currency = strtoupper($pricing->currency());
+        $currency = Str::upper($pricing->currency());
+        $tierList = implode(', ', $tiers);
 
         $lines = [
             'Extract the API price of every AI model listed on this page: every row of every pricing table.',
             "Copy every amount exactly as printed on the page, in {$currency}. Do not convert, multiply or divide it.",
             'Set priced_per to the quantity the printed prices are for: 1000000 when the page prices per 1M tokens, 1000 when per 1K tokens or characters, 1 when per image, minute, second or request.',
-            'Make one entry per model and tier, using the tier the page labels the prices with. Tiers: '.implode(', ', $tiers).'. Skip prices for any other tier.',
+            "Make one entry per model and tier, using the tier the page labels the prices with. Tiers: {$tierList}. Skip prices for any other tier.",
             'When a table has separate rows per modality (Text, Audio, Image), input/output/cached input are the Text row; put the Audio row in audio_input/audio_output and the Image row in image_input/image_output.',
             'When a price applies only to long prompts (for example "> 200K tokens"), add a separate entry with above_input_tokens set to the threshold (200000).',
             'Models billed per image, megapixel, minute, second, video, search, page, request or character: put the printed price in price_per_unit and set unit. Token models: unit is "tokens".',
@@ -190,7 +195,8 @@ class FirecrawlPriceScraper
         ];
 
         if ($known !== []) {
-            $lines[] = 'When the page lists one of these models, use exactly this id: '.implode(', ', $known).'.';
+            $knownList = implode(', ', $known);
+            $lines[] = "When the page lists one of these models, use exactly this id: {$knownList}.";
         }
 
         return implode("\n", $lines);

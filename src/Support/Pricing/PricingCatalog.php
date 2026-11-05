@@ -17,10 +17,10 @@ use Spectra\Pricing\ProviderPricing;
 class PricingCatalog
 {
     /**
-     * Every catalog in `spectra.costs.pricing`, in config order. Two entries
-     * may share a provider slug (a second class for extra models); both are
-     * kept, as they always were. An entry set to `false` turns that built-in
-     * catalog off.
+     * Get every catalog in `spectra.costs.pricing`, in config order.
+     *
+     * Two entries may share a provider slug (a second class for extra models);
+     * both are kept. An entry set to `false` turns that built-in catalog off.
      *
      * @return list<ProviderPricing>
      */
@@ -33,8 +33,10 @@ class PricingCatalog
     }
 
     /**
-     * The configured catalogs keyed by provider slug. When two share a slug,
-     * the later one wins, as it does for the currency in PricingLookup.
+     * Get the configured catalogs keyed by provider slug.
+     *
+     * When two share a slug, the later one wins, as it does for the currency
+     * in PricingLookup.
      *
      * @return array<string, ProviderPricing>
      */
@@ -50,8 +52,8 @@ class PricingCatalog
     }
 
     /**
-     * The catalogs to price requests with, in the order PricingLookup reads
-     * them: later catalogs win for a model id they share.
+     * Get the catalogs to price requests with, in the order PricingLookup
+     * reads them: later catalogs win for a model id they share.
      *
      * @return list<ProviderPricing>
      */

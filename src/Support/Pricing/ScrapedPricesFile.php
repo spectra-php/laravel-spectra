@@ -6,6 +6,7 @@ namespace Spectra\Support\Pricing;
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use JsonException;
 use RuntimeException;
 use Spectra\Pricing\ProviderPricing;
@@ -60,7 +61,7 @@ class ScrapedPricesFile
     }
 
     /**
-     * The decoded file, or an empty catalog when it doesn't exist yet.
+     * Get the decoded file, or an empty catalog when it doesn't exist yet.
      *
      * @return array<string, mixed>
      *
@@ -97,7 +98,7 @@ class ScrapedPricesFile
     }
 
     /**
-     * One catalog per provider in the file.
+     * Get one catalog per provider in the file.
      *
      * A provider whose currency differs from its built-in catalog is skipped:
      * its models would be converted with the wrong exchange rate. Problems are
@@ -133,8 +134,8 @@ class ScrapedPricesFile
                 continue;
             }
 
-            $builtInCurrency = isset($builtIn[$provider]) ? strtoupper($builtIn[$provider]->currency()) : null;
-            $currency = strtoupper((string) ($section['currency'] ?? $builtInCurrency ?? 'USD'));
+            $builtInCurrency = isset($builtIn[$provider]) ? Str::upper($builtIn[$provider]->currency()) : null;
+            $currency = Str::upper((string) ($section['currency'] ?? $builtInCurrency ?? 'USD'));
 
             if ($builtInCurrency !== null && $currency !== $builtInCurrency) {
                 Log::warning("Spectra: the scraped prices file lists {$provider} prices in {$currency}, but its built-in catalog is in {$builtInCurrency}; using the built-in prices.");

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Pricing\Scraping;
 
+use Illuminate\Support\Str;
+
 /**
  * One provider's pricing pages read by Firecrawl and compared with its
  * built-in catalog.
@@ -32,7 +34,7 @@ final class ProviderScrape
     public function fileSection(array $models): array
     {
         return [
-            'currency' => strtoupper($this->currency),
+            'currency' => Str::upper($this->currency),
             'scraped_at' => now()->toIso8601String(),
             'sources' => $this->sources,
             'models' => $models,

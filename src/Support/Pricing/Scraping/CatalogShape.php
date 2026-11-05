@@ -51,6 +51,8 @@ final class CatalogShape
     ) {}
 
     /**
+     * Create the shape of the tiers and price fields a catalog uses.
+     *
      * A catalog without models (a provider of your own) allows everything.
      */
     public static function of(ProviderPricing $pricing): self
@@ -81,7 +83,7 @@ final class CatalogShape
     }
 
     /**
-     * The catalog tier a page's tier label stands for, or null when the
+     * Get the catalog tier a page's tier label stands for, or null when the
      * catalog has neither the tier nor a synonym of it.
      */
     public function resolveTier(string $tier): ?string
@@ -96,7 +98,7 @@ final class CatalogShape
     }
 
     /**
-     * Tier labels the extraction may use: the catalog's tiers and their synonyms.
+     * Get the tier labels the extraction may use: the catalog's tiers and their synonyms.
      *
      * @return list<string>
      */

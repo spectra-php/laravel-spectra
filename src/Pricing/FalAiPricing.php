@@ -40,9 +40,10 @@ class FalAiPricing extends ProviderPricing
     ];
 
     /**
-     * How much a video request costs relative to the model's catalog price,
-     * from its `resolution` and `generate_audio`; null for other models or
-     * a default request.
+     * Get the cost of a video request relative to the model's catalog price.
+     *
+     * The multiplier comes from the request's `resolution` and
+     * `generate_audio`; it is null for other models or a default request.
      *
      * @param  array<string, mixed>  $requestData
      */
@@ -93,21 +94,21 @@ class FalAiPricing extends ProviderPricing
      */
     protected function define(): void
     {
-        $this->model('fal-ai/flux/dev', fn ($m) => $m
+        $this->model('fal-ai/flux/dev', fn ($model) => $model
             ->displayName('FLUX.1 Dev')
             ->type('image')
             ->pricingUnit('megapixel')
             ->canGenerateImages()
             ->tier('standard', pricePerUnit: 2.5));
 
-        $this->model('fal-ai/flux/schnell', fn ($m) => $m
+        $this->model('fal-ai/flux/schnell', fn ($model) => $model
             ->displayName('FLUX.1 Schnell')
             ->type('image')
             ->pricingUnit('megapixel')
             ->canGenerateImages()
             ->tier('standard', pricePerUnit: 0.3));
 
-        $this->model('fal-ai/flux-pro/v1.1', fn ($m) => $m
+        $this->model('fal-ai/flux-pro/v1.1', fn ($model) => $model
             ->displayName('FLUX 1.1 Pro')
             ->type('image')
             ->pricingUnit('megapixel')
@@ -115,21 +116,21 @@ class FalAiPricing extends ProviderPricing
             ->tier('standard', pricePerUnit: 4));
 
         // Billed per image (`billing_unit: images`), whatever its size.
-        $this->model('fal-ai/flux-pro/v1.1-ultra', fn ($m) => $m
+        $this->model('fal-ai/flux-pro/v1.1-ultra', fn ($model) => $model
             ->displayName('FLUX Pro v1.1 Ultra')
             ->type('image')
             ->pricingUnit('image')
             ->canGenerateImages()
             ->tier('standard', pricePerUnit: 6));
 
-        $this->model('fal-ai/flux-pro/kontext', fn ($m) => $m
+        $this->model('fal-ai/flux-pro/kontext', fn ($model) => $model
             ->displayName('FLUX Pro Kontext')
             ->type('image')
             ->pricingUnit('image')
             ->canGenerateImages()
             ->tier('standard', pricePerUnit: 4));
 
-        $this->model('fal-ai/flux-pro/kontext/max', fn ($m) => $m
+        $this->model('fal-ai/flux-pro/kontext/max', fn ($model) => $model
             ->displayName('FLUX Pro Kontext Max')
             ->type('image')
             ->pricingUnit('image')
@@ -137,7 +138,7 @@ class FalAiPricing extends ProviderPricing
             ->tier('standard', pricePerUnit: 8));
 
         // The model page no longer shows a price; left unchanged.
-        $this->model('fal-ai/imagen4/preview', fn ($m) => $m
+        $this->model('fal-ai/imagen4/preview', fn ($model) => $model
             ->displayName('Imagen 4 Preview')
             ->type('image')
             ->pricingUnit('image')
@@ -146,14 +147,14 @@ class FalAiPricing extends ProviderPricing
 
         // Vector styles cost $0.08; FalAi::extractCostMultiplier() doubles
         // the price when the request asks for one.
-        $this->model('fal-ai/recraft/v3/text-to-image', fn ($m) => $m
+        $this->model('fal-ai/recraft/v3/text-to-image', fn ($model) => $model
             ->displayName('Recraft V3 Text-to-Image')
             ->type('image')
             ->pricingUnit('image')
             ->canGenerateImages()
             ->tier('standard', pricePerUnit: 4));
 
-        $this->model('fal-ai/nano-banana', fn ($m) => $m
+        $this->model('fal-ai/nano-banana', fn ($model) => $model
             ->displayName('Nano Banana')
             ->aliases('fal-ai/nano-banana/edit')
             ->type('image')
@@ -161,7 +162,7 @@ class FalAiPricing extends ProviderPricing
             ->canGenerateImages()
             ->tier('standard', pricePerUnit: 3.98));
 
-        $this->model('fal-ai/nano-banana-2', fn ($m) => $m
+        $this->model('fal-ai/nano-banana-2', fn ($model) => $model
             ->displayName('Nano Banana 2')
             ->aliases('fal-ai/nano-banana-2/edit')
             ->type('image')
@@ -169,7 +170,7 @@ class FalAiPricing extends ProviderPricing
             ->canGenerateImages()
             ->tier('standard', pricePerUnit: 8));
 
-        $this->model('fal-ai/nano-banana-pro', fn ($m) => $m
+        $this->model('fal-ai/nano-banana-pro', fn ($model) => $model
             ->displayName('Nano Banana Pro')
             ->aliases('fal-ai/nano-banana-pro/edit')
             ->type('image')
@@ -177,42 +178,42 @@ class FalAiPricing extends ProviderPricing
             ->canGenerateImages()
             ->tier('standard', pricePerUnit: 15));
 
-        $this->model('fal-ai/kling-video/v3/pro/text-to-video', fn ($m) => $m
+        $this->model('fal-ai/kling-video/v3/pro/text-to-video', fn ($model) => $model
             ->displayName('Kling 3.0 Pro Text-to-Video')
             ->type('video')
             ->pricingUnit('second')
             ->canGenerateVideo()
             ->tier('standard', pricePerUnit: self::defaultVideoPrice('fal-ai/kling-video/v3/pro/text-to-video')));
 
-        $this->model('fal-ai/kling-video/v3/pro/image-to-video', fn ($m) => $m
+        $this->model('fal-ai/kling-video/v3/pro/image-to-video', fn ($model) => $model
             ->displayName('Kling 3.0 Pro Image-to-Video')
             ->type('video')
             ->pricingUnit('second')
             ->canGenerateVideo()
             ->tier('standard', pricePerUnit: self::defaultVideoPrice('fal-ai/kling-video/v3/pro/image-to-video')));
 
-        $this->model('fal-ai/veo3.1', fn ($m) => $m
+        $this->model('fal-ai/veo3.1', fn ($model) => $model
             ->displayName('Veo 3.1')
             ->type('video')
             ->pricingUnit('second')
             ->canGenerateVideo()
             ->tier('standard', pricePerUnit: self::defaultVideoPrice('fal-ai/veo3.1')));
 
-        $this->model('fal-ai/veo3.1/fast', fn ($m) => $m
+        $this->model('fal-ai/veo3.1/fast', fn ($model) => $model
             ->displayName('Veo 3.1 Fast')
             ->type('video')
             ->pricingUnit('second')
             ->canGenerateVideo()
             ->tier('standard', pricePerUnit: self::defaultVideoPrice('fal-ai/veo3.1/fast')));
 
-        $this->model('fal-ai/veo3.1/lite', fn ($m) => $m
+        $this->model('fal-ai/veo3.1/lite', fn ($model) => $model
             ->displayName('Veo 3.1 Lite')
             ->type('video')
             ->pricingUnit('second')
             ->canGenerateVideo()
             ->tier('standard', pricePerUnit: self::defaultVideoPrice('fal-ai/veo3.1/lite')));
 
-        $this->model('fal-ai/wan/v2.2-a14b/text-to-video', fn ($m) => $m
+        $this->model('fal-ai/wan/v2.2-a14b/text-to-video', fn ($model) => $model
             ->displayName('Wan 2.2 A14B Text-to-Video')
             ->type('video')
             ->pricingUnit('second')

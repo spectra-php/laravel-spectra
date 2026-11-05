@@ -6,6 +6,7 @@ namespace Spectra\Support\Pricing;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
 use Spectra\Enums\PricingUnit;
@@ -118,7 +119,7 @@ class CostCalculator
     }
 
     /**
-     * Price row for a model, converted to the reporting currency.
+     * Get the price row for a model, converted to the reporting currency.
      *
      * @return Price|null
      */
@@ -202,7 +203,7 @@ class CostCalculator
     }
 
     /**
-     * Cost for minute-billed models (e.g. Whisper), from a duration in seconds.
+     * Calculate the cost for minute-billed models (e.g. Whisper) from a duration in seconds.
      *
      * @return array{total_cost_in_cents: float}
      */
@@ -232,6 +233,8 @@ class CostCalculator
     }
 
     /**
+     * Calculate the cost for character-billed models from the number of characters.
+     *
      * price_per_unit for character-based models is cents per 1M characters,
      * matching the cents-per-1M-tokens convention used everywhere else.
      *
@@ -293,7 +296,7 @@ class CostCalculator
     }
 
     /**
-     * Cost for search-billed models (e.g. Cohere Rerank, priced per search).
+     * Calculate the cost for search-billed models (e.g. Cohere Rerank, priced per search).
      *
      * @return array{total_cost_in_cents: float}
      */
@@ -308,7 +311,7 @@ class CostCalculator
     }
 
     /**
-     * Cost for page-billed models (e.g. OCR).
+     * Calculate the cost for page-billed models (e.g. OCR).
      *
      * @return array{total_cost_in_cents: float}
      */
@@ -323,7 +326,7 @@ class CostCalculator
     }
 
     /**
-     * Cost for models billed a flat price per request (e.g. per song).
+     * Calculate the cost for models billed a flat price per request (e.g. per song).
      *
      * @return array{total_cost_in_cents: float}
      */
@@ -355,15 +358,15 @@ class CostCalculator
     }
 
     /**
-     * How many units of the reporting currency one unit of $currency is worth.
+     * Get how many units of the reporting currency one unit of $currency is worth.
      *
      * Rates come from `spectra.costs.exchange_rates` (e.g. ['EUR' => 1.17] when
      * reporting in USD). A missing rate counts as 1.0 and is logged once.
      */
     public function currencyFactor(string $currency): float
     {
-        $currency = strtoupper($currency);
-        $target = strtoupper((string) config('spectra.costs.currency', 'USD'));
+        $currency = Str::upper($currency);
+        $target = Str::upper((string) config('spectra.costs.currency', 'USD'));
 
         if ($currency === $target) {
             return 1.0;

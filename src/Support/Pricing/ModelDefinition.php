@@ -99,7 +99,7 @@ class ModelDefinition
     }
 
     /**
-     * Other model ids that bill exactly like this one (`-latest` aliases,
+     * Add other model ids that bill exactly like this one (`-latest` aliases,
      * dated snapshots, provider-prefixed ids, retired ids that now redirect).
      */
     public function aliases(string ...$aliases): static

@@ -42,10 +42,12 @@ class XAiPricing extends ProviderPricing
     }
 
     /**
-     * Server-side tool fees in cents (web search, code execution and file
-     * attachments: $5 / 1K calls; collections search: $2.50 / 1K calls;
-     * X Search: $5 / 1K posts and $10 / 1K profiles fetched). MCP, image
-     * understanding and image generation are billed by tokens or Imagine rates.
+     * Get the server-side tool fees, in cents.
+     *
+     * Web search, code execution and file attachments: $5 / 1K calls;
+     * collections search: $2.50 / 1K calls; X Search: $5 / 1K posts and
+     * $10 / 1K profiles fetched. MCP, image understanding and image
+     * generation are billed by tokens or Imagine rates.
      *
      * @return array<string, float>
      */
@@ -66,7 +68,7 @@ class XAiPricing extends ProviderPricing
      */
     protected function define(): void
     {
-        $this->model('grok-4.7', fn ($m) => $m
+        $this->model('grok-4.7', fn ($model) => $model
             ->displayName('Grok 4.7')
             ->canGenerateText()
             ->tier('standard', inputPrice: 200, outputPrice: 600, cachedInputPrice: 50)
@@ -74,7 +76,7 @@ class XAiPricing extends ProviderPricing
             ->tier('priority', inputPrice: 400, outputPrice: 1200, cachedInputPrice: 100)
             ->tier('priority', inputPrice: 800, outputPrice: 2400, cachedInputPrice: 200, aboveInputTokens: 199_999));
 
-        $this->model('grok-4.6', fn ($m) => $m
+        $this->model('grok-4.6', fn ($model) => $model
             ->displayName('Grok 4.6')
             ->canGenerateText()
             ->tier('standard', inputPrice: 200, outputPrice: 600, cachedInputPrice: 50)
@@ -82,7 +84,7 @@ class XAiPricing extends ProviderPricing
             ->tier('priority', inputPrice: 400, outputPrice: 1200, cachedInputPrice: 100)
             ->tier('priority', inputPrice: 800, outputPrice: 2400, cachedInputPrice: 200, aboveInputTokens: 199_999));
 
-        $this->model('grok-4.5', fn ($m) => $m
+        $this->model('grok-4.5', fn ($model) => $model
             ->displayName('Grok 4.5')
             ->aliases('grok-4.5-latest', 'grok-build-latest')
             ->canGenerateText()
@@ -91,12 +93,12 @@ class XAiPricing extends ProviderPricing
             ->tier('priority', inputPrice: 400, outputPrice: 1200, cachedInputPrice: 60)
             ->tier('priority', inputPrice: 800, outputPrice: 2400, cachedInputPrice: 120, aboveInputTokens: 199_999));
 
-        $this->model('grok-4.3', fn ($m) => $this->grok43Rates($m
+        $this->model('grok-4.3', fn ($model) => $this->grok43Rates($model
             ->displayName('Grok 4.3')
             ->aliases('grok-4.3-latest')
             ->canGenerateText()));
 
-        $this->model('grok-4.20-multi-agent-0309', fn ($m) => $this->grok43Rates($m
+        $this->model('grok-4.20-multi-agent-0309', fn ($model) => $this->grok43Rates($model
             ->displayName('Grok 4.20 Multi-Agent')
             ->aliases(
                 'grok-4.20-multi-agent',
@@ -108,7 +110,7 @@ class XAiPricing extends ProviderPricing
             )
             ->canGenerateText()));
 
-        $this->model('grok-4.20-0309-reasoning', fn ($m) => $this->grok43Rates($m
+        $this->model('grok-4.20-0309-reasoning', fn ($model) => $this->grok43Rates($model
             ->displayName('Grok 4.20 Reasoning')
             ->aliases(
                 'grok-4.20',
@@ -129,7 +131,7 @@ class XAiPricing extends ProviderPricing
             )
             ->canGenerateText()));
 
-        $this->model('grok-4.20-0309-non-reasoning', fn ($m) => $this->grok43Rates($m
+        $this->model('grok-4.20-0309-non-reasoning', fn ($model) => $this->grok43Rates($model
             ->displayName('Grok 4.20 Non-Reasoning')
             ->aliases(
                 'grok-4.20-non-reasoning',
@@ -143,7 +145,7 @@ class XAiPricing extends ProviderPricing
             )
             ->canGenerateText()));
 
-        $this->model('grok-build-0.1', fn ($m) => $m
+        $this->model('grok-build-0.1', fn ($model) => $model
             ->displayName('Grok Build 0.1')
             ->canGenerateText()
             ->tier('standard', inputPrice: 100, outputPrice: 200, cachedInputPrice: 20)
@@ -151,7 +153,7 @@ class XAiPricing extends ProviderPricing
 
         // Retired 2026-05-15 and redirected to grok-build-0.1. Kept as its own
         // entry (with its snapshot ids) so its dashboard name stays the same.
-        $this->model('grok-code-fast-1', fn ($m) => $m
+        $this->model('grok-code-fast-1', fn ($model) => $model
             ->displayName('Grok Code Fast 1')
             ->aliases('grok-code-fast', 'grok-code-fast-1-0825')
             ->retiredOn('2026-05-15')
@@ -171,7 +173,7 @@ class XAiPricing extends ProviderPricing
         ];
 
         foreach ($retiredToGrok43 as $id => [$name, $input, $output]) {
-            $this->model($id, fn ($m) => $m
+            $this->model($id, fn ($model) => $model
                 ->displayName($name)
                 ->retiredOn('2026-05-15')
                 ->canGenerateText()
@@ -180,19 +182,19 @@ class XAiPricing extends ProviderPricing
         }
 
         // No longer listed by xAI; no retirement date was published.
-        $this->model('grok-3-mini', fn ($m) => $m
+        $this->model('grok-3-mini', fn ($model) => $model
             ->displayName('Grok 3 Mini')
             ->canGenerateText()
             ->tier('standard', inputPrice: 30, outputPrice: 50));
 
-        $this->model('grok-2-vision-1212', fn ($m) => $m
+        $this->model('grok-2-vision-1212', fn ($model) => $model
             ->displayName('Grok 2 Vision 1212')
             ->canGenerateText()
             ->tier('standard', inputPrice: 200, outputPrice: 1000));
 
         // Images: per image. `hd` is the 2K price (for grok-imagine-image-2.0,
         // 2K at medium quality). The response cost covers 1.5K and low quality.
-        $this->model('grok-imagine-image-2.0', fn ($m) => $m
+        $this->model('grok-imagine-image-2.0', fn ($model) => $model
             ->displayName('Grok Imagine Image 2.0')
             ->type('image')
             ->pricingUnit('image')
@@ -201,7 +203,7 @@ class XAiPricing extends ProviderPricing
             ->tier('hd', pricePerUnit: 8));
 
         // xAI retires grok-imagine-image-quality on 2026-11-02.
-        $this->model('grok-imagine-image-quality', fn ($m) => $m
+        $this->model('grok-imagine-image-quality', fn ($model) => $model
             ->displayName('Grok Imagine Image Quality')
             ->aliases('grok-imagine-image-quality-latest')
             ->type('image')
@@ -211,7 +213,7 @@ class XAiPricing extends ProviderPricing
             ->tier('hd', pricePerUnit: 7));
 
         // Retired 2026-05-15 and redirected to grok-imagine-image-quality.
-        $this->model('grok-imagine-image-pro', fn ($m) => $m
+        $this->model('grok-imagine-image-pro', fn ($model) => $model
             ->displayName('Grok Imagine Image Pro')
             ->retiredOn('2026-05-15')
             ->type('image')
@@ -221,7 +223,7 @@ class XAiPricing extends ProviderPricing
             ->tier('standard', pricePerUnit: 5, since: '2026-05-15')
             ->tier('hd', pricePerUnit: 7, since: '2026-05-15'));
 
-        $this->model('grok-imagine-image', fn ($m) => $m
+        $this->model('grok-imagine-image', fn ($model) => $model
             ->displayName('Grok Imagine Image')
             ->type('image')
             ->pricingUnit('image')
@@ -229,7 +231,7 @@ class XAiPricing extends ProviderPricing
             ->tier('standard', pricePerUnit: 2));
 
         // No longer listed by xAI; no retirement date was published.
-        $this->model('grok-2-image-1212', fn ($m) => $m
+        $this->model('grok-2-image-1212', fn ($model) => $model
             ->displayName('Grok 2 Image 1212')
             ->type('image')
             ->pricingUnit('image')
@@ -239,7 +241,7 @@ class XAiPricing extends ProviderPricing
         // Video: per second of output. Standard is 480p, `hd` is 720p; the
         // 1080p rate (grok-imagine-video-1.5: $0.25/s, -lite: $0.14/s) and
         // input images / videos are covered by the reported response cost.
-        $this->model('grok-imagine-video-1.5', fn ($m) => $m
+        $this->model('grok-imagine-video-1.5', fn ($model) => $model
             ->displayName('Grok Imagine Video 1.5')
             ->aliases('grok-imagine-video-1.5-preview')
             ->type('video')
@@ -248,7 +250,7 @@ class XAiPricing extends ProviderPricing
             ->tier('standard', pricePerUnit: 8)
             ->tier('hd', pricePerUnit: 14));
 
-        $this->model('grok-imagine-video-1.5-lite', fn ($m) => $m
+        $this->model('grok-imagine-video-1.5-lite', fn ($model) => $model
             ->displayName('Grok Imagine Video 1.5 Lite')
             ->type('video')
             ->pricingUnit('second')
@@ -256,7 +258,7 @@ class XAiPricing extends ProviderPricing
             ->tier('standard', pricePerUnit: 2)
             ->tier('hd', pricePerUnit: 3));
 
-        $this->model('grok-imagine-video', fn ($m) => $m
+        $this->model('grok-imagine-video', fn ($model) => $model
             ->displayName('Grok Imagine Video')
             ->type('video')
             ->pricingUnit('second')
@@ -266,21 +268,21 @@ class XAiPricing extends ProviderPricing
 
         // Voice: TTS $15 / 1M characters; speech to text $0.10 / hour (REST);
         // speech to speech $0.08 / minute.
-        $this->model('grok-tts', fn ($m) => $m
+        $this->model('grok-tts', fn ($model) => $model
             ->displayName('Grok TTS')
             ->type('audio')
             ->pricingUnit('characters')
             ->canGenerateAudio()
             ->tier('standard', pricePerUnit: 1500));
 
-        $this->model('grok-voice-transcribe-2.0', fn ($m) => $m
+        $this->model('grok-voice-transcribe-2.0', fn ($model) => $model
             ->displayName('Grok Voice Transcribe 2.0')
             ->type('audio')
             ->pricingUnit('minute')
             ->canGenerateText()
             ->tier('standard', pricePerUnit: 10 / 60));
 
-        $this->model('grok-voice-3.0', fn ($m) => $m
+        $this->model('grok-voice-3.0', fn ($model) => $model
             ->displayName('Grok Voice 3.0')
             ->type('audio')
             ->pricingUnit('minute')
@@ -289,7 +291,7 @@ class XAiPricing extends ProviderPricing
             ->tier('standard', pricePerUnit: 8));
 
         // Deprecated by xAI in favour of grok-voice-3.0 (same price).
-        $this->model('grok-voice-2.0', fn ($m) => $m
+        $this->model('grok-voice-2.0', fn ($model) => $model
             ->displayName('Grok Voice 2.0')
             ->type('audio')
             ->pricingUnit('minute')
@@ -299,8 +301,9 @@ class XAiPricing extends ProviderPricing
     }
 
     /**
-     * Rates shared by grok-4.3 and the grok-4.20 family (the only models with
-     * a batch discount).
+     * Add the rates shared by grok-4.3 and the grok-4.20 family to a model.
+     *
+     * They are the only xAI models with a batch discount.
      */
     protected function grok43Rates(ModelDefinition $model): ModelDefinition
     {

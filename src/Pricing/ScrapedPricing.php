@@ -152,7 +152,7 @@ class ScrapedPricing extends ProviderPricing
     }
 
     /**
-     * The JSON form of a model definition, without empty fields.
+     * Get the JSON form of a model definition, without empty fields.
      *
      * @return array<string, mixed>
      */

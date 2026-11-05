@@ -7,6 +7,7 @@ namespace Spectra\Support\Pricing;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Spectra\Enums\PricingTier;
 use Spectra\Pricing\ProviderPricing;
 
@@ -131,7 +132,7 @@ class PricingLookup
     }
 
     /**
-     * Whether the model is in the catalog at all (by id, alias or snapshot).
+     * Determine if the model is in the catalog at all (by id, alias or snapshot).
      */
     public function knows(string $provider, string $model): bool
     {
@@ -139,13 +140,13 @@ class PricingLookup
     }
 
     /**
-     * The catalog id a model resolves to (e.g. an alias resolves to its model).
+     * Get the catalog id a model resolves to (e.g. an alias resolves to its model).
      */
     public function canonicalModel(string $provider, string $model): ?string
     {
         $key = $this->resolveKey($provider, $model);
 
-        return $key !== null ? explode('|', $key, 2)[1] : null;
+        return $key !== null ? Str::after($key, '|') : null;
     }
 
     /**
@@ -179,7 +180,7 @@ class PricingLookup
     }
 
     /**
-     * The date the provider shut the model down, if it has.
+     * Get the date the provider shut the model down, if it has.
      */
     public function getRetiredOn(string $provider, string $model): ?string
     {
@@ -223,9 +224,10 @@ class PricingLookup
     }
 
     /**
-     * The currency a provider's catalog is written in (ISO 4217). When two
-     * catalogs share the slug, this is the later one's; price a model with
-     * modelCurrency() instead.
+     * Get the currency a provider's catalog is written in (ISO 4217).
+     *
+     * When two catalogs share the slug, this is the later one's; price a model
+     * with modelCurrency() instead.
      */
     public function currency(string $provider): string
     {
@@ -235,7 +237,7 @@ class PricingLookup
     }
 
     /**
-     * The currency of the catalog that defines a model (ISO 4217), falling
+     * Get the currency of the catalog that defines a model (ISO 4217), falling
      * back to the provider's currency for a model no catalog knows.
      */
     public function modelCurrency(string $provider, string $model): string
@@ -246,7 +248,7 @@ class PricingLookup
     }
 
     /**
-     * The currency of the provider's tool call prices (ISO 4217).
+     * Get the currency of the provider's tool call prices (ISO 4217).
      */
     public function toolCallCurrency(string $provider): string
     {
@@ -256,8 +258,8 @@ class PricingLookup
     }
 
     /**
-     * The tier a provider's requests bill at when neither the request nor the
-     * response names one (`spectra.costs.provider_settings.{provider}.default_tier`).
+     * Get the tier a provider's requests bill at when neither the request nor
+     * the response names one (`spectra.costs.provider_settings.{provider}.default_tier`).
      *
      * A value that isn't a PricingTier (a typo in SPECTRA_OPENAI_PRICING_TIER)
      * bills at standard, so cost and the stored tier agree; it is logged once.
@@ -311,7 +313,7 @@ class PricingLookup
      */
     public function canGenerateText(): array
     {
-        return $this->modelsWithCapability('can_generate_text');
+        return $this->getModelsWithCapability('can_generate_text');
     }
 
     /**
@@ -321,7 +323,7 @@ class PricingLookup
      */
     public function canGenerateImages(): array
     {
-        return $this->modelsWithCapability('can_generate_images');
+        return $this->getModelsWithCapability('can_generate_images');
     }
 
     /**
@@ -331,7 +333,7 @@ class PricingLookup
      */
     public function canGenerateVideo(): array
     {
-        return $this->modelsWithCapability('can_generate_video');
+        return $this->getModelsWithCapability('can_generate_video');
     }
 
     /**
@@ -341,7 +343,7 @@ class PricingLookup
      */
     public function canGenerateAudio(): array
     {
-        return $this->modelsWithCapability('can_generate_audio');
+        return $this->getModelsWithCapability('can_generate_audio');
     }
 
     /**
@@ -349,15 +351,14 @@ class PricingLookup
      *
      * @return string[]
      */
-    protected function modelsWithCapability(string $field): array
+    protected function getModelsWithCapability(string $field): array
     {
         $this->resolve();
 
         $result = [];
         foreach ($this->models as $key => $data) {
             if ($data[$field]) {
-                // Key is "provider|model", we want just the model part
-                $result[] = explode('|', $key, 2)[1];
+                $result[] = Str::after($key, '|');
             }
         }
 
@@ -397,7 +398,7 @@ class PricingLookup
 
         foreach ($this->pricingClasses as $pricing) {
             $provider = $pricing->provider();
-            $currency = strtoupper($pricing->currency());
+            $currency = Str::upper($pricing->currency());
             $this->currencies[$provider] = $currency;
 
             $toolPricing = $pricing->toolCallPricing();
@@ -497,7 +498,7 @@ class PricingLookup
     {
         $this->resolve();
 
-        foreach ($this->candidateIds($model) as $candidate) {
+        foreach ($this->getCandidateIds($model) as $candidate) {
             $key = $this->buildKey($provider, $candidate);
 
             if (isset($this->models[$key])) {
@@ -517,18 +518,18 @@ class PricingLookup
      *
      * @return list<string>
      */
-    protected function candidateIds(string $model): array
+    protected function getCandidateIds(string $model): array
     {
         $candidates = [$model];
 
         foreach (self::ROUTING_SUFFIXES as $suffix) {
-            if (str_ends_with($model, $suffix)) {
-                $candidates[] = substr($model, 0, -strlen($suffix));
+            if (Str::endsWith($model, $suffix)) {
+                $candidates[] = Str::replaceEnd($suffix, '', $model);
             }
         }
 
         foreach ($candidates as $candidate) {
-            $base = preg_replace('/-(\d{8}|\d{4}-\d{2}-\d{2})$/', '', $candidate);
+            $base = Str::replaceMatches('/-(\d{8}|\d{4}-\d{2}-\d{2})$/', '', $candidate);
 
             if (is_string($base) && $base !== $candidate) {
                 $candidates[] = $base;
