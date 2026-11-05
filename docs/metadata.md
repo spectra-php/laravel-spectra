@@ -18,7 +18,7 @@ Use metadata for request context such as:
 | Simple grouping/filtering labels | Best fit | Possible, but overkill |
 | Structured context (key-value data) | No | Best fit |
 | Multiple fields on a single request | Limited | Yes |
-| High-cardinality diagnostic fields | Not ideal | Yes |
+| Fields with many distinct values, such as ids | Not ideal | Yes |
 
 Use both together when needed: tags for quick filtering and metadata for detailed context.
 

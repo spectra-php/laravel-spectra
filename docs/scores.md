@@ -1,15 +1,35 @@
 # Scores
 
-Scores tell you how good your AI answers are, not just what they cost. A score is a quality signal attached to an AI call, a [trace](/usage#traces) or a [conversation](/usage#conversation-tracking): a user's thumbs up, a 1-5 rating, a model's judgement of an answer, or a reviewer's label.
+Spectra records what every AI call cost and how long it took. It can't tell on its own whether the answer was any good. A score is that missing piece: a grade attached to an answer, so the dashboard shows quality next to cost.
 
-The dashboard shows each call's, trace's and conversation's scores, and the Overview sums every score name for the period: the share of yes, the average, or the most common labels.
+<a name="what-is-a-score"></a>
+## What Is a Score?
+
+A score is a named value attached to one AI call, to a [trace](/usage#traces) (all the calls made for one user action) or to a [conversation](/usage#conversation-tracking). The name says what it measures. The value is one of three kinds:
+
+| Kind | For example | Value |
+| --- | --- | --- |
+| Yes or no | A thumbs up or down | `true` or `false` |
+| A number | A 1-5 star rating, an accuracy of 0.8 | Any number |
+| A category | `positive`, `wrong-facts` | A short label |
+
+Scores come from four places, and each score records which one:
+
+- **Your users**, through a thumbs up button under the answer.
+- **A model**, usually a cheaper one, that reads the answer and rates it.
+- **A reviewer** on your team, grading answers in an [annotation queue](/annotations).
+- **Your code**, with any check you run, such as whether the answer parsed as JSON.
+
+Use the same name for the same measure (`helpful` for every thumbs up), so the dashboard can add them up.
+
+The dashboard shows each call's, trace's and conversation's scores, and the Overview sums up every score name for the period: the share of yes, the average, or the most common labels.
 
 <img class="screenshot" src="/images/dashboard/overview-scores.png" alt="The Overview's scores card" />
 
 <a name="recording-a-score"></a>
 ## Recording a Score
 
-Record a score with `Spectra::score()`. The type of the value sets the type of the score:
+Record a score with `Spectra::score()`. The type of the value sets the kind of the score:
 
 ```php
 use Spectra\Enums\ScoreSource;
@@ -34,7 +54,7 @@ Spectra::score('sentiment', 'positive', conversationId: $chat->id);
 | `conversationId` | The conversation. |
 | `comment` | Free text, such as what the user wrote with their thumbs down. |
 | `source` | Who gave it: `ScoreSource::User` (an end user), `Model` (a model judging the answer), `Annotation` (a reviewer; see [Annotation Queues](/annotations)) or `Api` (your code, the default). |
-| `author` | The model (for example the user) who gave the score. |
+| `author` | The Eloquent model who gave it, usually the user. |
 | `metadata` | Any other key-value context, such as the judge model's name. |
 
 Without `request`, `traceId` or `conversationId`, the score goes to the trace of the current request, job or command.
@@ -44,7 +64,7 @@ Without `request`, `traceId` or `conversationId`, the score goes to the trace of
 <a name="user-feedback"></a>
 ## User Feedback
 
-Feedback usually arrives in a later HTTP request than the answer it rates: the user reads the answer, then clicks a thumb. Send the answer's trace id along with the answer, and pass it back with the feedback. Without it, the score would go to the feedback request's own trace.
+Feedback usually arrives in a later HTTP request than the answer it rates: the user reads the answer, then clicks a thumb. By then Spectra has no way to know which answer the click is about. Send the answer's trace id along with the answer, and pass it back with the feedback. Without it, the score would go to the feedback request's own trace.
 
 ```php
 use Spectra\Facades\Spectra;

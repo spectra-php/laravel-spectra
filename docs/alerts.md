@@ -1,13 +1,13 @@
 # Alerts
 
-Alerts tell you when your AI traffic goes wrong while you're not looking at the dashboard: the error rate climbs, responses get slow, or spend spikes. You write rules in `config/spectra.php`; `php artisan spectra:check-alerts` checks them against the stored calls and notifies you by email, Slack or a webhook.
+Alerts tell you when your AI traffic goes wrong while you're not looking at the dashboard: the error rate climbs, responses get slow, or spend spikes. An alert rule is a sentence like "tell me when more than 10% of calls failed in the last 15 minutes". You write the rules in `config/spectra.php`; `php artisan spectra:check-alerts` checks them against the stored calls and notifies you by email, Slack or a webhook.
 
 [Budgets](/budgets) limit what one user or team may spend. Alerts watch your whole app (or one provider or model) for problems.
 
 <a name="rules"></a>
 ## Writing Rules
 
-Each rule watches one metric over a window of minutes, and fires when the metric goes `above` or `below` its threshold:
+Each rule watches one metric over a window of recent minutes, and fires when the metric goes `above` or `below` its threshold:
 
 ```php
 // config/spectra.php
@@ -24,7 +24,7 @@ Each rule watches one metric over a window of minutes, and fires when the metric
 | Metric | Measures | Unit |
 | --- | --- | --- |
 | `error_rate` | The share of failed calls (no 2xx status, or an error on a 2xx answer) | 0 to 1 (`0.1` is 10%) |
-| `latency_p95` | The 95th percentile latency of successful calls | milliseconds |
+| `latency_p95` | How long successful calls take at the 95th percentile: 95 of every 100 calls finished within this time. It ignores the few slowest calls, so one outlier doesn't fire it | milliseconds |
 | `latency_avg` | The average latency of successful calls | milliseconds |
 | `cost` | The spend of successful calls | cents (`5000` is $50) |
 | `requests` | The number of calls | calls |
@@ -34,7 +34,7 @@ Each rule watches one metric over a window of minutes, and fires when the metric
 | `name` | | Shown in notifications and on the dashboard. Each rule needs its own. |
 | `metric` | | One of the metrics above. |
 | `above` / `below` | | The threshold. Give exactly one. |
-| `window` | `15` | Minutes of calls the metric is measured over, ending now. |
+| `window` | `15` | How many minutes of calls the metric is measured over, ending now: `15` means the last 15 minutes. |
 | `min_requests` | `10` | For `error_rate` and the latencies: the calls the window needs before the rule is judged, so one failure out of two calls doesn't fire a 50% error rate. |
 | `provider`, `model` | all | Narrow the rule to one provider or one model. |
 
@@ -114,6 +114,6 @@ The Overview shows an Alerts card with each rule, its value now, and whether it 
 
 <img class="screenshot" src="/images/dashboard/overview-alerts.png" alt="The alerts card: one rule firing, two OK" />
 
-Below it, the Performance card shows each model's error rate and its p50, p95 and p99 latency for the selected period. See [Dashboard](/dashboard#overview).
+Below it, the Performance card shows each model's error rate and its p50, p95 and p99 latency for the selected period: the time within which 50, 95 and 99 of every 100 calls finished. See [Dashboard](/dashboard#overview).
 
 <img class="screenshot" src="/images/dashboard/overview-performance.png" alt="Error rate and latency percentiles per model" />

@@ -159,7 +159,7 @@ If you report in another currency, add a rate for `USD` too. It is used for the 
 <a name="pricing-tiers"></a>
 ## Pricing Tiers
 
-Some providers offer several pricing tiers with different prices for the same model. Spectra supports per-tier pricing, so costs are right no matter how you call the API.
+A pricing tier is a different price list for the same model: pay less to wait longer (batch), or more to be served first (priority). Some providers offer several, and Spectra prices each call at the tier it was served on, so costs are right no matter how you call the API.
 
 | Tier | Description | Built-in catalogs |
 | --- | --- | --- |

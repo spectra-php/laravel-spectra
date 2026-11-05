@@ -59,7 +59,7 @@ This is a short version. The full formula, with 1-hour writes, audio and image t
 <a name="embeddings"></a>
 ### Embeddings
 
-Embeddings turn text into dense vectors for semantic search, clustering, and similarity comparisons. Unlike text completions, embedding models produce no output tokens, so the cost is based only on the input token count.
+An embedding turns a piece of text into a list of numbers that stands for its meaning. Texts that mean similar things get similar numbers, so your app can find the documents closest to a question, group similar texts, or compare two of them. Unlike text completions, embedding models produce no output tokens, so the cost is based only on the input token count.
 
 | Metric | Column | Description |
 | --- | --- | --- |

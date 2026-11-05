@@ -1,6 +1,11 @@
 # Prompts
 
-When you change a prompt, you want to know if the new version is better: does it fail less, cost less, answer faster, and do users rate it higher? Tag each AI call with the prompt template it used and that template's version, and the dashboard's Prompts screen compares the versions side by side.
+A prompt is the text you send a model along with the user's message: the instructions, the examples, the rules about tone. You will change it many times. Each time, you want to know whether the new wording is better: does it fail less, cost less, answer faster, and do users rate it higher?
+
+<a name="what-is-a-prompt-version"></a>
+## What Is a Prompt Version?
+
+Spectra treats a prompt as a named template, and every edit of it as a new version. Tag each AI call with the name of the prompt it used and the version, and the dashboard's Prompts screen puts the versions side by side: calls, failures, cost, latency and [scores](/scores) per version.
 
 Spectra doesn't store or manage your prompts. You keep them where they are, in code, files or a database, and tell Spectra which one a call used.
 
@@ -17,9 +22,9 @@ $reply = Spectra::withPrompt('support-answer', 'v3', function () use ($agent, $m
 });
 ```
 
-`withPrompt()` returns what the callback returns. Calls after the callback, and calls in queued jobs it dispatches, are not tagged. A stream started inside the callback keeps the prompt even when you read it later. A prompt name is stored in a 100-character column and a version in a 50-character one; longer ones are cut.
+`withPrompt()` returns what the callback returns. Calls after the callback, and calls in queued jobs it dispatches, are not tagged. A stream started inside the callback keeps the prompt even when you read it later.
 
-The version is any string up to 50 characters: `v3`, `2026-11-04`, a git commit, or the id of the prompt's row in your database. The name is up to 100 characters. Use the same name for every version of a prompt, so the screen can group them.
+The name is any string up to 100 characters. Use the same name for every version of a prompt, so the screen can group them. The version is any string up to 50 characters: `v3`, `2026-11-04`, a git commit, or the id of the prompt's row in your database. Longer names and versions are cut.
 
 To tag one call tracked with `Spectra::track()`, pass the prompt in the options, or set it on the context:
 
@@ -59,7 +64,7 @@ To compare versions on user feedback, record the feedback as a [score](/scores#u
 <a name="rolling-out-a-new-version"></a>
 ## Rolling Out a New Version
 
-To compare two versions over the same days, send a share of traffic to the new one:
+To compare two versions over the same days, send a share of traffic to the new one. Here one call in ten uses `v4`:
 
 ```php
 $version = Lottery::odds(1, 10)->choose() ? 'v4' : 'v3';

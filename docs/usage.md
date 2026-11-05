@@ -165,7 +165,7 @@ The trackable type is stored as the model's morph alias (`$model->getMorphClass(
 <a name="conversation-tracking"></a>
 ### Conversation Tracking
 
-For multi-turn conversations, attach a conversation ID and a turn number to link related requests in the dashboard. They are stored in the `conversation_id` and `conversation_turn` columns:
+A conversation is a chat with many back-and-forth messages. Each **turn** is one user message and everything your app did to answer it: the chat call, the tools it ran and the embeddings it looked up. Attach a conversation ID and a turn number to the calls, and the dashboard groups them into a transcript you can read. They are stored in the `conversation_id` and `conversation_turn` columns:
 
 ```php
 $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($conversationId, $turn) {
@@ -361,14 +361,12 @@ $tracker->finish();
 ```
 
 > [!NOTE]
-> **How Spectra stores streaming responses.** For a normal response, Spectra stores the full API response body. For a streamed response, it stores only the accumulated text, not the individual SSE chunks. This is on purpose: a stream can produce hundreds or thousands of chunks, and storing each raw chunk as JSON would make huge database rows. The `response_id` of a streamed request comes from the first chunk that has an ID (for example, `chatcmpl-...` for OpenAI or `msg_...` for Anthropic).
+> **How Spectra stores streaming responses.** For a normal response, Spectra stores the full API response body. For a streamed response, it stores only the accumulated text, not the individual stream chunks. This is on purpose: a stream can produce hundreds or thousands of chunks, and storing each raw chunk as JSON would make huge database rows. The `response_id` of a streamed request comes from the first chunk that has an ID (for example, `chatcmpl-...` for OpenAI or `msg_...` for Anthropic).
 
 <a name="traces"></a>
 ## Traces
 
-One user action often makes several AI calls: an embedding to search your
-documents, a chat completion, then a tool call and a second completion.
-Spectra links these calls with a **trace id**.
+One user action often makes several AI calls. A support question, say, makes an embedding call to search your documents, a chat call to draft the answer, a tool call to look up the order, and a second chat call to finish. On the requests list these are four unrelated rows. A **trace** ties them together: it is the group of AI calls made for one piece of work, and every call in it carries the same **trace id**. Open a trace and you see its calls in order on one timeline, with what each one cost and how long the whole thing took.
 
 All AI calls made in the same unit of work share one trace id:
 
@@ -450,7 +448,7 @@ end of the last one.
 <a name="spans"></a>
 ### Spans
 
-A trace is a tree. Each AI call has a span, and calls can sit inside other spans: the request, job or command they ran in, and the blocks of your code you wrap in `Spectra::span()`.
+A span is one timed step inside a trace: when it started, when it ended, and whether it failed. Spans nest, so a trace reads as a tree. The request, job or command sits at the top, your own steps sit under it, and the AI calls sit inside the steps they ran in. Each AI call is a span of its own. You add spans for the blocks of your code that matter, such as the search before the prompt or the parsing after the reply, by wrapping them in `Spectra::span()`.
 
 **Your own spans.** Wrap a step in `Spectra::span()` to see it on the timeline, with the AI calls it makes nested inside:
 

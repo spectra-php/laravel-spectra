@@ -22,7 +22,7 @@ The overview answers "how much AI are we using, and what does it cost?" at a gla
 - **Breakdown** of requests by provider or by model type.
 - **Top models** by request volume, and the **recent requests**.
 - **Alerts**: each [alert rule](/alerts) with its value now and whether it is firing. It shows once you configure rules.
-- **Performance**: each model's error rate and its p50, p95 and p99 latency, and the median time to first token of streamed calls.
+- **Performance**: each model's error rate and how long its calls take at the p50, p95 and p99 marks, that is, the time within which 50, 95 and 99 of every 100 calls finished. The p50 is the typical call; the p95 and p99 show how bad the slow ones get. For streamed calls, the median time to first token: how long a user waited before the first word appeared.
 - **Scores**: each [score](/scores) name given in the period, with the share of yes, the average, or the most common labels. It shows once your app records scores.
 
 <img class="screenshot" src="/images/dashboard/overview-latency-by-type.png" alt="The average latency of each model type" />

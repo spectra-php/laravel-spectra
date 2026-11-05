@@ -1,8 +1,15 @@
 # Tools
 
-When a model calls tools, most of an agent's time is often spent in them, not in the model: searching documents, reading an order, calling another API. Spectra draws each tool in the trace as a `tool` span, between the AI calls around it, with the arguments the model passed and the result it got back.
+Many AI features let the model do more than write text. The model can ask your code to look up an order, search your documents or call another API, and use what comes back in its reply. Providers call this tool calling or function calling. Spectra shows these steps in the trace, so you can see what the model asked for, what it got back, and how long each step took.
 
-There are two ways to get tool spans: run your tools through `Spectra::tool()`, or let Spectra find them in the calls that send tool results back to the model.
+<a name="what-is-a-tool"></a>
+## What Is a Tool?
+
+A tool is a function you describe to the model: its name, what it does and what arguments it takes. The model never runs it. When the model decides it needs the tool, its reply contains a **tool call**: the tool's name and the arguments to pass. Your code runs the function, sends the result back to the model in the next request, and the model carries on. An agent loop is that cycle repeated until the model answers without asking for a tool.
+
+Most of an agent's time is often spent in those steps, not in the model. Spectra draws each one in the [trace](/usage#traces) as a `tool` span, between the AI calls around it, with the arguments the model passed and the result it got back.
+
+There are two ways to get tool spans: run your tools through `Spectra::tool()`, which also records a tool that threw, so you can tell a slow search from a broken one; or let Spectra find the tools in the requests that send their results back to the model.
 
 <a name="running-a-tool"></a>
 ## Running a Tool

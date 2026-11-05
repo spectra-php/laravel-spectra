@@ -1,6 +1,15 @@
 # Annotation Queues
 
-User feedback and model judges tell you a lot, but some answers need a person to read them. An annotation queue collects traces for your team to review on the dashboard: each reviewer reads what the model was asked and answered, gives the queue's scores, and moves to the next trace. Their labels are saved as [scores](/scores) with the Annotation source, so they show next to user feedback everywhere scores do.
+Thumbs up and model judges tell you a lot, but some answers need a person to read them: the chat a customer complained about, a sample of this week's traffic, every answer about a legal topic. An annotation queue is a to-do list of such answers for your team.
+
+<a name="what-is-an-annotation-queue"></a>
+## What Is an Annotation Queue?
+
+An annotation is a label a person gives an answer after reading it: helpful or not, an accuracy from 1 to 5, the kind of mistake it made. A queue collects the [traces](/usage#traces) (the AI calls made for one user action) you want labelled, and the dashboard's **Review** screen hands them to your reviewers one at a time. A reviewer reads what the model was asked and what it answered, gives the queue's labels, adds a comment if needed, and moves on to the next trace.
+
+The labels are saved as [scores](/scores) with the Annotation source, so they show next to user feedback and model judgements everywhere scores do: on the trace, on the Overview, and on the [Prompts](/prompts) screen when you compare prompt versions.
+
+You decide what goes in a queue: a random share of traffic, the traces users gave a thumbs down, or any trace you pick on the dashboard.
 
 <a name="defining-a-queue"></a>
 ## Defining a Queue
@@ -24,6 +33,8 @@ Add queues to `config/spectra.php` under `annotations.queues`. Each queue names 
 ],
 ```
 
+This queue takes one in twenty of the traces whose calls used the `support-answer` prompt, and asks its reviewers three things: was the answer helpful, how accurate was it from 1 to 5, and what, if anything, was wrong with it.
+
 | Score type | The reviewer picks | Saved as |
 | --- | --- | --- |
 | `boolean` | Yes or No | A yes/no score |
@@ -37,7 +48,7 @@ A queue name is up to 100 characters. A typo in a queue (no scores, an unknown t
 
 There are three ways to put a trace in a queue. A trace is in a queue once: adding it again keeps its place and status.
 
-**Sampling.** With `sample`, the queue takes that share of the traces whose calls match `filter`, as they are recorded. The choice is made per trace, so every call of a sampled trace leads to the same queue item. The filter keys are:
+**Sampling.** With `sample`, the queue takes that share of the traces whose calls match `filter`, as they are recorded: `0.05` is one trace in twenty. The choice is made per trace, so every call of a sampled trace leads to the same queue item. The filter keys are:
 
 | Key | Matches calls |
 | --- | --- |

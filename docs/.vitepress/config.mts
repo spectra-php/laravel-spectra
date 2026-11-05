@@ -26,20 +26,30 @@ export default defineConfig({
         ]
       },
       {
-        text: 'Core Concepts',
+        text: 'Tracking',
         items: [
           { text: 'Usage', link: '/usage' },
           { text: 'Dashboard', link: '/dashboard' },
           { text: 'Models', link: '/models' },
+          { text: 'Tags', link: '/tags' },
+          { text: 'Metadata', link: '/metadata' },
+          { text: 'Tools', link: '/tools' }
+        ]
+      },
+      {
+        text: 'Costs',
+        items: [
           { text: 'Pricing', link: '/pricing' },
           { text: 'Costs', link: '/costs' },
           { text: 'Budgets', link: '/budgets' },
-          { text: 'Alerts', link: '/alerts' },
-          { text: 'Tags', link: '/tags' },
-          { text: 'Metadata', link: '/metadata' },
+          { text: 'Alerts', link: '/alerts' }
+        ]
+      },
+      {
+        text: 'Quality',
+        items: [
           { text: 'Scores', link: '/scores' },
           { text: 'Prompts', link: '/prompts' },
-          { text: 'Tools', link: '/tools' },
           { text: 'Annotation Queues', link: '/annotations' },
           { text: 'Evaluations', link: '/evaluations' }
         ]
