@@ -36,6 +36,8 @@ php artisan spectra:install
 
 The installer publishes the configuration file to `config/spectra.php` and the schema migrations to `database/migrations/`, then asks whether to run the migrations.
 
+Run it again after each upgrade to publish the new version's migrations, or let `composer update` do it with [a Composer script](/commands#spectra-install-composer).
+
 To run each step yourself instead of using the interactive installer:
 
 ```shell

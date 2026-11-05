@@ -15,7 +15,25 @@ The installer runs these steps in order:
 
 1. **Publishes configuration.** Copies `config/spectra.php` to your application's config directory (an existing file is kept).
 2. **Publishes missing migrations.** Copies only the Spectra migrations your `database/migrations/` folder doesn't have yet, so it's safe to run again after an upgrade.
-3. **Runs migrations** (optional). If it published something, it asks whether to run the migrations.
+3. **Runs migrations** (optional). If it published something, it asks whether to run the migrations. Run without a terminal, with `--no-interaction` or from a Composer script, it never runs them and prints the `php artisan migrate` to run instead.
+
+<a name="spectra-install-composer"></a>
+### Publish New Migrations on `composer update`
+
+To pick up the migrations of a new Spectra version without remembering the installer, add it to the `post-update-cmd` scripts in your application's `composer.json`:
+
+```json
+"scripts": {
+    "post-update-cmd": [
+        "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
+        "@php artisan spectra:install --no-interaction"
+    ]
+}
+```
+
+Composer runs `post-update-cmd` after `composer update`, which you usually run on your own machine to upgrade, and not after the `composer install` of a deploy. The new migrations land in `database/migrations/`; commit them, and the `php artisan migrate` your deploy already runs applies them. The installer doesn't run them itself here, so a Composer script never changes a database.
+
+A package can't add this for you: Composer only runs the scripts in your application's own `composer.json`.
 
 On a fresh install you can also publish the files yourself. Don't use `vendor:publish` for migrations when upgrading, though: it copies the older migrations again under a new date.
 

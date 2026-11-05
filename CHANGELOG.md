@@ -11,6 +11,10 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - The maintenance actions need the new `manageSpectra` gate (local-only by default) and the `dashboard.maintenance` option (`SPECTRA_DASHBOARD_MAINTENANCE`, on by default)
 - `spectra:pause` and `spectra:resume`: while paused, AI calls keep working but no request, span or media is stored
 
+#### Changed
+
+- `spectra:install` without a terminal (`--no-interaction`, a Composer script) publishes the new migrations and no longer runs them, so it can sit in your app's `post-update-cmd` scripts. (see the `spectra:install` docs)
+
 ## v3.1.0 - 2026-11-04
 
 #### Added

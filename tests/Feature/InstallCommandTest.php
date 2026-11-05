@@ -56,3 +56,14 @@ it('publishes only the missing migrations when run again', function () {
     // Nothing left to publish the third time.
     $this->artisan('spectra:install')->expectsOutputToContain('already published')->assertSuccessful();
 });
+
+it('publishes without running the migrations when not interactive, as from a Composer script', function () {
+    $this->artisan('spectra:install', ['--no-interaction' => true])
+        ->doesntExpectOutputToContain('Running Migrations')
+        ->expectsOutputToContain('php artisan migrate')
+        ->assertSuccessful();
+
+    $packaged = count(File::files(__DIR__.'/../../database/migrations'));
+
+    expect(File::files($this->databasePath.'/migrations'))->toHaveCount($packaged);
+});

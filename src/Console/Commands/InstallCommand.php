@@ -26,6 +26,8 @@ class InstallCommand extends Command
 
     /**
      * Publish the config and new migrations, then offer to run the migrations.
+     * Without a terminal (--no-interaction, a Composer script) it never runs
+     * them: that is left to the app's own deploy.
      */
     public function handle(): int
     {
@@ -38,7 +40,7 @@ class InstallCommand extends Command
             ? '  All Spectra migrations are already published.'
             : "  Published {$published} new migration(s).");
 
-        if ($published > 0 && confirm('Would you like to run migrations now?', true)) {
+        if ($published > 0 && $this->input->isInteractive() && confirm('Would you like to run migrations now?', true)) {
             $this->comment('Running Migrations...');
             $this->call('migrate');
         } elseif ($published > 0) {
