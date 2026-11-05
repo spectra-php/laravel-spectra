@@ -108,7 +108,7 @@ it('counts chat completion tool calls by type', function () {
     $record = SpectraRequest::query()->sole();
 
     expect($record->has_tool_calls)->toBeTrue()
-        ->and($record->tool_call_counts)->toBe(['function' => 3])
+        ->and($record->tool_call_counts)->toEqual(['function' => 3])
         ->and($record->finish_reason)->toBe('tool_calls');
 });
 

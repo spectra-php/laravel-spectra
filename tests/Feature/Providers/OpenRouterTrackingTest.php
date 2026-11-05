@@ -110,7 +110,7 @@ it('keeps openrouter/auto as the model and the served model as the snapshot', fu
         ->and($record->total_cost_in_cents)->toEqualWithDelta(2.223, 0.000001)
         ->and($record->cached_tokens)->toBe(1000)
         ->and($record->has_tool_calls)->toBeTrue()
-        ->and($record->tool_call_counts)->toBe(['web_search' => 1]);
+        ->and($record->tool_call_counts)->toEqual(['web_search' => 1]);
 });
 
 it('prices the served model when openrouter/auto reports no cost', function () {

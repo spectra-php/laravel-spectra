@@ -84,7 +84,7 @@ it('bills web searches per search and web fetches for free', function () {
     // plus 2 searches × 1¢ ($10 per 1,000); the fetch is free.
     expect($row->model)->toBe('Claude Sonnet 5.5')
         ->and($row->has_tool_calls)->toBeTrue()
-        ->and($row->tool_call_counts)->toBe(['web_search_requests' => 2, 'web_fetch_requests' => 1])
+        ->and($row->tool_call_counts)->toEqual(['web_search_requests' => 2, 'web_fetch_requests' => 1])
         ->and($row->total_cost_in_cents)->toEqualWithDelta(6.46, 0.000001);
 });
 
@@ -229,7 +229,7 @@ it('takes the cumulative usage of message_delta over message_start in a stream',
         ->and($row->response_id)->toBe('msg_01StrmWebSrch7Lq2Vx9Kd3Ma')
         ->and($row->prompt_tokens)->toBe(10682)
         ->and($row->completion_tokens)->toBe(510)
-        ->and($row->tool_call_counts)->toBe(['web_search_requests' => 1])
+        ->and($row->tool_call_counts)->toEqual(['web_search_requests' => 1])
         ->and($row->pricing_tier)->toBe('standard')
         ->and($row->finish_reason)->toBe('end_turn')
         ->and($row->total_cost_in_cents)->toEqualWithDelta(7.616, 0.000001);

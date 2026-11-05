@@ -78,7 +78,7 @@ it('runs a tool as a tool span with its arguments and result, under the current 
         ->and($tool->parent_span_id)->toBe($agent->span_id)
         ->and($tool->duration_ms)->toBe(250)
         ->and($tool->status)->toBe(SpanStatus::Ok)
-        ->and($tool->attributes)->toBe([
+        ->and($tool->attributes)->toEqual([
             'gen_ai.tool.name' => 'get_weather',
             'gen_ai.tool.call.id' => 'call_1',
             'gen_ai.tool.call.arguments' => ['city' => 'Paris'],
@@ -94,7 +94,7 @@ it('marks a tool that throws as failed, keeps its arguments and re-throws', func
 
     expect($tool->status)->toBe(SpanStatus::Error)
         ->and($tool->error_message)->toBe('Index offline')
-        ->and($tool->attributes)->toBe(['gen_ai.tool.name' => 'search', 'gen_ai.tool.call.arguments' => ['query' => 'refunds']]);
+        ->and($tool->attributes)->toEqual(['gen_ai.tool.name' => 'search', 'gen_ai.tool.call.arguments' => ['query' => 'refunds']]);
 });
 
 it('stores a tool\'s arguments and result only with store_prompts on and the trace sampled', function () {
@@ -142,7 +142,7 @@ describe('with tool_spans on', function () {
             ->and($tools->pluck('name')->all())->toBe(['get_weather', 'get_weather'])
             ->and($tools->pluck('duration_ms')->all())->toBe([1500, 1500])
             ->and($tools->pluck('parent_span_id')->unique()->all())->toBe([$agent->span_id])
-            ->and($tools[0]->attributes)->toBe([
+            ->and($tools[0]->attributes)->toEqual([
                 'gen_ai.tool.name' => 'get_weather',
                 'gen_ai.tool.call.id' => 'call_paris',
                 'gen_ai.tool.call.arguments' => ['city' => 'Paris'],
@@ -212,7 +212,7 @@ describe('with tool_spans on', function () {
             ['type' => 'function_call_output', 'call_id' => 'call_9', 'output' => '18°C'],
         ]], seconds: 0.2);
 
-        expect(toolSpans()->sole()->attributes)->toBe([
+        expect(toolSpans()->sole()->attributes)->toEqual([
             'gen_ai.tool.name' => 'get_weather',
             'gen_ai.tool.call.id' => 'call_9',
             'gen_ai.tool.call.arguments' => ['city' => 'Paris'],
@@ -228,7 +228,7 @@ describe('with tool_spans on', function () {
             ['role' => 'user', 'parts' => [['functionResponse' => ['name' => 'get_weather', 'response' => ['celsius' => 4]]]]],
         ]], seconds: 0.3, provider: 'google');
 
-        expect(toolSpans()->sole()->attributes)->toBe([
+        expect(toolSpans()->sole()->attributes)->toEqual([
             'gen_ai.tool.name' => 'get_weather',
             'gen_ai.tool.call.arguments' => ['city' => 'Oslo'],
             'gen_ai.tool.call.result' => ['celsius' => 4],

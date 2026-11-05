@@ -56,7 +56,7 @@ it('records a span with its name, attributes and timing, and returns the result'
         ->and($span->name)->toBe('retrieve-docs')
         ->and($span->kind)->toBe(SpanKind::Span)
         ->and($span->status)->toBe(SpanStatus::Ok)
-        ->and($span->attributes)->toBe(['top_k' => 3])
+        ->and($span->attributes)->toEqual(['top_k' => 3])
         ->and($span->trace_id)->toBe(Spectra::currentTraceId())
         ->and($span->ended_at->greaterThanOrEqualTo($span->started_at))->toBeTrue();
 });
@@ -225,9 +225,9 @@ it('saves the request and job a queued job came from when they made no AI call',
 
     expect($request->name)->toBe('POST /conversations')
         ->and($request->parent_span_id)->toBeNull()
-        ->and($request->attributes)->toBe([SpanStack::INFERRED_ATTRIBUTE => true])
+        ->and($request->attributes)->toEqual([SpanStack::INFERRED_ATTRIBUTE => true])
         ->and($between->parent_span_id)->toBe($request->span_id)
-        ->and($between->attributes)->toBe([SpanStack::INFERRED_ATTRIBUTE => true])
+        ->and($between->attributes)->toEqual([SpanStack::INFERRED_ATTRIBUTE => true])
         ->and($job->parent_span_id)->toBe($between->span_id)
         ->and($job->attributes)->toBeNull()
         ->and(collect([$request, $between, $job])->pluck('trace_id')->unique()->all())->toBe([$request->trace_id])

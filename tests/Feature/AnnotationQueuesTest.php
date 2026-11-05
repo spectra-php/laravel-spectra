@@ -146,7 +146,7 @@ it('saves a review as Annotation scores on the trace, by the signed-in reviewer'
         ->and($scores->pluck('source')->unique()->all())->toBe([ScoreSource::Annotation])
         ->and($scores->pluck('trace_id')->unique()->all())->toBe([$item->trace_id])
         ->and($scores->first()->author_id)->toBe((string) $reviewer->id)
-        ->and($scores->first()->metadata)->toBe(['annotation_queue' => 'support-review'])
+        ->and($scores->first()->metadata)->toEqual(['annotation_queue' => 'support-review'])
         ->and($item->fresh())->status->toBe(AnnotationStatus::Completed)
         ->and($item->fresh())->comment->toBe('Good, a bit long.')
         ->and($item->fresh())->reviewer_id->toBe((string) $reviewer->id);

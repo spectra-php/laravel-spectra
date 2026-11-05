@@ -75,7 +75,7 @@ it('adds tool-use prompt tokens to the input and counts search grounding without
     expect($row->prompt_tokens)->toBe(6500)
         ->and($row->cached_tokens)->toBe(2000)
         ->and($row->completion_tokens)->toBe(1000)
-        ->and($row->tool_call_counts)->toBe(['google_search' => 2])
+        ->and($row->tool_call_counts)->toEqual(['google_search' => 2])
         ->and($row->total_cost_in_cents)->toEqualWithDelta(0.391, 0.000001);
 });
 

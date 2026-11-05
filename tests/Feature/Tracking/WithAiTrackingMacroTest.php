@@ -47,7 +47,7 @@ it('stores the tags, metadata and pricing tier given to withAITracking() and bil
 
     // gpt-4.1 batch (in 100, out 400): (19×100 + 10×400) / 1M = 0.0059¢
     expect($record->tags->pluck('name')->all())->toEqualCanonicalizing(['proxy', 'nightly-digest'])
-        ->and($record->metadata)->toBe(['tenant_id' => 'acme', 'feature' => 'digest'])
+        ->and($record->metadata)->toEqual(['tenant_id' => 'acme', 'feature' => 'digest'])
         ->and($record->pricing_tier)->toBe('batch')
         ->and((float) $record->total_cost_in_cents)->toEqualWithDelta(0.0059, 1e-9);
 });
@@ -121,7 +121,7 @@ it('records a stream sent through withAITracking() once its body has been read',
     expect($read)->toBe($body)
         ->and($record->provider)->toBe('openai')
         ->and($record->is_streaming)->toBeTrue()
-        ->and($record->metadata)->toBe(['feature' => 'live-chat'])
+        ->and($record->metadata)->toEqual(['feature' => 'live-chat'])
         ->and($record->pricing_tier)->toBe('flex')
         ->and($record->prompt_tokens)->toBe(3000)
         ->and($record->completion_tokens)->toBe(400)

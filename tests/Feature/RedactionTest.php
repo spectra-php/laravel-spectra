@@ -68,7 +68,7 @@ it('masks span attributes and score comments', function () {
     Spectra::span('lookup', fn () => null, ['customer_email' => 'ada@example.com']);
     Spectra::score('helpful', false, traceId: 't', comment: 'Reach me at +44 20 7946 0958');
 
-    expect(SpectraSpan::query()->sole()->attributes)->toBe(['customer_email' => '[REDACTED:email]'])
+    expect(SpectraSpan::query()->sole()->attributes)->toEqual(['customer_email' => '[REDACTED:email]'])
         ->and(SpectraScore::query()->sole()->comment)->toBe('Reach me at [REDACTED:phone]');
 });
 

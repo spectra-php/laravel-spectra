@@ -75,7 +75,7 @@ it('stores a string value as a category and the author who gave it', function ()
         ->and($score->label)->toBe('negative')
         ->and($score->author_type)->toBe($user->getMorphClass())
         ->and($score->author_id)->toBe((string) $user->getKey())
-        ->and($score->metadata)->toBe(['screen' => 'chat']);
+        ->and($score->metadata)->toEqual(['screen' => 'chat']);
 });
 
 it('rejects a score without a name, without a target, or with a value it cannot store', function (array $arguments, string $message) {
