@@ -21,7 +21,7 @@ One root namespace, `Spectra\` → `src/`. Put new code next to its kind, never 
 | `Support/Query/` | `CostQueryBuilder` / `UsageQueryBuilder` (public API) and `RequestAggregateQuery` (internal, dashboard). |
 | `Actions/{Area}/`, `Http/Controllers/` | The dashboard's read side. `.ai/rules/actions.md`, `.ai/rules/controllers.md`. |
 | `Integrations/` | Outside systems Spectra exports to (OpenTelemetry). |
-| `Data/`, `Enums/`, `Events/`, `Exceptions/`, `Contracts/`, `Concerns/` | Shared types; `Concerns/` holds the traits users add to their models. |
+| `Data/`, `Enums/`, `Events/`, `Exceptions/`, `Contracts/`, `Concerns/` | Shared types; `Concerns/` holds the traits users add to their models and the handler traits shared across providers (`MatchesEndpoints`, `ExtractsModelField`). |
 | `Testing/` | `SpectraFake`, the fake users swap in with `Spectra::fake()`. |
 
 `workbench/` is maintainer tooling (the pricing-drift command, a demo user) and is export-ignored, so nothing in `src/` may depend on it.
@@ -39,7 +39,7 @@ Create a folder when its first class arrives; no empty or `Misc/` folders. Split
 Name a support class for what it does (`AudioDurationExtractor`, `ApiKeyResolver`, `StreamDetector`) with no `Service` suffix; if you cannot name it precisely, split it. No `Helper`, `Util` or `Manager` grab-bags.
 
 ## Wrap every outside system in one class
-Each outside API is called from one class (`OtlpExporter`, the Firecrawl scraper in `Support/Pricing/Scraping`). Everything else uses that class. Credentials and URLs come from `config('spectra.…')`, never `env()` or a literal.
+Each outside API is called from one class (`OtlpExporter`, the Firecrawl scraper in `Support/Pricing/Scraping`). Everything else uses that class. Credentials and URLs come from `config('spectra.…')`, never `env()` or a literal. A watcher that rebuilds a third-party client reads that package's own config too (the OpenAI watcher reads `openai.*`), so the client behaves as the user set it up.
 
 ## Add an interface only for a real seam
 Write an interface in `Contracts/` only for a second implementation, a test fake, or an extension point users implement (`Handler`, `SpanBuilder`, `RequestExporter`, the optional `Extracts…` / `Has…` capabilities handlers opt into). Name it as a noun or capability with no `Interface` suffix, and bind the default in `SpectraServiceProvider::register()`.
@@ -48,7 +48,7 @@ Write an interface in `Contracts/` only for a second implementation, a test fake
 Anything a user may want to change is a config key or a container binding they can override: custom providers and pricing classes in `config('spectra.providers')` and `config('spectra.costs.pricing')`, a custom `integrations.request_transformer`, `SpanBuilder` or exporter. Don't make them extend an internal class to change one behaviour.
 
 ## Traits are Concerns
-A trait lives in a `Concerns/` folder next to the classes that use it, is named for one capability (`MatchesEndpoints`, `ExtractsModelField`, `HasAiBudget`), and has no `Trait` suffix. If describing it needs "and", split it.
+A trait lives in a `Concerns/` folder next to the classes that use it (`src/Concerns/` when several areas use it), is named for one capability (`MatchesEndpoints`, `ExtractsModelField`, `HasAiBudget`), and has no `Trait` suffix. If describing it needs "and", split it.
 
 ## Store to the configured connection
 Every Spectra table and query uses `config('spectra.storage.connection')`, which may be a separate database from the app's. Models do this through `getConnectionName()` and migrations through `getConnection()`; never query a Spectra table through `DB::table()` on the default connection.

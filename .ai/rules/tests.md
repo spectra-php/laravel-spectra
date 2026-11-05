@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'tests/**'
+  - 'tests/**/*.php'
   - 'database/factories/**'
 ---
 
@@ -12,16 +12,16 @@ Test what users get: the stored row, its cost, the budget decision, the dashboar
 Don't test labels and copy, the exact shape of a DTO, config defaults, enum lists, service-provider bindings, or framework behaviour. A dataset holds distinct branches only.
 
 ## Pest style
-Write `it('bills groq whisper at the 10-second minimum', function () { … })` with `expect()` chains joined by `->and()`. No `test()`, no PHPUnit classes, no `$this->assertX()`. Start a new file with a short docblock that says which behaviour it covers. Use `describe()` only when one file covers several subjects.
+Write `it('bills groq whisper at the 10-second minimum', function () { … })` with `expect()` chains joined by `->and()`. No `test()`, no PHPUnit classes, no `$this->assertX()`. Every test file starts with a short docblock that says which behaviour it covers. Use `describe()` only when one file covers several subjects.
 
 ## Names state the scenario and the outcome
 A test name says what happens and what should result, never "works". Split a test when "and" joins two separate behaviours.
 
 ## Put the file where it belongs
-`tests/Feature/Providers/{Provider}…Test.php` tracks provider responses end to end through `Spectra` or the watchers. `tests/Feature/Tracking/` covers the pipeline across providers (async jobs, tags, traces), and the other `tests/Feature/*Test.php` files cover commands, budgets and the facade. `tests/Unit/{Area}/` calls one class directly: `Providers`, `Pricing`, `Tracking`, `Telemetry`, `Queries`, `Controllers`.
+`tests/Feature/Providers/{Provider}…Test.php` tracks provider responses end to end through `Spectra` or the watchers. `tests/Feature/Tracking/` covers the pipeline across providers (async jobs, tags, traces), and the other `tests/Feature/*Test.php` files cover commands, budgets, the facade and each dashboard or observability feature (scores, evals, review queues, errors, redaction). `tests/Unit/{Area}/` calls one class directly: `Providers`, `Pricing`, `Tracking`, `Telemetry`, `Queries`, `Controllers`. A unit test for a class outside those areas (a `Support` class, an enum, a DTO, the migrations) and `ArchTest.php` sit in `tests/Unit/` itself.
 
 ## Fixtures over hand-built payloads
-Load provider responses with `$this->loadMockResponse('{provider}/{file}.json')` from `tests/responses/`. Add a new fixture from a real response rather than typing one, and show the price maths in a comment next to the cost assertion (`// 0.185 cents/minute × (120.5s / 60)`). Compare costs with `toEqualWithDelta()`.
+Load provider responses with `$this->loadMockResponse('{provider}/{file}.json')` from `tests/responses/`. Add a new fixture from a real response rather than typing one. A unit test of one branch (a usage shape, a stream event, `matchesResponse()`) may build the small payload inline, and a variant of a real response is derived from its loaded fixture. Show the price maths in a comment next to the cost assertion (`// 0.185 cents/minute × (120.5s / 60)`). Compare costs with `toEqualWithDelta()`.
 
 ## Never call a real outside service
 Fake every HTTP call with `Http::fake([...])` or a Guzzle `MockHandler`. Firecrawl, OTLP endpoints and provider APIs are never reached from tests.

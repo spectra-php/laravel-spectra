@@ -15,7 +15,7 @@ The dashboard is Vue 3 with Vue Router and Tailwind 3, in plain JavaScript (no T
 Users install the package without Node, so the built assets in `dist/` are committed. After changing anything under `resources/js` or `resources/css`, run `npm run build` and commit `dist/` with the change. Never edit `dist/` by hand.
 
 ## Show what the API sends
-Format numbers, costs and dates in the frontend from the raw values the API returns (cents, ISO dates). Costs are cents and may have sub-cent precision; never round them away before display.
+Format numbers, costs and dates in the frontend from the raw values the API returns (cents, ISO dates). The few display strings the API already sends (`formatted_created_at`, `created_at_human`, `formatted_expires_at`) are shown as they come. Costs are cents and may have sub-cent precision: pass the raw value to the shared formatter (`formatCurrency`), which picks the display precision, and never round it before that.
 
 ## Provider logos are keyed by slug
 `components/ProviderLogo.vue` maps a provider slug to its logo. A new built-in provider adds its slug there. Keep the entries for providers users add themselves (bedrock, deepseek, meta, microsoft).

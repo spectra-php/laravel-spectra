@@ -16,19 +16,19 @@ Every price is checked against the provider's live pricing page (the URLs in the
 Each provider has a `{Provider}Pricing` class extending `ProviderPricing`, defining models in `define()` with the fluent `ModelDefinition` builder. Token prices are cents per 1M tokens (per 1M characters for character-billed models); per-unit models (images, seconds, minutes, searches) use the unit price. Use the catalog's currency (`currency()`; Scaleway is EUR). No database, no runtime fetching.
 
 ## Every model has a billable standard tier
-Each model needs a `standard` tier, which the calculator falls back to. Per-unit models need a non-zero unit price on it, and token models numeric input and output prices. `PricingCatalogInvariantsTest` checks this; never loosen it to make a model pass.
+Each model needs a `standard` tier, which the calculator falls back to. Per-unit models need a non-zero unit price on it, and token models numeric input and output prices. A model the provider gives away (OpenRouter's `:free` variants) is priced 0 on purpose, with a comment saying so. `PricingCatalogInvariantsTest` checks this; never loosen it to make a model pass.
 
 ## Define the undated id; list the rest as aliases
 Name the model by its undated id (`gpt-4o`, `claude-opus-4-8`): lookup strips trailing `-YYYYMMDD` / `-YYYY-MM-DD` dates and OpenRouter routing suffixes on its own. List other ids that bill the same (`-latest`, provider-prefixed, renamed) in `aliases()`. A dated snapshot gets its own entry only when its price differs.
 
 ## Never delete a model
-When a provider shuts a model down, keep the entry and add `retiredOn('Y-m-d')`, so stored requests keep their price. When a price changes on a known date, add a second `cost(…, since: 'Y-m-d')` row instead of editing the old one.
+When a provider shuts a model down, keep the entry and add `retiredOn('Y-m-d')`, so stored requests keep their price. When a price changes on a known date, add a second `cost(…, since: 'Y-m-d')` or `tier(…, since: 'Y-m-d')` row instead of editing the old one.
 
 ## Tiers are PricingTier values
 Use the `PricingTier` values (`batch`, `flex`, `standard`, `priority`, `fast`, `ultrafast`, `hd`). A tier that isn't in the enum falls back to standard, so add the case before using it (`.ai/rules/enums.md`).
 
 ## Explain the quirks in the class docblock
-Say where the prices come from and every billing rule the numbers don't show: cache discounts and whether they stack with batch, long-context thresholds, minimum billed lengths, free tiers, approximations (ElevenLabs is per-character pay-as-you-go). Ollama is deliberately $0 and has no class.
+Say where the prices come from and every provider-wide billing rule the numbers don't show (a quirk of a single model goes in a comment next to that model): cache discounts and whether they stack with batch, long-context thresholds, minimum billed lengths, free tiers, approximations (ElevenLabs is per-character pay-as-you-go). Ollama is deliberately $0 and has no class.
 
 ## Record the review
 After checking prices, update "Prices last reviewed" in `docs/pricing.md` and add every changed price to `CHANGELOG.md` under "Fixed" (wrong price) or "Added" (new model), with the old and new numbers when a price changed.
