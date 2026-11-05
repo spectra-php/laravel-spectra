@@ -69,7 +69,13 @@ The name, the call id, the timing and whether the tool failed are always stored.
 <a name="in-the-dashboard"></a>
 ## In the Dashboard
 
-The [trace timeline](/dashboard#trace-timeline) draws a tool with a wrench and an amber bar, between the calls that asked for it and got its result. Click it to see the arguments and the result, or the error of a failed tool.
+The [trace timeline](/dashboard#trace-timeline) draws a tool with a wrench and an amber bar, between the calls that asked for it and got its result. Click it to see the arguments and the result:
+
+<img class="screenshot" src="/images/dashboard/trace-tool.png" alt="A tool opened in the trace timeline, with its arguments and result" />
+
+A failed tool has a red bar, and shows its error above the arguments:
+
+<img class="screenshot" src="/images/dashboard/trace-tool-failed.png" alt="A failed tool with its error" />
 
 <a name="opentelemetry"></a>
 ## OpenTelemetry

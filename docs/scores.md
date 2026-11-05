@@ -4,6 +4,8 @@ Scores tell you how good your AI answers are, not just what they cost. A score i
 
 The dashboard shows each call's, trace's and conversation's scores, and the Overview sums every score name for the period: the share of yes, the average, or the most common labels.
 
+<img class="screenshot" src="/images/dashboard/overview-scores.png" alt="The Overview's scores card" />
+
 <a name="recording-a-score"></a>
 ## Recording a Score
 
@@ -74,6 +76,10 @@ public function feedback(Request $request)
 }
 ```
 
+The trace's page lists its scores with their source, author and comment:
+
+<img class="screenshot" src="/images/dashboard/trace-scores.png" alt="A trace with user feedback and reviewer scores" />
+
 <a name="scoring-one-call"></a>
 ## Scoring One Call
 
@@ -98,6 +104,10 @@ Spectra::score('answer_quality', $rating, request: $this->requestId, source: Sco
 ```
 
 A call tracked on its own (through the HTTP client or the OpenAI SDK) reaches your code in the [`RequestTracked`](/opentelemetry#events) event, whose `$request['id']` is its id.
+
+The call's page lists the scores given to it:
+
+<img class="screenshot" src="/images/dashboard/request-scores.png" alt="The scores of one call" />
 
 <a name="reacting-to-scores"></a>
 ## Reacting to Scores

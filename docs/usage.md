@@ -422,12 +422,14 @@ the millisecond. A new lane starts when the origin changes, for example when a
 request dispatches a job. The trace page also shows the cost, calls and tokens
 per model, the tags, the trackable and the parent span from `traceparent`.
 
-<img class="screenshot" src="/images/dashboard/trace-detail.png" alt="A trace timeline with a span and five calls" />
+<img class="screenshot" src="/images/dashboard/trace-detail.png" alt="A trace timeline with a span, three tools and five calls" />
 
 The request page shows a **Trace** card when a trace has more than one call,
 with an **Open trace** link. As everywhere in the dashboard, cost counts
 successful calls only. Duration runs from the start of the first call to the
 end of the last one.
+
+<img class="screenshot" src="/images/dashboard/request-trace.png" alt="The Trace card on a request page, with the request's root span, its calls and a tool" />
 
 <a name="spans"></a>
 ### Spans
@@ -455,7 +457,7 @@ $answer = Spectra::span('answer-question', function () use ($question) {
 
 **Root spans.** Each HTTP request, queued job and Artisan command that makes an AI call gets a span of its own, named by its origin, with its calls and spans inside. A job's span sits under the span that dispatched it, so a trace reads request, job, call. A request, job or command that makes no AI call stores nothing, unless a job it queued does: then the job also saves the spans it came from, so the tree has no gap (a request that queues a job that stores a message and queues its analysis reads request, job, job, call). Such a span is marked `spectra.inferred` in its attributes and ends when it queued the job, since nothing recorded its real end. Turn root spans off with `root_spans` (see [Configuration](/configuration#tracking-context)). They need `trace_per_request`, the default: with it off, each call is a trace of its own and no root span is stored.
 
-Spans are stored in the `spectra_spans` table. They are never billed or counted as requests, and `spectra:prune` deletes them with the requests. The trace page draws the tree: each span with its children indented under it. In the screenshot above, the embedding call sits inside the `retrieve-context` span, which sits inside the `POST /api/chat` request.
+Spans are stored in the `spectra_spans` table. They are never billed or counted as requests, and `spectra:prune` deletes them with the requests. The trace page draws the tree: each span with its children indented under it. In the trace screenshot above, the embedding call sits inside the `retrieve-context` span, and the trace is named after the `App\Jobs\GenerateWeeklyDigest` job it ran in. The Trace card above shows the root span too: the `POST /api/chats/{chat}/messages` request, with the calls and tools inside it.
 
 <a name="setting-the-trace-yourself"></a>
 ### Setting the Trace Yourself

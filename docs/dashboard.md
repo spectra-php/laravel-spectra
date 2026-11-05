@@ -25,6 +25,24 @@ The overview answers "how much AI are we using, and what does it cost?" at a gla
 - **Performance**: each model's error rate and its p50, p95 and p99 latency, and the median time to first token of streamed calls.
 - **Scores**: each [score](/scores) name given in the period, with the share of yes, the average, or the most common labels. It shows once your app records scores.
 
+<img class="screenshot" src="/images/dashboard/overview-latency-by-type.png" alt="The average latency of each model type" />
+
+The media usage row shows what the period's images, videos and audio cost, next to the token traffic:
+
+<img class="screenshot" src="/images/dashboard/overview-media.png" alt="Images, videos, text-to-speech and speech-to-text usage with their cost" />
+
+The alerts card shows each rule's value as of the last check. A firing rule turns red and says since when it fires:
+
+<img class="screenshot" src="/images/dashboard/overview-alerts.png" alt="The alerts card with one firing rule" />
+
+The performance card puts each model's error rate next to its latency percentiles:
+
+<img class="screenshot" src="/images/dashboard/overview-performance.png" alt="Error rate, p50, p95 and p99 latency and time to first token per model" />
+
+The scores card sums up every score name: the share of yes for a boolean score, the average and range for a numeric one, and the labels for a categorical one:
+
+<img class="screenshot" src="/images/dashboard/overview-scores.png" alt="The scores given in the period" />
+
 The request, trace and conversation pages list their own scores too, with any comment, who gave each one, and a link to the call a score was given to.
 
 The `dashboard.layout` option narrows the dashboard to one model type, for example `text` or `image`. See [Layout Modes](/installation#layout-modes).
@@ -35,6 +53,8 @@ The `dashboard.layout` option narrows the dashboard to one model type, for examp
 <img class="screenshot" src="/images/dashboard/requests.png" alt="The requests list" />
 
 The requests list shows every tracked AI call: its model and type, its tags, its usage (tokens, images, characters or seconds), its cost, latency and status. Search by model, or paste a request ID, response ID or trace ID. Filter by model type, provider, tag, finish reason and more, and sort by time, cost, usage or latency.
+
+<img class="screenshot" src="/images/dashboard/requests-filters.png" alt="The requests filters: model, status, tag, finish reason, tool calls and reasoning" />
 
 <a name="request-details"></a>
 ### Request Details
@@ -51,6 +71,18 @@ Open a request to see everything Spectra recorded about it:
 
 The payload shows only what your [storage settings](/configuration#storage) keep.
 
+The trace card shows where the call sits among the other calls of its trace, with the tools the model asked for between them:
+
+<img class="screenshot" src="/images/dashboard/request-trace.png" alt="A call highlighted in its trace" />
+
+The token usage card splits the input into uncached tokens and cache reads and writes, and the output into the answer and reasoning:
+
+<img class="screenshot" src="/images/dashboard/request-token-usage.png" alt="Token usage with cache reads and reasoning tokens" />
+
+A failed call shows the provider's error and links to the calls that failed the same way:
+
+<img class="screenshot" src="/images/dashboard/request-failed.png" alt="A rate-limited call" />
+
 <a name="traces"></a>
 ## Traces
 
@@ -64,6 +96,12 @@ A trace groups the AI calls of one HTTP request, queued job or Artisan command. 
 <img class="screenshot" src="/images/dashboard/trace-detail.png" alt="A trace timeline" />
 
 Open a trace to see its calls on one timeline, in the order they started, to the millisecond. The request, job or command sits at the top, and the calls are nested under the [spans](/usage#spans) they ran in, such as the `retrieve-context` span above. A [tool](/tools) shows with a wrench between the calls around it; click it to see its arguments and result. The side panel shows the cost, calls and tokens per model, the trackable, the origins and the tags.
+
+<img class="screenshot" src="/images/dashboard/trace-tool.png" alt="A tool call opened to show its arguments and result" />
+
+When the trace has [scores](/scores), the side panel lists them, with a link to the call each one was given to:
+
+<img class="screenshot" src="/images/dashboard/trace-scores.png" alt="The scores of a trace" />
 
 <a name="conversations"></a>
 ## Conversations
@@ -79,13 +117,19 @@ The conversations list shows one row per [conversation](/usage#conversation-trac
 
 Open a conversation to read it as a transcript. Each turn shows the user's message and the model's reply, the calls the turn made, what the turn cost and what the conversation has cost so far. A failed call is marked in red. The transcript needs `store_prompts` and `store_responses`; with either off, the turns still show their calls and costs.
 
+<img class="screenshot" src="/images/dashboard/conversation-turn.png" alt="One turn of a conversation: the message, the reply and its calls" />
+
 <a name="prompts"></a>
 ## Prompts
+
+<img class="screenshot" src="/images/dashboard/prompts.png" alt="The prompts screen comparing two versions of a prompt" />
 
 The prompts screen compares the versions of each [prompt](/prompts) your calls were tagged with: their calls, error rate, average cost, tokens and latency, their top scores, and when each was last used. Click a version to see its calls. The screen lists the prompts once your app tags calls with `Spectra::withPrompt()`.
 
 <a name="errors"></a>
 ## Errors
+
+<img class="screenshot" src="/images/dashboard/errors.png" alt="The errors screen" />
 
 The errors screen groups the period's failed calls by cause, so a rate limit that hit 400 times is one row, not 400. It shows how many calls failed and the error rate, then each group with the most failures first:
 
@@ -103,12 +147,32 @@ Failures saved before the [error fingerprint migration](/migrations#error-finger
 <a name="review"></a>
 ## Review
 
+<img class="screenshot" src="/images/dashboard/review.png" alt="The review screen with two queues" />
+
 Once the app configures an [annotation queue](/annotations), a clipboard icon in the top bar opens the Review screen, with the number of traces waiting. It lists each queue with its progress; open one to read a trace's calls, give the queue's scores, and move to the next. A trace's page has an **Add to review** menu to queue it by hand.
+
+<img class="screenshot" src="/images/dashboard/review-queue.png" alt="Reviewing a trace: its calls on the left, the queue's scores on the right" />
 
 <a name="evals"></a>
 ## Evals
 
-The Evals screen lists each [evaluation](/evaluations) with its latest runs and every scorer's result per run, and the datasets. Open a run to see each example's input, expected output, output, scores, latency and cost, and compare it with an earlier run. A call's page has an **Add to dataset** card that saves the call as an example.
+<img class="screenshot" src="/images/dashboard/evals.png" alt="The evals screen with an evaluation and a dataset" />
+
+The Evals screen lists each [evaluation](/evaluations) with its latest runs and every scorer's result per run, and the datasets. Open a run to see each example's input, expected output, output, scores, latency and cost:
+
+<img class="screenshot" src="/images/dashboard/eval-run.png" alt="An evaluation run, example by example" />
+
+Pick an earlier run in **Compare with** to see how each score moved, with the earlier run's output and scores under each example. **Changed only** hides the examples whose output and scores stayed the same:
+
+<img class="screenshot" src="/images/dashboard/eval-compare.png" alt="A run compared with an earlier one" />
+
+Open a dataset to see its examples and the runs over it:
+
+<img class="screenshot" src="/images/dashboard/eval-dataset.png" alt="A dataset with its examples and runs" />
+
+A call's page has an **Add to dataset** card that saves the call as an example:
+
+<img class="screenshot" src="/images/dashboard/request-add-to-dataset.png" alt="The Add to dataset card on a call" />
 
 <a name="costs"></a>
 ## Costs
@@ -142,6 +206,8 @@ Open a trackable to see its spend and requests over time, the providers and mode
 <a name="maintenance"></a>
 ## Maintenance
 
+<img class="screenshot" src="/images/dashboard/maintenance.png" alt="The maintenance screen" />
+
 The wrench icon in the top bar opens the Maintenance screen. It shows how many requests, spans and daily stats are stored and when the oldest request was made, and it runs the upkeep that is otherwise on the command line:
 
 - **Prune old data.** Pick how much to keep (24 hours to 1 year) and, optionally, how many days of daily stats to keep. The screen counts what would be deleted before you confirm. It runs [`spectra:prune`](/commands#spectra-prune) on the queue.
@@ -162,6 +228,8 @@ Every price on the dashboard uses the same format: two decimals from $1 (`$1,234
 ## Dark Mode
 
 The dashboard follows your system theme. The moon and sun icon in the top bar switches it, and the dashboard remembers your choice in the browser.
+
+<img class="screenshot" src="/images/dashboard/trace-detail-dark.png" alt="A trace timeline in dark mode" />
 
 <a name="demo-data"></a>
 ## Trying It With Demo Data

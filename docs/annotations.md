@@ -64,10 +64,16 @@ It returns whether the trace is in the queue, and throws an `InvalidArgumentExce
 <a name="reviewing"></a>
 ## Reviewing
 
-The dashboard's **Review** screen (the clipboard icon in the top bar, with the number of traces waiting) lists the queues with how many traces wait, were reviewed and were skipped. Open a queue to review its traces, the one waiting longest first:
+The dashboard's **Review** screen (the clipboard icon in the top bar, with the number of traces waiting) lists the queues with how many traces wait, were reviewed and were skipped:
+
+<img class="screenshot" src="/images/dashboard/review.png" alt="The review screen with two queues" />
+
+Open a queue to review its traces, the one waiting longest first:
 
 - On the left, each call of the trace with what it was asked and what it answered, or its error. The call that got the trace queued is outlined. The trace's scores so far are below.
 - On the right, the queue's scores and a comment. **Submit and next** (or ⌘/Ctrl + Enter) saves the review and opens the next trace; **Skip** passes over it.
+
+<img class="screenshot" src="/images/dashboard/review-queue.png" alt="Reviewing a trace: its calls on the left, the queue's scores on the right" />
 
 A review needs at least one score or a comment. Each score is saved on the trace with the Annotation source, the signed-in reviewer as its author, and the queue's name in its metadata (`annotation_queue`). The queue item keeps the reviewer, the time and the comment.
 

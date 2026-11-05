@@ -96,6 +96,10 @@ Spectra::redactUsing(fn (string $text) => $this->customerNames->mask($text));
 
 Redaction runs before a request or span is queued, so personal data never reaches your queue either. Rows saved before you turned it on are not changed. To stop storing prompts or responses at all, use `store_prompts` and `store_responses` instead.
 
+A redacted request in the dashboard, with the card number and email masked:
+
+<img class="screenshot" src="/images/dashboard/request-redacted-payload.png" alt="A stored request with the card number and email replaced by labels" />
+
 <a name="media-persistence"></a>
 ### Media Persistence
 

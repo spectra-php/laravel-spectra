@@ -6,6 +6,7 @@ namespace Workbench\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Spectra\Enums\ScoreSource;
@@ -181,9 +182,13 @@ class DatabaseSeeder extends Seeder
 
         Carbon::setTestNow();
 
-        $this->reviewQueuedTraces($users->take(2)->values()->all());
+        // The evaluation runs are sampled into the review queue too, so run them first.
         $this->runEvaluations();
+        $this->reviewQueuedTraces($users->take(2)->values()->all());
         $this->seedRedactedCall($users->first());
+
+        // The overview's Alerts card shows the state of the last check.
+        Artisan::call('spectra:check-alerts');
     }
 
     /**
@@ -295,17 +300,24 @@ class DatabaseSeeder extends Seeder
     {
         config()->set('spectra.storage.redaction.enabled', true);
         Spectra::newTrace();
+        // An hour and a half ago, taking as long as a real call, so it doesn't top the lists as a 0ms call.
+        Carbon::setTestNow(Carbon::now()->subMinutes(95));
 
-        Spectra::track('openai', 'gpt-5.4-mini', fn () => [
-            'id' => 'chatcmpl-redaction-demo',
-            'model' => 'gpt-5.4-mini',
-            'choices' => [['index' => 0, 'finish_reason' => 'stop', 'message' => [
-                'role' => 'assistant',
-                'content' => 'Thanks! I sent the refund confirmation to jonas.berg@example.com. The card ending 4242 will be credited in 3-5 days.',
-            ]]],
-            'usage' => ['prompt_tokens' => 64, 'completion_tokens' => 31],
-        ], [
+        Spectra::track('openai', 'gpt-5.4-mini', function () {
+            Carbon::setTestNow(Carbon::now()->addMilliseconds(1_840));
+
+            return [
+                'id' => 'chatcmpl-redaction-demo',
+                'model' => 'gpt-5.4-mini',
+                'choices' => [['index' => 0, 'finish_reason' => 'stop', 'message' => [
+                    'role' => 'assistant',
+                    'content' => 'Thanks! I sent the refund confirmation to jonas.berg@example.com. The card ending 4242 will be credited in 3-5 days.',
+                ]]],
+                'usage' => ['prompt_tokens' => 64, 'completion_tokens' => 31],
+            ];
+        }, [
             'endpoint' => '/v1/chat/completions',
+            'origin' => 'POST /api/chats/{chat}/messages',
             'trackable_type' => $user->getMorphClass(),
             'trackable_id' => $user->getKey(),
             'request_data' => ['model' => 'gpt-5.4-mini', 'messages' => [
@@ -313,6 +325,7 @@ class DatabaseSeeder extends Seeder
             ]],
         ]);
 
+        Carbon::setTestNow();
         config()->set('spectra.storage.redaction.enabled', false);
     }
 

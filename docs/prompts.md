@@ -41,7 +41,11 @@ The options win over `withPrompt()`, so a call inside the callback can name anot
 <a name="comparing-versions"></a>
 ## Comparing Versions
 
-The dashboard's [Prompts screen](/dashboard#prompts) lists each prompt with its versions, the most recently used first. For each version in the period it shows:
+The dashboard's [Prompts screen](/dashboard#prompts) lists each prompt with its versions, the most recently used first:
+
+<img class="screenshot" src="/images/dashboard/prompts.png" alt="Two prompts, one with versions v2 and v3 side by side" />
+
+For each version in the period it shows:
 
 - **Calls** and the **error rate**: the share of calls that failed.
 - **Avg cost** and **avg tokens** per call, and the **avg latency** of the calls that succeeded.

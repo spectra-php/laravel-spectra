@@ -110,4 +110,10 @@ Event::listen(function (AlertTriggered $event) {
 <a name="dashboard"></a>
 ## On the Dashboard
 
-The Overview shows an Alerts card with each rule, its value now, and whether it is firing as of the last `spectra:check-alerts`. Below it, the Performance card shows each model's error rate and its p50, p95 and p99 latency for the selected period. See [Dashboard](/dashboard#overview).
+The Overview shows an Alerts card with each rule, its value now, and whether it is firing as of the last `spectra:check-alerts`:
+
+<img class="screenshot" src="/images/dashboard/overview-alerts.png" alt="The alerts card: one rule firing, two OK" />
+
+Below it, the Performance card shows each model's error rate and its p50, p95 and p99 latency for the selected period. See [Dashboard](/dashboard#overview).
+
+<img class="screenshot" src="/images/dashboard/overview-performance.png" alt="Error rate and latency percentiles per model" />

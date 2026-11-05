@@ -20,7 +20,11 @@ $dataset->add(['question' => 'How long does a refund take?'], expected: 'Five to
 
 The input and the expected output can be any value that encodes to JSON: a string, or an array with the fields your code needs. The expected output is optional; leave it out when your scorers don't compare against one. `add()` also takes `metadata`.
 
-**From real traffic.** The best examples are often real questions. A call's page in the dashboard has an **Add to dataset** card: it saves the call's last user message as the input (`['prompt' => ...]`), and its reply as the expected output when you tick the box. In code:
+**From real traffic.** The best examples are often real questions. A call's page in the dashboard has an **Add to dataset** card: it saves the call's last user message as the input (`['prompt' => ...]`), and its reply as the expected output when you tick the box.
+
+<img class="screenshot" src="/images/dashboard/request-add-to-dataset.png" alt="The Add to dataset card on a call" />
+
+In code:
 
 ```php
 Spectra::dataset('refund-questions')->addRequest($requestId, replyIsExpected: true);
@@ -122,14 +126,24 @@ $run->summary; // ['exact' => ['type' => 'boolean', 'count' => 8, 'average' => 0
 
 The dashboard's **Evals** screen lists each evaluation with its latest runs, every scorer's result per run, and the datasets.
 
-Open a run to see each example's input, expected output, output, scores, latency and cost, with a link to its trace. Pick an earlier run under **Compare with** to see:
+<img class="screenshot" src="/images/dashboard/evals.png" alt="An evaluation with two runs, and a dataset" />
+
+Open a run to see each example's input, expected output, output, scores, latency and cost, with a link to its trace.
+
+<img class="screenshot" src="/images/dashboard/eval-run.png" alt="An evaluation run, example by example" />
+
+Pick an earlier run under **Compare with** to see:
 
 - each scorer's change, in points for yes/no scores;
 - the earlier run's output under each example's;
 - the scores that changed, outlined, with the earlier value on hover;
 - **Changed only**, to hide the examples whose output and scores stayed the same.
 
+<img class="screenshot" src="/images/dashboard/eval-compare.png" alt="A v3 run compared with the v2 run" />
+
 A dataset's page lists its examples and the runs over it.
+
+<img class="screenshot" src="/images/dashboard/eval-dataset.png" alt="A dataset with its examples and the runs over it" />
 
 <a name="storage"></a>
 ## Storage

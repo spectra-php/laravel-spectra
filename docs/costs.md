@@ -58,6 +58,10 @@ The other fields are a breakdown of these two totals, so nothing is counted twic
 | Audio output tokens | Completion tokens | Used for cost only |
 | Image output tokens | Completion tokens | Used for cost only |
 
+A call's page shows this breakdown, with what each part cost:
+
+<img class="screenshot" src="/images/dashboard/request-token-usage.png" alt="Input split into uncached tokens and cache reads, output into the answer and reasoning" />
+
 <a name="token-based-cost-formula"></a>
 ## Token-Based Cost Formula
 

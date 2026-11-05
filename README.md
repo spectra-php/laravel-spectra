@@ -27,7 +27,7 @@ Spectra is an AI observability package for Laravel, built to track AI requests, 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/public/images/dashboard/overview-dark.png" />
-    <img alt="The Spectra dashboard overview: requests, spend, tokens and latency, media usage, daily volume and a breakdown by provider" src="docs/public/images/dashboard/overview.png" width="100%" />
+    <img alt="The Spectra dashboard overview: requests, spend, tokens and latency, alerts, media usage, daily volume, a breakdown by provider, performance per model and scores" src="docs/public/images/dashboard/overview.png" width="100%" />
   </picture>
 </p>
 
@@ -39,7 +39,7 @@ Spectra is an AI observability package for Laravel, built to track AI requests, 
     </td>
     <td width="50%">
       <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/request-detail.png" target="_blank" rel="noopener"><img alt="A single request" src="docs/public/images/dashboard/thumbnails/request-detail.png" width="100%" /></a>
-      <p align="center"><strong>Request details</strong><br />Token breakdown, cache hits, cost split and payload</p>
+      <p align="center"><strong>Request details</strong><br />Its trace, token breakdown, cache hits, cost split and payload</p>
     </td>
   </tr>
   <tr>
@@ -49,7 +49,7 @@ Spectra is an AI observability package for Laravel, built to track AI requests, 
     </td>
     <td width="50%">
       <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/trace-detail.png" target="_blank" rel="noopener"><img alt="A trace timeline" src="docs/public/images/dashboard/thumbnails/trace-detail.png" width="100%" /></a>
-      <p align="center"><strong>Trace timeline</strong><br />Every call and span on one timeline</p>
+      <p align="center"><strong>Trace timeline</strong><br />Every call, span and tool on one timeline</p>
     </td>
   </tr>
   <tr>
@@ -60,6 +60,26 @@ Spectra is an AI observability package for Laravel, built to track AI requests, 
     <td width="50%">
       <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/conversation-detail.png" target="_blank" rel="noopener"><img alt="A conversation transcript" src="docs/public/images/dashboard/thumbnails/conversation-detail.png" width="100%" /></a>
       <p align="center"><strong>Conversation transcript</strong><br />Each turn with its messages and running cost</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/errors.png" target="_blank" rel="noopener"><img alt="The errors screen" src="docs/public/images/dashboard/thumbnails/errors.png" width="100%" /></a>
+      <p align="center"><strong>Errors</strong><br />Failed calls grouped by cause, with their trend</p>
+    </td>
+    <td width="50%">
+      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/prompts.png" target="_blank" rel="noopener"><img alt="The prompts screen" src="docs/public/images/dashboard/thumbnails/prompts.png" width="100%" /></a>
+      <p align="center"><strong>Prompts</strong><br />Each prompt version's cost, latency, errors and scores</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/eval-run.png" target="_blank" rel="noopener"><img alt="An evaluation run" src="docs/public/images/dashboard/thumbnails/eval-run.png" width="100%" /></a>
+      <p align="center"><strong>Evals</strong><br />Run your AI code over a dataset and compare runs</p>
+    </td>
+    <td width="50%">
+      <a href="https://raw.githubusercontent.com/spectra-php/laravel-spectra/refs/heads/main/docs/public/images/dashboard/review-queue.png" target="_blank" rel="noopener"><img alt="A review queue" src="docs/public/images/dashboard/thumbnails/review-queue.png" width="100%" /></a>
+      <p align="center"><strong>Review</strong><br />Label traces by hand, one after the other</p>
     </td>
   </tr>
   <tr>
