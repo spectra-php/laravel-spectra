@@ -416,6 +416,9 @@ class Spectra
      *   }
      *   $result = $tracker->finish();
      *
+     * A stream that throws inside the loop is recorded as a failed request
+     * when the tracker is released, or at once with `$tracker->fail($e)`.
+     *
      * @param  array<string, mixed>  $options
      */
     public function stream(?string $provider = null, ?string $model = null, array $options = []): StreamingTracker

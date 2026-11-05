@@ -16,7 +16,8 @@ use Spectra\Support\Payload;
 
 /**
  * Ollama's native `/api/embed` endpoint, which reports its input tokens as
- * `prompt_eval_count`.
+ * `prompt_eval_count`, and the legacy `/api/embeddings` endpoint it
+ * superseded, which answers one bare `embedding` vector with no counts.
  */
 class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesResponseShape
 {
@@ -32,11 +33,11 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     }
 
     /**
-     * Get Ollama's native embed endpoint path.
+     * Get Ollama's native and legacy embedding endpoint paths.
      */
     public function endpoints(): array
     {
-        return ['/api/embed'];
+        return ['/api/embed', '/api/embeddings'];
     }
 
     /**
@@ -61,6 +62,13 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
      */
     public function extractResponse(array $response): ?string
     {
+        // The legacy endpoint answers a single vector.
+        if (is_array($response['embedding'] ?? null)) {
+            $dimensions = count($response['embedding']);
+
+            return "[embedding: 1 vectors, {$dimensions} dimensions]";
+        }
+
         if (! isset($response['embeddings']) || ! is_array($response['embeddings'])) {
             return null;
         }
@@ -72,12 +80,12 @@ class EmbeddingHandler implements ExtractsModelFromResponse, Handler, MatchesRes
     }
 
     /**
-     * Determine if the body is an Ollama embed response.
+     * Determine if the body is an Ollama embed response, native or legacy.
      *
      * @param  array<string, mixed>  $data
      */
     public function matchesResponse(array $data): bool
     {
-        return isset($data['model'], $data['embeddings']);
+        return isset($data['model'], $data['embeddings']) || is_array($data['embedding'] ?? null);
     }
 }

@@ -6,6 +6,7 @@ namespace Spectra\Http\Controllers\Api;
 
 use Spectra\Actions\Conversations\GetConversationDetails;
 use Spectra\Data\Responses\ConversationDetailsResponse;
+use Spectra\Support\Query\TraceSchema;
 
 /**
  * GET /api/conversations/{conversationId}: the conversation transcript.
@@ -18,8 +19,12 @@ class ShowConversationController extends BaseApiController
     /**
      * Get the conversation transcript, or a 404 when it has no calls.
      */
-    public function __invoke(string $conversationId, GetConversationDetails $getConversationDetails): ConversationDetailsResponse
+    public function __invoke(string $conversationId, GetConversationDetails $getConversationDetails, TraceSchema $traceSchema): ConversationDetailsResponse
     {
+        if (! $traceSchema->hasTraceColumns()) {
+            return ConversationDetailsResponse::unmigrated($conversationId);
+        }
+
         return $getConversationDetails($conversationId, self::CALL_LIMIT) ?? abort(404);
     }
 }

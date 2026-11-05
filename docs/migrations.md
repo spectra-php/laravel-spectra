@@ -76,7 +76,7 @@ Run this migration before you deploy 2.0. Without the new columns, Spectra can't
 php artisan spectra:install
 ```
 
-Until it runs, Spectra keeps recording calls without these two columns and logs a warning once per process. Rows saved before the migration have no `started_at`; Spectra uses their `created_at` instead.
+Until it runs, Spectra keeps recording calls without these two columns and logs a warning once per process; the Traces and Conversations screens and the request page's trace card say the migration is missing instead of listing anything. Rows saved before the migration have no `started_at`; Spectra uses their `created_at` instead.
 
 <a name="spans-migration"></a>
 ## The Spans Migration

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Log;
+use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\ShowRequestController;
 use Spectra\Http\Controllers\Api\ShowTraceController;
 use Spectra\Http\Controllers\Api\TracesController;
@@ -172,6 +174,24 @@ it('marks the current call and its place in the trace on the request screen', fu
 
     expect($trace['position'])->toBe(2)
         ->and(collect($trace['requests'])->pluck('is_current')->all())->toBe([false, true]);
+});
+
+it('lists nothing and says the trace migrations are missing until they run', function () {
+    $this->dropTraceColumns();
+    Log::spy();
+    Spectra::withTraceId(CHECKOUT_TRACE);
+    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Hi']]]]);
+
+    $list = callTraces();
+    $trace = callTrace(CHECKOUT_TRACE);
+
+    expect(SpectraRequest::query()->count())->toBe(1)
+        ->and($list['migrated'])->toBeFalse()
+        ->and($list['data'])->toBe([])
+        ->and($list['summary']['trace_count'])->toBe(0)
+        ->and($trace['migrated'])->toBeFalse()
+        ->and($trace['request_count'])->toBe(0)
+        ->and($trace['requests'])->toBe([]);
 });
 
 it('answers 404 for a trace with no calls', function () {

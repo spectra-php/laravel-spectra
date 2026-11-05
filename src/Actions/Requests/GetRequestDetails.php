@@ -9,6 +9,7 @@ use Spectra\Actions\Traces\GetTraceDetails;
 use Spectra\Data\Responses\RequestDetailsResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Pricing\PricingLookup;
+use Spectra\Support\Query\TraceSchema;
 
 /**
  * Everything the request detail screen shows for one request: its payloads
@@ -27,6 +28,7 @@ class GetRequestDetails
         private readonly PricingLookup $pricingLookup,
         private readonly GetTraceDetails $getTraceDetails,
         private readonly GetScores $getScores,
+        private readonly TraceSchema $traceSchema,
     ) {}
 
     /**
@@ -59,7 +61,10 @@ class GetRequestDetails
 
         $details['scores'] = ($this->getScores)(requestId: $request->id);
 
-        $details['trace'] = filled($request->trace_id)
+        // The trace card orders calls by started_at; until the trace
+        // migrations run it is left out and the page says so.
+        $details['trace_migrated'] = $this->traceSchema->hasTraceColumns();
+        $details['trace'] = $details['trace_migrated'] && filled($request->trace_id)
             ? ($this->getTraceDetails)($request->trace_id, $request->id, self::TRACE_LIMIT)?->toArray()
             : null;
 

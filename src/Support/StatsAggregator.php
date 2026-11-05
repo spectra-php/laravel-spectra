@@ -13,6 +13,10 @@ use Spectra\Models\SpectraRequest;
  * Keeps the pre-aggregated spectra_daily_stats rows in step with
  * spectra_requests: one global row and, when the request has a trackable, one
  * row for that trackable, per day / provider / model / model type.
+ *
+ * Like every live query, it counts failed requests but adds cost and latency
+ * for successful ones only, so the daily stats agree with the dashboard and
+ * stay right after the requests they came from are pruned.
  */
 class StatsAggregator
 {
@@ -21,7 +25,7 @@ class StatsAggregator
      */
     public function recordRequest(SpectraRequest $request): void
     {
-        $this->apply($request, $this->amounts($request), $request->latency_ms);
+        $this->apply($request, $this->amounts($request), $this->latencyOf($request));
     }
 
     /**
@@ -33,22 +37,32 @@ class StatsAggregator
         $currentAmounts = $this->amounts($current);
         $previousAmounts = $this->amounts($previous);
 
+        // Cost and latency count for successful requests only, so when the
+        // outcome flips (a job polled as running, then as failed) they move
+        // with it, in either direction.
+        $outcomeChanged = $current->isSuccessful() !== $previous->isSuccessful();
+
         $delta = [];
         foreach ($currentAmounts as $column => $value) {
             $change = $value - ($previousAmounts[$column] ?? 0);
 
             // Usage only grows as a job progresses; a smaller number means a
             // poll returned less detail, not that usage went away. Only the
-            // success/failure split may move in both directions.
-            $delta[$column] = in_array($column, ['successful_count', 'failed_count'], true) ? $change : max(0, $change);
+            // success/failure split, and what follows it, may move in both directions.
+            $movesBothWays = in_array($column, ['successful_count', 'failed_count'], true)
+                || ($outcomeChanged && in_array($column, ['total_cost_in_cents', 'total_latency_ms'], true));
+
+            $delta[$column] = $movesBothWays ? $change : max(0, $change);
         }
 
         // Still one request; only its outcome may have changed.
         $delta['request_count'] = 0;
 
-        $latency = $current->latency_ms !== null && $current->latency_ms !== $previous->latency_ms
-            ? $current->latency_ms
-            : null;
+        $latency = $this->latencyOf($current);
+
+        if ($latency === $previous->latency_ms && ! $outcomeChanged) {
+            $latency = null;
+        }
 
         $this->apply($current, $delta, $latency);
     }
@@ -63,6 +77,7 @@ class StatsAggregator
         $isSuccessful = $request->isSuccessful();
         $promptTokens = $request->prompt_tokens ?? 0;
         $completionTokens = $request->completion_tokens ?? 0;
+        $latencyMs = $this->latencyOf($request);
 
         return [
             'request_count' => 1,
@@ -79,9 +94,19 @@ class StatsAggregator
             'total_pages' => $request->page_count ?? 0,
             'total_duration_seconds' => (float) ($request->duration_seconds ?? 0),
             'total_input_characters' => $request->input_characters ?? 0,
-            'total_cost_in_cents' => (float) ($request->total_cost_in_cents ?? 0),
-            'total_latency_ms' => $request->latency_ms ?? 0,
+            'total_cost_in_cents' => $isSuccessful ? (float) ($request->total_cost_in_cents ?? 0) : 0.0,
+            'total_latency_ms' => $latencyMs ?? 0,
         ];
+    }
+
+    /**
+     * Get the latency a request adds to the daily stats: its own when it
+     * succeeded, none when it failed (a timeout or an error answer says
+     * nothing about how fast the model is).
+     */
+    protected function latencyOf(SpectraRequest $request): ?int
+    {
+        return $request->isSuccessful() ? $request->latency_ms : null;
     }
 
     /**
@@ -134,7 +159,7 @@ class StatsAggregator
             // are long text and would make every chunk heavy.
             ->select([
                 'id', 'created_at', 'provider', 'model', 'model_type', 'trackable_type', 'trackable_id',
-                'status_code', 'prompt_tokens', 'completion_tokens', 'cached_tokens', 'cache_write_tokens',
+                'status_code', 'error_type', 'prompt_tokens', 'completion_tokens', 'cached_tokens', 'cache_write_tokens',
                 'reasoning_tokens', 'image_count', 'video_count', 'page_count', 'duration_seconds',
                 'input_characters', 'total_cost_in_cents', 'latency_ms',
             ])

@@ -84,7 +84,8 @@ it('bills the 10-second minimum when a json transcription has no duration', func
         ->and($row->model_type)->toBe('stt')
         ->and($row->response_id)->toBe('req_01k3hj8v7xf2r9g4p6m1n0q3ts')
         ->and((float) $row->duration_seconds)->toBe(10.0)
-        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta((4 / 60) * (10 / 60), 1e-12);
+        // The cost column holds six decimals, so the stored value is within 5e-7 of the exact one.
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta((4 / 60) * (10 / 60), 1e-6);
 });
 
 it('bills a verbose transcription shorter than 10 seconds at the 10-second minimum', function () {
@@ -98,7 +99,7 @@ it('bills a verbose transcription shorter than 10 seconds at the 10-second minim
 
     // Whisper Large v3: $0.111 / hour = 0.185 cents per minute × 10 s billed.
     expect((float) $row->duration_seconds)->toBe(10.0)
-        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.185 * 10 / 60, 1e-12);
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.185 * 10 / 60, 1e-6);
 });
 
 it('bills a translation by its audio length', function () {
@@ -113,7 +114,7 @@ it('bills a translation by its audio length', function () {
         ->and($row->model)->toBe('Whisper Large v3')
         ->and($row->model_type)->toBe('stt')
         ->and((float) $row->duration_seconds)->toBe(120.5)
-        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.185 * 120.5 / 60, 1e-12);
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.185 * 120.5 / 60, 1e-6);
 });
 
 it('tracks Orpheus text to speech per character', function () {

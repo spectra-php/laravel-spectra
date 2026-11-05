@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Spectra\Tests\Concerns\CreatesProviders;
+use Spectra\Tests\Concerns\DropsTraceColumns;
 use Spectra\Tests\Concerns\GeneratesAudio;
 use Spectra\Tests\Concerns\InteractsWithHttpWatcher;
 use Spectra\Tests\Concerns\LoadsMockResponses;
@@ -12,4 +13,5 @@ uses(TestCase::class)->in('Feature', 'Unit');
 uses(LoadsMockResponses::class)->in('Feature', 'Unit');
 uses(CreatesProviders::class)->in('Feature', 'Unit');
 uses(GeneratesAudio::class)->in('Feature', 'Unit');
+uses(DropsTraceColumns::class)->in('Unit');
 uses(InteractsWithHttpWatcher::class)->in('Unit');

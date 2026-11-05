@@ -149,8 +149,8 @@ class GuzzleMiddleware
         }
 
         $providerInstance = $registry->provider($provider);
-        $path = $request->getUri()->getPath();
-        $path = $providerInstance?->normalizeEndpoint($path) ?? $path;
+        $requestPath = $request->getUri()->getPath();
+        $path = $providerInstance?->normalizeEndpoint($requestPath) ?? $requestPath;
 
         if (! $this->manual && ! $registry->isTrackableEndpoint($provider, $path)) {
             return null;
@@ -169,6 +169,7 @@ class GuzzleMiddleware
 
         $context->requestData = $requestData;
         $context->endpoint = $path;
+        $context->deployment = $providerInstance?->extractDeployment($requestPath);
 
         if ($providerInstance instanceof ExtractsPricingTierFromRequest) {
             $context->requestedPricingTier = $providerInstance->extractPricingTierFromRequest($requestData);
@@ -185,14 +186,14 @@ class GuzzleMiddleware
         $context->httpStatus = $response->getStatusCode();
 
         if ($response->getStatusCode() >= 400) {
-            return $this->withBody($response, fn (string $body) => $this->recordHttpError($context, $response->getStatusCode(), $body));
+            return $this->withBody($context, $response, fn (string $body) => $this->recordHttpError($context, $response->getStatusCode(), $body));
         }
 
         if (StreamDetector::isStreamingResponse($response, $context->provider, $context->endpoint, $context->requestData)) {
             return $this->trackStream($context, $response);
         }
 
-        return $this->withBody($response, fn (string $body) => $this->recordBody($context, $body));
+        return $this->withBody($context, $response, fn (string $body) => $this->recordBody($context, $body));
     }
 
     /**
@@ -211,11 +212,12 @@ class GuzzleMiddleware
 
     /**
      * Read the body now when it can be rewound; otherwise let the application
-     * read it first and receive the bytes as it does.
+     * read it first and receive the bytes as it does. A body the application
+     * can't read to the end is recorded as a failure, not as a complete answer.
      *
      * @param  callable(string): void  $record
      */
-    protected function withBody(ResponseInterface $response, callable $record): ResponseInterface
+    protected function withBody(RequestContext $context, ResponseInterface $response, callable $record): ResponseInterface
     {
         $body = $response->getBody();
 
@@ -237,25 +239,32 @@ class GuzzleMiddleware
             function () use (&$buffer, $record) {
                 $record($buffer);
             },
+            function (Throwable $exception) use ($context) {
+                app(Spectra::class)->recordFailure($context, $exception);
+            },
         ));
     }
 
     /**
-     * Wrap a streamed response body so each chunk feeds the streaming tracker as the app reads it.
+     * Wrap a streamed response body so each chunk feeds the streaming tracker
+     * as the app reads it, and a body that breaks off is recorded as a failure.
      */
     protected function trackStream(RequestContext $context, ResponseInterface $response): ResponseInterface
     {
-        $manager = app(Spectra::class);
         $tracker = StreamingTracker::forContext($context);
         $parser = new StreamEventParser($response->getHeaderLine('Content-Type'));
-
-        // A manual Spectra::stream() wrapped around the same response claims
-        // this context and records it instead.
-        $manager->setPendingStreamContext($context);
 
         return $response->withBody(new TrackedStream(
             $response->getBody(),
             function (string $bytes) use ($parser, $tracker, $context) {
+                // A manual Spectra::stream() wrapped around this response gets
+                // its first chunk from these bytes and claims the context then.
+                // Offering it only while the body is being read keeps an
+                // unread stream from being claimed by an unrelated tracker.
+                if (! $context->streamClaimed) {
+                    app(Spectra::class)->setPendingStreamContext($context);
+                }
+
                 foreach ($parser->push($bytes) as $event) {
                     if (! $context->streamClaimed) {
                         $tracker->ingest($event);
@@ -273,6 +282,15 @@ class GuzzleMiddleware
 
                 if (! $context->streamClaimed) {
                     $tracker->finish();
+                }
+            },
+            function (Throwable $exception) use ($tracker, $context) {
+                app(Spectra::class)->clearPendingStreamContext($context);
+
+                // A manual tracker that claimed the context sees the same
+                // exception from its own loop and records it itself.
+                if (! $context->streamClaimed) {
+                    $tracker->fail($exception);
                 }
             },
         ));
@@ -313,7 +331,11 @@ class GuzzleMiddleware
             return;
         }
 
-        $this->restoreJob($context, $providerInstance, $jobId);
+        // Only a poll needs the job restored: it carries no body (a GET) or
+        // names no model. An ordinary call has both, and skips the cache read.
+        if ($context->requestData === [] || $context->model === 'unknown') {
+            $this->restoreJob($context, $providerInstance, $jobId);
+        }
 
         app(Spectra::class)->recordSuccess($context, $body);
     }
@@ -339,7 +361,7 @@ class GuzzleMiddleware
                 $job['model'] = $model;
             }
 
-            $request = $this->withoutInlineFiles($context->requestData);
+            $request = app(RequestDataFilter::class)->withoutInlineFiles($context->requestData);
 
             if ($request !== []) {
                 $job['request'] = $request;
@@ -398,26 +420,6 @@ class GuzzleMiddleware
         }
 
         return is_array($job) ? $job : [];
-    }
-
-    /**
-     * Remove inline files (data URIs) from the request body: they can be
-     * megabytes and say nothing about the price.
-     *
-     * @param  array<mixed>  $data
-     * @return array<mixed>
-     */
-    protected function withoutInlineFiles(array $data): array
-    {
-        foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $data[$key] = $this->withoutInlineFiles($value);
-            } elseif (is_string($value) && Str::startsWith($value, 'data:')) {
-                unset($data[$key]);
-            }
-        }
-
-        return $data;
     }
 
     /**

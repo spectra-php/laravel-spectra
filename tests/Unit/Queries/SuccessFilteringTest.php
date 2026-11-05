@@ -13,10 +13,12 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\DateRange;
 use Spectra\Support\Query\UsageQueryBuilder;
+use Spectra\Support\Tracking\ProviderErrorException;
 
 /**
- * Dashboard aggregates count failed requests but leave them out of cost and
- * latency, and keep fractional-cent costs.
+ * Dashboard aggregates count failed requests (a status outside 2xx, none, or
+ * an error recorded on a 2xx answer) but leave them out of cost and latency,
+ * and keep fractional-cent costs.
  */
 function seedMixedOutcomeRequests(): void
 {
@@ -47,6 +49,17 @@ function seedMixedOutcomeRequests(): void
         'trackable_type' => 'App\\Models\\User',
         'trackable_id' => '1',
     ]);
+
+    // One job the provider reported as failed inside an HTTP 200
+    SpectraRequest::factory()->create([
+        'model_type' => 'text',
+        'status_code' => 200,
+        'error_type' => ProviderErrorException::class,
+        'total_cost_in_cents' => 555,
+        'latency_ms' => 20000,
+        'trackable_type' => 'App\\Models\\User',
+        'trackable_id' => '1',
+    ]);
 }
 
 it('excludes failed requests from cost and latency in the overview stats but counts them', function () {
@@ -54,7 +67,7 @@ it('excludes failed requests from cost and latency in the overview stats but cou
 
     $stats = app(GetOverviewStats::class)(DateRange::fromRequest(new Request), 'full');
 
-    expect($stats->total_requests)->toBe(3)
+    expect($stats->total_requests)->toBe(4)
         ->and($stats->total_cost_in_cents)->toBe(300.0)
         ->and($stats->avg_latency)->toBe(200.0);
 });
@@ -65,7 +78,7 @@ it('excludes failed requests from cost and latency in the model type breakdown',
     $rows = app(GetModelTypeBreakdown::class)(DateRange::fromRequest(new Request), 'full');
     $text = $rows->firstWhere('model_type', 'text');
 
-    expect($text->count)->toBe(3)
+    expect($text->count)->toBe(4)
         ->and((float) $text->cost)->toBe(300.0)
         ->and((float) $text->avg_latency)->toBe(200.0);
 });
@@ -75,7 +88,7 @@ it('excludes failed requests from trackable stats cost and latency', function ()
 
     $stats = app(GetTrackableStats::class)('App\\Models\\User', '1', DateRange::fromRequest(new Request));
 
-    expect($stats->total_requests)->toBe(3)
+    expect($stats->total_requests)->toBe(4)
         ->and($stats->total_cost)->toBe(300.0)
         ->and($stats->avg_latency)->toBe(200.0);
 });
@@ -96,7 +109,7 @@ it('excludes failed requests from trackable usage-by-provider cost', function ()
     $rows = app(GetTrackableUsageByProvider::class)('App\\Models\\User', '1', DateRange::fromRequest(new Request));
 
     expect($rows->first()->cost)->toBe(300.0)
-        ->and($rows->first()->requests)->toBe(3);
+        ->and($rows->first()->requests)->toBe(4);
 });
 
 it('excludes failed requests from the trackables summary cost', function () {
@@ -104,23 +117,26 @@ it('excludes failed requests from the trackables summary cost', function () {
 
     $summary = app(GetTrackablesSummary::class)(new Request, DateRange::fromRequest(new Request));
 
-    expect($summary->total_requests)->toBe(3)
+    expect($summary->total_requests)->toBe(4)
         ->and($summary->total_cost)->toBe(300.0)
         ->and($summary->avg_latency)->toBe(200.0);
 });
 
-it('counts 3xx responses as failed so success and failure cover every request', function () {
+it('counts 3xx responses and 2xx answers with an error as failed so success and failure cover every request', function () {
     SpectraRequest::factory()->create(['status_code' => 200]);
     SpectraRequest::factory()->create(['status_code' => 301]);
     SpectraRequest::factory()->create(['status_code' => 500]);
     SpectraRequest::factory()->create(['status_code' => null]);
+    SpectraRequest::factory()->create(['status_code' => 200, 'error_type' => ProviderErrorException::class]);
 
     $stats = (new UsageQueryBuilder)->stats();
 
-    expect($stats->requestCount)->toBe(4)
+    expect($stats->requestCount)->toBe(5)
         ->and($stats->successfulCount)->toBe(1)
-        ->and($stats->failedCount)->toBe(3)
-        ->and($stats->successfulCount + $stats->failedCount)->toBe($stats->requestCount);
+        ->and($stats->failedCount)->toBe(4)
+        ->and($stats->successfulCount + $stats->failedCount)->toBe($stats->requestCount)
+        ->and((new UsageQueryBuilder)->failed()->count())->toBe(4)
+        ->and((new UsageQueryBuilder)->successful()->count())->toBe(1);
 });
 
 it('does not truncate fractional-cent costs in usage stats', function () {

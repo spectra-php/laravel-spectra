@@ -22,10 +22,14 @@ use Spectra\Support\ProviderRegistry;
  * One tracked AI call: the provider, model and endpoint, who made it, its
  * usage, cost and latency, and (when storing is enabled) its payloads.
  *
- * A request is successful when its status code is 2xx and failed otherwise,
- * including a missing status code, so the two always cover every row. The
- * aggregate aliases below are the columns the dashboard and the usage
- * queries select; they exist only on those query results.
+ * A request is successful when its status code is 2xx and no error was
+ * recorded, and failed otherwise: a status outside 2xx, none at all, or an
+ * error_type on a 2xx answer (a stream that broke off, an async job the
+ * provider reports as failed inside an HTTP 200). The two always cover every
+ * row. SUCCESSFUL_SQL and FAILED_SQL spell that rule out for raw SQL, so
+ * every query in the package shares it. The aggregate aliases below are the
+ * columns the dashboard and the usage queries select; they exist only on
+ * those query results.
  *
  * @property string $id
  * @property string|null $batch_id
@@ -139,6 +143,12 @@ class SpectraRequest extends Model
     use HasUuids;
 
     public $timestamps = false;
+
+    /** SQL condition that holds for a successful request (see the class docblock). */
+    public const SUCCESSFUL_SQL = '(status_code BETWEEN 200 AND 299 AND error_type IS NULL)';
+
+    /** SQL condition that holds for a failed request, the complement of SUCCESSFUL_SQL. */
+    public const FAILED_SQL = '(status_code IS NULL OR status_code NOT BETWEEN 200 AND 299 OR error_type IS NOT NULL)';
 
     /**
      * Create a new factory instance for the model.
@@ -303,27 +313,29 @@ class SpectraRequest extends Model
     }
 
     /**
-     * Scope the query to requests with a 2xx status code.
+     * Scope the query to successful requests: a 2xx status code and no recorded error.
      *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
     public function scopeSuccessful(Builder $query): Builder
     {
-        return $query->whereBetween('status_code', [200, 299]);
+        return $query->whereBetween('status_code', [200, 299])->whereNull('error_type');
     }
 
     /**
-     * Scope the query to requests with a non-2xx status code or none at all.
+     * Scope the query to failed requests: a status code outside 2xx, none at
+     * all, or an error recorded on a 2xx answer.
      *
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
     public function scopeFailed(Builder $query): Builder
     {
-        return $query->where(function (Builder $statusQuery) {
-            $statusQuery->whereNotBetween('status_code', [200, 299])
-                ->orWhereNull('status_code');
+        return $query->where(function (Builder $outcomeQuery) {
+            $outcomeQuery->whereNotBetween('status_code', [200, 299])
+                ->orWhereNull('status_code')
+                ->orWhereNotNull('error_type');
         });
     }
 
@@ -335,14 +347,30 @@ class SpectraRequest extends Model
      */
     public function scopeForTrace(Builder $query, string $traceId): Builder
     {
-        // trace_id is a native uuid column on PostgreSQL, which rejects any
-        // other string with an error instead of matching nothing. Other
-        // drivers store it as text, where custom trace ids can exist.
-        if (! Str::isUuid($traceId) && $this->getConnection()->getDriverName() === 'pgsql') {
+        if (! Str::isUuid($traceId) && $this->hasUuidTraceIdColumn()) {
             return $query->whereRaw('1 = 0');
         }
 
         return $query->where('trace_id', $traceId);
+    }
+
+    /**
+     * Determine if trace_id is still a native uuid column, as it was on
+     * PostgreSQL before the trace id migration. PostgreSQL rejects any other
+     * string with an error instead of matching nothing, so queries compare
+     * such a column with UUIDs only. Other drivers store it as text.
+     */
+    public function hasUuidTraceIdColumn(): bool
+    {
+        if ($this->getConnection()->getDriverName() !== 'pgsql') {
+            return false;
+        }
+
+        return rescue(
+            fn () => Str::lower($this->getConnection()->getSchemaBuilder()->getColumnType($this->getTable(), 'trace_id')) === 'uuid',
+            false,
+            report: false,
+        );
     }
 
     /**
@@ -386,8 +414,10 @@ class SpectraRequest extends Model
      */
     public function scopeForTrackable(Builder $query, Model $trackable): Builder
     {
+        // Bound as a string: MySQL compares a string column with a number as
+        // doubles and can't use the index then.
         return $query->where('trackable_type', $trackable->getMorphClass())
-            ->where('trackable_id', $trackable->getKey());
+            ->where('trackable_id', (string) $trackable->getKey());
     }
 
     /**
@@ -477,15 +507,24 @@ class SpectraRequest extends Model
     }
 
     /**
-     * Determine if the request got a 2xx status code.
+     * Determine if the request succeeded: a 2xx status code and no recorded error.
      */
     public function isSuccessful(): bool
     {
-        return $this->status_code !== null && $this->status_code >= 200 && $this->status_code < 300;
+        return static::isSuccessfulOutcome($this->status_code, $this->error_type);
     }
 
     /**
-     * Determine if the request failed: any status outside 200-299, or none at all.
+     * Determine if a status code and error type make a successful request;
+     * the one PHP-side spelling of SUCCESSFUL_SQL.
+     */
+    public static function isSuccessfulOutcome(?int $statusCode, ?string $errorType): bool
+    {
+        return $statusCode !== null && $statusCode >= 200 && $statusCode < 300 && $errorType === null;
+    }
+
+    /**
+     * Determine if the request failed: a status outside 200-299, none at all, or a recorded error.
      */
     public function isFailed(): bool
     {

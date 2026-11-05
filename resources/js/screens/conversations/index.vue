@@ -58,6 +58,8 @@ const { period, startDate, endDate, applyQueryState, buildQueryParams, syncQuery
     getFilters: () => filters.value,
 });
 
+const migrated = ref(true);
+
 const loadConversations = async (page = 1) => {
     loading.value = true;
     try {
@@ -65,6 +67,7 @@ const loadConversations = async (page = 1) => {
         const data = await apiRequest('get', '/conversations?' + params.toString());
         conversations.value = data.data;
         summary.value = data.summary;
+        migrated.value = data.migrated !== false;
         pagination.value = {
             current_page: data.current_page,
             last_page: data.last_page,
@@ -176,6 +179,10 @@ onUnmounted(() => {
             :loading="loading"
             @change="onRangeChange"
         />
+
+        <div v-if="!migrated" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            Conversations are built from the start time of each call, which is stored once the trace migrations run; until then calls are recorded without it and there is nothing to list here. Run <code class="font-mono">php artisan spectra:install</code> to publish and run them.
+        </div>
 
         <!-- Totals over every matching conversation -->
         <div class="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">

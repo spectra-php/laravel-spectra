@@ -83,6 +83,19 @@ class OpenAI extends Provider implements ExtractsPricingTierFromRequest, Extract
     }
 
     /**
+     * Get the Azure deployment name of a `/openai/deployments/{deployment}/`
+     * path. Deployments are usually named after their model, and an image or
+     * speech response names none, so the deployment is the only model name
+     * such a call has.
+     */
+    public function extractDeployment(string $path): ?string
+    {
+        $deployment = Str::match('#^/openai/deployments/([^/]+)/#', $path);
+
+        return filled($deployment) ? rawurldecode($deployment) : null;
+    }
+
+    /**
      * Get the handlers for OpenAI's endpoints, in resolution order.
      *
      * Order matters:

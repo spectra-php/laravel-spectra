@@ -63,6 +63,28 @@ it('maps the azure responses preview api to the v1 responses endpoint', function
         ->and($row->completion_tokens)->toBe(87);
 });
 
+it('names an image or speech call after its deployment when the response names no model', function () {
+    Http::fake([
+        'contoso.openai.azure.com/openai/deployments/dall-e-3/*' => Http::response($this->loadMockResponse('openai/image_generation.json')),
+        'contoso.openai.azure.com/openai/deployments/tts-1/*' => Http::response('ID3fake-mp3-bytes', 200, ['Content-Type' => 'audio/mpeg']),
+    ]);
+
+    Http::post('https://contoso.openai.azure.com/openai/deployments/dall-e-3/images/generations?api-version=2024-10-21', ['prompt' => 'A lighthouse at dusk', 'n' => 2]);
+    Http::post('https://contoso.openai.azure.com/openai/deployments/tts-1/audio/speech?api-version=2024-10-21', ['voice' => 'alloy', 'input' => 'Hello world']);
+
+    $image = SpectraRequest::query()->where('model_type', 'image')->sole();
+    $speech = SpectraRequest::query()->where('model_type', 'tts')->sole();
+
+    // dall-e-3 standard: 4¢ per image × 2; tts-1: 1500¢ per 1M characters × 11.
+    expect($image->model)->toBe('DALL-E 3')
+        ->and($image->endpoint)->toBe('/v1/images/generations')
+        ->and($image->image_count)->toBe(2)
+        ->and((float) $image->total_cost_in_cents)->toEqualWithDelta(8.0, 1e-9)
+        ->and($speech->model)->toBe('TTS')
+        ->and($speech->input_characters)->toBe(11)
+        ->and((float) $speech->total_cost_in_cents)->toEqualWithDelta(0.0165, 1e-9);
+});
+
 it('does not track non-usage azure endpoints', function () {
     Http::fake(['*' => Http::response(['object' => 'list', 'data' => []])]);
 

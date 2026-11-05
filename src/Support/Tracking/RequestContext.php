@@ -189,6 +189,13 @@ class RequestContext implements Arrayable
 
     public ?int $httpStatus = null;
 
+    /**
+     * The provider deployment the request went to (an Azure OpenAI deployment
+     * name), used as the model when neither the response nor the request
+     * names one.
+     */
+    public ?string $deployment = null;
+
     public int $retryCount = 0;
 
     public bool $isReasoning = false;
@@ -337,7 +344,9 @@ class RequestContext implements Arrayable
     }
 
     /**
-     * Mark the request as failed with the exception and HTTP status.
+     * Mark the request as failed with the exception and HTTP status. Without
+     * a status the response's own stays (a stream that broke off after a
+     * 200), and a request that never got one stays without.
      */
     public function fail(\Throwable $exception, ?int $httpStatus = null): self
     {
@@ -346,7 +355,7 @@ class RequestContext implements Arrayable
         $this->latencyMs = (int) $this->startedAt->diffInMilliseconds($this->completedAt);
         $this->errorType = $exception::class;
         $this->errorMessage = $exception->getMessage();
-        $this->httpStatus = $httpStatus;
+        $this->httpStatus = $httpStatus ?? $this->httpStatus;
 
         return $this;
     }
@@ -642,10 +651,12 @@ class RequestContext implements Arrayable
     }
 
     /**
-     * Get the raw request body with the system prompt and tool storage switches applied.
+     * Get the raw request body with the system prompt and tool storage
+     * switches applied and its inline files replaced by a placeholder.
      *
      * The raw body is where system prompts and tools are stored, so their
-     * switches are applied to it.
+     * switches are applied to it. Inline files (base64 images and audio sent
+     * as `data:` URIs) are always stripped, like binary data in responses.
      *
      * @return array<string, mixed>|null
      */
@@ -656,7 +667,7 @@ class RequestContext implements Arrayable
         }
 
         $filter = app(RequestDataFilter::class);
-        $requestData = $this->requestData;
+        $requestData = $filter->withoutInlineFiles($this->requestData);
 
         if (! config('spectra.storage.store_system_prompts', true)) {
             $requestData = $filter->withoutSystemPrompts($requestData);

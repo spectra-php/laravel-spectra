@@ -200,7 +200,7 @@ class GetErrorGroups
     }
 
     /**
-     * Query the period's failed calls: no 2xx status.
+     * Query the period's failed calls (SpectraRequest::failed()).
      *
      * @return Builder<SpectraRequest>
      */

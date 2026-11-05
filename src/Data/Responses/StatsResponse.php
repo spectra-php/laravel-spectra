@@ -11,11 +11,13 @@ use Spectra\Data\ModelTypeLatency;
 use Spectra\Data\RequestByDate;
 use Spectra\Data\RequestByProvider;
 use Spectra\Data\TopModel;
+use Spectra\Data\UnpricedRequests;
 use Spectra\Models\SpectraRequest;
 
 /**
  * The overview screen: headline totals, cost and latency by model type, top
- * models, recent requests and the per-day and per-provider charts.
+ * models, recent requests, the per-day and per-provider charts, and the
+ * requests recorded at $0 for want of a price.
  */
 readonly class StatsResponse extends DataTransferObject
 {
@@ -48,6 +50,7 @@ readonly class StatsResponse extends DataTransferObject
         public Collection $requests_by_date,
         public Collection $requests_by_provider,
         public Collection $latency_by_model_type,
+        public UnpricedRequests $unpriced,
         public string $layout,
         public ?Collection $stats_by_model_type = null,
     ) {}

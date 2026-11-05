@@ -603,7 +603,7 @@ onUnmounted(() => {
                                     </td>
                                     <td class="text-right tabular-nums text-sm">{{ formatUsage(request) }}</td>
                                     <td>
-                                        <StatusCode :code="request.status_code" />
+                                        <StatusCode :code="request.status_code" :error="request.error_type" />
                                     </td>
                                     <td class="text-right whitespace-nowrap">
                                         <span class="group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">

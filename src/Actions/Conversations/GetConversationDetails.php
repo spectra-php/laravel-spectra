@@ -56,7 +56,7 @@ class GetConversationDetails
         $calls = SpectraRequest::query()
             ->where('conversation_id', $conversationId)
             ->select([
-                'id', 'provider', 'model', 'model_type', 'endpoint', 'conversation_turn', 'trace_id', 'status_code',
+                'id', 'provider', 'model', 'model_type', 'endpoint', 'conversation_turn', 'trace_id', 'status_code', 'error_type',
                 'finish_reason', 'prompt_tokens', 'completion_tokens', 'total_cost_in_cents', 'latency_ms',
                 'created_at', 'started_at', 'request', 'response',
             ])

@@ -35,6 +35,12 @@ use Throwable;
  * When both happen for the same request (the middleware saw it and the user
  * also wrapped it), the manual tracker claims the request and the automatic
  * one stays silent, so it is recorded once.
+ *
+ * A stream that throws while it is read is recorded as a failed request: the
+ * middleware's body reports the exception here, and a manual tracker keeps
+ * the exception its loop saw. A manual tracker that was never finished
+ * records what it has when it is released, so a stream that broke off
+ * before `finish()` is not lost.
  */
 class StreamingTracker
 {
@@ -599,11 +605,44 @@ class StreamingTracker
     }
 
     /**
+     * Record the stream as failed with the exception that broke it off,
+     * keeping the usage it reported before. Safe to call more than once.
+     */
+    public function fail(Throwable $exception): SpectraRequest
+    {
+        $this->error ??= $exception;
+
+        return $this->finish();
+    }
+
+    /**
      * Determine if finish() has already recorded this stream.
      */
     public function isFinished(): bool
     {
         return $this->result !== null;
+    }
+
+    /**
+     * Record a stream that was never finished when the tracker is released:
+     * one whose loop threw, or one that claimed the middleware's context,
+     * which stays silent for it and would otherwise never be recorded.
+     */
+    public function __destruct()
+    {
+        if ($this->result !== null || ! $this->contextInitialized || $this->context === null) {
+            return;
+        }
+
+        if ($this->error === null && ! $this->context->streamClaimed) {
+            return;
+        }
+
+        try {
+            $this->finish();
+        } catch (Throwable) {
+            // The application may be shutting down; tracking is best effort.
+        }
     }
 
     /**

@@ -35,7 +35,7 @@ class AlertEvaluator
             return null;
         }
 
-        $successful = $calls->clone()->whereBetween('status_code', [200, 299]);
+        $successful = $calls->clone()->successful();
 
         return match ($rule->metric) {
             AlertMetric::ErrorRate => ($count - $successful->count()) / $count,

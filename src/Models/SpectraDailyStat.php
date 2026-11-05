@@ -20,6 +20,9 @@ use RuntimeException;
  * rows in step with spectra_requests so long-range reports don't scan the
  * raw requests table.
  *
+ * Counts include failed requests; total_cost_in_cents and the latency
+ * columns cover successful requests only, the package-wide convention.
+ *
  * @property string $id
  * @property CarbonInterface $date
  * @property string $provider
@@ -114,15 +117,15 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * Get the day's average latency per request, or null when there were none.
+     * Get the day's average latency per successful request, or null when none succeeded.
      */
     public function getAvgLatencyMsAttribute(): ?float
     {
-        if ($this->request_count === 0) {
+        if ($this->successful_count === 0) {
             return null;
         }
 
-        return round($this->total_latency_ms / $this->request_count, 2);
+        return round($this->total_latency_ms / $this->successful_count, 2);
     }
 
     /**
@@ -190,8 +193,9 @@ class SpectraDailyStat extends Model
      */
     public function scopeForTrackable(Builder $query, Model $trackable): Builder
     {
+        // Bound as a string, so MySQL can use the index on the string column.
         return $query->where('trackable_type', $trackable->getMorphClass())
-            ->where('trackable_id', $trackable->getKey());
+            ->where('trackable_id', (string) $trackable->getKey());
     }
 
     /**
@@ -217,7 +221,8 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * Add one request to the day's stats.
+     * Add one request to the day's stats. A failed request counts, but its
+     * cost and latency are left out, as everywhere in Spectra.
      *
      * Kept for backwards compatibility; StatsAggregator calls accumulate() directly.
      */
@@ -264,10 +269,10 @@ class SpectraDailyStat extends Model
                 'total_duration_seconds' => $durationSeconds,
                 'total_input_characters' => $inputCharacters,
                 'total_reasoning_tokens' => $reasoningTokens,
-                'total_cost_in_cents' => $cost,
-                'total_latency_ms' => $latencyMs ?? 0,
+                'total_cost_in_cents' => $successful ? $cost : 0,
+                'total_latency_ms' => $successful ? ($latencyMs ?? 0) : 0,
             ],
-            latencyMs: $latencyMs,
+            latencyMs: $successful ? $latencyMs : null,
         );
     }
 
@@ -430,8 +435,8 @@ class SpectraDailyStat extends Model
             'total_pages' => $stats->total_pages ?? 0,
             'total_cost_in_cents' => (float) ($stats->total_cost_in_cents ?? 0),
             'total_cost' => (float) ($stats->total_cost_in_cents ?? 0) / 100,
-            'avg_latency_ms' => $totalRequests > 0
-                ? round($totalLatencyMs / $totalRequests, 2)
+            'avg_latency_ms' => $successfulRequests > 0
+                ? round($totalLatencyMs / $successfulRequests, 2)
                 : null,
             'min_latency_ms' => $stats->min_latency_ms,
             'max_latency_ms' => $stats->max_latency_ms,

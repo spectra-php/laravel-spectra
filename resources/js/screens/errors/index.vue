@@ -144,7 +144,7 @@ onMounted(async () => {
                                 <router-link :to="callsLink(group)" class="group block">
                                     <span class="flex items-center gap-2">
                                         <ProviderLogo :provider="group.provider" class="inline-flex h-4 w-4 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full" />
-                                        <StatusCode :code="group.status_code" />
+                                        <StatusCode :code="group.status_code" :error="group.error_type" />
                                         <span v-if="group.error_type" class="truncate font-mono text-[11px] text-gray-500 dark:text-gray-400" v-tooltip.truncated="group.error_type">{{ group.error_type.split('\\').pop() }}</span>
                                     </span>
                                     <span class="mt-1.5 line-clamp-2 break-words text-sm text-gray-900 group-hover:text-primary-600 dark:text-gray-100 dark:group-hover:text-primary-400" v-tooltip.truncated="group.message || ''">

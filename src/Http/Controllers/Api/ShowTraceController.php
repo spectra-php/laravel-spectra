@@ -6,6 +6,7 @@ namespace Spectra\Http\Controllers\Api;
 
 use Spectra\Actions\Traces\GetTraceDetails;
 use Spectra\Data\Responses\TraceDetailsResponse;
+use Spectra\Support\Query\TraceSchema;
 
 /**
  * GET /api/traces/{traceId}: the trace screen.
@@ -18,8 +19,12 @@ class ShowTraceController extends BaseApiController
     /**
      * Get the trace screen's data, or a 404 when the trace has no calls.
      */
-    public function __invoke(string $traceId, GetTraceDetails $getTraceDetails): TraceDetailsResponse
+    public function __invoke(string $traceId, GetTraceDetails $getTraceDetails, TraceSchema $traceSchema): TraceDetailsResponse
     {
+        if (! $traceSchema->hasTraceColumns()) {
+            return TraceDetailsResponse::unmigrated($traceId);
+        }
+
         return $getTraceDetails($traceId, limit: self::CALL_LIMIT) ?? abort(404);
     }
 }

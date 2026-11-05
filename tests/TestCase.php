@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -12,6 +13,26 @@ use Spectra\SpectraServiceProvider;
 
 class TestCase extends Orchestra
 {
+    /** Every table the migrations and the test setup create, so a leftover table (a queue's jobs table) is recognised. */
+    protected const TABLES = [
+        'users',
+        'spectra_requests',
+        'spectra_tags',
+        'spectra_requests_tags',
+        'spectra_daily_stats',
+        'spectra_budgets',
+        'spectra_spans',
+        'spectra_scores',
+        'spectra_annotation_items',
+        'spectra_datasets',
+        'spectra_dataset_examples',
+        'spectra_eval_runs',
+        'spectra_eval_results',
+    ];
+
+    /** Columns later migrations add to spectra_requests; a test that drops one leaves the schema incomplete. */
+    protected const LATER_COLUMNS = ['started_at', 'origin', 'span_id', 'prompt_name', 'prompt_version', 'error_fingerprint'];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -21,6 +42,16 @@ class TestCase extends Orchestra
         Factory::guessFactoryNamesUsing(
             fn (string $modelName) => 'Spectra\\Database\\Factories\\'.class_basename($modelName).'Factory'
         );
+    }
+
+    protected function tearDown(): void
+    {
+        // Each test boots a fresh app; on a real database server the
+        // connections of past tests would otherwise wait for garbage
+        // collection and run the server out of clients mid-suite.
+        $this->app?->make('db')->disconnect('testing');
+
+        parent::tearDown();
     }
 
     protected function getPackageProviders($app): array
@@ -38,8 +69,15 @@ class TestCase extends Orchestra
         config()->set('app.key', 'base64:'.Str::toBase64(Str::repeat('s', 32)));
         config()->set('cache.default', 'array');
 
-        // Create users table
-        $app['db']->connection()->getSchemaBuilder()->create('users', function ($table) {
+        $this->configureDatabase($app);
+
+        $schema = $app['db']->connection()->getSchemaBuilder();
+
+        if ($schema->hasTable('spectra_requests')) {
+            return;
+        }
+
+        $schema->create('users', function ($table) {
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
@@ -67,5 +105,72 @@ class TestCase extends Orchestra
             $migration = include $path;
             $migration->up();
         }
+    }
+
+    /**
+     * Point the testing connection at the database the environment asks for.
+     *
+     * The suite runs on Testbench's in-memory SQLite by default, fresh for
+     * every test. With SPECTRA_TEST_DB_DRIVER=mysql or pgsql (and the DB_*
+     * variables), it runs on that server instead, as CI does for both: the
+     * tables are emptied before each test, and dropped and migrated again
+     * when a test changed the schema or left a table of its own behind.
+     */
+    protected function configureDatabase($app): void
+    {
+        $driver = (string) env('SPECTRA_TEST_DB_DRIVER', 'sqlite');
+
+        if (! in_array($driver, ['mysql', 'pgsql'], true)) {
+            return;
+        }
+
+        $app['config']->set('database.connections.testing', [
+            'driver' => $driver,
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', $driver === 'mysql' ? 3306 : 5432),
+            'database' => env('DB_DATABASE', 'spectra'),
+            'username' => env('DB_USERNAME', $driver === 'mysql' ? 'root' : 'spectra'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => $driver === 'mysql' ? 'utf8mb4' : 'utf8',
+            'collation' => $driver === 'mysql' ? 'utf8mb4_unicode_ci' : null,
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'search_path' => 'public',
+            'sslmode' => 'prefer',
+        ]);
+
+        $connection = $app['db']->connection();
+        $schema = $connection->getSchemaBuilder();
+
+        if (! $this->hasCompleteSchema($schema)) {
+            $schema->dropAllTables();
+
+            return;
+        }
+
+        $schema->withoutForeignKeyConstraints(function () use ($connection) {
+            foreach (static::TABLES as $table) {
+                $connection->table($table)->truncate();
+            }
+        });
+    }
+
+    /**
+     * Determine if the database holds exactly the tables and columns the
+     * migrations create, so a test can start from empty tables instead of a
+     * fresh schema.
+     */
+    protected function hasCompleteSchema(Builder $schema): bool
+    {
+        $tables = collect($schema->getTableListing(schemaQualified: false));
+
+        if ($tables->diff(static::TABLES)->isNotEmpty() || collect(static::TABLES)->diff($tables)->isNotEmpty()) {
+            return false;
+        }
+
+        return $schema->hasColumns('spectra_requests', static::LATER_COLUMNS)
+            && $schema->hasColumns('spectra_daily_stats', ['total_cached_tokens', 'total_cache_write_tokens', 'total_pages'])
+            && $schema->hasTable('spectra_requests_tags');
     }
 }

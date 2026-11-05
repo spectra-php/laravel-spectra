@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Tracking\ProviderErrorException;
 
 /**
  * OpenAI background responses, video, images and audio. Real wire-format
@@ -51,6 +52,27 @@ it('records a background response once, when a poll returns it finished', functi
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(369.0, 1e-9)
         ->and((int) SpectraDailyStat::query()->sum('request_count'))->toBe(1)
         ->and((float) SpectraDailyStat::query()->sum('total_cost_in_cents'))->toEqualWithDelta(369.0, 1e-9);
+});
+
+it('records a failed background response as a failed request with its error', function () {
+    $failed = $this->loadMockResponse('openai/response_background_completed.json');
+    $failed['status'] = 'failed';
+    $failed['output'] = [];
+    $failed['error'] = ['code' => 'server_error', 'message' => 'The model produced invalid content.'];
+    Http::fake(['api.openai.com/*' => Http::response($failed)]);
+
+    Http::get('https://api.openai.com/v1/responses/resp_bg_7a6b5c4d3e2f1a0b');
+
+    $row = SpectraRequest::query()->sole();
+
+    expect($row->status_code)->toBe(200)
+        ->and($row->finish_reason)->toBe('failed')
+        ->and($row->error_type)->toBe(ProviderErrorException::class)
+        ->and($row->error_message)->toBe('The model produced invalid content.')
+        ->and($row->isFailed())->toBeTrue()
+        ->and(SpectraRequest::query()->failed()->count())->toBe(1)
+        ->and((int) SpectraDailyStat::query()->sum('failed_count'))->toBe(1)
+        ->and((float) SpectraDailyStat::query()->sum('total_cost_in_cents'))->toEqualWithDelta(0.0, 1e-9);
 });
 
 it('records a cancelled background response', function () {

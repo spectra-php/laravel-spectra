@@ -16,7 +16,7 @@ As everywhere in Spectra, request counts include failed requests, while cost and
 
 The overview answers "how much AI are we using, and what does it cost?" at a glance:
 
-- **Requests, spend, tokens and average latency** for the period. Click **By type** to see the latency of each model type.
+- **Requests, spend, tokens and average latency** for the period. Click **By type** to see the latency of each model type. When calls in the period were recorded at $0 because their model has no price, the spend card says how many and names the models (see [Zero-Cost Requests](/costs#zero-cost-requests)).
 - **Media usage**: images, videos, text-to-speech characters and speech-to-text audio, each with its cost. A kind only shows when the period has that traffic.
 - **Requests over time**, one point per day.
 - **Breakdown** of requests by provider or by model type.
@@ -140,7 +140,7 @@ The errors screen groups the period's failed calls by cause, so a rate limit tha
 
 Click a group to see its calls in the requests list, or its last-seen time to open the latest one. A failed call's page links to the calls that failed the same way.
 
-Two failures are in the same group when they have the same provider, status code and error type, and the same message once the parts that change from call to call are taken out: ids, numbers, URLs, emails, IP addresses, masked keys and the model's name. "Rate limit reached for gpt-4o … try again in 2s" and "Rate limit reached for gpt-4o-mini … try again in 14s" are one group. A call counts as failed when it got no 2xx status.
+Two failures are in the same group when they have the same provider, status code and error type, and the same message once the parts that change from call to call are taken out: ids, numbers, URLs, emails, IP addresses, masked keys and the model's name. "Rate limit reached for gpt-4o … try again in 2s" and "Rate limit reached for gpt-4o-mini … try again in 14s" are one group. A call counts as failed when it got no 2xx status, or when the provider reported an error inside a 2xx answer (a job that ended `failed`, a stream that broke off); the status badge of such a call is red although it reads `200`.
 
 Failures saved before the [error fingerprint migration](/migrations#error-fingerprint-migration) aren't grouped until you run [`spectra:group-errors`](/commands#spectra-group-errors); the screen says how many there are.
 

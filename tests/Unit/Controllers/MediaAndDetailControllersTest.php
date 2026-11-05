@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
 use Spectra\Http\Controllers\Api\RequestsController;
 use Spectra\Http\Controllers\Api\ServeAudioController;
@@ -142,6 +144,21 @@ it('leaves failed calls out of a trace total cost', function () {
 
     expect($json['trace']['request_count'])->toBe(2)
         ->and($json['trace']['total_cost_in_cents'])->toEqualWithDelta(40.0, 0.0001);
+});
+
+it('shows a request without its trace card and says the trace migrations are missing until they run', function () {
+    $this->dropTraceColumns();
+    Log::spy();
+    Spectra::withTraceId('0b6f3a52-6d47-4a5e-9a51-2a7c1f0e9d11');
+    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Hi']]]]);
+    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Again']]]]);
+    $current = SpectraRequest::query()->firstOrFail();
+
+    $json = app()->call([app(ShowRequestController::class), '__invoke'], ['id' => $current->id])->toArray();
+
+    expect($json['trace_migrated'])->toBeFalse()
+        ->and($json['trace'])->toBeNull()
+        ->and($json['model'])->toBe('GPT-4o');
 });
 
 it('returns tag ids as their UUIDs', function () {

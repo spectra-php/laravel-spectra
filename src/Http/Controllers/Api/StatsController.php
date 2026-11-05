@@ -12,6 +12,7 @@ use Spectra\Actions\Stats\GetRecentRequests;
 use Spectra\Actions\Stats\GetRequestsByDate;
 use Spectra\Actions\Stats\GetRequestsByProvider;
 use Spectra\Actions\Stats\GetTopModels;
+use Spectra\Actions\Stats\GetUnpricedRequests;
 use Spectra\Data\ModelTypeCost;
 use Spectra\Data\ModelTypeLatency;
 use Spectra\Data\Responses\StatsResponse;
@@ -35,6 +36,7 @@ class StatsController extends BaseApiController
         GetRequestsByProvider $getRequestsByProvider,
         GetModelTypeBreakdown $getModelTypeBreakdown,
         BuildCostByModelType $buildCostByModelType,
+        GetUnpricedRequests $getUnpricedRequests,
     ): StatsResponse {
         $dateRange = DateRange::fromRequest($request);
         $layout = config('spectra.dashboard.layout', 'full');
@@ -60,6 +62,7 @@ class StatsController extends BaseApiController
             requests_by_date: $getRequestsByDate($dateRange, $layout),
             requests_by_provider: $getRequestsByProvider($dateRange, $layout),
             latency_by_model_type: ModelTypeLatency::fromCollection($modelTypeStats),
+            unpriced: $getUnpricedRequests($dateRange, $layout),
             layout: $layout,
             stats_by_model_type: $layout === 'full' ? ModelTypeCost::fromCollection($modelTypeStats) : null,
         );

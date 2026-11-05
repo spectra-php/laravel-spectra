@@ -22,7 +22,9 @@ use Spectra\Support\Pricing\ModelDefinition;
  * On several models batch and flex keep the standard cache price instead of
  * discounting it. Context-cache storage (per token per hour) and search
  * grounding (free allowance, then per query) are not per-request costs and
- * are not modelled.
+ * are not modelled. Imagen is not listed: Google shut the Imagen models down
+ * and removed them from the pricing page, so a `:generateImages` call is
+ * recorded and reported as unpriced rather than billed at a remembered rate.
  */
 class GooglePricing extends ProviderPricing
 {

@@ -11,7 +11,8 @@ use Spectra\Data\ScoreEntry;
  * One trace: its totals, its calls in the order they started, the spans
  * around them, the models it used, its tags and trackable. The trace screen
  * shows all of it; the request screen shows the totals and calls in its
- * Trace card.
+ * Trace card. Until the trace migrations run the trace can't be built, and
+ * `migrated` says so.
  */
 readonly class TraceDetailsResponse extends DataTransferObject
 {
@@ -44,5 +45,33 @@ readonly class TraceDetailsResponse extends DataTransferObject
         public array $tags,
         public ?array $trackable,
         public array $scores = [],
+        public bool $migrated = true,
     ) {}
+
+    /**
+     * Build the empty response the screen gets until the trace migrations run.
+     */
+    public static function unmigrated(string $traceId): self
+    {
+        return new self(
+            trace_id: $traceId,
+            parent_span_id: null,
+            origin: null,
+            request_count: 0,
+            failed_count: 0,
+            position: null,
+            total_cost_in_cents: 0.0,
+            total_tokens: 0,
+            started_at: null,
+            duration_ms: 0,
+            timeline_ms: 0,
+            truncated: false,
+            requests: [],
+            spans: [],
+            models: [],
+            tags: [],
+            trackable: null,
+            migrated: false,
+        );
+    }
 }

@@ -50,9 +50,10 @@ class GetEvalRun
     {
         $results = $run->results()->oldest('created_at')->limit(self::RESULTS)->get();
 
-        $costs = SpectraRequest::query()->toBase()
+        $costs = SpectraRequest::query()
             ->whereIn('trace_id', $results->pluck('trace_id')->all())
-            ->whereBetween('status_code', [200, 299])
+            ->successful()
+            ->toBase()
             ->groupBy('trace_id')
             ->selectRaw('trace_id, SUM(total_cost_in_cents) as cost, COUNT(*) as call_count')
             ->get()

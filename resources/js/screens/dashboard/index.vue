@@ -29,6 +29,7 @@ const layout = ref('full');
 const stats = ref({
     total_requests: 0,
     total_cost_in_cents: 0,
+    unpriced: { request_count: 0, models: [] },
     total_tokens: 0,
     total_images: 0,
     total_videos: 0,
@@ -308,6 +309,14 @@ onUnmounted(() => {
                         </template>
                         <template v-else>No spend in this period</template>
                     </div>
+                    <!-- Calls recorded at $0 because their model has no price: the total is short by them. -->
+                    <div
+                        v-if="stats.unpriced?.request_count"
+                        class="mt-1.5 text-xs text-amber-700 dark:text-amber-300"
+                        v-tooltip="'No price for ' + stats.unpriced.models.join(', ') + '. Add the model to a pricing catalog or the scraped prices file.'"
+                    >
+                        {{ formatNumber(stats.unpriced.request_count) }} {{ stats.unpriced.request_count === 1 ? 'call' : 'calls' }} without a price ({{ stats.unpriced.models.slice(0, 2).join(', ') }}{{ stats.unpriced.models.length > 2 ? ', …' : '' }})
+                    </div>
                 </template>
             </StatCard>
             <StatCard v-if="showTokens" label="Tokens" :loading="loading" skeleton-width="50%">
@@ -513,7 +522,7 @@ onUnmounted(() => {
                                         </div>
                                     </td>
                                     <td class="text-right tabular-nums">{{ formatUsage(request) }}</td>
-                                    <td><StatusCode :code="request.status_code" /></td>
+                                    <td><StatusCode :code="request.status_code" :error="request.error_type" /></td>
                                     <td class="whitespace-nowrap text-right text-gray-500 transition-colors group-hover:text-primary-600 dark:text-gray-400 dark:group-hover:text-primary-400">
                                         {{ request.created_at_human }}
                                     </td>

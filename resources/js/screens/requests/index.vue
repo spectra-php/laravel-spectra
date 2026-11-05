@@ -352,7 +352,7 @@ onUnmounted(() => {
                                 <td class="text-right tabular-nums font-medium"><Money :cents="request.total_cost_in_cents" /></td>
                                 <td class="text-right tabular-nums">{{ formatDuration(request.latency_ms) }}</td>
                                 <td>
-                                    <StatusCode :code="request.status_code" />
+                                    <StatusCode :code="request.status_code" :error="request.error_type" />
                                 </td>
                                 <td class="text-right whitespace-nowrap">
                                     <span class="group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">

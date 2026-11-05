@@ -10,6 +10,7 @@ declare(strict_types=1);
  * migration ran.
  */
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -101,6 +102,22 @@ it('lists the groups with the most failures first, with their models, latest mes
         ->and($rateLimits->trend)->toHaveCount(14)
         ->and(array_sum($rateLimits->trend))->toBe(3)
         ->and($rateLimits->trend[13])->toBe(3);
+});
+
+it('lists a job the provider reported as failed inside an HTTP 200 among the failures', function () {
+    Http::fake(['api.replicate.com/*' => Http::response($this->loadMockResponse('replicate/prediction-failed.json'))]);
+    Http::get('https://api.replicate.com/v1/predictions/x1hfa7zq3hrmc0cs9qwbtyd0rg');
+    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Hi']]]]);
+
+    $response = app(GetErrorGroups::class)(DateRange::fromRequest(new Request(['period' => 'all'])));
+    $group = $response->groups->sole();
+
+    expect($response->request_count)->toBe(2)
+        ->and($response->failed_count)->toBe(1)
+        ->and($response->error_rate)->toBe(0.5)
+        ->and($group->status_code)->toBe(200)
+        ->and($group->error_type)->toBe(ProviderErrorException::class)
+        ->and($group->message)->toBe('NSFW content detected. Try running it again, or try a different prompt.');
 });
 
 it('filters the requests list by error group', function () {

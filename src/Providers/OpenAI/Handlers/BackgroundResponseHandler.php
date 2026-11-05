@@ -6,6 +6,7 @@ namespace Spectra\Providers\OpenAI\Handlers;
 
 use Illuminate\Support\Str;
 use Spectra\Contracts\HasProviderLatency;
+use Spectra\Contracts\ReportsJobFailure;
 use Spectra\Data\Metrics;
 use Spectra\Providers\OpenAI\MeasuresJobLatency;
 
@@ -17,14 +18,15 @@ use Spectra\Providers\OpenAI\MeasuresJobLatency;
  * usage, which TextHandler skips. The response is recorded when a poll
  * returns it in a final state (`completed`, `incomplete`, `failed`,
  * `cancelled`). Every poll carries the same response id, so repeated polls
- * update one row instead of adding new ones.
+ * update one row instead of adding new ones. A `failed` response arrives as
+ * an HTTP 200 with its error inside, and is recorded as a failed request.
  *
  * Fetching a stored response that was not created in the background is not
  * recorded again: its original request already was. The same path also
  * serves `/v1/responses/input_tokens` (a free token count), which is never
  * a response object and so is skipped too.
  */
-class BackgroundResponseHandler extends TextHandler implements HasProviderLatency
+class BackgroundResponseHandler extends TextHandler implements HasProviderLatency, ReportsJobFailure
 {
     use MeasuresJobLatency;
 
@@ -69,6 +71,22 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
 
         return ! is_string($responseData['status'] ?? null)
             || in_array($responseData['status'], self::PENDING_STATUSES, true);
+    }
+
+    /**
+     * Get the error message of a background response that ended `failed`, otherwise null.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
+    public function extractFailure(array $responseData): ?string
+    {
+        if (($responseData['status'] ?? null) !== 'failed') {
+            return null;
+        }
+
+        $message = $responseData['error']['message'] ?? null;
+
+        return filled($message) ? $message : 'Response failed';
     }
 
     /**

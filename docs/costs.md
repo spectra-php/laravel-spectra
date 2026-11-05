@@ -260,9 +260,9 @@ $expensive = SpectraRequest::orderByDesc('total_cost_in_cents')
     ->get();
 ```
 
-A request is **successful** when its status code is 2xx and **failed** otherwise, including a 3xx or a missing status code, so the two always add up to every request. `SpectraRequest::successful()` / `failed()`, `isSuccessful()` / `isFailed()` and the `is_failed` field sent to integrations all use this rule.
+A request is **successful** when its status code is 2xx and no error was recorded, and **failed** otherwise: a 3xx, a 4xx or 5xx, a missing status code, or an error on a 2xx answer (a stream that broke off, or an async job the provider reports as failed inside an HTTP 200, such as a Replicate prediction or an OpenAI background response). The two always add up to every request. `SpectraRequest::successful()` / `failed()`, `isSuccessful()` / `isFailed()`, the `is_failed` field sent to integrations, the dashboard, the alerts and the daily stats all use this one rule; `SpectraRequest::SUCCESSFUL_SQL` and `FAILED_SQL` hold it as SQL for your own raw queries.
 
-Spectra's own reports follow one convention: request counts (and token totals) include failed requests, while cost and latency cover successful requests only, so a failed call never adds spend or skews latency. This applies to the dashboard, to `Spectra::usage()` (`stats()`, `byProvider()`, `byModel()`, `dailyUsage()`, `totalCostCents()`, `averageLatency()`) and to the `HasAiUsage` methods (`getAiUsageForPeriod()`, `getAiUsageByProvider()`, `getAiUsageByModel()`). `Spectra::costs()` starts from successful requests only, so the request counts it returns are counts of successful requests. The raw-model queries above sum every row; add `->successful()` to match the reports.
+Spectra's own reports follow one convention: request counts (and token totals) include failed requests, while cost and latency cover successful requests only, so a failed call never adds spend or skews latency. This applies to the dashboard, to the daily stats (`spectra_daily_stats`), to `Spectra::usage()` (`stats()`, `byProvider()`, `byModel()`, `dailyUsage()`, `totalCostCents()`, `averageLatency()`) and to the `HasAiUsage` methods (`getAiUsageForPeriod()`, `getAiUsageByProvider()`, `getAiUsageByModel()`). `Spectra::costs()` starts from successful requests only, so the request counts it returns are counts of successful requests. The raw-model queries above sum every row; add `->successful()` to match the reports.
 
 A date-only end bound (`'2026-01-31'`) passed to `between()` or `getAiUsageForPeriod()` includes that whole day.
 
@@ -320,4 +320,6 @@ A request costs zero when:
 - The model is priced per request and the request failed
 - An OpenAI Chat Completions stream was sent without `stream_options.include_usage` (see [Streaming](/usage#streaming))
 
-To add pricing for a missing model, create a [custom pricing class](/pricing#customizing-pricing).
+A model that is missing from its provider's catalog is not silent: Spectra logs a warning once per process for each such model (`no price for the openai model 'ft:gpt-4o-mini:acme'`), and the dashboard's Overview says under the spend total how many successful calls in the period were recorded at $0 for want of a price, and for which models. Providers without a catalog (Ollama, a custom provider) are tracked at $0 on purpose and are left out of both.
+
+To add pricing for a missing model, create a [custom pricing class](/pricing#customizing-pricing) or add it to the [scraped prices file](/pricing#scraped-prices).

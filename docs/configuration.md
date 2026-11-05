@@ -124,7 +124,8 @@ Some AI endpoints return media with expiring URLs. For example, DALL-E images ex
 | `media.path` | `string` | `spectra` | Directory path within the disk. |
 
 > [!NOTE]
-> **Binary data is always stripped from stored responses.** Whether or not media persistence is enabled, Spectra replaces inline base64-encoded data with `[stripped]` placeholders before saving responses to the database. This keeps multi-megabyte base64 strings out of the `response` column. Spectra strips these formats automatically:
+> **Binary data is always stripped from stored requests and responses.** Whether or not media persistence is enabled, Spectra replaces inline base64-encoded data with `[stripped]` placeholders before saving requests and responses to the database. This keeps multi-megabyte base64 strings out of the `request` and `response` columns. Spectra strips these formats automatically:
+> - Any `data:` URI in a request body (the base64 image or audio file of a vision or audio prompt), wherever the provider puts it
 > - OpenAI DALL-E: `data[].b64_json`
 > - OpenAI Responses API: `output[].result` (image generation calls)
 > - Google Gemini: `candidates[].content.parts[].inlineData.data` (images and audio)
@@ -434,7 +435,7 @@ Azure paths are mapped to the matching OpenAI endpoint before tracking, and the 
 | `/openai/v1/chat/completions` | `/v1/chat/completions` |
 | `/openai/responses` | `/v1/responses` |
 
-The model is taken from the response, because deployment requests don't name one. Costs use OpenAI's prices.
+The model is taken from the response, because deployment requests don't name one. When the response names no model either (image generation, text to speech, transcription), the deployment's name stands in for it, so name those deployments after their model (`dall-e-3`, `tts-1`) to have them priced; a deployment named otherwise is recorded under that name and reported as [unpriced](/costs#zero-cost-requests). Costs use OpenAI's prices.
 
 If your Azure endpoint uses a custom domain (for example, an API Management gateway), add it as `endpoint_urls.azure`. Its host is detected as OpenAI, but unlike `endpoint_urls.openai` it is never used as the OpenAI client's base URL:
 

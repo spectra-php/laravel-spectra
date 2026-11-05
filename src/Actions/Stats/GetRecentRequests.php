@@ -29,6 +29,6 @@ class GetRecentRequests
 
         return $query
             ->limit($limit)
-            ->get(['id', 'provider', 'model', 'model_type', 'status_code', 'prompt_tokens', 'completion_tokens', 'image_count', 'video_count', 'duration_seconds', 'input_characters', 'created_at']);
+            ->get(['id', 'provider', 'model', 'model_type', 'status_code', 'error_type', 'prompt_tokens', 'completion_tokens', 'image_count', 'video_count', 'duration_seconds', 'input_characters', 'created_at']);
     }
 }

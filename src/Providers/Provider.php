@@ -64,6 +64,17 @@ abstract class Provider
     }
 
     /**
+     * Get the deployment a request path names, before normalizeEndpoint()
+     * drops it (an Azure OpenAI `/openai/deployments/{deployment}/` path),
+     * or null for providers without deployments. It stands in for the model
+     * when neither the response nor the request names one.
+     */
+    public function extractDeployment(string $path): ?string
+    {
+        return null;
+    }
+
+    /**
      * Get the provider's handlers, built once per instance.
      *
      * @return Handler[]

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Log;
+use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\ShowConversationController;
 use Spectra\Models\SpectraRequest;
@@ -174,6 +176,23 @@ it('makes each call without a turn number a turn of its own', function () {
     supportCall(5, null);
 
     expect(callConversation('support-42')['turns'])->toHaveCount(2);
+});
+
+it('lists nothing and says the trace migrations are missing until they run', function () {
+    $this->dropTraceColumns();
+    Log::spy();
+    Spectra::forConversation('chat-1', turn: 1);
+    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Hi']]]]);
+
+    $list = callConversations();
+    $conversation = callConversation('chat-1');
+
+    expect(SpectraRequest::query()->count())->toBe(1)
+        ->and($list['migrated'])->toBeFalse()
+        ->and($list['data'])->toBe([])
+        ->and($list['summary']['conversation_count'])->toBe(0)
+        ->and($conversation['migrated'])->toBeFalse()
+        ->and($conversation['turns'])->toBe([]);
 });
 
 it('answers 404 for a conversation with no calls', function () {

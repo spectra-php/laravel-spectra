@@ -22,9 +22,9 @@ use Spectra\Support\DateRange;
  * and latency.
  *
  * Request counts and tokens include failed requests; cost and latency cover
- * successful (2xx) requests only, the same convention as the dashboard, so a
- * failed call never adds spend or skews latency. Its method names and result
- * keys are public API.
+ * successful requests only (a 2xx status and no recorded error), the same
+ * convention as the dashboard, so a failed call never adds spend or skews
+ * latency. Its method names and result keys are public API.
  */
 class UsageQueryBuilder
 {
@@ -71,7 +71,7 @@ class UsageQueryBuilder
     public function forTrackable(Model $trackable): self
     {
         $this->query->where('trackable_type', $trackable->getMorphClass())
-            ->where('trackable_id', $trackable->getKey());
+            ->where('trackable_id', (string) $trackable->getKey());
 
         return $this;
     }
@@ -122,26 +122,23 @@ class UsageQueryBuilder
     }
 
     /**
-     * Filter for successful requests only (2xx status codes).
+     * Filter for successful requests only: a 2xx status code and no recorded error.
      */
     public function successful(): self
     {
-        $this->query->whereBetween('status_code', [200, 299]);
+        $this->query->successful();
 
         return $this;
     }
 
     /**
-     * Filter for failed requests only (anything that is not a 2xx, including
-     * null status codes), so successful() and failed() together cover every
-     * request exactly once.
+     * Filter for failed requests only (a status outside 2xx, none at all, or
+     * an error recorded on a 2xx answer), so successful() and failed()
+     * together cover every request exactly once.
      */
     public function failed(): self
     {
-        $this->query->where(function ($statusQuery) {
-            $statusQuery->whereNotBetween('status_code', [200, 299])
-                ->orWhereNull('status_code');
-        });
+        $this->query->failed();
 
         return $this;
     }
@@ -230,19 +227,21 @@ class UsageQueryBuilder
      */
     public function stats(): UsageStats
     {
+        $successful = SpectraRequest::SUCCESSFUL_SQL;
+
         $result = $this->query
-            ->selectRaw('
+            ->selectRaw("
                 COUNT(*) as request_count,
-                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as successful_count,
-                SUM(CASE WHEN status_code IS NULL OR status_code NOT BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as failed_count,
+                {$this->successfulCountExpression()} as successful_count,
+                {$this->failedCountExpression()} as failed_count,
                 SUM(prompt_tokens) as prompt_tokens,
                 SUM(completion_tokens) as completion_tokens,
                 SUM(prompt_tokens + completion_tokens) as tokens_sum,
-                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost,
-                AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms,
-                MIN(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as min_latency_ms,
-                MAX(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as max_latency_ms
-            ')
+                {$this->successfulCostExpression()} as total_cost,
+                {$this->successfulLatencyExpression()} as avg_latency_ms,
+                MIN(CASE WHEN {$successful} THEN latency_ms END) as min_latency_ms,
+                MAX(CASE WHEN {$successful} THEN latency_ms END) as max_latency_ms
+            ")
             ->first();
 
         if ($result === null) {
@@ -289,13 +288,13 @@ class UsageQueryBuilder
     public function byProvider(): Collection
     {
         return $this->query
-            ->selectRaw('
+            ->selectRaw("
                 provider,
                 COUNT(*) as request_count,
                 SUM(prompt_tokens + completion_tokens) as tokens_sum,
-                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost,
-                AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms
-            ')
+                {$this->successfulCostExpression()} as total_cost,
+                {$this->successfulLatencyExpression()} as avg_latency_ms
+            ")
             ->groupBy('provider')
             ->get()
             ->map(fn (SpectraRequest $item) => [
@@ -316,14 +315,14 @@ class UsageQueryBuilder
     public function byModel(): Collection
     {
         return $this->query
-            ->selectRaw('
+            ->selectRaw("
                 provider,
                 model,
                 COUNT(*) as request_count,
                 SUM(prompt_tokens + completion_tokens) as tokens_sum,
-                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost,
-                AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms
-            ')
+                {$this->successfulCostExpression()} as total_cost,
+                {$this->successfulLatencyExpression()} as avg_latency_ms
+            ")
             ->groupBy('provider', 'model')
             ->get()
             ->map(fn (SpectraRequest $item) => [
@@ -346,12 +345,12 @@ class UsageQueryBuilder
     {
         return $this->lastDays($days)
             ->query
-            ->selectRaw('
+            ->selectRaw("
                 DATE(created_at) as date,
                 COUNT(*) as request_count,
                 SUM(prompt_tokens + completion_tokens) as tokens_sum,
-                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost
-            ')
+                {$this->successfulCostExpression()} as total_cost
+            ")
             ->groupBy('date')
             ->orderBy('date')
             ->get()

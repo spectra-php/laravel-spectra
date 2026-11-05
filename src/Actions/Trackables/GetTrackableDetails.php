@@ -58,7 +58,7 @@ class GetTrackableDetails
                 'id', 'provider', 'model', 'model_type',
                 'prompt_tokens', 'completion_tokens',
                 'image_count', 'video_count', 'input_characters', 'duration_seconds',
-                'total_cost_in_cents', 'latency_ms', 'status_code', 'created_at',
+                'total_cost_in_cents', 'latency_ms', 'status_code', 'error_type', 'created_at',
             ])
             ->where('trackable_type', $type)
             ->where('trackable_id', $id)

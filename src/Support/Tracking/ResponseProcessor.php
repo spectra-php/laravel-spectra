@@ -127,7 +127,7 @@ class ResponseProcessor
             }
         });
 
-        if ($context->model !== 'unknown' || blank($context->requestData)) {
+        if ($context->model !== 'unknown') {
             return;
         }
 
@@ -140,6 +140,12 @@ class ResponseProcessor
                 $context->model = $requestModel;
             }
         });
+
+        // An Azure image or speech call names its model nowhere but in the
+        // deployment it went to.
+        if ($context->model === 'unknown' && filled($context->deployment)) {
+            $context->model = $context->deployment;
+        }
     }
 
     /**

@@ -2,19 +2,21 @@ name: tests
 
 on:
   push:
-    branches: [main]
     paths:
       - '**.php'
+      - 'tests/**'
+      - 'database/**'
       - '.github/workflows/tests.yml'
-      - 'phpunit.xml.dist'
+      - 'phpunit.xml'
       - 'composer.json'
       - 'composer.lock'
   pull_request:
-    branches: [main]
     paths:
       - '**.php'
+      - 'tests/**'
+      - 'database/**'
       - '.github/workflows/tests.yml'
-      - 'phpunit.xml.dist'
+      - 'phpunit.xml'
       - 'composer.json'
       - 'composer.lock'
 
@@ -68,6 +70,90 @@ jobs:
 
       - name: List Installed Dependencies
         run: composer show -D
+
+      - name: Execute tests
+        run: vendor/bin/pest --ci
+
+  # The suite on the two servers users run in production, on the newest
+  # supported Laravel and the PHP it ships with. tests/TestCase.php reads
+  # SPECTRA_TEST_DB_DRIVER and the DB_* variables.
+  mysql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: MySQL 8 - P8.4 - L12
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: spectra
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h 127.0.0.1 -ppassword" --health-interval=5s --health-timeout=5s --health-retries=10
+    env:
+      SPECTRA_TEST_DB_DRIVER: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: spectra
+      DB_USERNAME: root
+      DB_PASSWORD: password
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_mysql, bcmath, intl, gd, exif, iconv, fileinfo
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:12.*" "orchestra/testbench:10.*" "nunomaduro/collision:8.*" --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction
+
+      - name: Execute tests
+        run: vendor/bin/pest --ci
+
+  pgsql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: PostgreSQL 16 - P8.4 - L12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: spectra
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: spectra
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready -U spectra" --health-interval=5s --health-timeout=5s --health-retries=10
+    env:
+      SPECTRA_TEST_DB_DRIVER: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: spectra
+      DB_USERNAME: spectra
+      DB_PASSWORD: password
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, bcmath, intl, gd, exif, iconv, fileinfo
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:12.*" "orchestra/testbench:10.*" "nunomaduro/collision:8.*" --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction
 
       - name: Execute tests
         run: vendor/bin/pest --ci

@@ -2,13 +2,11 @@ name: Rector
 
 on:
   push:
-    branches: [main]
     paths:
       - '**.php'
       - 'rector.php'
       - '.github/workflows/rector.yml'
   pull_request:
-    branches: [main]
     paths:
       - '**.php'
       - 'rector.php'

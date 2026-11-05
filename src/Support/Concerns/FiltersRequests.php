@@ -50,7 +50,7 @@ trait FiltersRequests
         if ($request->filled('status')) {
             $status = $request->input('status');
             if ($status === 'success') {
-                $query->whereBetween('status_code', [200, 299]);
+                $query->successful();
             } elseif ($status === 'error') {
                 $query->failed();
             }

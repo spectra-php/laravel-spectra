@@ -23,7 +23,7 @@ Each rule watches one metric over a window of minutes, and fires when the metric
 
 | Metric | Measures | Unit |
 | --- | --- | --- |
-| `error_rate` | The share of calls outside 2xx | 0 to 1 (`0.1` is 10%) |
+| `error_rate` | The share of failed calls (no 2xx status, or an error on a 2xx answer) | 0 to 1 (`0.1` is 10%) |
 | `latency_p95` | The 95th percentile latency of successful calls | milliseconds |
 | `latency_avg` | The average latency of successful calls | milliseconds |
 | `cost` | The spend of successful calls | cents (`5000` is $50) |

@@ -70,7 +70,8 @@ const copyToClipboard = async (text, field) => {
     setTimeout(() => copiedField.value = null, 2000);
 };
 
-const isFailed = computed(() => !request.value?.status_code || request.value.status_code >= 400);
+// The same rule as the API: no 2xx status, or an error on a 2xx answer.
+const isFailed = computed(() => !request.value?.status_code || request.value.status_code < 200 || request.value.status_code >= 300 || !!request.value.error_type);
 
 const finishReasonClass = computed(() => {
     const reason = request.value?.finish_reason;
@@ -142,7 +143,7 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                         </p>
                     </div>
                 </div>
-                <StatusCode :code="request.status_code" class="self-start" />
+                <StatusCode :code="request.status_code" :error="request.error_type" class="self-start" />
             </div>
 
             <!-- Summary -->
@@ -202,6 +203,9 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
 
                     <!-- Other AI calls of the same request, job, or command -->
                     <TraceTimeline v-if="showTrace" :trace="request.trace" />
+                    <div v-else-if="request.trace_migrated === false && request.trace_id" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                        This call's trace is drawn once the trace migrations run. Run <code class="font-mono">php artisan spectra:install</code> to publish and run them.
+                    </div>
 
                     <!-- Model-specific metrics -->
                     <component :is="metricsComponent" :request="request" :expanded="metricsExpanded" @toggle="metricsExpanded = !metricsExpanded" />

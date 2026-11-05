@@ -453,8 +453,8 @@ The file is JSON. Models are keyed by id and use the same fields as the [Model D
 | Model field | Default | Description |
 | --- | --- | --- |
 | `display_name` | none | Name shown in the dashboard |
-| `type` | `text` | `text`, `embedding`, `image`, `audio` or `video` |
-| `pricing_unit` | `tokens` | See [Pricing Units](#pricing-units) |
+| `type` | the built-in model's, else `text` | `text`, `embedding`, `image`, `audio` or `video` |
+| `pricing_unit` | the built-in model's, else `tokens` | See [Pricing Units](#pricing-units). An entry for a built-in model keeps that model's unit: one that names a different unit is skipped, because the model's handler produces metrics in its own unit and the entry would bill every call at $0 |
 | `capabilities` | `[]` | Any of `text`, `images`, `video`, `audio` |
 | `aliases` | `[]` | Other ids that bill like this model |
 | `retired_on` | none | `Y-m-d` |
@@ -465,7 +465,7 @@ A model in the file replaces the **whole** built-in model, so list every row it 
 The provider's `currency` defaults to its built-in catalog's currency. A provider whose currency differs from its built-in catalog is skipped, because its prices would be converted with the wrong rate. You can also add providers that have no built-in catalog.
 
 ::: info Problems never stop cost tracking
-If the file is missing or isn't valid JSON, Spectra logs a warning and uses the built-in prices. A model that can't be read (an unknown tier, a price that isn't a number, a bad date) is skipped with a warning, and the rest of the file still loads.
+If the file is missing or isn't valid JSON, Spectra logs a warning and uses the built-in prices. A model that can't be read (an unknown tier, a price that isn't a number, a bad date, a pricing unit that differs from the built-in model's) is skipped with a warning, and the rest of the file still loads.
 :::
 
 <a name="scraping-prices"></a>
@@ -598,7 +598,9 @@ models.dev is not a price source: check every finding against the provider's pri
 When a provider renames a model, keep the old id in `aliases()`. When a provider shuts a model down, keep the entry and add `retiredOn()`, so older requests keep their prices. The `PricingCatalogInvariantsTest` checks the shape of the catalog.
 
 ::: info Providers without token pricing
-**Ollama** runs models locally, so its requests are deliberately tracked at **$0**. There is no `OllamaPricing` class.
+**Ollama** runs models locally, so its requests are deliberately tracked at **$0**. There is no `OllamaPricing` class, so its models are never reported as unpriced.
+
+**Google Imagen** is shut down: Google removed the Imagen models from the Gemini API and from its pricing page. Spectra still records a `:generateImages` call, with its images, but has no price for it, so it is reported as [unpriced](/costs#zero-cost-requests). Use the Gemini image models (`gemini-2.5-flash-image`, `gemini-3.1-flash-image`, `gemini-3-pro-image`), which are priced.
 
 **ElevenLabs** bills subscription plans in credits, not per request. The bundled `ElevenLabsPricing` uses the published pay-as-you-go per-character API rates as an approximation. If your plan's effective rate differs, extend the class and override the prices.
 :::

@@ -75,6 +75,9 @@ class PricingLookup
     /** @var array<string, true> "provider|tier" values already warned about (once per process). */
     protected array $warnedTiers = [];
 
+    /** @var array<string, true> "provider|model" pairs already reported as unpriced (once per process). */
+    protected array $reportedUnpriced = [];
+
     /** @var array<string, array<string, float>> Provider slug => tool call type => cost in cents */
     protected array $toolCallPricing = [];
 
@@ -137,6 +140,44 @@ class PricingLookup
     public function knows(string $provider, string $model): bool
     {
         return $this->resolveKey($provider, $model) !== null;
+    }
+
+    /**
+     * Determine if any catalog prices the provider. A provider without one
+     * (Ollama, a custom provider) is tracked at $0 on purpose, so its models
+     * are never reported as unpriced.
+     */
+    public function hasCatalog(string $provider): bool
+    {
+        $this->resolve();
+
+        return isset($this->currencies[$provider]);
+    }
+
+    /**
+     * Determine if a priced provider's model is missing from its catalog, so
+     * its requests are recorded at $0 without that being a price.
+     */
+    public function isUnpriced(string $provider, string $model): bool
+    {
+        return $this->hasCatalog($provider) && ! $this->knows($provider, $model);
+    }
+
+    /**
+     * Log, once per process for each model, that a priced provider's model
+     * has no price and its requests are recorded at $0.
+     */
+    public function reportUnpricedModel(string $provider, string $model): void
+    {
+        $key = $this->buildKey($provider, $model);
+
+        if (isset($this->reportedUnpriced[$key])) {
+            return;
+        }
+
+        $this->reportedUnpriced[$key] = true;
+
+        Log::warning("Spectra: no price for the {$provider} model '{$model}'; its requests are recorded at \$0. Add it to a pricing catalog or the scraped prices file (see the costs docs).");
     }
 
     /**

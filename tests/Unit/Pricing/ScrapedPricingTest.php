@@ -163,6 +163,31 @@ it('skips a broken model and loads the others', function (array $broken, string 
     'no standard tier' => [['tiers' => [['tier' => 'batch', 'input_price' => 1, 'output_price' => 2]]], 'no standard tier'],
 ]);
 
+it('keeps the built-in unit and type of a hand-written entry that leaves them out', function () {
+    config(['spectra.costs.use_scraped_prices' => true]);
+    $this->overrides['openai']['models']['image-x'] = ['tiers' => [['tier' => 'standard', 'price_per_unit' => 6]]];
+    ($this->writeScrapedPricesFile)($this->overrides);
+
+    $lookup = app(PricingLookup::class);
+
+    expect($lookup->getUnit('openai', 'image-x'))->toBe('image')
+        ->and($lookup->getModelType('openai', 'image-x'))->toBe('image')
+        ->and($lookup->get('openai', 'image-x')['price_per_unit'])->toBe(6);
+});
+
+it('skips an entry whose pricing unit differs from the built-in model and keeps the built-in price', function () {
+    config(['spectra.costs.use_scraped_prices' => true]);
+    $this->overrides['openai']['models']['image-x'] = ['pricing_unit' => 'tokens', 'tiers' => [['tier' => 'standard', 'input_price' => 1, 'output_price' => 2]]];
+    ($this->writeScrapedPricesFile)($this->overrides);
+    Log::spy();
+
+    $lookup = app(PricingLookup::class);
+
+    expect($lookup->getUnit('openai', 'image-x'))->toBe('image')
+        ->and($lookup->get('openai', 'image-x')['price_per_unit'])->toBe(4);
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => Str::contains($message, ["'image-x'", "pricing_unit 'tokens'", "'image'"]));
+});
+
 it('round-trips every built-in model through its JSON form', function () {
     $classes = (require dirname(__DIR__, 3).'/config/spectra.php')['costs']['pricing'];
 

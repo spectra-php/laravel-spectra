@@ -50,7 +50,7 @@ class GetFilteredRequests
                 'latency_ms', 'time_to_first_token_ms', 'tokens_per_second',
                 'is_reasoning', 'reasoning_effort', 'is_streaming',
                 'finish_reason', 'has_tool_calls', 'tool_call_counts',
-                'status_code', 'metadata',
+                'status_code', 'error_type', 'metadata',
                 'created_at', 'completed_at', 'expires_at',
             ])
             ->with('tags')
@@ -82,14 +82,17 @@ class GetFilteredRequests
             // Search model names and exact ids — deliberately NOT the
             // request/response longtext columns, which cannot use an index
             // and turn every keystroke into a full-table scan at volume.
-            // id and trace_id are native uuid columns on PostgreSQL, which
-            // errors on any other string, so only compare them with a UUID.
-            $query->where(function (Builder $searchQuery) use ($search) {
+            // id is a native uuid column on PostgreSQL, which errors on any
+            // other string, so it is only compared with a UUID; trace_id
+            // too while it is still one (see SpectraRequest::hasUuidTraceIdColumn()).
+            $isUuid = Str::isUuid($search);
+            $matchesTraceId = $isUuid || ! (new SpectraRequest)->hasUuidTraceIdColumn();
+
+            $query->where(function (Builder $searchQuery) use ($search, $isUuid, $matchesTraceId) {
                 $searchQuery->where('model', 'like', "%{$search}%")
                     ->orWhere('response_id', $search)
-                    ->when(Str::isUuid($search), fn (Builder $uuidQuery) => $uuidQuery
-                        ->orWhere('id', $search)
-                        ->orWhere('trace_id', $search));
+                    ->when($isUuid, fn (Builder $uuidQuery) => $uuidQuery->orWhere('id', $search))
+                    ->when($matchesTraceId, fn (Builder $traceQuery) => $traceQuery->orWhere('trace_id', $search));
             });
         }
 

@@ -13,6 +13,7 @@ The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Larav
 2. If `spectra:install` runs in a deploy script, [run `migrate` after it](#v4-install-scripts).
 3. If others use your dashboard in production, [define the new gates](#v4-gates).
 4. If you kept `RequestContext::$id`, [it is the saved id now](#v4-request-context).
+5. If you report on failed requests or read the daily stats, [recheck the numbers and rebuild the stats](#v4-failed-requests).
 
 <a name="v4-migrations"></a>
 ### Run the Installer (Recommended)
@@ -23,7 +24,7 @@ The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Larav
 php artisan spectra:install
 ```
 
-Nothing breaks if you upgrade first. Until they run, calls are recorded as before, the new columns are skipped, `Spectra::score()` returns `null`, no trace is queued for review, and Spectra logs one warning per process. The Prompts and Errors screens say which migration is missing. If your app is on PostgreSQL, run the budgetable id and trace id migrations before you rely on [budgets](/budgets) for users with integer or ULID keys, or on `Spectra::withTraceId()` with ids that aren't UUIDs: without them, those budgets and calls can't be saved there.
+Nothing breaks if you upgrade first. Until they run, calls are recorded as before, the new columns are skipped, `Spectra::score()` returns `null`, no trace is queued for review, and Spectra logs one warning per process. The Prompts and Errors screens say which migration is missing, and so do the Traces and Conversations screens and the request page's trace card while the 3.0 trace columns are missing. If your app is on PostgreSQL, run the budgetable id and trace id migrations before you rely on [budgets](/budgets) for users with integer or ULID keys, or on `Spectra::withTraceId()` with ids that aren't UUIDs: without them, those budgets and calls can't be saved there.
 
 Then group the failures saved before the error fingerprint column existed:
 
@@ -53,6 +54,19 @@ Reviewing traces and adding dataset examples from the dashboard need `annotateSp
 ### `RequestContext::$id` Is the Saved Id
 
 `RequestContext::$id` is now the UUID the call is saved under, so code inside `Spectra::track()` can [score the call](/scores) before it is saved. It used to be a separate ULID that was never stored; if you kept it, it won't match any row.
+
+<a name="v4-failed-requests"></a>
+### Failed Requests and the Daily Stats
+
+A request is failed when its status code is outside 200–299 or missing, as before, and now also when an error was recorded on a 2xx answer: an async job the provider reports as `failed` inside an HTTP 200 (a Replicate prediction, an OpenAI background response, an OpenRouter video), or a stream that broke off before its end. Those calls keep their `200` status code and are stored with the provider's error; they used to count as successes everywhere. Now `SpectraRequest::failed()`, `isFailed()`, the `is_failed` attribute sent to integrations, the dashboard counts and error rates, the Errors screen, the alerts and `Spectra::usage()` all treat them as failed, and their cost and latency stay out of the totals.
+
+The daily stats (`spectra_daily_stats`) follow the same convention as the live numbers now: `total_cost_in_cents`, `total_latency_ms` and the latency bounds cover successful requests only, and `avg_latency_ms` divides by the successful count. They used to add every request's cost and latency, failed ones included, so the stats over-reported spend and latency where calls failed. Rebuild them once after upgrading:
+
+```shell
+php artisan spectra:rebuild-stats
+```
+
+The stats are rebuilt from the request records that still exist, so if you pruned old requests, rebuild only the days you still have requests for, with `--from` (see [`spectra:rebuild-stats`](/commands#spectra-rebuild-stats)). Reports built on the old numbers change; recheck them after upgrading.
 
 <a name="v4-other-changes"></a>
 ### Other Changes

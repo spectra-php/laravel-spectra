@@ -99,7 +99,7 @@ $user->configureAiBudget()
     ->save();
 ```
 
-Setting either threshold to `0` disables it. The defaults are 80% (warning) and 95% (critical).
+Setting either threshold to `0` disables it: a disabled warning never fires, and with the critical threshold disabled the warning fires anywhere from its percentage up to the limit. The defaults are 80% (warning) and 95% (critical).
 
 **Provider and model restrictions:**
 

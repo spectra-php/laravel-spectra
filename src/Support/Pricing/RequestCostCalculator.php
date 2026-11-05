@@ -37,6 +37,7 @@ class RequestCostCalculator
      */
     public function forContext(RequestContext $context, string|PricingTier|null $pricingTier = null): array
     {
+        $lookup = app(PricingLookup::class);
         $tier = $pricingTier ?? $context->pricingTier;
         $model = $this->getPricedModel($context);
         $at = $context->getStartedAt();
@@ -70,6 +71,9 @@ class RequestCostCalculator
 
         if ($context->reportedCostInCents !== null) {
             $cost = $this->applyReportedCost($cost, $this->costCalculator->convertFromUsd($context->reportedCostInCents));
+        } elseif ($lookup->isUnpriced($provider, $model)) {
+            // A $0 that is a missing price, not a free call, must not stay silent.
+            $lookup->reportUnpricedModel($provider, $model);
         }
 
         return $cost;

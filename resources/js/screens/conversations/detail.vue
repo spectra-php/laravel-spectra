@@ -93,6 +93,10 @@ const missingReply = computed(() => conversation.value?.stores_responses ? 'No r
             </div>
         </div>
 
+        <div v-else-if="conversation && conversation.migrated === false" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            A transcript is built from the start time of each call, which is stored once the trace migrations run. Run <code class="font-mono">php artisan spectra:install</code> to publish and run them.
+        </div>
+
         <div v-else-if="conversation">
             <!-- Header -->
             <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Tracking\ProviderErrorException;
 
 /**
  * Replicate predictions through the HTTP client: a polled prediction is
@@ -77,16 +78,25 @@ it('records deployment predictions with the model from the response', function (
         ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(4.0, 0.000001);
 });
 
-it('records a failed prediction without cost', function () {
+it('records a failed prediction as a failed request that keeps its 200 status and has no cost', function () {
     Http::fake(['api.replicate.com/*' => Http::response($this->loadMockResponse('replicate/prediction-failed.json'))]);
 
     Http::get('https://api.replicate.com/v1/predictions/x1hfa7zq3hrmc0cs9qwbtyd0rg');
 
     $record = SpectraRequest::query()->sole();
+    $stat = SpectraDailyStat::query()->whereNull('trackable_type')->sole();
 
     expect($record->finish_reason)->toBe('failed')
+        ->and($record->status_code)->toBe(200)
+        ->and($record->error_type)->toBe(ProviderErrorException::class)
+        ->and($record->error_message)->toBe('NSFW content detected. Try running it again, or try a different prompt.')
+        ->and($record->error_fingerprint)->not->toBeNull()
+        ->and($record->isFailed())->toBeTrue()
+        ->and(SpectraRequest::query()->failed()->count())->toBe(1)
         ->and($record->image_count)->toBe(0)
-        ->and($record->total_cost_in_cents)->toEqualWithDelta(0.0, 0.000001);
+        ->and($record->total_cost_in_cents)->toEqualWithDelta(0.0, 0.000001)
+        ->and($stat->failed_count)->toBe(1)
+        ->and($stat->successful_count)->toBe(0);
 });
 
 it('prices wan video by the seconds the input asked for', function () {

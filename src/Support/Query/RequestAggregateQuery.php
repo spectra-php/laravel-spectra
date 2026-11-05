@@ -59,11 +59,11 @@ class RequestAggregateQuery
     }
 
     /**
-     * Limit the query to successful (2xx) requests.
+     * Limit the query to successful requests (SpectraRequest::successful()).
      */
     public function successfulOnly(): self
     {
-        $this->query->whereBetween('status_code', [200, 299]);
+        $this->query->successful();
 
         return $this;
     }
@@ -215,7 +215,7 @@ class RequestAggregateQuery
 
         return $this
             ->countAs('request_count')
-            ->aggregate('COALESCE(SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 0 ELSE 1 END), 0)', 'failed_count', 'integer')
+            ->failedCount()
             ->successfulCost()
             ->tokenSum('tokens')
             ->selectRaw('MIN(COALESCE(started_at, created_at)) as first_started_at')
@@ -258,13 +258,13 @@ class RequestAggregateQuery
     }
 
     /**
-     * Select the count of requests outside 2xx (or with no status) under the given alias.
+     * Select the count of failed requests (SpectraRequest::FAILED_SQL) under the given alias.
      *
      * @param  literal-string  $alias
      */
     public function failedCount(string $alias = 'failed_count'): self
     {
-        return $this->aggregate('COALESCE(SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 0 ELSE 1 END), 0)', $alias, 'integer');
+        return $this->aggregate($this->failedCountExpression(), $alias, 'integer');
     }
 
     /**

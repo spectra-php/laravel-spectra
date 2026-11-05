@@ -186,7 +186,8 @@ it('prices fal video by resolution and audio', function (string $model, array $i
 
     $record = SpectraRequest::query()->sole();
 
-    expect((float) $record->duration_seconds)->toEqualWithDelta($seconds, 1e-9)
+    // duration_seconds holds three decimals, so a stored 81/16 s reads back as 5.063.
+    expect((float) $record->duration_seconds)->toEqualWithDelta($seconds, 1e-3)
         ->and((float) $record->total_cost_in_cents)->toEqualWithDelta($cents, 1e-6);
 })->with([
     // Per-second prices from each model page (2026-10-27).
@@ -221,7 +222,7 @@ it('keeps inline files out of the remembered submit body', function () {
 
     // Kling 3.0 Pro with audio (the default): $0.168 per second × 5 s.
     expect($remembered['model'])->toBe('fal-ai/kling-video/v3/pro/text-to-video')
-        ->and($remembered['request'])->toBe(['prompt' => 'animate this', 'duration' => '5', 'elements' => [['label' => 'cat']]])
+        ->and($remembered['request'])->toBe(['prompt' => 'animate this', 'duration' => '5', 'image_url' => '[stripped]', 'elements' => [['image_url' => '[stripped]', 'label' => 'cat']]])
         ->and((float) SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(84.0, 1e-6);
 });
 

@@ -101,8 +101,10 @@ class ScrapedPricesFile
      * Get one catalog per provider in the file.
      *
      * A provider whose currency differs from its built-in catalog is skipped:
-     * its models would be converted with the wrong exchange rate. Problems are
-     * logged instead of thrown, so cost tracking keeps the built-in prices.
+     * its models would be converted with the wrong exchange rate, and an
+     * entry whose pricing unit differs from its built-in model's is skipped
+     * too. Problems are logged instead of thrown, so cost tracking keeps the
+     * built-in prices.
      *
      * @param  array<string, ProviderPricing>  $builtIn  Provider slug => built-in catalog.
      * @return list<ScrapedPricing>
@@ -143,7 +145,7 @@ class ScrapedPricesFile
                 continue;
             }
 
-            $catalogs[] = new ScrapedPricing($provider, $section['models'], $currency);
+            $catalogs[] = new ScrapedPricing($provider, $section['models'], $currency, $builtIn[$provider] ?? null);
         }
 
         return $catalogs;

@@ -202,11 +202,12 @@ class RequestPersister
     }
 
     /**
-     * Determine if the call failed: it threw, or the provider answered with no 2xx status.
+     * Determine if the call failed: it threw, the provider answered with no
+     * 2xx status, or it reported an error inside a 2xx answer.
      */
     protected function isFailed(RequestContext $context): bool
     {
-        return $context->errorType !== null || $context->httpStatus === null || $context->httpStatus < 200 || $context->httpStatus > 299;
+        return ! SpectraRequest::isSuccessfulOutcome($context->httpStatus, $context->errorType);
     }
 
     /**
@@ -234,7 +235,9 @@ class RequestPersister
      */
     protected function persistSync(array $attributes, array $tags, array $reviewQueues = []): SpectraRequest
     {
-        return $this->writer->write($attributes, $tags, reviewQueues: $reviewQueues);
+        // A synchronous write is never retried, so only a polled job (named by
+        // its response id) can already have a row.
+        return $this->writer->write($attributes, $tags, reviewQueues: $reviewQueues, mayExist: filled($attributes['response_id'] ?? null));
     }
 
     /**

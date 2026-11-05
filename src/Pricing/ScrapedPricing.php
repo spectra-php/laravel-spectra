@@ -19,6 +19,12 @@ use Throwable;
  * model id. A model that fails to parse, or has no `standard` tier to fall
  * back to, is skipped with a warning (the built-in entry keeps pricing it),
  * so one bad entry never takes cost tracking down.
+ *
+ * An entry replaces the built-in model wholesale, so its `pricing_unit` and
+ * `type` default to the built-in model's rather than to tokens and text: a
+ * hand-written entry for a per-minute or per-image model that leaves them
+ * out would otherwise turn it into a token model that bills nothing. An
+ * entry that names a different unit from the built-in model is skipped.
  */
 class ScrapedPricing extends ProviderPricing
 {
@@ -47,11 +53,13 @@ class ScrapedPricing extends ProviderPricing
      * Create a new scraped catalog instance for one provider's entries in the file.
      *
      * @param  array<array-key, mixed>  $data  Model id => model array (a numeric id decodes as an int key).
+     * @param  ProviderPricing|null  $builtIn  The provider's built-in catalog, whose units the entries must keep.
      */
     public function __construct(
         protected string $slug,
         protected array $data,
         protected string $catalogCurrency = 'USD',
+        protected ?ProviderPricing $builtIn = null,
     ) {}
 
     /**
@@ -75,15 +83,75 @@ class ScrapedPricing extends ProviderPricing
      */
     protected function define(): void
     {
+        $builtInModels = $this->builtInModels();
+
         foreach ($this->data as $id => $model) {
             try {
                 throw_unless(is_array($model), InvalidArgumentException::class, 'the model must be an object');
 
-                $this->definitions[] = static::definitionFromArray((string) $id, $model);
+                $this->definitions[] = static::definitionFromArray((string) $id, $this->withBuiltInUnit((string) $id, $model, $builtInModels));
             } catch (Throwable $e) {
                 Log::warning("Spectra: skipped {$this->slug} model '{$id}' in the scraped prices file: {$e->getMessage()}");
             }
         }
+    }
+
+    /**
+     * Fill an entry's unit and type from the built-in model it replaces, and
+     * refuse a unit that differs from it: the entry would bill the model in
+     * units its handler never produces, so every call would cost $0.
+     *
+     * @param  array<mixed>  $model
+     * @param  array<string, array{type: string, pricing_unit: string}>  $builtInModels
+     * @return array<mixed>
+     */
+    protected function withBuiltInUnit(string $id, array $model, array $builtInModels): array
+    {
+        $builtIn = $builtInModels[$id] ?? null;
+
+        if ($builtIn === null) {
+            return $model;
+        }
+
+        $unit = $model['pricing_unit'] ?? null;
+
+        throw_if(
+            $unit !== null && (string) $unit !== $builtIn['pricing_unit'],
+            InvalidArgumentException::class,
+            "pricing_unit '{$unit}' differs from the built-in model's '{$builtIn['pricing_unit']}'; a model keeps its unit",
+        );
+
+        $model['pricing_unit'] ??= $builtIn['pricing_unit'];
+        $model['type'] ??= $builtIn['type'];
+
+        return $model;
+    }
+
+    /**
+     * Get the type and unit of each built-in model, by its id and its aliases.
+     *
+     * @return array<string, array{type: string, pricing_unit: string}>
+     */
+    protected function builtInModels(): array
+    {
+        if ($this->builtIn === null) {
+            return [];
+        }
+
+        $models = [];
+
+        foreach ($this->builtIn->models() as $definition) {
+            $modelArray = $definition->toModelArray();
+            $units = ['type' => $modelArray['type'], 'pricing_unit' => $modelArray['pricing_unit']];
+
+            $models[$definition->getInternalName()] = $units;
+
+            foreach ($definition->getAliases() as $alias) {
+                $models[$alias] = $units;
+            }
+        }
+
+        return $models;
     }
 
     /**

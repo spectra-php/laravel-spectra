@@ -49,7 +49,7 @@ $response = Prism::text()
 echo $response->text;
 ```
 
-Spectra records provider errors too. Any response outside 200–299 (a 4xx, a 5xx, or an unfollowed 3xx), or one with no status code, is stored as a failed request, with the provider's error message in the `error_message` column. A connection failure is recorded and still thrown to your code. Saving a tracked request never throws into your application: if saving fails, the error goes to your exception handler.
+Spectra records provider errors too. Any response outside 200–299 (a 4xx, a 5xx, or an unfollowed 3xx), or one with no status code, is stored as a failed request, with the provider's error message in the `error_message` column. So is an error the provider reports inside an HTTP 200: an async job that ends `failed` (a Replicate prediction, an OpenAI background response, an OpenRouter video) or a stream that breaks off keeps its 200 status code, but is stored with the error and counts as failed in every number. A connection failure is recorded and still thrown to your code. Saving a tracked request never throws into your application: if saving fails, the error goes to your exception handler.
 
 > [!TIP]
 > Automatic tracking is on whenever `spectra.watcher.enabled` is `true` (the default). It works for requests made through Laravel's `Http` facade, the OpenAI PHP SDK, and any library built on either of them. Direct `curl` calls and other HTTP libraries are not tracked. Use the [Guzzle middleware](#guzzle-middleware) or [manual tracking](#manual-tracking) for those.
@@ -244,7 +244,7 @@ Spectra records the request when the stream ends. This happens when your code re
 - Newline-delimited JSON (Ollama)
 - Streamed JSON arrays (Gemini without `alt=sse`)
 
-An error event inside a stream (for example, an Anthropic `error` event) is recorded as a failed request. Spectra also measures the time to the first token of each stream.
+An error event inside a stream (for example, an Anthropic `error` event) is recorded as a failed request, and so is a stream that breaks off before its end (the connection drops, the provider stops sending): the request keeps the status code the response had, the usage read so far, and the exception as its error, and the exception still reaches your code. Spectra also measures the time to the first token of each stream.
 
 <a name="with-the-laravel-http-client"></a>
 ### With the Laravel HTTP Client
@@ -324,7 +324,23 @@ $tracker->finish();
 
 The `finish()` method returns the `SpectraRequest` record, with token counts, cost, latency, and time-to-first-token metrics. You can call it more than once. Later calls return the first result.
 
-If you wrap a stream that Spectra already tracks on its own (for example, a stream from the OpenAI SDK), the request is recorded once, not twice.
+When the stream throws inside the loop, the exception reaches your code, and the request is recorded as failed, with the usage read so far, when the tracker is released. To record it right away, or to record an exception you caught around the stream, call `fail()`:
+
+```php
+try {
+    foreach ($tracker->track($sdkStream) as $text) {
+        echo $text;
+    }
+
+    $tracker->finish();
+} catch (Throwable $e) {
+    $tracker->fail($e);
+
+    throw $e;
+}
+```
+
+If you wrap a stream that Spectra already tracks on its own (for example, a stream from the OpenAI SDK), the request is recorded once, not twice. A tracked stream your code hasn't started reading yet is never taken over by an unrelated `Spectra::stream()`.
 
 If your SDK gives you the text and the usage separately, add them yourself before you call `finish()`:
 

@@ -19,9 +19,10 @@ use Spectra\Support\DateRange;
  * model, trackable and period, then read totals or breakdowns in cents and
  * dollars.
  *
- * It starts from successful (2xx) requests only, because a failed call is
- * not billed; every count it returns is therefore a count of successful
- * requests. Its method names and result keys are public API.
+ * It starts from successful requests only (a 2xx status and no recorded
+ * error), because a failed call is not billed; every count it returns is
+ * therefore a count of successful requests. Its method names and result keys
+ * are public API.
  */
 class CostQueryBuilder
 {
@@ -29,11 +30,11 @@ class CostQueryBuilder
     protected Builder $query;
 
     /**
-     * Create a new cost query over successful (2xx) requests.
+     * Create a new cost query over successful requests.
      */
     public function __construct()
     {
-        $this->query = SpectraRequest::query()->whereBetween('status_code', [200, 299]);
+        $this->query = SpectraRequest::query()->successful();
     }
 
     /**
@@ -62,7 +63,7 @@ class CostQueryBuilder
     public function forTrackable(Model $trackable): self
     {
         $this->query->where('trackable_type', $trackable->getMorphClass())
-            ->where('trackable_id', $trackable->getKey());
+            ->where('trackable_id', (string) $trackable->getKey());
 
         return $this;
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
@@ -81,10 +82,12 @@ class RequestWriter
      * @param  bool  $export  Whether to export to integrations synchronously (the
      *                        persister handles queued export itself).
      * @param  list<string>  $reviewQueues  Review queues to put the call's trace in
+     * @param  bool  $mayExist  Whether an earlier write may have saved this row (a
+     *                          polled job, a retried queued job); false saves a lookup.
      */
-    public function write(array $attributes, array $tags = [], bool $export = true, array $reviewQueues = []): SpectraRequest
+    public function write(array $attributes, array $tags = [], bool $export = true, array $reviewQueues = [], bool $mayExist = true): SpectraRequest
     {
-        [$request, $previous] = $this->save($attributes);
+        [$request, $previous] = $this->save($attributes, $mayExist);
 
         // A tag that can't be saved must not keep the call out of the stats and budgets.
         if (filled($tags)) {
@@ -137,12 +140,16 @@ class RequestWriter
      * response id or row id. Returns the saved row and, for updates, its
      * previous values.
      *
+     * The lookup comes before the insert on purpose: a failed insert aborts
+     * the whole transaction on PostgreSQL, and the write may run inside the
+     * host app's.
+     *
      * @param  array<string, mixed>  $attributes
      * @return array{0: SpectraRequest, 1: SpectraRequest|null}
      */
-    protected function save(array $attributes): array
+    protected function save(array $attributes, bool $mayExist = true): array
     {
-        $existing = $this->findExisting($attributes);
+        $existing = $mayExist ? $this->findExisting($attributes) : null;
 
         if ($existing === null) {
             try {
@@ -243,29 +250,30 @@ class RequestWriter
     }
 
     /**
-     * Find the row an earlier write saved, by provider response id or by row id.
+     * Find the row an earlier write saved, by provider response id or by row
+     * id, in one query. The response id wins: a poll of a job saved under
+     * another row id must update that row.
      *
      * @param  array<string, mixed>  $attributes
      */
     protected function findExisting(array $attributes): ?SpectraRequest
     {
         $responseId = $attributes['response_id'] ?? null;
-
-        if (filled($responseId)) {
-            $existing = SpectraRequest::query()->where('response_id', $responseId)->first();
-
-            if ($existing !== null) {
-                return $existing;
-            }
-        }
-
         $id = $attributes['id'] ?? null;
 
-        if (blank($id)) {
+        if (blank($responseId) && blank($id)) {
             return null;
         }
 
-        return SpectraRequest::query()->whereKey($id)->first();
+        $rows = SpectraRequest::query()
+            ->where(fn (Builder $match) => $match
+                ->when(filled($responseId), fn (Builder $byResponse) => $byResponse->orWhere('response_id', $responseId))
+                ->when(filled($id), fn (Builder $byId) => $byId->orWhere('id', $id)))
+            ->limit(2)
+            ->get();
+
+        return $rows->first(fn (SpectraRequest $row) => filled($responseId) && $row->response_id === $responseId)
+            ?? $rows->first();
     }
 
     /**
