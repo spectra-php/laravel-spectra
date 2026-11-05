@@ -35,8 +35,8 @@ These settings control what Spectra saves to the database, and how. Use them to 
 | `store_requests` | `bool` | `true` | Save request records to the database. When `false`, nothing is saved: requests are still tracked in memory, and still sent to the `RequestTracked` event and to OpenTelemetry. |
 | `store_responses` | `bool` | `true` | Persist response payloads (the JSON returned by the provider). |
 | `store_prompts` | `bool` | `true` | Store user prompt text and chat messages. Disable for privacy compliance (GDPR, CCPA). |
-| `store_system_prompts` | `bool` | `true` | Keep system prompts in the stored request body. These often contain proprietary business logic. When `false`, Spectra removes them before saving: `system` and `developer` messages, and the `system`, `instructions`, `systemInstruction` and `system_prompt` fields providers use. |
-| `store_tools` | `bool` | `true` | Keep function and tool definitions in the stored request body. These can be large for complex tool schemas. When `false`, Spectra removes the `tools` and `functions` lists before saving. Tool calls in responses are kept. |
+| `store_system_prompts` | `bool` | `true` | Keep system prompts in the stored request body. These often contain proprietary business logic. When `false`, Spectra removes them before saving: `system` and `developer` messages, and the `system`, `instructions`, `systemInstruction` and `system_prompt` fields providers use, from the request body and from a response that echoes them (the OpenAI Responses API returns `instructions`). |
+| `store_tools` | `bool` | `true` | Keep function and tool definitions in the stored request body. These can be large for complex tool schemas. When `false`, Spectra removes the `tools` and `functions` lists before saving, from the request body and from a response that echoes them (the OpenAI Responses API returns `tools`). Tool calls in responses are kept. |
 | `store_request_data` | `bool\|null` | `null` | Store the raw request body sent to the provider (the full JSON body, including sampling settings) in the `request` column. When `null`, follows `store_prompts`. Set it to `true` to keep the body with `store_prompts` off; the prompts are then stored with it. When it resolves to `false`, the raw body is not saved. `store_system_prompts` and `store_tools` apply either way. |
 | `store_embeddings` | `bool` | `false` | Store embedding vector values in the response column. Embedding requests are always tracked (tokens, costs, latency), but the float-vector arrays can be very large. When disabled, vectors are replaced with `[stripped]`. |
 
@@ -95,6 +95,8 @@ Spectra::redactUsing(fn (string $text) => $this->customerNames->mask($text));
 ```
 
 Redaction runs before a request or span is queued, so personal data never reaches your queue either. Rows saved before you turned it on are not changed. To stop storing prompts or responses at all, use `store_prompts` and `store_responses` instead.
+
+Whether redaction is on or not, the error message of a failed call or span is stored without URL query strings and with API keys masked: a connection error quotes the request URL, and Google's key travels in it as `?key=…`.
 
 A redacted request in the dashboard, with the card number and email masked:
 
@@ -207,7 +209,7 @@ Choose what context Spectra captures automatically with each tracked request.
 | `auto_track_user` | `bool` | `true` | Automatically associate requests with the authenticated user via the polymorphic `trackable` relationship. A trackable you set yourself always wins over the signed-in user. |
 | `capture_ip` | `bool` | `true` | Store the client's IP address in the `ip_address` column. Disable for GDPR or CCPA compliance. |
 | `capture_user_agent` | `bool` | `true` | Store the client's user agent string in the `user_agent` column. |
-| `capture_request_id` | `bool` | `true` | Store a request ID for correlation with your logs in the `laravel_request_id` column. Uses the `X-Request-ID` header if present, otherwise generates one. |
+| `capture_request_id` | `bool` | `true` | Store a request ID for correlation with your logs in the `laravel_request_id` column. Uses the `X-Request-ID` header if present (cut to 255 characters), otherwise generates one. |
 | `capture_origin` | `bool` | `true` | Store where each call came from in the `origin` column: the queued job class, the Artisan command (`artisan reports:send`), or the route pattern of the HTTP request (`POST /chats/{chat}`). Only the pattern is stored, never the URL with its ids and query string. Env: `SPECTRA_CAPTURE_ORIGIN`. |
 | `root_spans` | `bool` | `true` | Give each HTTP request, queued job and Artisan command that makes AI calls a span of its own, with its calls and spans inside. Only units of work that made an AI call are stored. Needs `trace_per_request`: with it off, each call is a trace of its own and no root span is stored. Env: `SPECTRA_ROOT_SPANS`. See [Spans](/usage#spans). |
 | `tool_spans` | `bool` | `false` | Draw the tools a model asked for in the trace: when a call sends tool results back, a `tool` span per result, with its arguments and result. Tools run through `Spectra::tool()` are recorded either way. Env: `SPECTRA_TOOL_SPANS`. See [Tools](/tools#tools-the-model-asked-for). |

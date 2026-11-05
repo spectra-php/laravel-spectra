@@ -138,7 +138,8 @@ return [
         | prompts often contain business logic or instructions you'd rather keep
         | private. When disabled, Spectra removes them before saving: system and
         | developer messages, and the system, instructions or systemInstruction
-        | fields providers use.
+        | fields providers use, from the request and from a response that
+        | echoes them (the OpenAI Responses API returns instructions).
         |
         | Docs: https://spectraphp.com/configuration#storage
         |
@@ -154,7 +155,8 @@ return [
         | Whether to keep function and tool definitions in the stored request
         | body. Tool schemas can be large and may describe internal APIs. When
         | disabled, Spectra removes the tools (and legacy functions) list before
-        | saving. Tool calls in responses are kept.
+        | saving, from the request and from a response that echoes it (the
+        | OpenAI Responses API returns tools). Tool calls in responses are kept.
         |
         | Docs: https://spectraphp.com/configuration#storage
         |

@@ -31,6 +31,26 @@ it('skips the trackable id migration when the tables do not exist', function () 
     expect(Schema::hasTable('spectra_daily_stats'))->toBeFalse();
 });
 
+it('runs the budgetable id migration again without changes', function () {
+    spectraMigration('2026_11_05_000001_change_budgetable_id_to_string_on_spectra_budgets_table')->up();
+
+    expect(Schema::getColumnType('spectra_budgets', 'budgetable_id'))->toBe('varchar');
+});
+
+it('skips the budgetable id migration when the budgets table does not exist', function () {
+    Schema::drop('spectra_budgets');
+
+    spectraMigration('2026_11_05_000001_change_budgetable_id_to_string_on_spectra_budgets_table')->up();
+
+    expect(Schema::hasTable('spectra_budgets'))->toBeFalse();
+});
+
+it('runs the trace id migration again without changes', function () {
+    spectraMigration('2026_11_05_000002_change_trace_id_to_string_on_spectra_requests_table')->up();
+
+    expect(Schema::getColumnType('spectra_requests', 'trace_id'))->toBe('varchar');
+});
+
 it('runs the v2 columns migration again without changes', function () {
     spectraMigration('2026_10_15_000001_add_v2_tracking_columns_to_spectra_tables')->up();
 

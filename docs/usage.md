@@ -190,7 +190,7 @@ Spectra::forConversation($chat, turn: $chat->messages()->where('role', 'user')->
 $reply = $agent->prompt($message); // every call it makes is in the conversation, at this turn
 ```
 
-`forConversation()` takes an id or a model (its key is used), and an optional turn number. It lasts until the request, job or command ends, or until `Spectra::clearGlobals()`. A call given its own conversation (the `conversation_id` option, or `$ctx->inConversation()`) keeps it.
+`forConversation()` takes an id or a model (its key is used), and an optional turn number. It lasts until the request, job or command ends, or until `Spectra::clearGlobals()`. A call given its own conversation (the `conversation_id` option, or `$ctx->inConversation()`) keeps it. Conversation ids are stored in a 255-character column; a longer one is cut.
 
 The **Conversations** screen lists one row per conversation: its turns and failed calls, the models it used, its trackable, its cost and its last activity. Above the list are totals for every conversation you filter for. The filters are the same as on the requests list, and search matches part of a conversation id.
 
@@ -481,6 +481,8 @@ foreach ($tickets as $ticket) {
 // Give one call its own trace id.
 Spectra::track('openai', 'gpt-4o', fn () => ..., ['trace_id' => $traceId]);
 ```
+
+A trace id is any string of up to 64 characters (Spectra's own are UUIDs); a longer one is cut. Apps on PostgreSQL need [the trace id migration](/migrations#trace-id-migration) for ids that aren't UUIDs.
 
 To give every AI call its own trace id, set
 `SPECTRA_TRACE_PER_REQUEST=false`. See [Tracking Context](/configuration#tracking-context).

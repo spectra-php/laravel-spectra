@@ -29,6 +29,8 @@ Spectra ships these migration files:
 | `add_error_fingerprint_to_spectra_requests_table` | Adds `error_fingerprint` to `spectra_requests`, for the [Errors screen](/dashboard#errors) (see [below](#error-fingerprint-migration)) |
 | `create_spectra_annotation_items_table` | Creates `spectra_annotation_items`, for [annotation queues](/annotations) (see [below](#annotation-migration)) |
 | `create_spectra_evaluation_tables` | Creates `spectra_datasets`, `spectra_dataset_examples`, `spectra_eval_runs` and `spectra_eval_results`, for [evaluations](/evaluations) (see [below](#evaluation-migration)) |
+| `change_budgetable_id_to_string_on_spectra_budgets_table` | Stores budget owner ids as strings, so [budgets](/budgets) work for integer and ULID keys on every database (see [below](#budgetable-id-migration)) |
+| `change_trace_id_to_string_on_spectra_requests_table` | Stores trace ids as strings of up to 64 characters, like the spans and scores tables, so `Spectra::withTraceId()` takes any id on every database (see [below](#trace-id-migration)) |
 
 <a name="publishing-schema-migrations"></a>
 ### Publishing Schema Migrations
@@ -142,6 +144,28 @@ php artisan spectra:install
 ```
 
 Until it runs, the Evals screen asks you to, and `Spectra::dataset()` and `spectra:eval` fail with a database error.
+
+<a name="budgetable-id-migration"></a>
+## The Budgetable Id Migration
+
+`change_budgetable_id_to_string_on_spectra_budgets_table` changes `spectra_budgets.budgetable_id` from a UUID column to a string, as `change_trackable_id_to_string_on_spectra_tables` did for requests and daily stats. Run the installer to publish and run it:
+
+```shell
+php artisan spectra:install
+```
+
+Until it runs, a budget for a model with an integer or ULID key can't be saved on PostgreSQL (the insert fails with `invalid input syntax for type uuid`), and the budget middleware lets that model's calls through unchecked. MySQL and SQLite accept the ids either way, so the migration changes nothing visible there.
+
+<a name="trace-id-migration"></a>
+## The Trace Id Migration
+
+`change_trace_id_to_string_on_spectra_requests_table` changes `spectra_requests.trace_id` from a UUID column to a string of up to 64 characters, the type the spans, scores, review queue and evaluation tables already use. Run the installer to publish and run it:
+
+```shell
+php artisan spectra:install
+```
+
+Until it runs, a call made under a trace id that isn't a UUID (`Spectra::withTraceId('order-12345')`) isn't saved on PostgreSQL, and the scores of a conversation's or a prompt's traces are missing from those screens there (the query compares the two column types and fails). MySQL and SQLite accept the ids either way.
 
 <a name="custom-database-connection"></a>
 ### Custom Database Connection

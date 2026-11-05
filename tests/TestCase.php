@@ -61,6 +61,8 @@ class TestCase extends Orchestra
             __DIR__.'/../database/migrations/2026_11_04_000003_add_error_fingerprint_to_spectra_requests_table.php',
             __DIR__.'/../database/migrations/2026_11_04_000004_create_spectra_annotation_items_table.php',
             __DIR__.'/../database/migrations/2026_11_04_000005_create_spectra_evaluation_tables.php',
+            __DIR__.'/../database/migrations/2026_11_05_000001_change_budgetable_id_to_string_on_spectra_budgets_table.php',
+            __DIR__.'/../database/migrations/2026_11_05_000002_change_trace_id_to_string_on_spectra_requests_table.php',
         ] as $path) {
             $migration = include $path;
             $migration->up();

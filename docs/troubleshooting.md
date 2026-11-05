@@ -226,12 +226,9 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
    ],
    ```
 
-2. **Spectra is enabled.** Macros are registered when Spectra boots:
-   ```bash
-   SPECTRA_ENABLED=true
-   ```
+2. **Check for conflicts.** Another package may have registered a macro with the same name. Laravel macros are global, and the last registration wins.
 
-3. **Check for conflicts.** Another package may have registered a macro with the same name. Laravel macros are global, and the last registration wins.
+The macros are registered whether Spectra is enabled or not: with `SPECTRA_ENABLED=false`, `Http::withAITracking()` works and records nothing. They are also available on a pending request, after `withHeaders()`, `withToken()` and the like.
 
 <a name="high-memory-usage"></a>
 ## High Memory Usage

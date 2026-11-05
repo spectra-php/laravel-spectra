@@ -127,8 +127,9 @@ class ScoreRecorder
             'comment' => filled($comment) ? app(Redactor::class)->redact($comment) : null,
             'source' => $source instanceof ScoreSource ? $source : ScoreSource::from($source),
             'request_id' => filled($requestId) ? $requestId : null,
-            'trace_id' => filled($traceId) ? $traceId : null,
-            'conversation_id' => filled($conversationId) ? $conversationId : null,
+            'trace_id' => filled($traceId) ? Str::limit($traceId, 64, '') : null,
+            // Cut like the request's conversation id, so the two still match.
+            'conversation_id' => filled($conversationId) ? Str::limit($conversationId, 255, '') : null,
             'author_type' => $author?->getMorphClass(),
             'author_id' => $author !== null ? (string) $author->getKey() : null,
             'metadata' => $metadata === [] ? null : $metadata,

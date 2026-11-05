@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Spectra\Models\SpectraRequest;
 
 beforeEach(fn () => Gate::define('viewSpectra', fn ($user = null) => true));
@@ -36,4 +37,18 @@ it('serves a request by its UUID', function () {
 
 it('serves the dashboard SPA for its own screens', function () {
     $this->get('/spectra/requests')->assertOk();
+});
+
+it('serves tts audio inline, and as a download when asked', function () {
+    Storage::fake('local');
+    Storage::disk('local')->put('spectra/req-3/0.wav', 'wav-bytes');
+    $request = SpectraRequest::factory()->create(['model_type' => 'tts', 'media_storage_path' => ['spectra/req-3/0.wav']]);
+
+    $inline = $this->get("/spectra/api/requests/{$request->id}/audio")->assertOk();
+    $download = $this->get("/spectra/api/requests/{$request->id}/audio/download")->assertOk();
+
+    expect($inline->headers->get('Content-Type'))->toBe('audio/wav')
+        ->and($inline->headers->has('Content-Disposition'))->toBeFalse()
+        ->and($inline->getContent())->toBe('wav-bytes')
+        ->and($download->headers->get('Content-Disposition'))->toStartWith('attachment; filename=');
 });

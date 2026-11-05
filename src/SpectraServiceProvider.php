@@ -173,6 +173,9 @@ class SpectraServiceProvider extends ServiceProvider
         $this->registerCommands();
         $this->registerPublishing();
         $this->registerMiddleware();
+        // The macros are public API that call sites keep using with Spectra
+        // off: they must exist, and then record nothing.
+        $this->registerHttpMacros();
 
         if (! $this->app->make('config')->get('spectra.enabled')) {
             return;
@@ -181,7 +184,6 @@ class SpectraServiceProvider extends ServiceProvider
         $this->registerAuthorization();
         $this->registerRoutes();
         $this->registerResources();
-        $this->registerHttpMacros();
         $this->registerWatchers();
         $this->registerTracePropagation();
         $this->registerOriginTracking();
@@ -417,11 +419,24 @@ class SpectraServiceProvider extends ServiceProvider
      * would silently do nothing.
      */
     protected const NESTED_CONFIG_DEFAULTS = [
-        'tracking.capture_origin',
-        'tracking.root_spans',
+        // 2.0
+        'storage.store_request_data',
+        'tracking.trace_per_request',
+        'tracking.use_traceparent',
+        'costs.exchange_rates',
+        // 2.x
+        'tracking.propagate_tags',
         'costs.use_scraped_prices',
         'costs.scraped_prices_path',
         'costs.firecrawl',
+        // 3.0
+        'tracking.capture_origin',
+        'tracking.root_spans',
+        // 4.0
+        'storage.sampling',
+        'storage.redaction',
+        'tracking.tool_spans',
+        'dashboard.maintenance',
     ];
 
     /**

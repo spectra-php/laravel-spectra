@@ -17,7 +17,7 @@ $reply = Spectra::withPrompt('support-answer', 'v3', function () use ($agent, $m
 });
 ```
 
-`withPrompt()` returns what the callback returns. Calls after the callback, and calls in queued jobs it dispatches, are not tagged. A stream started inside the callback keeps the prompt even when you read it later.
+`withPrompt()` returns what the callback returns. Calls after the callback, and calls in queued jobs it dispatches, are not tagged. A stream started inside the callback keeps the prompt even when you read it later. A prompt name is stored in a 100-character column and a version in a 50-character one; longer ones are cut.
 
 The version is any string up to 50 characters: `v3`, `2026-11-04`, a git commit, or the id of the prompt's row in your database. The name is up to 100 characters. Use the same name for every version of a prompt, so the screen can group them.
 

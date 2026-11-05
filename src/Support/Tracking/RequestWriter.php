@@ -86,8 +86,9 @@ class RequestWriter
     {
         [$request, $previous] = $this->save($attributes);
 
+        // A tag that can't be saved must not keep the call out of the stats and budgets.
         if (filled($tags)) {
-            $request->attachTags($tags);
+            rescue(fn () => $request->attachTags($tags));
         }
 
         if ($reviewQueues !== [] && filled($request->trace_id)) {

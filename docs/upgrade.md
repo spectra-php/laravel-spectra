@@ -9,7 +9,7 @@ The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Larav
 
 **Quick checklist:**
 
-1. [Run the installer](#v4-migrations) for the five new migrations, then `spectra:group-errors` (recommended).
+1. [Run the installer](#v4-migrations) for the seven new migrations, then `spectra:group-errors` (recommended).
 2. If `spectra:install` runs in a deploy script, [run `migrate` after it](#v4-install-scripts).
 3. If others use your dashboard in production, [define the new gates](#v4-gates).
 4. If you kept `RequestContext::$id`, [it is the saved id now](#v4-request-context).
@@ -17,13 +17,13 @@ The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Larav
 <a name="v4-migrations"></a>
 ### Run the Installer (Recommended)
 
-4.0 adds [the scores migration](/migrations#scores-migration), [the prompt columns migration](/migrations#prompt-columns-migration), [the error fingerprint migration](/migrations#error-fingerprint-migration), [the annotation migration](/migrations#annotation-migration) and [the evaluation migration](/migrations#evaluation-migration). The installer publishes only the ones your app doesn't have yet, then asks if it should run them:
+4.0 adds [the scores migration](/migrations#scores-migration), [the prompt columns migration](/migrations#prompt-columns-migration), [the error fingerprint migration](/migrations#error-fingerprint-migration), [the annotation migration](/migrations#annotation-migration), [the evaluation migration](/migrations#evaluation-migration), [the budgetable id migration](/migrations#budgetable-id-migration) and [the trace id migration](/migrations#trace-id-migration). The installer publishes only the ones your app doesn't have yet, then asks if it should run them:
 
 ```shell
 php artisan spectra:install
 ```
 
-Nothing breaks if you upgrade first. Until they run, calls are recorded as before, the new columns are skipped, `Spectra::score()` returns `null`, no trace is queued for review, and Spectra logs one warning per process. The Prompts and Errors screens say which migration is missing.
+Nothing breaks if you upgrade first. Until they run, calls are recorded as before, the new columns are skipped, `Spectra::score()` returns `null`, no trace is queued for review, and Spectra logs one warning per process. The Prompts and Errors screens say which migration is missing. If your app is on PostgreSQL, run the budgetable id and trace id migrations before you rely on [budgets](/budgets) for users with integer or ULID keys, or on `Spectra::withTraceId()` with ids that aren't UUIDs: without them, those budgets and calls can't be saved there.
 
 Then group the failures saved before the error fingerprint column existed:
 
@@ -31,7 +31,7 @@ Then group the failures saved before the error fingerprint column existed:
 php artisan spectra:group-errors
 ```
 
-A published `config/spectra.php` doesn't need to be published again. The new keys (`alerts`, `annotations`, `storage.redaction`, `storage.sampling`, `tracking.tool_spans`, `dashboard.maintenance`) default to 3.x behaviour.
+A published `config/spectra.php` doesn't need to be published again. The new keys (`alerts`, `annotations`, `storage.redaction`, `storage.sampling`, `tracking.tool_spans`, `dashboard.maintenance`) default to 3.x behaviour, and their `SPECTRA_*` environment variables work under the published config. Publish it again only to set the new options in the file.
 
 <a name="v4-install-scripts"></a>
 ### `spectra:install` in Scripts No Longer Migrates

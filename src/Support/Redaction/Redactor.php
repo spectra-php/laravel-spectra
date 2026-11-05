@@ -55,6 +55,22 @@ class Redactor
     }
 
     /**
+     * Mask the secrets an error message may quote, whether redaction is on or
+     * not: a transport error names the request URL, and Google's key travels
+     * in it as `?key=…`, so URL query strings are dropped and API keys masked.
+     */
+    public function scrubSecrets(?string $message): ?string
+    {
+        if ($message === null || $message === '') {
+            return $message;
+        }
+
+        $message = Str::replaceMatches('/(https?:\/\/[^\s?#"\'<>]+)\?[^\s"\'<>]*/i', '$1', $message) ?? $message;
+
+        return Str::replaceMatches(self::PATTERNS['api_key'], '[REDACTED:api_key]', $message) ?? $message;
+    }
+
+    /**
      * Redact a value: a string, or every string inside an array, at any depth.
      * Returned as is when redaction is off.
      */

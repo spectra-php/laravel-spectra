@@ -47,6 +47,8 @@ it('publishes only the missing migrations when run again', function () {
         'add_spans_to_spectra_tables.php',
         'add_trace_timing_columns_to_spectra_tables.php',
         'add_v2_tracking_columns_to_spectra_tables.php',
+        'change_budgetable_id_to_string_on_spectra_budgets_table.php',
+        'change_trace_id_to_string_on_spectra_requests_table.php',
         'change_trackable_id_to_string_on_spectra_tables.php',
         'create_spectra_annotation_items_table.php',
         'create_spectra_entries.php',

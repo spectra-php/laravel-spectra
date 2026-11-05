@@ -200,6 +200,27 @@ it('stores the request without its system prompt and tools when those switches a
         ->toBe(['model' => 'gpt-4o', 'messages' => [['role' => 'user', 'content' => 'hi']]]);
 });
 
+it('stores the response without the system prompt and tools the Responses API echoes', function () {
+    config(['spectra.storage.store_system_prompts' => false, 'spectra.storage.store_tools' => false]);
+    $body = $this->loadMockResponse('openai/response.json');
+    $body['instructions'] = 'internal rules';
+    $body['tools'] = [['type' => 'web_search_preview']];
+    Http::fake(['api.openai.com/*' => Http::response($body)]);
+
+    Http::post('https://api.openai.com/v1/responses', [
+        'model' => 'gpt-4o',
+        'instructions' => 'internal rules',
+        'input' => 'hi',
+        'tools' => [['type' => 'web_search_preview']],
+    ]);
+
+    $stored = SpectraRequest::query()->sole()->makeVisible('response')->response;
+
+    expect($stored)->not->toHaveKey('instructions')
+        ->not->toHaveKey('tools')
+        ->and($stored['output'])->toBe($body['output']);
+});
+
 it('counts a polled job once and keeps its original start time', function () {
     $this->travelTo('2026-03-10 12:00:00');
     $writer = app(RequestWriter::class);

@@ -73,7 +73,8 @@ class RequestPersister
             return $request;
         }
 
-        $tags = $context->tags;
+        // Tag names are stored in a 255-character column.
+        $tags = array_map(fn (string $tag): string => Str::limit($tag, 255, ''), $context->tags);
         // The review queues that sample this call's trace, picked now from
         // config and written with the row, so the queue setting keeps that
         // write off the request too.
@@ -125,9 +126,11 @@ class RequestPersister
             'parent_span_id' => $context->parentSpanId,
             'span_id' => $context->spanId,
             'response_id' => $context->responseId,
-            'conversation_id' => $context->conversationId,
-            'prompt_name' => $context->promptName,
-            'prompt_version' => $context->promptVersion,
+            // Ids and names the app chooses are cut to their column's length, so
+            // an over-long one can't make the insert fail and lose the call.
+            'conversation_id' => $this->truncate($context->conversationId, 255),
+            'prompt_name' => $this->truncate($context->promptName, 100),
+            'prompt_version' => $this->truncate($context->promptVersion, 50),
             'conversation_turn' => $context->conversationTurn,
             'provider' => $context->provider,
             'model' => $this->resolveDisplayName($context->provider, $context->model),
@@ -169,13 +172,14 @@ class RequestPersister
             'is_streaming' => $context->isStreaming,
             'status_code' => $context->httpStatus,
             'error_type' => $context->errorType,
-            'error_message' => $this->redact($this->truncate($context->errorMessage, 10_000)),
+            'error_message' => $this->redact($this->truncate(app(Redactor::class)->scrubSecrets($context->errorMessage), 10_000)),
             'error_fingerprint' => $this->isFailed($context) ? app(ErrorFingerprint::class)->for($context->provider, $context->httpStatus, $context->errorType, $context->errorMessage, [$context->model, $context->snapshot]) : null,
             'media_storage_path' => $context->mediaStoragePath ?: null,
             'metadata' => $context->metadata ?: null,
             'request_source' => $context->requestSource,
             'origin' => $context->origin,
-            'laravel_request_id' => $context->laravelRequestId,
+            // The X-Request-ID header is the client's: a long one must not drop the call.
+            'laravel_request_id' => $this->truncate($context->laravelRequestId, 255),
             'ip_address' => $context->ipAddress,
             'user_agent' => $this->truncate($context->userAgent, 1_000),
             'created_at' => $context->getStartedAt(),
@@ -359,11 +363,25 @@ class RequestPersister
      * For embeddings: strips the large float-vector arrays from the response
      * when `store_embeddings` is disabled, keeping only the metadata (model,
      * usage, object type) while avoiding megabytes of vector data in the DB.
+     *
+     * The OpenAI Responses API echoes the request's `instructions` and
+     * `tools`, so `store_system_prompts` and `store_tools` apply to the
+     * stored response too.
      */
     protected function sanitizeResponse(RequestContext $context, mixed $response): mixed
     {
         if ($response === null || ! is_array($response)) {
             return $response;
+        }
+
+        $filter = app(RequestDataFilter::class);
+
+        if (! config('spectra.storage.store_system_prompts', true)) {
+            $response = $filter->withoutSystemPrompts($response);
+        }
+
+        if (! config('spectra.storage.store_tools', true)) {
+            $response = $filter->withoutTools($response);
         }
 
         if ($context->modelType === ModelType::Embedding->value && ! config('spectra.storage.store_embeddings', false)) {

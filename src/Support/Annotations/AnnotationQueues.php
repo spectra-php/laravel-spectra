@@ -118,7 +118,7 @@ class AnnotationQueues
             SpectraAnnotationItem::query()->insertOrIgnore([
                 'id' => (string) Str::uuid7(),
                 'queue' => $queue,
-                'trace_id' => $traceId,
+                'trace_id' => Str::limit($traceId, 64, ''),
                 'request_id' => $requestId,
                 'status' => AnnotationStatus::Pending->value,
                 'created_at' => Date::now(),

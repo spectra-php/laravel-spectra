@@ -108,7 +108,10 @@ class Spectra
     {
         // Options first, so the merged tags/metadata and the global fallbacks
         // below are not overwritten by the raw per-request values.
-        $traceId = $options['trace_id'] ?? $this->globalTraceId ?? $this->requestTraceId();
+        // A trace id the call is given is cut to the column's 64 characters.
+        $traceId = isset($options['trace_id'])
+            ? Str::limit((string) $options['trace_id'], 64, '')
+            : ($this->globalTraceId ?? $this->requestTraceId());
 
         $context = new RequestContext([
             ...$options,
@@ -536,6 +539,9 @@ class Spectra
      */
     public function withTraceId(string $traceId): self
     {
+        // Any string works as a trace id; the column holds 64 characters.
+        $traceId = Str::limit($traceId, 64, '');
+
         $this->globalTraceId = $traceId;
 
         if (config('spectra.tracking.trace_per_request', true)) {
