@@ -112,9 +112,9 @@ Spectra is an AI observability package for Laravel, built to track AI requests, 
 
 Official documentation can be found on [spectraphp.com](https://spectraphp.com).
 
-## Upgrading to 3.0
+## Upgrading to 4.0
 
-Spectra 3.0 adds traces, spans and conversations, and fixes several billing and budget bugs. Most apps only need to run `php artisan spectra:install` once. Check the guide if you use budgets, remove built-in providers in your published config, or touch `RequestContext` in your code. See the [upgrade guide](UPGRADE.md) and the [changelog](CHANGELOG.md).
+Spectra 4.0 adds scores, alerts, redaction, payload sampling, prompt versions, tool spans, error grouping, review queues, evaluations and a maintenance screen. Most apps only need to run `php artisan spectra:install` once. Check the guide if `spectra:install` runs in a deploy script, if others use your dashboard in production, or if your code reads `RequestContext::$id`. See the [upgrade guide](UPGRADE.md) and the [changelog](CHANGELOG.md).
 
 ## Code of Conduct
 
