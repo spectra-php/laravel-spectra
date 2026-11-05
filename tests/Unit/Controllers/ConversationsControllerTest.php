@@ -138,6 +138,37 @@ it('shows a conversation as turns with the prompt, the reply and the cost so far
         ->and($turns[2])->toMatchArray(['turn' => 3, 'prompt' => null, 'reply' => null, 'failed_count' => 1, 'running_cost_in_cents' => 13.0]);
 });
 
+it('takes the text from the streamed reply, not from the guardrails and rewriter around it', function () {
+    $verdict = '{"toxic":false}';
+    // An input guardrail, a query rewriter, the streamed agent reply, and an output guardrail.
+    supportCall(0, 1, ['request' => [...chatRequest("<conversation>\nVisitor: Hello\n</conversation>\n<text>\nAre you okay?\n</text>"), 'response_format' => ['type' => 'json_schema']], 'response' => chatReply($verdict)]);
+    supportCall(0, 1, ['request' => chatRequest("Chat:\nVisitor: Hello\n\nLast message: Are you okay?"), 'response' => chatReply('are you okay')]);
+    supportCall(1, 1, ['request' => [...chatRequest('Are you okay?'), 'stream' => true], 'response' => ['streaming' => true, 'content' => "I'm doing well, thanks!"]]);
+    supportCall(2, 1, ['request' => [...chatRequest("<text>\nI'm doing well, thanks!\n</text>"), 'response_format' => ['type' => 'json_schema']], 'response' => chatReply($verdict)]);
+
+    expect(callConversation('support-42')['turns'][0])->toMatchArray(['prompt' => 'Are you okay?', 'reply' => "I'm doing well, thanks!", 'request_count' => 4]);
+});
+
+it('passes over structured-output calls when the turn has a plain one', function (array $structured) {
+    supportCall(0, 1, ['request' => [...chatRequest('<text>Hi</text>'), ...$structured], 'response' => chatReply('{"ok":true}')]);
+    supportCall(1, 1, ['request' => chatRequest('Hi'), 'response' => chatReply('Hello!')]);
+    supportCall(2, 1, ['request' => [...chatRequest('<text>Hello!</text>'), ...$structured], 'response' => chatReply('{"ok":true}')]);
+
+    expect(callConversation('support-42')['turns'][0])->toMatchArray(['prompt' => 'Hi', 'reply' => 'Hello!']);
+})->with([
+    'OpenAI chat' => [['response_format' => ['type' => 'json_object']]],
+    'OpenAI Responses' => [['text' => ['format' => ['type' => 'json_schema']]]],
+    'Anthropic' => [['output_config' => ['format' => ['type' => 'json_schema']]]],
+    'Gemini' => [['generationConfig' => ['responseMimeType' => 'application/json']]],
+    'Ollama' => [['format' => 'json']],
+]);
+
+it('still shows a turn made only of structured-output calls', function () {
+    supportCall(0, 1, ['request' => [...chatRequest('Rate this answer'), 'response_format' => ['type' => 'json_schema']], 'response' => chatReply('{"score":4}')]);
+
+    expect(callConversation('support-42')['turns'][0])->toMatchArray(['prompt' => 'Rate this answer', 'reply' => '{"score":4}']);
+});
+
 it('makes each call without a turn number a turn of its own', function () {
     supportCall(0, null);
     supportCall(5, null);

@@ -22,8 +22,10 @@ use Spectra\Support\Query\RequestAggregateQuery;
  *
  * Calls with the same turn number form one turn, so an agent's tool loop
  * reads as one exchange: the prompt comes from the turn's first text call,
- * the reply from its last. A call without a turn number is a turn of its
- * own. Each turn carries the conversation's cost so far.
+ * the reply from its last. Side calls such as guardrails and query rewriters
+ * are passed over when the turn has a call that looks like the user's own
+ * exchange. A call without a turn number is a turn of its own. Each turn
+ * carries the conversation's cost so far.
  */
 class GetConversationDetails
 {
@@ -106,13 +108,15 @@ class GetConversationDetails
 
                 /** @var SpectraRequest $first */
                 $first = $turnCalls->first();
-                $textCalls = $turnCalls->filter(fn (SpectraRequest $call) => in_array($call->model_type, ['text', null], true));
+                $transcriptCalls = $this->transcriptCalls(
+                    $turnCalls->filter(fn (SpectraRequest $call) => in_array($call->model_type, ['text', null], true)),
+                );
 
                 return [
                     'turn' => $first->conversation_turn,
                     'started_at' => $this->startOf($first)->format(self::ISO_MILLISECONDS),
-                    'prompt' => $this->firstFilled($textCalls, fn (SpectraRequest $call) => $this->messageTextExtractor->prompt($call->request)),
-                    'reply' => $this->firstFilled($textCalls->reverse(), fn (SpectraRequest $call) => $this->messageTextExtractor->reply($call)),
+                    'prompt' => $this->firstFilled($transcriptCalls, fn (SpectraRequest $call) => $this->messageTextExtractor->prompt($call->request)),
+                    'reply' => $this->firstFilled($transcriptCalls->reverse(), fn (SpectraRequest $call) => $this->messageTextExtractor->reply($call)),
                     'request_count' => $turnCalls->count(),
                     'failed_count' => $turnCalls->filter(fn (SpectraRequest $call) => $call->isFailed())->count(),
                     'total_cost_in_cents' => $cost,
@@ -137,6 +141,80 @@ class GetConversationDetails
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * The text calls most likely to be the exchange the user saw, in order.
+     *
+     * An app often makes side calls in the same turn: a guardrail or judge
+     * that wraps the message and the history in its own prompt, a query
+     * rewriter. Their prompts aren't what the user typed and their replies
+     * aren't what the user read, so only the calls of the best kind count.
+     *
+     * @param  Collection<int, SpectraRequest>  $calls
+     * @return Collection<int, SpectraRequest>
+     */
+    private function transcriptCalls(Collection $calls): Collection
+    {
+        $kinds = $calls->map(fn (SpectraRequest $call) => $this->transcriptKind($call));
+        $best = $kinds->max();
+
+        return $calls->filter(fn (SpectraRequest $call, int $key) => $kinds[$key] === $best);
+    }
+
+    /**
+     * How surely the call is the user's exchange: 2 when it streams or offers
+     * tools, as an agent's reply does; 0 when it asks for structured output,
+     * as a classifier, judge or extractor does; 1 otherwise.
+     */
+    private function transcriptKind(SpectraRequest $call): int
+    {
+        $request = is_array($call->request) ? $call->request : [];
+
+        if ($this->requestsStructuredOutput($request)) {
+            return 0;
+        }
+
+        $streams = ($request['stream'] ?? false) === true
+            || (is_array($call->response) && ($call->response['streaming'] ?? false) === true);
+
+        return $streams || filled($request['tools'] ?? null) ? 2 : 1;
+    }
+
+    /**
+     * Whether the request asks for a JSON answer rather than a reply to read.
+     *
+     * @param  array<mixed>  $request
+     */
+    private function requestsStructuredOutput(array $request): bool
+    {
+        $formats = [
+            // OpenAI Chat Completions and the APIs that copy it (Mistral, Groq, xAI, OpenRouter, Cohere v2).
+            $request['response_format']['type'] ?? null,
+            // OpenAI Responses.
+            $request['text']['format']['type'] ?? null,
+            // Anthropic structured outputs, the beta and the current field.
+            $request['output_format']['type'] ?? null,
+            $request['output_config']['format']['type'] ?? null,
+        ];
+
+        foreach ($formats as $format) {
+            if (in_array($format, ['json_schema', 'json_object'], true)) {
+                return true;
+            }
+        }
+
+        $generation = $request['generationConfig'] ?? null;
+
+        // Gemini.
+        if (is_array($generation) && (($generation['responseMimeType'] ?? null) === 'application/json' || isset($generation['responseSchema']) || isset($generation['responseJsonSchema']))) {
+            return true;
+        }
+
+        // Ollama: "json" or a JSON schema.
+        $format = $request['format'] ?? null;
+
+        return $format === 'json' || is_array($format);
     }
 
     /**
