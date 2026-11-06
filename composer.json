@@ -77,6 +77,14 @@
         "test-coverage": "vendor/bin/pest --coverage",
         "format": "vendor/bin/pint",
         "refactor": "vendor/bin/rector process",
+        "ci:check": [
+            "Composer\\Config::disableProcessTimeout",
+            "vendor/bin/pint --test",
+            "vendor/bin/rector process --dry-run --no-progress-bar",
+            "@analyse",
+            "npm run typecheck",
+            "@test"
+        ],
         "pricing-drift": "@php vendor/bin/testbench spectra:pricing-drift",
         "pricing-scrape": "@php vendor/bin/testbench spectra:pricing-scrape --all --path=resources/pricing/catalog.json"
     },
