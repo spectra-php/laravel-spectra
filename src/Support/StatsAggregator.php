@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace Spectra\Support;
 
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Query\DailyStatUpsert;
+use Spectra\Support\Query\RollupSchema;
 
 /**
  * Keeps the pre-aggregated spectra_daily_stats rows in step with
@@ -20,6 +24,9 @@ use Spectra\Models\SpectraRequest;
  */
 class StatsAggregator
 {
+    /** Rows saved per statement when rebuilding a day. */
+    protected const REBUILD_BATCH = 500;
+
     /**
      * Add a tracked request to its day's stats, overall and for its trackable.
      */
@@ -50,7 +57,7 @@ class StatsAggregator
             // poll returned less detail, not that usage went away. Only the
             // success/failure split, and what follows it, may move in both directions.
             $movesBothWays = in_array($column, ['successful_count', 'failed_count'], true)
-                || ($outcomeChanged && in_array($column, ['total_cost_in_cents', 'total_latency_ms'], true));
+                || ($outcomeChanged && in_array($column, ['total_cost_in_cents', 'total_latency_ms', 'latency_samples'], true));
 
             $delta[$column] = $movesBothWays ? $change : max(0, $change);
         }
@@ -96,6 +103,7 @@ class StatsAggregator
             'total_input_characters' => $request->input_characters ?? 0,
             'total_cost_in_cents' => $isSuccessful ? (float) ($request->total_cost_in_cents ?? 0) : 0.0,
             'total_latency_ms' => $latencyMs ?? 0,
+            'latency_samples' => $latencyMs !== null ? 1 : 0,
         ];
     }
 
@@ -118,11 +126,16 @@ class StatsAggregator
     {
         $date = $request->created_at?->format('Y-m-d') ?? now()->format('Y-m-d');
 
-        $rows = [[null, null]];
+        $rows = [];
 
         if ($request->trackable_type && $request->trackable_id !== null) {
             $rows[] = [$request->trackable_type, $request->trackable_id];
         }
+
+        // The global row comes last. Every call of a model writes it, so inside
+        // a transaction it should be locked for no longer than the commit, and
+        // one order for everyone means two calls can't wait for each other.
+        $rows[] = [null, null];
 
         foreach ($rows as [$trackableType, $trackableId]) {
             SpectraDailyStat::accumulate(
@@ -142,39 +155,142 @@ class StatsAggregator
      * Rebuild the daily stats from the stored requests, optionally between two
      * dates, and return how many requests were counted.
      *
-     * Useful for backfilling or fixing stat inconsistencies.
+     * Useful for backfilling or fixing stat inconsistencies. The database adds
+     * up each day and the rows replace that day's stats in one transaction, so
+     * readers never see a day half rebuilt. A call saved on a day while that
+     * day is being rebuilt can be missed; rebuild finished days, or rebuild
+     * today again afterwards.
      */
     public function rebuild(?CarbonInterface $startDate = null, ?CarbonInterface $endDate = null): int
+    {
+        $requests = SpectraRequest::query()
+            ->when($startDate, fn ($query, CarbonInterface $start) => $query->where('created_at', '>=', $start->copy()->startOfDay()))
+            ->when($endDate, fn ($query, CarbonInterface $end) => $query->where('created_at', '<=', $end->copy()->endOfDay()));
+
+        $oldest = $requests->clone()->min('created_at');
+        $newest = $requests->clone()->max('created_at');
+
+        if ($oldest === null || $newest === null) {
+            $this->statsBetween($startDate, $endDate)->delete();
+
+            return 0;
+        }
+
+        $firstDay = Date::parse($oldest)->startOfDay();
+        $lastDay = Date::parse($newest)->startOfDay();
+
+        // Days around the stored requests have nothing to rebuild from.
+        $this->statsBetween($startDate, $firstDay->copy()->subDay())->delete();
+        $this->statsBetween($lastDay->copy()->addDay(), $endDate)->delete();
+
+        $count = 0;
+
+        for ($day = $firstDay; $day->lessThanOrEqualTo($lastDay); $day = $day->copy()->addDay()) {
+            $count += $this->rebuildDay($day);
+        }
+
+        return $count;
+    }
+
+    /**
+     * Get the daily stats between two dates, both included.
+     *
+     * @return Builder<SpectraDailyStat>
+     */
+    protected function statsBetween(?CarbonInterface $start, ?CarbonInterface $end): Builder
     {
         // whereDate on both bounds: SQLite stores the date cast as
         // "Y-m-d 00:00:00", so a plain comparison with "Y-m-d" would skip the
         // end day's rows and the rebuild would count that day twice.
-        SpectraDailyStat::query()
-            ->when($startDate, fn ($query, CarbonInterface $start) => $query->whereDate('date', '>=', $start->format('Y-m-d')))
-            ->when($endDate, fn ($query, CarbonInterface $end) => $query->whereDate('date', '<=', $end->format('Y-m-d')))
-            ->delete();
+        return SpectraDailyStat::query()
+            ->when($start, fn ($query, CarbonInterface $from) => $query->whereDate('date', '>=', $from->format('Y-m-d')))
+            ->when($end, fn ($query, CarbonInterface $to) => $query->whereDate('date', '<=', $to->format('Y-m-d')));
+    }
 
-        $requestQuery = SpectraRequest::query()
-            // Only what recordRequest() reads: the request/response payloads
-            // are long text and would make every chunk heavy.
-            ->select([
-                'id', 'created_at', 'provider', 'model', 'model_type', 'trackable_type', 'trackable_id',
-                'status_code', 'error_type', 'prompt_tokens', 'completion_tokens', 'cached_tokens', 'cache_write_tokens',
-                'reasoning_tokens', 'image_count', 'video_count', 'page_count', 'duration_seconds',
-                'input_characters', 'total_cost_in_cents', 'latency_ms',
-            ])
-            ->when($startDate, fn ($query, CarbonInterface $start) => $query->where('created_at', '>=', $start->copy()->startOfDay()))
-            ->when($endDate, fn ($query, CarbonInterface $end) => $query->where('created_at', '<=', $end->copy()->endOfDay()));
+    /**
+     * Replace one day's stats and return how many requests it holds.
+     */
+    protected function rebuildDay(CarbonInterface $day): int
+    {
+        $hasKey = app(RollupSchema::class)->hasStatKey();
+        $global = $this->groupedRows($day, ['provider', 'model', 'model_type'], $hasKey);
+        $byTrackable = $this->groupedRows($day, ['provider', 'model', 'model_type', 'trackable_type', 'trackable_id'], $hasKey)
+            ->filter(fn (array $row) => $row['trackable_type'] !== null && $row['trackable_id'] !== null);
 
-        $count = 0;
-        $requestQuery->chunkById(1000, function ($requests) use (&$count) {
-            foreach ($requests as $request) {
-                $this->recordRequest($request);
-                $count++;
+        (new SpectraDailyStat)->getConnection()->transaction(function () use ($day, $global, $byTrackable, $hasKey): void {
+            $this->statsBetween($day, $day)->delete();
+
+            foreach ($global->concat($byTrackable)->chunk(self::REBUILD_BATCH) as $rows) {
+                $rows = $rows->values()->all();
+
+                if ($hasKey) {
+                    SpectraDailyStat::query()->upsert($rows, ['stat_key'], [...DailyStatUpsert::COLUMNS, 'min_latency_ms', 'max_latency_ms', 'updated_at']);
+                } else {
+                    SpectraDailyStat::query()->insert($rows);
+                }
             }
         });
 
-        return $count;
+        return (int) $global->sum('request_count');
+    }
+
+    /**
+     * Add up one day's requests by the given columns, as daily stat rows.
+     *
+     * @param  list<string>  $dimensions
+     * @return Collection<int, non-empty-array<array-key, mixed>>
+     */
+    protected function groupedRows(CarbonInterface $day, array $dimensions, bool $hasKey): Collection
+    {
+        $successful = SpectraRequest::SUCCESSFUL_SQL;
+        $stat = new SpectraDailyStat;
+        $date = $stat->fromDateTime($day->copy()->startOfDay());
+        $now = $stat->fromDateTime(Date::now());
+
+        return SpectraRequest::query()
+            ->toBase()
+            ->select($dimensions)
+            ->whereBetween('created_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
+            ->selectRaw('COUNT(*) as request_count')
+            ->selectRaw("SUM(CASE WHEN {$successful} THEN 1 ELSE 0 END) as successful_count")
+            ->selectRaw("SUM(CASE WHEN {$successful} THEN 0 ELSE 1 END) as failed_count")
+            ->selectRaw('SUM(prompt_tokens) as prompt_tokens')
+            ->selectRaw('SUM(completion_tokens) as completion_tokens')
+            ->selectRaw('SUM(prompt_tokens + completion_tokens) as total_tokens')
+            ->selectRaw('SUM(reasoning_tokens) as total_reasoning_tokens')
+            ->selectRaw('SUM(cached_tokens) as total_cached_tokens')
+            ->selectRaw('SUM(cache_write_tokens) as total_cache_write_tokens')
+            ->selectRaw('SUM(COALESCE(image_count, 0)) as total_images')
+            ->selectRaw('SUM(COALESCE(video_count, 0)) as total_videos')
+            ->selectRaw('SUM(COALESCE(page_count, 0)) as total_pages')
+            ->selectRaw('SUM(COALESCE(duration_seconds, 0)) as total_duration_seconds')
+            ->selectRaw('SUM(COALESCE(input_characters, 0)) as total_input_characters')
+            ->selectRaw("SUM(CASE WHEN {$successful} THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents")
+            ->selectRaw("SUM(CASE WHEN {$successful} THEN COALESCE(latency_ms, 0) ELSE 0 END) as total_latency_ms")
+            ->selectRaw("SUM(CASE WHEN {$successful} AND latency_ms IS NOT NULL THEN 1 ELSE 0 END) as latency_samples")
+            ->selectRaw("MIN(CASE WHEN {$successful} THEN latency_ms END) as min_latency_ms")
+            ->selectRaw("MAX(CASE WHEN {$successful} THEN latency_ms END) as max_latency_ms")
+            ->groupBy($dimensions)
+            ->get()
+            ->map(function (object $row) use ($stat, $date, $now, $hasKey, $day): array {
+                $values = (array) $row;
+                $values['trackable_type'] ??= null;
+                $values['trackable_id'] ??= null;
+
+                if ($hasKey) {
+                    $values['stat_key'] = DailyStatUpsert::key($day->format('Y-m-d'), $values['provider'], $values['model'], $values['model_type'], $values['trackable_type'], $values['trackable_id']);
+                } else {
+                    unset($values['latency_samples']);
+                }
+
+                return [
+                    ...$values,
+                    'id' => $stat->newUniqueId(),
+                    'date' => $date,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            });
     }
 
     /**

@@ -279,15 +279,20 @@ class SpectraRequest extends Model
      */
     public function attachTags(array $tags): void
     {
-        $tagModels = [];
+        $names = array_values(array_unique($tags));
+        $tagIds = SpectraTag::query()->whereIn('name', $names)->pluck('id', 'name');
 
-        foreach ($tags as $tag) {
-            $tagModels[] = SpectraTag::findOrCreateByName($tag);
+        $rows = [];
+
+        foreach ($names as $name) {
+            $rows[] = [
+                'request_id' => $this->getKey(),
+                'tag_id' => $tagIds[$name] ?? SpectraTag::findOrCreateByName($name)->getKey(),
+            ];
         }
 
-        $this->tags()->syncWithoutDetaching(
-            collect($tagModels)->pluck('id')->toArray()
-        );
+        // One statement for any number of tags; a tag it already has is skipped.
+        $this->getConnection()->table('spectra_requests_tags')->insertOrIgnore($rows);
     }
 
     /**

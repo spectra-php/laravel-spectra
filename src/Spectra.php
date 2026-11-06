@@ -283,7 +283,7 @@ class Spectra
         $traceId = $this->currentTraceId();
 
         if ($traceId === null) {
-            $traceId = (string) Str::uuid();
+            $traceId = (string) Str::uuid7();
             $this->globalTraceId = $traceId;
             $startedTrace = true;
         }

@@ -258,7 +258,9 @@ class RequestContext implements Arrayable
         // The id the request is stored under, so code inside Spectra::track()
         // can point a score at the call before it is saved.
         $this->id = $attributes['id'] ?? (string) Str::uuid7();
-        $this->traceId = $attributes['trace_id'] ?? (string) Str::uuid();
+        // Time-ordered like every other id, so saving a call appends to the trace
+        // index instead of splitting a random page of it.
+        $this->traceId = $attributes['trace_id'] ?? (string) Str::uuid7();
         $this->spanId = $attributes['span_id'] ?? bin2hex(random_bytes(8));
         $this->startedAt = $attributes['started_at'] ?? now();
 

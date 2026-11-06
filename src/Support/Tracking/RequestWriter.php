@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -17,6 +18,7 @@ use Spectra\Support\Annotations\AnnotationQueues;
 use Spectra\Support\Budget\BudgetEnforcer;
 use Spectra\Support\RequestTransformer;
 use Spectra\Support\StatsAggregator;
+use Throwable;
 
 /**
  * Writes one tracked request to the database and keeps the daily stats,
@@ -29,9 +31,11 @@ use Spectra\Support\StatsAggregator;
  * as one request with one cost.
  *
  * A queued write carries its row id, so a retried job finds the row an
- * earlier attempt saved and changes nothing. Stats, budget alerts and
- * exports run after the row is saved and report their own failures: one
- * of them failing must neither lose the row nor make the job save it again.
+ * earlier attempt saved and changes nothing. The row and its daily stats are
+ * saved together, so a retry can neither count a call twice nor leave it out.
+ * Tags, budget alerts and exports run after that and report their own
+ * failures: one of them failing must neither lose the row nor make the job
+ * save it again.
  *
  * Shared by the synchronous path and PersistSpectraRequestJob.
  */
@@ -52,6 +56,9 @@ class RequestWriter
         'total_cost_in_cents',
         'status_code',
     ];
+
+    /** How many times a transaction is tried when it deadlocks. */
+    protected const TRANSACTION_ATTEMPTS = 3;
 
     /** Columns added after 2.0 that a table may not have until the app migrates. */
     protected const OPTIONAL_COLUMNS = ['started_at', 'origin', 'span_id', 'prompt_name', 'prompt_version', 'error_fingerprint'];
@@ -74,8 +81,8 @@ class RequestWriter
     ) {}
 
     /**
-     * Save a tracked request, then update its tags, review queues, daily
-     * stats, budgets and integrations.
+     * Save a tracked request and its daily stats, then update its tags, review
+     * queues, budgets and integrations.
      *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
@@ -87,9 +94,104 @@ class RequestWriter
      */
     public function write(array $attributes, array $tags = [], bool $export = true, array $reviewQueues = [], bool $mayExist = true): SpectraRequest
     {
-        [$request, $previous] = $this->save($attributes, $mayExist);
+        $connection = (new SpectraRequest)->getConnection();
 
-        // A tag that can't be saved must not keep the call out of the stats and budgets.
+        if ($connection->transactionLevel() > 0) {
+            return $this->writeInsideHostTransaction($connection, $attributes, $tags, $export, $reviewQueues, $mayExist);
+        }
+
+        [$request, $previous] = $this->saveWithStats($connection, $attributes, $mayExist);
+
+        $this->finish($request, $previous, $tags, $export, $reviewQueues);
+
+        return $request;
+    }
+
+    /**
+     * Write while the host app's transaction is open on this connection.
+     *
+     * The row joins that transaction, behind a savepoint so a failed insert
+     * can't abort the app's work. Everything else waits for its commit. A
+     * daily stat row is shared by every call of a model, so writing it here
+     * would hold that lock for as long as the app's transaction lasts, and two
+     * transactions that track two models in a different order would deadlock,
+     * which rolls back the app's own work. If the app rolls back, neither the
+     * row nor its stats are kept.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @param  array<int, string>  $tags
+     * @param  list<string>  $reviewQueues
+     */
+    protected function writeInsideHostTransaction(Connection $connection, array $attributes, array $tags, bool $export, array $reviewQueues, bool $mayExist): SpectraRequest
+    {
+        [$request, $previous] = $connection->transaction(fn () => $this->save($attributes, $mayExist));
+
+        $connection->afterCommit(function () use ($request, $previous, $tags, $export, $reviewQueues): void {
+            rescue(fn () => $this->recordStats($request, $previous));
+
+            $this->finish($request, $previous, $tags, $export, $reviewQueues);
+        });
+
+        return $request;
+    }
+
+    /**
+     * Save the row and its daily stats in one transaction, so a crash between
+     * the two can't leave a saved call out of the stats for good: a retried
+     * job would find the row and add nothing. The stats come last, so the
+     * rows every call shares stay locked for no longer than the commit, and a
+     * deadlock is retried.
+     *
+     * When that fails for any other reason the row still has to be saved, so
+     * it is saved on its own and the failure is reported.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array{0: SpectraRequest, 1: SpectraRequest|null}
+     */
+    protected function saveWithStats(Connection $connection, array $attributes, bool $mayExist): array
+    {
+        try {
+            return $connection->transaction(function () use ($attributes, $mayExist): array {
+                [$request, $previous] = $this->save($attributes, $mayExist);
+
+                $this->recordStats($request, $previous);
+
+                return [$request, $previous];
+            }, self::TRANSACTION_ATTEMPTS);
+        } catch (Throwable) {
+            [$request, $previous] = $this->save($attributes, $mayExist);
+
+            rescue(fn () => $this->recordStats($request, $previous));
+
+            return [$request, $previous];
+        }
+    }
+
+    /**
+     * Add the saved row to the daily stats, or only what changed for a row
+     * that existed already.
+     */
+    protected function recordStats(SpectraRequest $request, ?SpectraRequest $previous): void
+    {
+        if ($previous === null) {
+            $this->statsAggregator->recordRequest($request);
+
+            return;
+        }
+
+        $this->statsAggregator->recordChange($request, $previous);
+    }
+
+    /**
+     * Run what follows a saved call: its tags, review queues, budget alerts and
+     * exports, each reporting its own failure.
+     *
+     * @param  array<int, string>  $tags
+     * @param  list<string>  $reviewQueues
+     */
+    protected function finish(SpectraRequest $request, ?SpectraRequest $previous, array $tags, bool $export, array $reviewQueues): void
+    {
+        // A tag that can't be saved must not keep the call out of the budgets.
         if (filled($tags)) {
             rescue(fn () => $request->attachTags($tags));
         }
@@ -102,12 +204,6 @@ class RequestWriter
             }
         }
 
-        if ($previous === null) {
-            rescue(fn () => $this->statsAggregator->recordRequest($request));
-        } else {
-            rescue(fn () => $this->statsAggregator->recordChange($request, $previous));
-        }
-
         $changed = $previous === null || $this->hasChanged($request, $previous);
 
         if ($changed && config('spectra.budget.enabled', true)) {
@@ -117,8 +213,6 @@ class RequestWriter
         if ($changed && $export) {
             rescue(fn () => $this->export($request));
         }
-
-        return $request;
     }
 
     /**

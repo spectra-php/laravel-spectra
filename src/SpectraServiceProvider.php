@@ -50,6 +50,7 @@ use Spectra\Support\Pricing\PricingCatalog;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Pricing\RequestCostCalculator;
 use Spectra\Support\ProviderRegistry;
+use Spectra\Support\Query\RollupSchema;
 use Spectra\Support\Redaction\Redactor;
 use Spectra\Support\RequestTransformer;
 use Spectra\Support\Scoring\ScoreRecorder;
@@ -109,6 +110,7 @@ class SpectraServiceProvider extends ServiceProvider
         $this->app->singleton(BudgetEnforcer::class, fn ($app) => new BudgetEnforcer($app['events']));
 
         $this->app->singleton(StatsAggregator::class, fn () => new StatsAggregator);
+        $this->app->singleton(RollupSchema::class);
 
         $this->app->singleton(RequestTransformer::class, function () {
             $class = config('spectra.integrations.request_transformer', RequestTransformer::class);

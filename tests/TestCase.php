@@ -105,6 +105,7 @@ class TestCase extends Orchestra
             __DIR__.'/../database/migrations/2026_11_06_000001_create_spectra_dashboards_table.php',
             __DIR__.'/../database/migrations/2026_11_06_000003_add_sections_to_spectra_dashboards_table.php',
             __DIR__.'/../database/migrations/2026_11_06_000004_drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table.php',
+            __DIR__.'/../database/migrations/2026_11_06_000005_add_stat_key_to_spectra_daily_stats_table.php',
         ] as $path) {
             $migration = include $path;
             $migration->up();
@@ -173,7 +174,9 @@ class TestCase extends Orchestra
             return false;
         }
 
-        return $schema->hasColumns('spectra_requests', static::LATER_COLUMNS)
+        return $schema->hasColumns('spectra_daily_stats', ['stat_key', 'latency_samples'])
+            && $schema->hasIndex('spectra_daily_stats', 'spectra_daily_stats_stat_key_unique')
+            && $schema->hasColumns('spectra_requests', static::LATER_COLUMNS)
             && $schema->hasColumns('spectra_daily_stats', ['total_cached_tokens', 'total_cache_write_tokens', 'total_pages'])
             && $schema->hasTable('spectra_requests_tags');
     }

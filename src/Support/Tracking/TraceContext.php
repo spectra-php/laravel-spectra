@@ -68,7 +68,7 @@ class TraceContext
                 return $existing;
             }
 
-            [$traceId, $parentSpanId] = self::fromTraceparent() ?? [(string) Str::uuid(), null];
+            [$traceId, $parentSpanId] = self::fromTraceparent() ?? [(string) Str::uuid7(), null];
 
             Context::addHidden(self::TRACE_ID, $traceId);
 
@@ -79,7 +79,7 @@ class TraceContext
             return $traceId;
         } catch (Throwable) {
             // Context unavailable (e.g. a bare container): fall back to one id per call.
-            return (string) Str::uuid();
+            return (string) Str::uuid7();
         }
     }
 

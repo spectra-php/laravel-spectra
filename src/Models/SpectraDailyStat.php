@@ -13,6 +13,8 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use RuntimeException;
+use Spectra\Support\Query\DailyStatUpsert;
+use Spectra\Support\Query\RollupSchema;
 
 /**
  * One day's pre-aggregated usage for a provider, model and model type,
@@ -48,6 +50,8 @@ use RuntimeException;
  * @property int $total_latency_ms
  * @property int|null $min_latency_ms
  * @property int|null $max_latency_ms
+ * @property string|null $stat_key
+ * @property int|null $latency_samples
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read float|null $avg_latency_ms
@@ -95,6 +99,7 @@ class SpectraDailyStat extends Model
             'total_latency_ms' => 'integer',
             'min_latency_ms' => 'integer',
             'max_latency_ms' => 'integer',
+            'latency_samples' => 'integer',
         ];
     }
 
@@ -271,6 +276,7 @@ class SpectraDailyStat extends Model
                 'total_reasoning_tokens' => $reasoningTokens,
                 'total_cost_in_cents' => $successful ? $cost : 0,
                 'total_latency_ms' => $successful ? ($latencyMs ?? 0) : 0,
+                'latency_samples' => $successful && $latencyMs !== null ? 1 : 0,
             ],
             latencyMs: $successful ? $latencyMs : null,
         );
@@ -295,13 +301,34 @@ class SpectraDailyStat extends Model
         array $increments,
         ?int $latencyMs = null,
     ): void {
-        $increments = Arr::where($increments, fn (int|float $value) => $value != 0);
+        // Rounded to the column's precision first: a retried or repeated write
+        // has nothing to add, and float noise must not lock the row for that.
+        $increments = Arr::where(
+            Arr::map($increments, fn (int|float $value) => is_float($value) ? round($value, 6) : $value),
+            fn (int|float $value) => $value != 0,
+        );
 
         if ($increments === [] && $latencyMs === null) {
             return;
         }
 
         $trackableIdString = $trackableId !== null ? (string) $trackableId : null;
+        $latencyMs = $latencyMs !== null ? max(0, $latencyMs) : null;
+
+        $hasKey = app(RollupSchema::class)->hasStatKey();
+        $upsert = app(DailyStatUpsert::class);
+
+        if (! $hasKey) {
+            unset($increments['latency_samples']);
+        } elseif ($upsert->supports($increments)) {
+            $upsert->run($date, $provider, $model, $modelType, $trackableType, $trackableIdString, $increments, $latencyMs);
+
+            return;
+        }
+
+        if ($increments === [] && $latencyMs === null) {
+            return;
+        }
 
         $find = fn () => static::query()
             ->whereDate('date', $date)
@@ -330,6 +357,7 @@ class SpectraDailyStat extends Model
                     'model_type' => $modelType,
                     'trackable_type' => $trackableType,
                     'trackable_id' => $trackableIdString,
+                    ...($hasKey ? ['stat_key' => DailyStatUpsert::key($date, $provider, $model, $modelType, $trackableType, $trackableIdString)] : []),
                 ]);
             } catch (UniqueConstraintViolationException) {
                 // Another worker created the row between our read and insert.
@@ -344,8 +372,6 @@ class SpectraDailyStat extends Model
         }
 
         if ($latencyMs !== null) {
-            $latencyMs = max(0, $latencyMs);
-
             static::query()
                 ->whereKey($key)
                 ->where(fn (Builder $latencyQuery) => $latencyQuery->whereNull('min_latency_ms')->orWhere('min_latency_ms', '>', $latencyMs))

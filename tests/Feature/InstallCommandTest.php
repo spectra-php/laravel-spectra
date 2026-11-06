@@ -46,6 +46,7 @@ it('publishes only the missing migrations when run again', function () {
         'add_prompt_columns_to_spectra_requests_table.php',
         'add_sections_to_spectra_dashboards_table.php',
         'add_spans_to_spectra_tables.php',
+        'add_stat_key_to_spectra_daily_stats_table.php',
         'add_trace_timing_columns_to_spectra_tables.php',
         'add_v2_tracking_columns_to_spectra_tables.php',
         'change_budgetable_id_to_string_on_spectra_budgets_table.php',
