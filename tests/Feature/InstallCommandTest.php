@@ -58,6 +58,7 @@ it('publishes only the missing migrations when run again', function () {
         'create_spectra_evaluation_tables.php',
         'create_spectra_scores_table.php',
         'drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table.php',
+        'drop_redundant_indexes_from_spectra_requests_table.php',
     ]);
 
     // Nothing left to publish the third time.

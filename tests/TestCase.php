@@ -106,6 +106,7 @@ class TestCase extends Orchestra
             __DIR__.'/../database/migrations/2026_11_06_000003_add_sections_to_spectra_dashboards_table.php',
             __DIR__.'/../database/migrations/2026_11_06_000004_drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table.php',
             __DIR__.'/../database/migrations/2026_11_06_000005_add_stat_key_to_spectra_daily_stats_table.php',
+            __DIR__.'/../database/migrations/2026_11_06_000006_drop_redundant_indexes_from_spectra_requests_table.php',
         ] as $path) {
             $migration = include $path;
             $migration->up();
