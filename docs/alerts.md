@@ -5,7 +5,7 @@ Alerts tell you when your AI traffic goes wrong while you're not looking at the 
 [Budgets](/budgets) limit what one user or team may spend. Alerts watch your whole app (or one provider or model) for problems.
 
 <a name="rules"></a>
-## Writing Rules
+## Writing Rules {#rules}
 
 Each rule watches one metric over a window of recent minutes, and fires when the metric goes `above` or `below` its threshold:
 
@@ -41,7 +41,7 @@ Each rule watches one metric over a window of recent minutes, and fires when the
 A rule with a typo (an unknown metric, no threshold) makes `spectra:check-alerts` fail with a message saying what is wrong, and the dashboard's Alerts card shows the message.
 
 <a name="checking"></a>
-## Checking the Rules
+## Checking the Rules {#checking}
 
 Schedule the command every few minutes:
 
@@ -108,7 +108,7 @@ Event::listen(function (AlertTriggered $event) {
 ```
 
 <a name="dashboard"></a>
-## On the Dashboard
+## On the Dashboard {#dashboard}
 
 The Overview shows an Alerts card with each rule, its value now, and whether it is firing as of the last `spectra:check-alerts`:
 

@@ -57,7 +57,7 @@ The bundled catalog and your own file share one format: JSON, with one section p
 | `models` | required | The models, keyed by the id used in API requests. |
 
 <a name="model-properties"></a>
-### Model Fields
+### Model Fields {#model-properties}
 
 | Field | Default | Description |
 | --- | --- | --- |
@@ -87,7 +87,7 @@ The bundled catalog and your own file share one format: JSON, with one section p
 | `request` | Successful request (a flat price per call) |
 
 <a name="tier-pricing"></a>
-### Tier Rows
+### Tier Rows {#tier-pricing}
 
 Each row of `tiers` holds the prices for one pricing tier. Tier names: `standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, and `hd`. Every model needs a `standard` row: a request for a tier the model does not list is billed at its `standard` price.
 
@@ -247,7 +247,7 @@ Some models cost more when the prompt is long. List the same tier twice: once wi
 The prompt size is the full prompt: uncached tokens, cache reads, and cache writes. When the prompt is larger than `above_input_tokens`, the whole request (input and output) uses that row. When several rows match, the one with the highest threshold wins.
 
 <a name="dated-prices"></a>
-## Prices That Change on a Date
+## Prices That Change on a Date {#dated-prices}
 
 When a provider announces a new price for a future date, add a second row with `since`:
 
@@ -267,7 +267,7 @@ Spectra uses the date the request was made. Requests before 2026-12-01 use the f
 Dates must use the `Y-m-d` format. A row with any other format is skipped with a warning, and the model with it.
 
 <a name="model-lookup"></a>
-## How Spectra Finds a Model
+## How Spectra Finds a Model {#model-lookup}
 
 Spectra looks up the `provider` and model id in this order:
 
@@ -283,7 +283,7 @@ A catalog entry always wins over an alias with the same id. Because the exact id
 List models under their **undated** id, and the dated snapshots resolve on their own. Names that differ in any other way do not match, and the request is billed **0**.
 
 <a name="snapshot-first"></a>
-### The Served Model Is Priced First
+### The Served Model Is Priced First {#snapshot-first}
 
 The model in the response can differ from the model you asked for. This happens with aliases, routers, and retired models that redirect to a newer model. Spectra prices the model the provider actually served (stored in the `snapshot` column) when the catalog knows it. If the catalog does not know it, Spectra prices the model you asked for.
 
@@ -395,7 +395,7 @@ Some providers charge separately for built-in tool calls (web search, file searc
 The keys match the tool call types Spectra counts in the response (for example, OpenAI's `web_search_call` output items) or the keys a handler reports in `Metrics::$toolCalls` (for example, Anthropic's `web_search_requests`). Tool call fees are added to the total cost of the request. They are converted with the provider's currency, like the other prices. In your own file, a provider's `tool_calls` replaces the bundled list for that provider.
 
 <a name="scraping-prices"></a>
-## Scraping Prices with Firecrawl
+## Scraping Prices with Firecrawl {#scraping-prices}
 
 `spectra:pricing-scrape` reads the providers' pricing pages with [Firecrawl](https://firecrawl.dev) and saves the prices that differ from the bundled catalog, and the models it doesn't have, to [your pricing file](#your-own-prices). Use it to pick up a price change or a new model before the next Spectra release.
 
@@ -417,7 +417,7 @@ php artisan spectra:pricing-scrape --dry-run  # show the changes, write nothing
 Only the command calls Firecrawl. Tracking reads the saved file and never makes a network call.
 
 <a name="scraped-providers"></a>
-### Which Providers Are Scraped
+### Which Providers Are Scraped {#scraped-providers}
 
 Each page costs Firecrawl credits, so the command only scrapes the providers you use. Without provider names, it picks, in this order:
 
@@ -428,7 +428,7 @@ Each page costs Firecrawl credits, so the command only scrapes the providers you
 If none of these gives a provider with pricing pages (a new app that hasn't tracked anything yet), the command stops without calling Firecrawl. Pass `--all` to scrape every provider that has pages.
 
 <a name="firecrawl-how-it-works"></a>
-### How It Works
+### How It Works {#firecrawl-how-it-works}
 
 1. For each provider, Firecrawl renders the pages in the provider's `sources`. Its [JSON extraction](https://docs.firecrawl.dev/features/llm-extract) fills a schema with one row per model, tier and long-context threshold, and the same call returns the page text. The schema only offers the tiers and price fields the provider's catalog uses, and the prompt lists the catalog's model ids, so the page's names map to API ids.
 2. The extraction copies prices as printed, with the quantity they are for (per 1M tokens, per 1K characters, per image). Spectra converts them to cents. The LLM never does the arithmetic.
@@ -448,7 +448,7 @@ LLM extraction makes mistakes: on real pricing pages it copies prices from the n
 The checks favour skipping a real change over saving a wrong one, so a run can miss some changes. Run it again later, or add them to the file by hand. Review the printed changes, and the file diff, before you deploy it. Each change prints the page line it was confirmed on, so you can check that the price sits in the right column and tier without opening the page; the checks above can't tell a batch price from a standard one printed on the same row. New models get a type and capabilities guessed from their pricing unit.
 
 <a name="firecrawl-options"></a>
-### Options
+### Options {#firecrawl-options}
 
 | Option | Description |
 | --- | --- |

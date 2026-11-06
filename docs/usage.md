@@ -296,12 +296,12 @@ foreach ($stream as $response) {
 > When you stream from the OpenAI Chat Completions API (`/v1/chat/completions`), you must include `'stream_options' => ['include_usage' => true]` in your request. Without it, OpenAI does not send token usage in the stream, and Spectra records zero tokens and zero cost. The Responses API (`/v1/responses`) doesn't need this, because it always includes usage in the `response.completed` event.
 
 <a name="streamed-image-generation"></a>
-### Streamed Image Generation (OpenAI Responses API)
+### Streamed Image Generation (OpenAI Responses API) {#streamed-image-generation}
 
 OpenAI's Responses API can stream image generation. Spectra tracks these streams too. When [media persistence](/configuration#media-persistence) is enabled, it stores the final image when the stream finishes.
 
 <a name="spectra-stream"></a>
-### Other SDKs: `Spectra::stream()`
+### Other SDKs: `Spectra::stream()` {#spectra-stream}
 
 Use `Spectra::stream()` only for SDKs that don't go through one of the clients above (for example, an SDK with its own HTTP client). It returns a `StreamingTracker`. Its `track()` method wraps the stream, yields the text as it arrives, and measures the time to the first token. Call `finish()` when the stream is done:
 

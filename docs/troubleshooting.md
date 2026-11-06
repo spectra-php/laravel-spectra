@@ -270,7 +270,7 @@ Spectra tracks each request once. Every route into a provider (the HTTP client, 
 **Solution:** Use only one tracking mechanism per request path.
 
 <a name="costs-changed-after-upgrade"></a>
-## Costs Look Higher or Lower After Upgrading
+## Costs Look Higher or Lower After Upgrading {#costs-changed-after-upgrade}
 
 **Symptoms:** After upgrading to Spectra 2.0, new requests cost more (or less) than the same requests did before.
 
@@ -285,7 +285,7 @@ This is expected. Spectra 2.0 prices requests more accurately:
 Older rows keep their old values. Nothing is rewritten. See the [Upgrade Guide](/upgrade#what-changes-in-the-numbers) for details. To fix daily stats that 1.x counted more than once for polled jobs, run `php artisan spectra:rebuild-stats` once.
 
 <a name="exchange-rate-warning"></a>
-## "No Exchange Rate" Warning in the Log
+## "No Exchange Rate" Warning in the Log {#exchange-rate-warning}
 
 **Symptoms:** The log shows a warning like `Spectra: no exchange rate from EUR to USD`.
 
@@ -303,21 +303,21 @@ A pricing catalog uses a different currency from your reporting currency (the bu
 The warning is logged once per process. See [Currency Conversion](/costs#currency-conversion).
 
 <a name="budgets-after-upgrade"></a>
-## Budgets or Per-User Usage Show Nothing for Old Requests
+## Budgets or Per-User Usage Show Nothing for Old Requests {#budgets-after-upgrade}
 
 **Symptoms:** In an app with a morph map, budgets and per-user usage ignore requests recorded before the upgrade.
 
 Spectra 2.0 stores the trackable type as the morph alias (`$model->getMorphClass()`). Spectra 1.x stored the class name. Update the old rows once, as shown in the [Upgrade Guide](/upgrade#trackables-use-morph-aliases).
 
 <a name="budget-alert-once"></a>
-## Budget Alert Fired Only Once
+## Budget Alert Fired Only Once {#budget-alert-once}
 
 **Symptoms:** A `BudgetThresholdReached` event fired once, and not again on later requests.
 
 This is expected. Warning, critical, and exceeded alerts fire once per budget, limit, and period. See [Alerts Fire Once per Period](/budgets#alerts-fire-once).
 
 <a name="playground-wont-run"></a>
-## The Playground Won't Open or Run a Call
+## The Playground Won't Open or Run a Call {#playground-wont-run}
 
 - **The screen says the Playground is off.** Set `SPECTRA_PLAYGROUND_ENABLED=true`. If you cache your config, run `php artisan config:cache` again.
 - **The screen says you can't use it.** Define the `manageSpectra` gate for your user. See [Who Can Use It](/playground#who-can-use-it).

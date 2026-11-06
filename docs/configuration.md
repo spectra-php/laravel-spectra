@@ -41,7 +41,7 @@ These settings control what Spectra saves to the database, and how. Use them to 
 | `store_embeddings` | `bool` | `false` | Store embedding vector values in the response column. Embedding requests are always tracked (tokens, costs, latency), but the float-vector arrays can be very large. When disabled, vectors are replaced with `[stripped]`. |
 
 <a name="sampling"></a>
-### Payload Sampling
+### Payload Sampling {#sampling}
 
 Request and response bodies are most of what Spectra stores. On a busy app, keep them for a share of traces only. Every call is still recorded with its tokens, cost, latency and status, so costs, budgets, alerts and the dashboard's numbers stay exact.
 

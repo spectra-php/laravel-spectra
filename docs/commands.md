@@ -18,7 +18,7 @@ The installer runs these steps in order:
 3. **Runs migrations** (optional). If it published something, it asks whether to run the migrations. Run without a terminal, with `--no-interaction` or from a Composer script, it never runs them and prints the `php artisan migrate` to run instead.
 
 <a name="spectra-install-composer"></a>
-### Publish New Migrations on `composer update`
+### Publish New Migrations on `composer update` {#spectra-install-composer}
 
 To pick up the migrations of a new Spectra version without remembering the installer, add it to the `post-update-cmd` scripts in your application's `composer.json`:
 
@@ -53,7 +53,7 @@ php artisan spectra:prune [--hours=24] [--stats-days=] [--chunk=1000]
 ```
 
 <a name="spectra-prune-options"></a>
-### Options
+### Options {#spectra-prune-options}
 
 | Option | Default | Description |
 | --- | --- | --- |
@@ -66,7 +66,7 @@ The command deletes rows from `spectra_requests` whose `created_at` is older tha
 Daily stats (`spectra_daily_stats`) are the long-term history behind the dashboard charts, so they are **kept** by default. Pass `--stats-days` to prune them too.
 
 <a name="spectra-prune-examples"></a>
-### Examples
+### Examples {#spectra-prune-examples}
 
 ```shell
 # Delete requests older than 24 hours (default)
@@ -80,7 +80,7 @@ php artisan spectra:prune --hours=720 --stats-days=365
 ```
 
 <a name="spectra-prune-scheduling"></a>
-### Scheduling
+### Scheduling {#spectra-prune-scheduling}
 
 Add pruning to your application's scheduler to apply your retention period automatically:
 
@@ -106,7 +106,7 @@ php artisan spectra:rebuild-stats [--from=] [--to=] [--yesterday]
 ```
 
 <a name="spectra-rebuild-stats-options"></a>
-### Options
+### Options {#spectra-rebuild-stats-options}
 
 | Option | Description |
 | --- | --- |
@@ -115,7 +115,7 @@ php artisan spectra:rebuild-stats [--from=] [--to=] [--yesterday]
 | `--yesterday` | Rebuild only yesterday's statistics |
 
 <a name="spectra-rebuild-stats-examples"></a>
-### Examples
+### Examples {#spectra-rebuild-stats-examples}
 
 ```shell
 # Rebuild all stats (prompts for confirmation)
@@ -129,7 +129,7 @@ php artisan spectra:rebuild-stats --yesterday
 ```
 
 <a name="spectra-rebuild-stats-scheduling"></a>
-### Scheduling
+### Scheduling {#spectra-rebuild-stats-scheduling}
 
 To keep the stats fresh, schedule a nightly rebuild:
 
@@ -147,7 +147,7 @@ php artisan spectra:pricing-scrape [provider*] [--all] [--url=*] [--path=] [--dr
 ```
 
 <a name="spectra-pricing-scrape-options"></a>
-### Options
+### Options {#spectra-pricing-scrape-options}
 
 | Option | Description |
 | --- | --- |
@@ -158,7 +158,7 @@ php artisan spectra:pricing-scrape [provider*] [--all] [--url=*] [--path=] [--dr
 | `--dry-run` | Print the changes without writing the file. |
 
 <a name="spectra-pricing-scrape-examples"></a>
-### Examples
+### Examples {#spectra-pricing-scrape-examples}
 
 ```shell
 # Scrape the providers your app uses and save the changes
@@ -171,7 +171,7 @@ php artisan spectra:pricing-scrape openai --dry-run
 See [Scraping Prices with Firecrawl](/pricing#scraping-prices) for how rows are matched and checked.
 
 <a name="spectra-pause"></a>
-## `spectra:pause` and `spectra:resume`
+## `spectra:pause` and `spectra:resume` {#spectra-pause}
 
 Pause recording without a deploy, for example during a load test or an incident:
 

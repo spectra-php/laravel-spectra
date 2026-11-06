@@ -116,7 +116,7 @@ STT requests send the audio file as multipart form data instead of JSON. Spectra
 STT models are priced **per minute** of input audio, or **per token** for token-billed models.
 
 <a name="documents"></a>
-### Documents (OCR)
+### Documents (OCR) {#documents}
 
 Document endpoints such as Mistral OCR bill by page. They are recorded as text requests.
 

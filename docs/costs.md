@@ -39,7 +39,7 @@ Each model in the pricing catalog has a `pricing_unit` that decides how its cost
 | `request` | Models with a flat price per call | Per successful request |
 
 <a name="token-model"></a>
-## How Tokens Are Counted
+## How Tokens Are Counted {#token-model}
 
 Every provider reports usage in its own way. Spectra turns it into one shape for all providers:
 
@@ -174,7 +174,7 @@ A pricing tier is a different price list for the same model: pay less to wait lo
 A model that does not list the requested tier is billed at its `standard` price.
 
 <a name="tier-order"></a>
-### Which Tier Is Used
+### Which Tier Is Used {#tier-order}
 
 Spectra picks the tier in this order:
 
@@ -187,7 +187,7 @@ Spectra picks the tier in this order:
 The tier in the response wins over the tier in the request. A `priority` request that the provider served at `standard` is priced at `standard`.
 
 <a name="configuring-tiers"></a>
-### Configuring the Default Tier
+### Configuring the Default Tier {#configuring-tiers}
 
 Configure the default tier per provider in `config/spectra.php`. It is used when you did not set a tier and neither the request nor the response says which tier was used:
 
@@ -207,7 +207,7 @@ Configure the default tier per provider in `config/spectra.php`. It is used when
 You can list any provider slug here.
 
 <a name="per-request-tier"></a>
-### Per-Request Tier Override
+### Per-Request Tier Override {#per-request-tier}
 
 Override the tier for one request with `withAITracking`:
 

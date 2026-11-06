@@ -21,7 +21,7 @@ Requests made with Laravel's HTTP client or the OpenAI PHP SDK are picked up wit
 Daily totals are updated as records are saved, and the same records can be exported to an [OpenTelemetry](/opentelemetry) backend, so your AI calls sit next to the rest of your monitoring.
 
 <a name="concepts"></a>
-## The Words Spectra Uses
+## The Words Spectra Uses {#concepts}
 
 The rest of these docs use a handful of words from AI observability. Each has its own page; this is what they mean.
 

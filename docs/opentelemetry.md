@@ -206,7 +206,7 @@ $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($myTraceId) {
 This gives you end-to-end tracing. A user clicks "Generate Summary", which triggers an API route that calls an AI model, writes to the database, and dispatches a queue job. All of these steps share one trace ID, which you can see in both Spectra and your observability platform.
 
 <a name="span-attributes"></a>
-## Span Name and Attributes
+## Span Name and Attributes {#span-attributes}
 
 The default span builder follows the current OpenTelemetry GenAI semantic conventions for client inference spans. You can read them in the [semantic conventions repository](https://github.com/open-telemetry/semantic-conventions-genai).
 
@@ -249,7 +249,7 @@ These attributes are added when they have a value:
 A failed request has the error status, with the provider's error message.
 
 <a name="attribute-changes"></a>
-### Changes from 1.x
+### Changes from 1.x {#attribute-changes}
 
 The attribute names follow the current conventions since Spectra 2.0. If your dashboards or alerts use the 1.x names, see [OpenTelemetry Attribute Names](/upgrade#opentelemetry) in the upgrade guide for the old and new names, and how to keep the old ones.
 
