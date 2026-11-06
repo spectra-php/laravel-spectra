@@ -26,8 +26,6 @@ Spectra is an AI observability package for Laravel, built to track AI requests, 
 
 <p align="center">
   <a href="https://spectraphp.com/dashboard"><img alt="A tour of the dashboard, one screen at a time: the overview, requests, request details, traces, the trace timeline, conversations, a conversation transcript, errors, prompts, evals, review, costs, trackables, one trackable's details, and dark mode" src="docs/public/images/readme/tour.gif" width="100%" /></a>
-  <br />
-  <sub>Every screen of the dashboard, three seconds each. <a href="https://spectraphp.com/dashboard">See them at full size in the docs.</a></sub>
 </p>
 
 <p align="center">
