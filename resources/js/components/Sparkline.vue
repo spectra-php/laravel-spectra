@@ -16,9 +16,12 @@ const props = withDefaults(defineProps<{
 const uid = Math.random().toString(36).slice(2, 8);
 
 const points = computed(() => {
-    const values = props.values.map((value) => Number(value) || 0);
+    let values = props.values.map((value) => Number(value) || 0);
 
-    if (values.length < 2) return null;
+    if (!values.length) return null;
+
+    // One day is a flat line, so the card keeps its shape.
+    if (values.length === 1) values = [values[0], values[0]];
 
     const max = Math.max(...values);
     const min = Math.min(...values);

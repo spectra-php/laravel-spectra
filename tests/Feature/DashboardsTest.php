@@ -420,6 +420,16 @@ describe('what a response may contain', function () {
             ->and($response->json('widgets.0.size'))->toBe('half');
     });
 
+    it('keeps the headline cards full width, whatever was saved', function () {
+        $user = dashboardViewer();
+
+        $this->actingAs($user);
+        $response = dashboardData(dashboardFor($user, ['widgets' => [['type' => 'stats', 'size' => 'half'], ['type' => 'budget', 'size' => 'half']]]));
+
+        expect($response->json('widgets.0.size'))->toBe('full')
+            ->and($response->json('widgets.1.size'))->toBe('half');
+    });
+
     it('skips a widget type it does not know', function () {
         $user = dashboardViewer();
 

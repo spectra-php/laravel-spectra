@@ -149,7 +149,7 @@ onMounted(async () => {
                                     {{ hidesCostWidget(widget.type) ? 'Hidden from viewers until you turn on the Costs page.' : details(widget.type)?.description }}
                                 </div>
                             </div>
-                            <select v-model="widget.size" class="form-select form-select-sm w-auto" :aria-label="`Width of ${details(widget.type)?.label}`">
+                            <select v-if="widget.type !== 'stats'" v-model="widget.size" class="form-select form-select-sm w-auto" :aria-label="`Width of ${details(widget.type)?.label}`">
                                 <option value="full">Full width</option>
                                 <option value="half">Half width</option>
                             </select>

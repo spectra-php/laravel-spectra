@@ -58,7 +58,8 @@ class BuildDashboard
 
             $widgets->push(new DashboardWidgetData(
                 type: $widget->value,
-                size: $entry['size'],
+                // The headline cards are a row of their own, as on the Overview.
+                size: $widget === DashboardWidget::Stats ? 'full' : $entry['size'],
                 data: $this->widgetData($widget, $trackable, $dateRange, $dashboard->showsCosts()),
             ));
         }
