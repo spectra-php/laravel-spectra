@@ -45,7 +45,11 @@ Spectra 4.0 adds scores, alerts, redaction, payload sampling, prompt versions, t
 
 ## Code of Conduct
 
-While this project is not affiliated with Laravel, we follow the Laravel [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct). We expect all contributors to follow these guidelines.
+We expect all contributors to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Security
+
+If you find a security problem, please report it privately, as explained in our [security policy](SECURITY.md). Please don't open a public issue.
 
 ## Author
 
