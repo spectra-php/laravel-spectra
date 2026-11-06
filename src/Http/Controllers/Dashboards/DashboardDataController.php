@@ -7,10 +7,10 @@ namespace Spectra\Http\Controllers\Dashboards;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Spectra\Actions\Dashboards\BuildDashboard;
-use Spectra\Contracts\DashboardTrackableResolver;
 use Spectra\Data\Responses\DashboardResponse;
 use Spectra\Models\SpectraDashboard;
 use Spectra\Support\Dashboards\DashboardAccess;
+use Spectra\Support\Dashboards\DashboardViewer;
 
 /**
  * GET /dashboards/{id}/data: a shared dashboard's widgets with their data. It is
@@ -26,7 +26,7 @@ class DashboardDataController extends Controller
     public function __invoke(
         string $id,
         Request $request,
-        DashboardTrackableResolver $resolver,
+        DashboardViewer $viewer,
         BuildDashboard $buildDashboard,
     ): DashboardResponse {
         abort_unless(DashboardAccess::enabled(), 404);
@@ -36,14 +36,10 @@ class DashboardDataController extends Controller
         ]);
 
         $dashboard = SpectraDashboard::query()->where('is_active', true)->findOrFail($id);
-        $viewer = $request->user();
+        $scope = $viewer->scope($dashboard, $request->user());
 
-        abort_if($viewer === null, 403);
+        abort_if($scope === null, 403);
 
-        $trackable = $resolver->resolve($viewer, $dashboard->trackable_type, $dashboard->trackable_id);
-
-        abort_unless($trackable !== null && $dashboard->isFor($trackable), 403);
-
-        return $buildDashboard($dashboard, $trackable, $input['period'] ?? $dashboard->default_period);
+        return $buildDashboard($dashboard, $scope->trackable, $input['period'] ?? $dashboard->default_period);
     }
 }

@@ -31,11 +31,14 @@ const props = withDefaults(defineProps<{
     showOrigins?: boolean;
     // A span left out of the tree, its children drawn in its place: the root span when the page already names it.
     hiddenSpanId?: string | null;
+    // On a shared dashboard: no links to the calls, and no tool arguments to open.
+    readOnly?: boolean;
 }>(), {
     spans: () => [],
     durationMs: 0,
     showOrigins: false,
     hiddenSpanId: null,
+    readOnly: false,
 });
 
 const { formatDuration } = useHelpers();
@@ -50,7 +53,7 @@ const ARGUMENTS = 'gen_ai.tool.call.arguments';
 const RESULT = 'gen_ai.tool.call.result';
 const expanded = ref(new Set<string>());
 
-const isTool = (row: SpanRow) => row.kind === 'tool';
+const isTool = (row: SpanRow) => !props.readOnly && row.kind === 'tool';
 const toggle = (row: SpanRow) => {
     const next = new Set(expanded.value);
     next.has(row.key) ? next.delete(row.key) : next.add(row.key);
@@ -205,13 +208,14 @@ const nameColumn = computed(() => {
 
             <!-- An AI call -->
             <li v-else>
-                <router-link
-                    :to="{ name: 'request-preview', params: { id: row.id } }"
+                <component
+                    :is="readOnly ? 'div' : 'router-link'"
+                    :to="readOnly ? undefined : { name: 'request-preview', params: { id: row.id } }"
                     :aria-current="row.is_current ? 'page' : undefined"
                     class="group relative grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-5 py-2.5 transition-colors sm:grid-cols-[1.5rem_minmax(0,var(--name-column))_minmax(0,1fr)_4.5rem_6rem]"
                     :class="row.is_current
                         ? 'bg-primary-50/70 dark:bg-primary-500/8'
-                        : 'hover:bg-gray-50 dark:hover:bg-white/3'"
+                        : readOnly ? '' : 'hover:bg-gray-50 dark:hover:bg-white/3'"
                 >
                     <span
                         v-if="row.is_current"
@@ -265,8 +269,8 @@ const nameColumn = computed(() => {
                     </span>
 
                     <span class="col-start-3 row-start-1 text-right text-xs tabular-nums text-gray-500 sm:col-start-auto sm:row-start-auto dark:text-gray-400">{{ formatDuration(row.latency_ms) }}</span>
-                    <span class="hidden text-right text-xs font-medium tabular-nums text-gray-700 sm:block dark:text-gray-200"><Money :cents="row.total_cost_in_cents" /></span>
-                </router-link>
+                    <span class="hidden text-right text-xs font-medium tabular-nums text-gray-700 sm:block dark:text-gray-200"><Money v-if="row.total_cost_in_cents !== null" :cents="row.total_cost_in_cents" /></span>
+                </component>
             </li>
         </template>
     </ol>

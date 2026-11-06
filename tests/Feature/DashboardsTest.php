@@ -17,12 +17,14 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 use Spectra\Contracts\DashboardTrackableResolver;
+use Spectra\Enums\DashboardSection;
 use Spectra\Enums\DashboardWidget;
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraBudget;
 use Spectra\Models\SpectraDashboard;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
+use Spectra\Models\SpectraSpan;
 use Spectra\Support\DashboardAssets;
 use Workbench\App\Models\User;
 
@@ -724,5 +726,249 @@ describe('from code', function () {
         Spectra::fake();
 
         expect(fn () => Spectra::dashboard()->create('Usage', User::class, widgets: ['raw_prompts']))->toThrow(InvalidArgumentException::class);
+    });
+});
+
+describe('the pages in the header', function () {
+    function dashboardWithSections(Model|string $target, array $attributes = []): SpectraDashboard
+    {
+        return dashboardFor($target, ['sections' => ['requests', 'traces', 'conversations', 'errors', 'costs'], 'show_costs' => true, ...$attributes]);
+    }
+
+    function dashboardSection(SpectraDashboard $dashboard, string $path): TestResponse
+    {
+        return test()->getJson("/spectra/dashboards/{$dashboard->id}/data/{$path}");
+    }
+
+    it('answers 404 for a page the admin did not turn on', function (string $path) {
+        $user = dashboardViewer();
+
+        $this->actingAs($user);
+
+        dashboardSection(dashboardFor($user), $path)->assertNotFound();
+        $this->get('/spectra/dashboards/'.dashboardFor($user, ['name' => 'Page'])->id.'/'.explode('/', $path)[0])->assertNotFound();
+    })->with(['requests', 'traces', 'conversations', 'errors', 'costs']);
+
+    it('refuses every page to a logged-in user it is not for', function (string $path) {
+        $dashboard = dashboardWithSections(dashboardViewer());
+
+        $this->actingAs(dashboardViewer());
+
+        dashboardSection($dashboard, $path)->assertForbidden();
+    })->with(['requests', 'traces', 'conversations', 'errors', 'costs', 'traces/some-trace', 'conversations/some-chat', 'requests/01a1b04c-d820-7140-bea1-3e85e8d94cfb']);
+
+    it('answers a guest with a 401 on every page', function (string $path) {
+        dashboardSection(dashboardWithSections(dashboardViewer()), $path)->assertUnauthorized();
+    })->with(['requests', 'traces', 'conversations', 'errors', 'costs']);
+
+    it('opens a page directly, for a reload', function () {
+        $user = dashboardViewer();
+        $dashboard = dashboardWithSections($user);
+
+        $this->actingAs($user);
+
+        $this->get("/spectra/dashboards/{$dashboard->id}/traces/some-trace")->assertOk()->assertSee('window.SpectraViewer', false);
+    });
+
+    it('hides the Costs page on a dashboard that hides costs', function () {
+        $user = dashboardViewer();
+        $dashboard = dashboardWithSections($user, ['show_costs' => false]);
+
+        $this->actingAs($user);
+
+        dashboardSection($dashboard, 'costs')->assertNotFound();
+        expect($dashboard->enabledSections())->not->toContain('costs');
+    });
+
+    it('lists only the viewer\'s calls, with no id or text when messages are off', function () {
+        $user = dashboardViewer();
+        $mine = dashboardCall($user, ['request' => ['messages' => [['role' => 'user', 'content' => 'TOP-SECRET']]]]);
+        dashboardCall(dashboardViewer());
+        dashboardCall($user, ['trackable_type' => 'team']);
+
+        $this->actingAs($user);
+        $response = dashboardSection(dashboardWithSections($user), 'requests')->assertOk();
+
+        expect($response->json('total'))->toBe(1)
+            ->and($response->getContent())->not->toContain('TOP-SECRET')->not->toContain($mine->id);
+    });
+
+    it('never opens a call when messages are off', function () {
+        $user = dashboardViewer();
+        $call = dashboardCall($user);
+
+        $this->actingAs($user);
+
+        dashboardSection(dashboardWithSections($user), "requests/{$call->id}")->assertNotFound();
+    });
+
+    it('opens the viewer\'s call with only the user\'s message and the reply', function () {
+        $user = dashboardViewer();
+        $call = dashboardCall($user, [
+            'request' => ['messages' => [['role' => 'system', 'content' => 'TOP-SECRET-SYSTEM'], ['role' => 'user', 'content' => 'Where is my order?']], 'tools' => [['name' => 'TOP-SECRET-TOOL']]],
+            'response' => ['choices' => [['message' => ['role' => 'assistant', 'content' => 'On its way.']]]],
+        ]);
+
+        $this->actingAs($user);
+        $response = dashboardSection(dashboardWithSections($user, ['show_messages' => true]), "requests/{$call->id}")->assertOk();
+
+        expect($response->json('prompt'))->toBe('Where is my order?')
+            ->and($response->getContent())->not->toContain('TOP-SECRET');
+    });
+
+    it('never opens another user\'s call, even with messages on', function () {
+        $user = dashboardViewer();
+        $theirs = dashboardCall(dashboardViewer());
+
+        $this->actingAs($user);
+
+        dashboardSection(dashboardWithSections($user, ['show_messages' => true]), "requests/{$theirs->id}")->assertNotFound();
+    });
+
+    it('lists a trace only when every call in it is the viewer\'s', function () {
+        $user = dashboardViewer();
+        dashboardCall($user, ['trace_id' => 'all-mine']);
+        dashboardCall($user, ['trace_id' => 'all-mine']);
+        dashboardCall($user, ['trace_id' => 'shared']);
+        dashboardCall(dashboardViewer(), ['trace_id' => 'shared']);
+        dashboardCall($user, ['trace_id' => 'half-unattributed']);
+        dashboardCall($user, ['trace_id' => 'half-unattributed', 'trackable_type' => null, 'trackable_id' => null]);
+        dashboardCall(dashboardViewer(), ['trace_id' => 'theirs']);
+
+        $this->actingAs($user);
+        $dashboard = dashboardWithSections($user);
+        $listed = dashboardSection($dashboard, 'traces')->assertOk();
+
+        expect(collect($listed->json('data'))->pluck('trace_id')->all())->toBe(['all-mine'])
+            ->and($listed->json('data.0.request_count'))->toBe(2);
+
+        dashboardSection($dashboard, 'traces/all-mine')->assertOk();
+        dashboardSection($dashboard, 'traces/shared')->assertNotFound();
+        dashboardSection($dashboard, 'traces/half-unattributed')->assertNotFound();
+        dashboardSection($dashboard, 'traces/theirs')->assertNotFound();
+        dashboardSection($dashboard, 'traces/does-not-exist')->assertNotFound();
+    });
+
+    it('sends a trace without origins, route names, tool arguments or results', function () {
+        $user = dashboardViewer();
+        dashboardCall($user, ['trace_id' => 'mine', 'origin' => 'POST /TOP-SECRET-ROUTE', 'endpoint' => '/TOP-SECRET-ENDPOINT']);
+        foreach ([['request', 'POST /TOP-SECRET-ROUTE'], ['tool', 'lookup_order']] as $index => [$kind, $name]) {
+            SpectraSpan::query()->create([
+                'trace_id' => 'mine', 'span_id' => "span{$index}", 'name' => $name, 'kind' => $kind, 'origin' => 'TOP-SECRET-ORIGIN',
+                'started_at' => now(), 'ended_at' => now(), 'duration_ms' => 5, 'status' => 'error', 'error_message' => 'TOP-SECRET-ERROR',
+                'attributes' => ['gen_ai.tool.call.arguments' => 'TOP-SECRET-ARGUMENTS'],
+            ]);
+        }
+
+        $this->actingAs($user);
+        $response = dashboardSection(dashboardWithSections($user), 'traces/mine')->assertOk();
+
+        expect($response->getContent())->not->toContain('TOP-SECRET')
+            ->and(collect($response->json('spans'))->pluck('name')->all())->toContain('Request', 'lookup_order');
+    });
+
+    it('sends no cost in traces or conversations when the dashboard hides costs', function () {
+        $user = dashboardViewer();
+        dashboardCall($user, ['trace_id' => 'mine', 'conversation_id' => 'chat', 'total_cost_in_cents' => 987.65]);
+
+        $this->actingAs($user);
+        $dashboard = dashboardWithSections($user, ['show_costs' => false]);
+
+        foreach (['traces', 'traces/mine', 'conversations', 'conversations/chat'] as $path) {
+            expect(dashboardSection($dashboard, $path)->assertOk()->getContent())->not->toContain('987.65');
+        }
+    });
+
+    it('lists and opens a conversation only when every call in it is the viewer\'s', function () {
+        $user = dashboardViewer();
+        dashboardCall($user, ['conversation_id' => 'chat/with-slash', 'conversation_turn' => 1]);
+        dashboardCall($user, ['conversation_id' => 'group-chat']);
+        dashboardCall(dashboardViewer(), ['conversation_id' => 'group-chat']);
+
+        $this->actingAs($user);
+        $dashboard = dashboardWithSections($user);
+
+        expect(collect(dashboardSection($dashboard, 'conversations')->assertOk()->json('data'))->pluck('conversation_id')->all())->toBe(['chat/with-slash']);
+        dashboardSection($dashboard, 'conversations/chat/with-slash')->assertOk();
+        dashboardSection($dashboard, 'conversations/group-chat')->assertNotFound();
+    });
+
+    it('keeps a conversation\'s text back unless messages are on', function () {
+        $user = dashboardViewer();
+        dashboardCall($user, [
+            'conversation_id' => 'chat',
+            'conversation_turn' => 1,
+            'model_type' => 'text',
+            'endpoint' => '/v1/chat/completions',
+            'request' => ['messages' => [['role' => 'system', 'content' => 'TOP-SECRET-SYSTEM'], ['role' => 'user', 'content' => 'CUSTOMER-TEXT']]],
+            'response' => ['choices' => [['message' => ['role' => 'assistant', 'content' => 'REPLY-TEXT']]]],
+        ]);
+
+        $this->actingAs($user);
+        $hidden = dashboardSection(dashboardWithSections($user), 'conversations/chat')->assertOk();
+        $shown = dashboardSection(dashboardWithSections($user, ['name' => 'Messages', 'show_messages' => true]), 'conversations/chat')->assertOk();
+
+        expect($hidden->getContent())->not->toContain('CUSTOMER-TEXT')->not->toContain('REPLY-TEXT')
+            ->and($shown->json('turns.0.prompt'))->toBe('CUSTOMER-TEXT')
+            ->and($shown->json('turns.0.reply'))->toBe('REPLY-TEXT')
+            ->and($shown->getContent())->not->toContain('TOP-SECRET');
+    });
+
+    it('groups only the viewer\'s failures, with the message only when messages are on', function () {
+        $user = dashboardViewer();
+        $failure = ['status_code' => 500, 'error_type' => 'server_error', 'error_message' => 'INTERNAL-DETAIL', 'error_fingerprint' => 'abc'];
+        dashboardCall($user, $failure);
+        dashboardCall($user);
+        dashboardCall(dashboardViewer(), [...$failure, 'error_fingerprint' => 'theirs']);
+        dashboardCall(dashboardViewer(), $failure);
+
+        $this->actingAs($user);
+        $hidden = dashboardSection(dashboardWithSections($user), 'errors')->assertOk();
+        $shown = dashboardSection(dashboardWithSections($user, ['name' => 'Messages', 'show_messages' => true]), 'errors')->assertOk();
+
+        expect($hidden->json('request_count'))->toBe(2)
+            ->and($hidden->json('failed_count'))->toBe(1)
+            ->and(collect($hidden->json('groups'))->pluck('fingerprint')->all())->toBe(['abc'])
+            ->and($hidden->json('groups.0.failure_count'))->toBe(1)
+            ->and($hidden->getContent())->not->toContain('INTERNAL-DETAIL')->not->toContain('server_error')
+            ->and($shown->json('groups.0.message'))->toBe('INTERNAL-DETAIL');
+    });
+
+    it('adds up only the viewer\'s successful spend', function () {
+        $user = dashboardViewer();
+        dashboardCall($user, ['total_cost_in_cents' => 10.0]);
+        dashboardCall($user, ['total_cost_in_cents' => 99.0, 'status_code' => 500]);
+        dashboardCall(dashboardViewer(), ['total_cost_in_cents' => 5000.0, 'model' => 'theirs-only']);
+
+        $this->actingAs($user);
+        $response = dashboardSection(dashboardWithSections($user), 'costs')->assertOk();
+
+        // 10 cents: the failed call and the other user's are left out.
+        expect($response->json('total_cost'))->toEqualWithDelta(10.0, 0.0001)
+            ->and($response->json('total_requests'))->toBe(2)
+            ->and($response->getContent())->not->toContain('theirs-only');
+    });
+
+    it('rejects all time on every page with a period', function (string $path) {
+        $user = dashboardViewer();
+
+        $this->actingAs($user);
+
+        test()->getJson('/spectra/dashboards/'.dashboardWithSections($user)->id."/data/{$path}?period=all")->assertUnprocessable();
+    })->with(['requests', 'traces', 'conversations', 'errors', 'costs']);
+
+    it('saves the pages and message setting from the form and from code', function () {
+        Gate::define('viewSpectra', fn ($user = null) => true);
+        Gate::define('manageSpectra', fn ($user = null) => true);
+
+        $id = $this->postJson('/spectra/api/dashboards', dashboardInput(['sections' => ['traces', 'errors'], 'show_messages' => true]))->assertCreated()->json('id');
+        $fromCode = Spectra::dashboard()->create('Code', User::class, showCosts: true, sections: [DashboardSection::Requests, 'costs'], showMessages: true);
+
+        expect(SpectraDashboard::query()->findOrFail($id)->enabledSections())->toBe(['traces', 'errors'])
+            ->and(SpectraDashboard::query()->findOrFail($id)->show_messages)->toBeTrue()
+            ->and($fromCode->enabledSections())->toBe(['requests', 'costs'])
+            ->and($fromCode->show_messages)->toBeTrue();
+        $this->postJson('/spectra/api/dashboards', dashboardInput(['sections' => ['raw_prompts']]))->assertUnprocessable();
+        expect(fn () => Spectra::dashboard()->create('Code', User::class, sections: ['raw_prompts']))->toThrow(InvalidArgumentException::class, 'Unknown dashboard section');
     });
 });

@@ -9,9 +9,13 @@ import Skeleton from '@/components/Skeleton.vue';
 // hides costs has no Cost column.
 const props = withDefaults(defineProps<{
     models: { provider: string | null; providerName: string | null; model: string | null; count: number; cost: number | null }[];
+    title?: string;
+    description?: string;
     showCosts?: boolean;
     loading?: boolean;
 }>(), {
+    title: 'Top models',
+    description: 'By request volume',
     showCosts: true,
     loading: false,
 });
@@ -25,8 +29,8 @@ const max = computed(() => Math.max(1, ...props.models.map((model) => Number(mod
     <div class="card h-full overflow-hidden">
         <div class="card-header">
             <div>
-                <h3>Top models</h3>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">By request volume</p>
+                <h3>{{ title }}</h3>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ description }}</p>
             </div>
             <slot name="action" />
         </div>

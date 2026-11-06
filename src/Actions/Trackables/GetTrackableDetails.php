@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Trackables;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Spectra\Data\ModelTypeLatency;
 use Spectra\Data\Responses\TrackableDetailsResponse;
 use Spectra\Models\SpectraRequest;
@@ -25,7 +27,6 @@ class GetTrackableDetails
         private readonly GetTrackableUsageByModel $getUsageByModel,
         private readonly GetTrackableUsageByProvider $getUsageByProvider,
         private readonly GetTrackableLatencyByModelType $getLatencyByModelType,
-        private readonly FindTrackable $findTrackable,
     ) {}
 
     /**
@@ -45,7 +46,7 @@ class GetTrackableDetails
             'latency_by_model_type' => ModelTypeLatency::fromCollection(($this->getLatencyByModelType)($type, $id, $dateRange)),
         ];
 
-        $trackable = ($this->findTrackable)($type, $id);
+        $trackable = $this->findTrackable($type, $id);
 
         if ($trackable !== null) {
             $trackableData['name'] = $trackable->name ?? null;
@@ -70,5 +71,21 @@ class GetTrackableDetails
             trackable: $trackableData,
             requests: $requests,
         );
+    }
+
+    /**
+     * Find the trackable model itself. The stored type is the morph class,
+     * which is an alias when the app uses a morph map; anything that doesn't
+     * resolve to an Eloquent model is never instantiated.
+     */
+    private function findTrackable(string $type, string $id): ?Model
+    {
+        $class = Relation::getMorphedModel($type) ?? $type;
+
+        if (! class_exists($class) || ! is_subclass_of($class, Model::class)) {
+            return null;
+        }
+
+        return $class::query()->find($id);
     }
 }

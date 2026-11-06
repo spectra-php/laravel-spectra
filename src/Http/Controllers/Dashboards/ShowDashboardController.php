@@ -7,33 +7,32 @@ namespace Spectra\Http\Controllers\Dashboards;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\View\View;
-use Spectra\Contracts\DashboardTrackableResolver;
+use Spectra\Enums\DashboardSection;
 use Spectra\Models\SpectraDashboard;
 use Spectra\Support\Dashboards\DashboardAccess;
+use Spectra\Support\Dashboards\DashboardViewer;
 
 /**
- * GET /dashboards/{id}: the page a shared dashboard's viewer opens. It is not
- * behind `viewSpectra`, because its viewers aren't dashboard users; it checks
- * them against the saved dashboard instead, and loads none of the admin screens.
+ * GET /dashboards/{id} and its sections: the page a shared dashboard's viewer
+ * opens. It is not behind `viewSpectra`, because its viewers aren't dashboard
+ * users; it checks them against the saved dashboard instead, and loads none of
+ * the admin screens.
  */
 class ShowDashboardController extends Controller
 {
     /**
      * Render the page for a viewer the dashboard allows.
      */
-    public function __invoke(string $id, Request $request, DashboardTrackableResolver $resolver): View
+    public function __invoke(string $id, Request $request, DashboardViewer $viewer, ?string $section = null): View
     {
         abort_unless(DashboardAccess::enabled(), 404);
 
         $dashboard = SpectraDashboard::query()->where('is_active', true)->findOrFail($id);
-        $viewer = $request->user();
+        $scope = $viewer->scope($dashboard, $request->user());
 
-        abort_if($viewer === null, 403);
+        abort_if($scope === null, 403);
+        abort_if($section !== null && ! $dashboard->hasSection(DashboardSection::from($section)), 404);
 
-        $trackable = $resolver->resolve($viewer, $dashboard->trackable_type, $dashboard->trackable_id);
-
-        abort_unless($trackable !== null && $dashboard->isFor($trackable), 403);
-
-        return view('spectra::viewer', ['dashboard' => $dashboard]);
+        return view('spectra::viewer', ['dashboard' => $dashboard, 'trackable' => $scope->trackable]);
     }
 }

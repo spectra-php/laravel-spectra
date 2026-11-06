@@ -9,8 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
-use Spectra\Actions\Trackables\FindTrackable;
-use Spectra\Actions\Trackables\ResolveTrackableClass;
+use Spectra\Enums\DashboardSection;
 use Spectra\Enums\DashboardWidget;
 use Spectra\Models\SpectraDashboard;
 
@@ -25,8 +24,7 @@ class Dashboards
      * Create a new shared dashboards instance.
      */
     public function __construct(
-        protected readonly ResolveTrackableClass $resolveTrackableClass,
-        protected readonly FindTrackable $findTrackable,
+        protected readonly DashboardTrackables $trackables,
     ) {}
 
     /**
@@ -41,6 +39,8 @@ class Dashboards
      *
      * @param  array<int, DashboardWidget|string|array{type: DashboardWidget|string, size?: string}>  $widgets  Without widgets: the headline numbers, requests per day and the latest requests
      * @param  string  $period  The period it opens on: today, week, month or year
+     * @param  array<int, DashboardSection|string>  $sections  The pages it links to in its header: requests, traces, conversations, errors and costs
+     * @param  bool  $showMessages  Let viewers read the user's messages, the replies and error messages
      *
      * @throws InvalidArgumentException when an argument is wrong
      */
@@ -52,8 +52,10 @@ class Dashboards
         string $period = 'month',
         bool $showCosts = false,
         bool $active = true,
+        array $sections = [],
+        bool $showMessages = false,
     ): SpectraDashboard {
-        $attributes = $this->attributes($name, $trackable, $trackableId, $widgets, $period, $showCosts, $active);
+        $attributes = $this->attributes($name, $trackable, $trackableId, $widgets, $period, $showCosts, $active, $sections, $showMessages);
 
         return SpectraDashboard::query()->updateOrCreate(
             ['name' => $attributes['name'], 'trackable_type' => $attributes['trackable_type'], 'trackable_id' => $attributes['trackable_id']],
@@ -108,7 +110,8 @@ class Dashboards
      * Check the arguments and turn them into the dashboard's columns.
      *
      * @param  array<int, DashboardWidget|string|array{type: DashboardWidget|string, size?: string}>  $widgets
-     * @return array{name: string, trackable_type: string, trackable_id: string|null, widgets: list<array{type: string, size: string}>, default_period: string, show_costs: bool, is_active: bool}
+     * @param  array<int, DashboardSection|string>  $sections
+     * @return array{name: string, trackable_type: string, trackable_id: string|null, widgets: list<array{type: string, size: string}>, default_period: string, show_costs: bool, is_active: bool, sections: list<string>, show_messages: bool}
      *
      * @throws InvalidArgumentException when an argument is wrong
      */
@@ -120,13 +123,15 @@ class Dashboards
         string $period,
         bool $showCosts,
         bool $active,
+        array $sections,
+        bool $showMessages,
     ): array {
         throw_if(blank($name) || mb_strlen($name) > 255, InvalidArgumentException::class, 'A dashboard needs a name of 1 to 255 characters.');
         throw_unless(in_array($period, ['today', 'week', 'month', 'year'], true), InvalidArgumentException::class, "Unknown dashboard period [{$period}]. Use today, week, month or year.");
 
         [$type, $id] = $this->target($trackable, $trackableId);
 
-        throw_if(is_string($trackable) && $id !== null && ($this->findTrackable)($type, $id) === null, InvalidArgumentException::class, "No [{$type}] trackable has the id [{$id}].");
+        throw_if(is_string($trackable) && $id !== null && $this->trackables->find($type, $id) === null, InvalidArgumentException::class, "No [{$type}] trackable has the id [{$id}].");
 
         return [
             'name' => $name,
@@ -136,6 +141,8 @@ class Dashboards
             'default_period' => $period,
             'show_costs' => $showCosts,
             'is_active' => $active,
+            'sections' => $this->sections($sections),
+            'show_messages' => $showMessages,
         ];
     }
 
@@ -156,11 +163,32 @@ class Dashboards
             return [$trackable->getMorphClass(), (string) $trackable->getKey()];
         }
 
-        $class = ($this->resolveTrackableClass)($trackable);
+        $class = $this->trackables->classFor($trackable);
 
         throw_if($class === null, InvalidArgumentException::class, "The trackable type [{$trackable}] is not an Eloquent model.");
 
         return [(new $class)->getMorphClass(), $trackableId === null ? null : (string) $trackableId];
+    }
+
+    /**
+     * Turn the sections into their stored values.
+     *
+     * @param  array<int, DashboardSection|string>  $sections
+     * @return list<string>
+     */
+    private function sections(array $sections): array
+    {
+        $stored = [];
+
+        foreach ($sections as $section) {
+            $case = $section instanceof DashboardSection ? $section : DashboardSection::tryFrom($section);
+
+            throw_if($case === null, InvalidArgumentException::class, 'Unknown dashboard section ['.(is_string($section) ? $section : '').'].');
+
+            $stored[$case->value] = $case->value;
+        }
+
+        return array_values($stored);
     }
 
     /**

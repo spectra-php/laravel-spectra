@@ -65,6 +65,12 @@ export interface SpectraConfig {
 
 // What a shared dashboard's page gets from its layout.
 export interface SpectraViewerConfig {
+    baseUrl: string;
     dataUrl: string;
     period: string;
+    name: string;
+    trackableName: string | null;
+    sections: string[];
+    showCosts: boolean;
+    showMessages: boolean;
 }

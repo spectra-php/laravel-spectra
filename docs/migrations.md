@@ -32,6 +32,7 @@ Spectra ships these migration files:
 | `change_budgetable_id_to_string_on_spectra_budgets_table` | Stores budget owner ids as strings, so [budgets](/budgets) work for integer and ULID keys on every database (see [below](#budgetable-id-migration)) |
 | `change_trace_id_to_string_on_spectra_requests_table` | Stores trace ids as strings of up to 64 characters, like the spans and scores tables, so `Spectra::withTraceId()` takes any id on every database (see [below](#trace-id-migration)) |
 | `create_spectra_dashboards_table` | Creates `spectra_dashboards`, for [dashboards](/dashboards) (see [below](#dashboards-migration)) |
+| `add_sections_to_spectra_dashboards_table` | Adds `sections` and `show_messages` to `spectra_dashboards`, for a dashboard's [pages](/dashboards#pages) (see [below](#dashboards-migration)) |
 
 <a name="publishing-schema-migrations"></a>
 ### Publishing Schema Migrations
@@ -149,7 +150,7 @@ Until it runs, the Evals screen asks you to, and `Spectra::dataset()` and `spect
 <a name="dashboards-migration"></a>
 ## The Dashboards Migration
 
-`create_spectra_dashboards_table` creates the `spectra_dashboards` table for [dashboards](/dashboards). Run the installer to publish and run it:
+`create_spectra_dashboards_table` creates the `spectra_dashboards` table for [dashboards](/dashboards), and `add_sections_to_spectra_dashboards_table` adds its `sections` and `show_messages` columns. Run the installer to publish and run them:
 
 ```shell
 php artisan spectra:install

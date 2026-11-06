@@ -8,7 +8,7 @@ import StatusCode from '@/components/StatusCode.vue';
 // call only where the page has an id and listens for `select`: a viewer gets no
 // ids, and can't open a call.
 type RecentRow = {
-    id?: string;
+    id?: string | null;
     provider: string | null;
     provider_display_name?: string | null;
     model: string | null;
@@ -27,9 +27,13 @@ type RecentRow = {
 
 const props = withDefaults(defineProps<{
     requests: RecentRow[];
+    title?: string;
+    description?: string;
     clickable?: boolean;
     loading?: boolean;
 }>(), {
+    title: 'Recent requests',
+    description: 'Latest activity',
     clickable: false,
     loading: false,
 });
@@ -67,8 +71,8 @@ const usage = (request: RecentRow) => {
     <div class="card h-full overflow-hidden">
         <div class="card-header">
             <div>
-                <h3>Recent requests</h3>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Latest activity</p>
+                <h3>{{ title }}</h3>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ description }}</p>
             </div>
             <slot name="action" />
         </div>
@@ -128,5 +132,6 @@ const usage = (request: RecentRow) => {
                 </tbody>
             </table>
         </div>
+        <slot name="footer" />
     </div>
 </template>

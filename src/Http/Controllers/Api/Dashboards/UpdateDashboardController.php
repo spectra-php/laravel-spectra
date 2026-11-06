@@ -8,12 +8,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Spectra\Actions\Trackables\FindTrackable;
-use Spectra\Actions\Trackables\ResolveTrackableClass;
+use Spectra\Enums\DashboardSection;
 use Spectra\Enums\DashboardWidget;
 use Spectra\Http\Controllers\Api\BaseApiController;
 use Spectra\Models\SpectraDashboard;
 use Spectra\Support\Dashboards\DashboardAccess;
+use Spectra\Support\Dashboards\DashboardTrackables;
 
 /**
  * PUT /api/dashboards/{id}: change a saved shared dashboard. A null trackable
@@ -25,7 +25,7 @@ class UpdateDashboardController extends BaseApiController
     /**
      * Validate the dashboard and save the changes.
      */
-    public function __invoke(string $id, Request $request, ResolveTrackableClass $resolveTrackableClass, FindTrackable $findTrackable): JsonResponse
+    public function __invoke(string $id, Request $request, DashboardTrackables $trackables): JsonResponse
     {
         abort_unless(DashboardAccess::allowed(), 403);
 
@@ -41,16 +41,19 @@ class UpdateDashboardController extends BaseApiController
             'widgets.*.size' => ['required', 'in:full,half'],
             'default_period' => ['required', 'string', 'in:today,week,month,year'],
             'show_costs' => ['required', 'boolean'],
+            'sections' => ['sometimes', 'array'],
+            'sections.*' => ['distinct', Rule::enum(DashboardSection::class)],
+            'show_messages' => ['sometimes', 'boolean'],
             'is_active' => ['required', 'boolean'],
         ]);
 
-        if ($resolveTrackableClass($input['trackable_type']) === null) {
+        if ($trackables->classFor($input['trackable_type']) === null) {
             throw ValidationException::withMessages(['trackable_type' => 'This trackable type is not an Eloquent model.']);
         }
 
         $input['trackable_id'] ??= null;
 
-        if ($input['trackable_id'] !== null && $findTrackable($input['trackable_type'], $input['trackable_id']) === null) {
+        if ($input['trackable_id'] !== null && $trackables->find($input['trackable_type'], $input['trackable_id']) === null) {
             throw ValidationException::withMessages(['trackable_id' => 'No trackable of this type has this id.']);
         }
 

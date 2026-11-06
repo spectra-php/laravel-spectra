@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Support;
 
 use Composer\InstalledVersions;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
@@ -108,7 +109,7 @@ class DashboardAssets
      * with its config. It is a build of its own, so a viewer's page holds none
      * of the admin screens.
      */
-    public static function viewerJs(SpectraDashboard $dashboard): HtmlString
+    public static function viewerJs(SpectraDashboard $dashboard, Model $trackable): HtmlString
     {
         $jsPath = __DIR__.'/../../dist/viewer.js';
 
@@ -116,8 +117,14 @@ class DashboardAssets
             $js = File::get($jsPath);
             $config = Js::from(static::viewerScriptVariables());
             $shared = Js::from([
+                'baseUrl' => route('spectra.dashboards.show', ['id' => $dashboard->id], false),
                 'dataUrl' => route('spectra.dashboards.data', ['id' => $dashboard->id], false),
                 'period' => $dashboard->default_period,
+                'name' => $dashboard->name,
+                'trackableName' => isset($trackable->name) && is_string($trackable->name) ? $trackable->name : null,
+                'sections' => $dashboard->enabledSections(),
+                'showCosts' => $dashboard->show_costs,
+                'showMessages' => $dashboard->show_messages,
             ]);
 
             return new HtmlString(<<<HTML

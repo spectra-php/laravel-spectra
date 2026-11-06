@@ -11,9 +11,14 @@ import ProviderLogo from '@/components/ProviderLogo.vue';
 const props = withDefaults(defineProps<{
     providers: { provider: string | null; label: string | null; count: number }[];
     modelTypes?: { model_type: string; label: string; count: number }[];
+    description?: string;
+    // How a row's value reads: a count by default, an amount on the costs page.
+    formatValue?: (value: number) => string;
     showTypes?: boolean;
     loading?: boolean;
 }>(), {
+    description: 'Share of requests',
+    formatValue: undefined,
     modelTypes: () => [],
     showTypes: true,
     loading: false,
@@ -85,7 +90,7 @@ onUnmounted(() => {
         <div class="card-header">
             <div>
                 <h3>Breakdown</h3>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Share of requests</p>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ description }}</p>
             </div>
             <div class="segmented">
                 <button type="button" :class="{ 'is-active': tab === 'provider' }" @click="tab = 'provider'">Provider</button>
@@ -110,7 +115,7 @@ onUnmounted(() => {
                         aria-hidden="true"
                     />
                     <span class="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">{{ row.label }}</span>
-                    <span class="tabular-nums text-gray-900 dark:text-white">{{ formatNumber(row.count) }}</span>
+                    <span class="tabular-nums text-gray-900 dark:text-white">{{ formatValue ? formatValue(row.count) : formatNumber(row.count) }}</span>
                     <span class="w-12 text-right tabular-nums text-xs text-gray-500 dark:text-gray-400">{{ row.share.toFixed(1) }}%</span>
                 </li>
                 <li v-if="!rows.length" class="py-6 text-center text-gray-500 dark:text-gray-400">No requests in this period</li>

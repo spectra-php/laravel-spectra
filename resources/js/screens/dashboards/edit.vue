@@ -5,7 +5,7 @@ import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import Skeleton from '@/components/Skeleton.vue';
-import type { DashboardSummary, DashboardsResponse, DashboardWidgetData, DashboardWidgetSize } from '@/types/api';
+import type { DashboardSectionName, DashboardSummary, DashboardsResponse, DashboardWidgetData, DashboardWidgetSize } from '@/types/api';
 
 // Design a shared dashboard: who it's for and which widgets it shows, in order.
 // Opens empty, from another dashboard (`from`), or for a trackable (`type`, `id`).
@@ -45,7 +45,17 @@ const widgets = ref<{ type: WidgetType; size: DashboardWidgetSize }[]>([
 ]);
 const period = ref('month');
 const showCosts = ref(false);
+const sections = ref<DashboardSectionName[]>([]);
+const showMessages = ref(false);
 const active = ref(true);
+
+const sectionOptions: { value: DashboardSectionName; label: string; description: string; costs?: boolean }[] = [
+    { value: 'requests', label: 'Requests', description: 'Their calls: model, usage, status and time.' },
+    { value: 'traces', label: 'Traces', description: 'Their traces and timelines. Tool arguments and results are never shown.' },
+    { value: 'conversations', label: 'Conversations', description: 'Their conversations, turn by turn.' },
+    { value: 'errors', label: 'Errors', description: 'Their failed calls, grouped by cause.' },
+    { value: 'costs', label: 'Costs', description: 'Their spend over time, by provider and by model.', costs: true },
+];
 
 const details = (type: WidgetType) => catalog.find((widget) => widget.type === type);
 const available = computed(() => catalog.filter((widget) => !widgets.value.some((chosen) => chosen.type === widget.type)));
@@ -60,6 +70,8 @@ const fill = (dashboard: DashboardSummary) => {
     widgets.value = dashboard.widgets.map((widget) => ({ ...widget }));
     period.value = dashboard.default_period;
     showCosts.value = dashboard.show_costs;
+    sections.value = [...dashboard.sections];
+    showMessages.value = dashboard.show_messages;
     active.value = dashboard.is_active;
 };
 
@@ -78,6 +90,8 @@ const save = async () => {
         widgets: widgets.value,
         default_period: period.value,
         show_costs: showCosts.value,
+        sections: sections.value,
+        show_messages: showMessages.value,
         is_active: active.value,
     };
 
@@ -208,6 +222,17 @@ onMounted(async () => {
                         <label class="flex items-start gap-2 text-sm">
                             <input v-model="showCosts" type="checkbox" class="mt-0.5" />
                             <span>Show costs<span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">These are what you pay the provider, so a customer could work out your margin.</span></span>
+                        </label>
+                        <fieldset>
+                            <legend class="stat-label mb-1.5">Pages in its header</legend>
+                            <label v-for="option in sectionOptions" :key="option.value" class="flex items-start gap-2 py-1 text-sm" :class="option.costs && !showCosts ? 'opacity-50' : ''">
+                                <input v-model="sections" type="checkbox" class="mt-0.5" :value="option.value" :disabled="option.costs && !showCosts" />
+                                <span>{{ option.label }}<span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{{ option.costs && !showCosts ? 'Needs Show costs.' : option.description }}</span></span>
+                            </label>
+                        </fieldset>
+                        <label class="flex items-start gap-2 text-sm">
+                            <input v-model="showMessages" type="checkbox" class="mt-0.5" />
+                            <span>Show message text<span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">Their messages, the replies and error messages. Never system prompts, tools or raw request bodies.</span></span>
                         </label>
                         <label class="flex items-start gap-2 text-sm">
                             <input v-model="active" type="checkbox" class="mt-0.5" />

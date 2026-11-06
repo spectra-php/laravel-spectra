@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Spectra\Actions\Dashboards;
 
 use Illuminate\Support\Collection;
-use Spectra\Actions\Trackables\FindTrackable;
 use Spectra\Data\DashboardSummary;
 use Spectra\Models\SpectraDashboard;
+use Spectra\Support\Dashboards\DashboardTrackables;
 
 /**
  * The saved shared dashboards for the admin screen, newest first, each with
@@ -19,7 +19,7 @@ class GetDashboards
      * Create a new get shared dashboards action instance.
      */
     public function __construct(
-        private readonly FindTrackable $findTrackable,
+        private readonly DashboardTrackables $trackables,
     ) {}
 
     /**
@@ -41,6 +41,8 @@ class GetDashboards
                 widgets: $dashboard->widgets,
                 default_period: $dashboard->default_period,
                 show_costs: $dashboard->show_costs,
+                sections: $dashboard->sections ?? [],
+                show_messages: $dashboard->show_messages,
                 is_active: $dashboard->is_active,
                 url: $dashboard->url(),
             ))
@@ -56,7 +58,7 @@ class GetDashboards
             return null;
         }
 
-        $trackable = ($this->findTrackable)($dashboard->trackable_type, $dashboard->trackable_id);
+        $trackable = $this->trackables->find($dashboard->trackable_type, $dashboard->trackable_id);
 
         return isset($trackable->name) && is_string($trackable->name) ? $trackable->name : null;
     }

@@ -116,10 +116,39 @@ They're the same widgets as the Overview in Spectra's own dashboard, narrowed to
 
 A dashboard shows totals and a short list of calls, and nothing a viewer could use to read your prompts:
 
-- **Prompts and responses are never sent**, and neither are a call's id, metadata or trace, whichever widgets you choose.
+- **System prompts, tools and raw request bodies are never sent**, and neither are metadata, origins or tool arguments and results, whichever widgets and pages you choose.
+- **Message text is hidden unless you turn it on.** With **Show message text**, viewers can read their own messages, the replies and error messages. Without it, they see only the numbers.
 - **Costs are hidden unless you turn them on.** They are what you pay the provider, so a customer could work out your margin. On a dashboard that hides them, the server doesn't send them at all.
 - **Model and provider names are shown** by `usage_by_model`, `usage_by_provider`, `recent_requests` and `performance`. Leave those widgets out if you'd rather not say which ones you use.
 - **Score names are shown** by `scores`. Names like `hallucination` or a reviewer's label can be internal, so check yours before adding this widget.
+
+<a name="pages"></a>
+## Pages
+
+Besides its widgets, a dashboard can link to more pages in a header, each showing only that viewer's data. They are off until you turn them on, and with none on there is no header:
+
+| Page | Shows |
+| --- | --- |
+| `requests` | Their calls: model, usage, status and time |
+| `traces` | Their traces, with a timeline of each |
+| `conversations` | Their conversations, turn by turn |
+| `errors` | Their failed calls, grouped by cause |
+| `costs` | Their spend over time, by provider and by model. Needs costs to be shown |
+
+Choose them on the dashboard's form, or in code:
+
+```php
+Spectra::dashboard()->create(
+    'Usage',
+    $user,
+    sections: ['requests', 'traces', 'errors'],
+    showMessages: true,
+);
+```
+
+A trace or a conversation can hold calls from more than one trackable, so a viewer sees one only when every call in it is theirs. Anything mixed or partly unattributed stays hidden from everyone involved.
+
+These pages run on their own endpoints under `/spectra/dashboards/{id}`, and viewers never reach the API of Spectra's own dashboard.
 
 <a name="who-can-open-a-dashboard"></a>
 ## Who Can Open a Dashboard

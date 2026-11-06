@@ -14,7 +14,7 @@ readonly class DashboardWidgetData extends DataTransferObject
     /**
      * Create a new shared widget instance.
      *
-     * @param  DataTransferObject|Collection<int, covariant DataTransferObject>  $data
+     * @param  DataTransferObject|Collection<int, mixed>  $data
      */
     public function __construct(
         public string $type,

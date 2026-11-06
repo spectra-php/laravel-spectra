@@ -44,6 +44,7 @@ it('publishes only the missing migrations when run again', function () {
     expect($names)->toBe([
         'add_error_fingerprint_to_spectra_requests_table.php',
         'add_prompt_columns_to_spectra_requests_table.php',
+        'add_sections_to_spectra_dashboards_table.php',
         'add_spans_to_spectra_tables.php',
         'add_trace_timing_columns_to_spectra_tables.php',
         'add_v2_tracking_columns_to_spectra_tables.php',

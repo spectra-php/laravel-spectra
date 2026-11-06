@@ -263,7 +263,8 @@ export interface TraceCall {
     is_error: boolean;
     is_streaming: boolean;
     total_tokens: number;
-    total_cost_in_cents: number;
+    // Null on a shared dashboard that hides costs.
+    total_cost_in_cents: number | null;
     latency_ms: number | null;
     created_at: string | null;
     started_at: string | null;
@@ -1057,6 +1058,105 @@ export interface DashboardRequest {
     status_code: number | null;
     failed: boolean;
     created_at_human: string | null;
+    id: string | null;
+}
+
+export type DashboardSectionName = 'requests' | 'traces' | 'conversations' | 'errors' | 'costs';
+
+export interface DashboardCallMessages {
+    model: string | null;
+    prompt: string | null;
+    reply: string | null;
+}
+
+export interface DashboardListedTrace {
+    trace_id: string;
+    request_count: number;
+    failed_count: number;
+    total_cost_in_cents: number | null;
+    total_tokens: number;
+    started_at: string | null;
+    duration_ms: number;
+    models: { provider: string | null; model: string | null }[];
+}
+
+export interface DashboardTrace {
+    trace_id: string;
+    request_count: number;
+    failed_count: number;
+    total_cost_in_cents: number | null;
+    total_tokens: number;
+    started_at: string | null;
+    duration_ms: number;
+    timeline_ms: number;
+    truncated: boolean;
+    requests: TraceCall[];
+    spans: TraceSpan[];
+}
+
+export interface DashboardListedConversation {
+    conversation_id: string;
+    request_count: number;
+    turn_count: number;
+    failed_count: number;
+    total_cost_in_cents: number | null;
+    total_tokens: number;
+    started_at: string | null;
+    last_activity_at: string | null;
+    models: { provider: string | null; model: string | null }[];
+}
+
+export interface DashboardConversation {
+    conversation_id: string;
+    request_count: number;
+    turn_count: number;
+    failed_count: number;
+    total_cost_in_cents: number | null;
+    total_tokens: number;
+    started_at: string | null;
+    last_activity_at: string | null;
+    truncated: boolean;
+    turns: {
+        turn: number | null;
+        started_at: string;
+        prompt: string | null;
+        reply: string | null;
+        request_count: number;
+        failed_count: number;
+        total_cost_in_cents: number | null;
+        total_tokens: number;
+        duration_ms: number;
+    }[];
+}
+
+export interface DashboardErrorGroup {
+    fingerprint: string;
+    provider: string;
+    status_code: number | null;
+    error_type: string | null;
+    message: string | null;
+    failure_count: number;
+    share: number;
+    models: { model: string; count: number }[];
+    first_seen_at: string | null;
+    last_seen_at: string | null;
+    trend: number[];
+}
+
+export interface DashboardErrors {
+    request_count: number;
+    failed_count: number;
+    error_rate: number;
+    groups: DashboardErrorGroup[];
+}
+
+export interface DashboardCosts {
+    total_cost: number;
+    total_requests: number;
+    by_date: CostByDate[];
+    by_provider: { provider: string | null; provider_name: string | null; requests: number; cost: number }[];
+    by_model: { provider: string | null; provider_name: string | null; model: string; requests: number; cost: number }[];
+    by_model_type: { model_type: string; label: string; cost: number }[];
 }
 
 export interface DashboardBudgetLimit {
@@ -1098,6 +1198,8 @@ export interface DashboardSummary {
     widgets: { type: DashboardWidgetData['type']; size: DashboardWidgetSize }[];
     default_period: string;
     show_costs: boolean;
+    sections: DashboardSectionName[];
+    show_messages: boolean;
     is_active: boolean;
     url: string;
 }

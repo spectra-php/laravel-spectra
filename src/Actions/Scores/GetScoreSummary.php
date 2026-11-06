@@ -7,7 +7,6 @@ namespace Spectra\Actions\Scores;
 use Illuminate\Support\Collection;
 use Spectra\Data\ScoreSummary;
 use Spectra\Enums\ScoreType;
-use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
 use Spectra\Support\DateRange;
 use stdClass;
@@ -26,14 +25,13 @@ class GetScoreSummary
     private const LIMIT = 20;
 
     /**
-     * Get one summary row per score name and type, most given first. With a
-     * trackable, only the scores on its calls, traces and conversations.
+     * Get one summary row per score name and type, most given first.
      *
      * @return Collection<int, ScoreSummary>
      */
-    public function __invoke(DateRange $dateRange, ?string $trackableType = null, ?string $trackableId = null): Collection
+    public function __invoke(DateRange $dateRange): Collection
     {
-        return rescue(fn () => $this->getSummaries($dateRange, $trackableType, $trackableId), new Collection, report: false);
+        return rescue(fn () => $this->getSummaries($dateRange), new Collection, report: false);
     }
 
     /**
@@ -41,23 +39,10 @@ class GetScoreSummary
      *
      * @return Collection<int, ScoreSummary>
      */
-    private function getSummaries(DateRange $dateRange, ?string $trackableType, ?string $trackableId): Collection
+    private function getSummaries(DateRange $dateRange): Collection
     {
         $query = SpectraScore::query();
         $dateRange->apply($query);
-
-        if ($trackableType !== null && $trackableId !== null) {
-            $calls = fn (string $column) => SpectraRequest::query()
-                ->where('trackable_type', $trackableType)
-                ->where('trackable_id', $trackableId)
-                ->whereNotNull($column)
-                ->select($column);
-
-            $query->where(fn ($scores) => $scores
-                ->whereIn('request_id', $calls('id'))
-                ->orWhereIn('trace_id', $calls('trace_id'))
-                ->orWhereIn('conversation_id', $calls('conversation_id')));
-        }
 
         $rows = $query->clone()
             ->toBase()

@@ -1,48 +1,20 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import axios from 'axios';
-import DashboardView from './DashboardView.vue';
-import type { ApiError } from '@/types/app';
-import type { DashboardResponse } from '@/types/api';
+import { computed } from 'vue';
+import { useViewer } from '@/composables/useViewer';
 
-// The page a shared dashboard's viewer opens, on its own bundle. It reads only
-// the dashboard's own data URL, because viewers can't reach the dashboard API.
-const { dataUrl, period: defaultPeriod } = window.SpectraViewer;
+// The page a shared dashboard's viewer opens, on its own bundle: a header with
+// the pages the admin turned on, and no header when there is only the overview.
+const { config } = useViewer();
 
-const dashboard = ref<DashboardResponse | null>(null);
-const period = ref(defaultPeriod);
-const loading = ref(true);
-const failed = ref(false);
-
-const load = async () => {
-    loading.value = true;
-    failed.value = false;
-
-    try {
-        const response = await axios.get<DashboardResponse>(dataUrl, {
-            params: { period: period.value },
-            headers: { Accept: 'application/json' },
-        });
-        dashboard.value = response.data;
-    } catch (error) {
-        // The session ended while the page was open: reloading goes through the login.
-        if ((error as ApiError).response?.status === 401) {
-            window.location.reload();
-            return;
-        }
-
-        failed.value = true;
-    } finally {
-        loading.value = false;
-    }
+const labels: Record<string, string> = {
+    requests: 'Requests',
+    traces: 'Traces',
+    conversations: 'Conversations',
+    errors: 'Errors',
+    costs: 'Costs',
 };
 
-const changePeriod = (next: string) => {
-    period.value = next;
-    load();
-};
-
-onMounted(load);
+const links = computed(() => config.sections.map((section) => ({ name: section, label: labels[section] ?? section })));
 </script>
 
 <template>
@@ -54,15 +26,25 @@ onMounted(load);
             aria-hidden="true"
         ></div>
 
+        <header v-if="links.length" class="relative border-b border-gray-200/80 bg-white/80 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/70">
+            <nav class="mx-auto flex max-w-shell gap-1 overflow-x-auto px-4 py-2 sm:px-6 lg:px-8" aria-label="Dashboard pages">
+                <router-link
+                    :to="{ name: 'overview' }"
+                    class="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                    exact-active-class="bg-gray-100 text-gray-900! dark:bg-gray-800 dark:text-white!"
+                >Overview</router-link>
+                <router-link
+                    v-for="link in links"
+                    :key="link.name"
+                    :to="{ name: link.name }"
+                    class="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                    active-class="bg-gray-100 text-gray-900! dark:bg-gray-800 dark:text-white!"
+                >{{ link.label }}</router-link>
+            </nav>
+        </header>
+
         <main class="relative mx-auto max-w-shell px-4 py-8 sm:px-6 lg:px-8">
-            <div v-if="failed" class="card">
-                <div class="empty-state">
-                    <p class="empty-state-title">This dashboard could not be loaded</p>
-                    <p class="empty-state-description">Please try again in a moment.</p>
-                    <button type="button" class="btn btn-secondary btn-sm mt-4" @click="load">Try again</button>
-                </div>
-            </div>
-            <DashboardView v-else :dashboard="dashboard" :period="period" :loading="loading" @update:period="changePeriod" />
+            <router-view />
         </main>
     </div>
 </template>

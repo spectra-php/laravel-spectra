@@ -14,6 +14,7 @@ readonly class DashboardSummary extends DataTransferObject
      * Create a new shared dashboard summary instance.
      *
      * @param  list<array{type: string, size: string}>  $widgets
+     * @param  list<string>  $sections
      */
     public function __construct(
         public string $id,
@@ -24,6 +25,8 @@ readonly class DashboardSummary extends DataTransferObject
         public array $widgets,
         public string $default_period,
         public bool $show_costs,
+        public array $sections,
+        public bool $show_messages,
         public bool $is_active,
         public string $url,
     ) {}

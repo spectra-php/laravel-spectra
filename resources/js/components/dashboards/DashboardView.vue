@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import Skeleton from '@/components/Skeleton.vue';
 import BudgetWidget from './BudgetWidget.vue';
+import DashboardHeading, { dashboardPeriods } from './DashboardHeading.vue';
 import StatsWidget from './StatsWidget.vue';
 import BreakdownCard from '@/components/widgets/BreakdownCard.vue';
 import PerformanceCard from '@/components/widgets/PerformanceCard.vue';
@@ -22,42 +23,19 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:period': [period: string] }>();
 
-const periods = [
-    { value: 'today', label: 'Today' },
-    { value: 'week', label: 'This Week' },
-    { value: 'month', label: 'This Month' },
-    { value: 'year', label: 'This Year' },
-];
-
 const widgets = computed(() => props.dashboard?.widgets ?? []);
 const showCosts = computed(() => props.dashboard?.show_costs ?? false);
 // Performance and Scores hide when empty, as they do on the Overview.
 const hidesWhenEmpty = (widget: DashboardWidgetData) => (widget.type === 'performance' || widget.type === 'scores') && !widget.data.length;
 const widgetsToShow = computed(() => widgets.value.filter((widget) => !hidesWhenEmpty(widget)));
 
-const periodLabel = computed(() => periods.find((option) => option.value === props.period)?.label);
+const periodLabel = computed(() => dashboardPeriods.find((option) => option.value === props.period)?.label);
 const subtitle = computed(() => [props.dashboard?.trackable_name, periodLabel.value].filter(Boolean).join(' · '));
 </script>
 
 <template>
     <div>
-        <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div class="min-w-0">
-                <Skeleton v-if="!dashboard" variant="text" width="12rem" height="2rem" />
-                <template v-else>
-                    <h1 class="truncate text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ dashboard.name }}</h1>
-                    <p class="mt-1 truncate text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
-                </template>
-            </div>
-            <select
-                class="form-select w-full sm:w-48"
-                aria-label="Period"
-                :value="period"
-                @change="emit('update:period', ($event.target as HTMLSelectElement).value)"
-            >
-                <option v-for="option in periods" :key="option.value" :value="option.value">{{ option.label }}</option>
-            </select>
-        </div>
+        <DashboardHeading :title="dashboard?.name ?? null" :subtitle="subtitle" :period="period" @update:period="emit('update:period', $event)" />
 
         <div v-if="!dashboard" class="card"><Skeleton variant="chart" height="240px" /></div>
 

@@ -7,6 +7,7 @@ namespace Spectra\Testing;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Spectra\Enums\DashboardSection;
 use Spectra\Enums\DashboardWidget;
 use Spectra\Models\SpectraDashboard;
 use Spectra\Support\Dashboards\Dashboards;
@@ -29,6 +30,7 @@ class FakeDashboards extends Dashboards
      * they do for the real thing.
      *
      * @param  array<int, DashboardWidget|string|array{type: DashboardWidget|string, size?: string}>  $widgets
+     * @param  array<int, DashboardSection|string>  $sections
      */
     public function create(
         string $name,
@@ -38,8 +40,10 @@ class FakeDashboards extends Dashboards
         string $period = 'month',
         bool $showCosts = false,
         bool $active = true,
+        array $sections = [],
+        bool $showMessages = false,
     ): SpectraDashboard {
-        $attributes = $this->attributes($name, $trackable, $trackableId, $widgets, $period, $showCosts, $active);
+        $attributes = $this->attributes($name, $trackable, $trackableId, $widgets, $period, $showCosts, $active, $sections, $showMessages);
 
         $existing = collect($this->dashboards)->first(fn (SpectraDashboard $dashboard) => $dashboard->name === $attributes['name']
             && $dashboard->trackable_type === $attributes['trackable_type']

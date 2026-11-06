@@ -11,6 +11,6 @@
 <body>
     <div id="spectra"></div>
 
-    {!! \Spectra\Support\DashboardAssets::viewerJs($dashboard) !!}
+    {!! \Spectra\Support\DashboardAssets::viewerJs($dashboard, $trackable) !!}
 </body>
 </html>
