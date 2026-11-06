@@ -33,7 +33,9 @@ Then group the failures saved before the error fingerprint column existed:
 php artisan spectra:group-errors
 ```
 
-A published `config/spectra.php` doesn't need to be published again. The new keys (`alerts`, `annotations`, `dashboards`, `storage.redaction`, `storage.sampling`, `tracking.tool_spans`, `dashboard.maintenance`, `dashboard.playground`, `dashboard.read_from_rollups`, `dashboard.exact_row_limit`) default to 3.x behaviour, and their `SPECTRA_*` environment variables work under the published config. Publish it again only to set the new options in the file.
+A published `config/spectra.php` doesn't need to be published again. The new keys (`alerts`, `annotations`, `dashboards`, `storage.redaction`, `storage.sampling`, `tracking.tool_spans`, `dashboard.maintenance`, `dashboard.playground`) default to 3.x behaviour, and their `SPECTRA_*` environment variables work under the published config. Publish it again only to set the new options in the file.
+
+Two other new keys apply as soon as you upgrade, even under a published config: `dashboard.read_from_rollups` is on, so [the screens read the daily stats](#v4-rollups), and `dashboard.exact_row_limit` is 50,000, so [the lists use estimates](/production#what-becomes-an-estimate) past that many calls. Their environment variables are `SPECTRA_DASHBOARD_READ_FROM_ROLLUPS` and `SPECTRA_DASHBOARD_EXACT_ROW_LIMIT`.
 
 <a name="v4-install-scripts"></a>
 ### `spectra:install` in Scripts No Longer Migrates {#v4-install-scripts}
