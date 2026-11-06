@@ -34,14 +34,13 @@ class GetUnpricedRequests
      */
     public function __invoke(DateRange $dateRange, string $layout): UnpricedRequests
     {
-        $unpriced = RequestAggregateQuery::make($dateRange)
+        $unpriced = RequestAggregateQuery::fromRollups($dateRange)
             ->forLayout($layout)
             ->successfulOnly()
             ->groupByColumns('provider', 'model')
             ->countAs()
             ->orderByDesc('count')
-            ->toQuery()
-            ->where('total_cost_in_cents', 0)
+            ->withoutCost()
             ->get()
             ->filter(fn (SpectraRequest $row) => $this->pricingLookup->isUnpriced($row->provider, $row->model));
 

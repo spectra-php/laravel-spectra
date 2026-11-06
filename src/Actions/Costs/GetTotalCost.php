@@ -17,7 +17,7 @@ class GetTotalCost
      */
     public function __invoke(DateRange $dateRange): float
     {
-        return RequestAggregateQuery::make($dateRange)
+        return RequestAggregateQuery::fromRollups($dateRange)
             ->successfulOnly()
             ->sumCost();
     }

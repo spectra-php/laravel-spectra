@@ -34,6 +34,7 @@ readonly class TracesResponse extends PaginatedResponse
         public array $available_reasoning_efforts,
         public array $available_trackable_types,
         public bool $migrated = true,
+        public bool $total_is_estimate = false,
     ) {
         parent::__construct(data: $data, current_page: $current_page, last_page: $last_page, total: $total);
     }

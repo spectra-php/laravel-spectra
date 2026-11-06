@@ -27,7 +27,8 @@ class RequestsController extends BaseApiController
         FormatRequestsList $formatRequestsList,
     ): RequestsResponse {
         $dateRange = DateRange::fromRequest($request);
-        $paginated = $getFilteredRequests($request, $dateRange);
+        $page = $getFilteredRequests($request, $dateRange);
+        $paginated = $page->paginator;
         $filters = $getAvailableFilters();
 
         return new RequestsResponse(
@@ -39,6 +40,9 @@ class RequestsController extends BaseApiController
             available_finish_reasons: $filters->finish_reasons,
             available_reasoning_efforts: $filters->reasoning_efforts,
             available_trackable_types: $filters->trackable_types,
+            total_is_estimate: $page->totalIsEstimate,
+            next_cursor: $page->nextCursor,
+            sorted_within_latest: $page->sortedWithinLatest,
         );
     }
 }

@@ -22,7 +22,7 @@ class GetTrackableCostsByDate
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {
         return CostByDate::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->forTrackable($type, $id)
                 ->successfulOnly()
                 ->byDate()

@@ -449,6 +449,8 @@ class SpectraServiceProvider extends ServiceProvider
         'tracking.capture_origin',
         'tracking.root_spans',
         // 4.0
+        'dashboard.read_from_rollups',
+        'dashboard.exact_row_limit',
         'storage.sampling',
         'storage.redaction',
         'tracking.tool_spans',

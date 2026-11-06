@@ -712,6 +712,36 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Read From Rollups
+        |--------------------------------------------------------------------------
+        |
+        | Screens without a filter that needs individual calls read the daily
+        | stats instead of scanning spectra_requests, so they stay fast on large
+        | tables. Turn it off to read the requests themselves, for example while
+        | the daily stats are out of step (see spectra:rebuild-stats).
+        |
+        | Docs: https://spectraphp.com/configuration#dashboard
+        |
+        */
+
+        'read_from_rollups' => env('SPECTRA_DASHBOARD_READ_FROM_ROLLUPS', true),
+
+        /*
+        |--------------------------------------------------------------------------
+        | Exact Row Limit
+        |--------------------------------------------------------------------------
+        |
+        | How many calls a period may hold before the lists stop reading all of
+        | them. Past it, traces and conversations list the latest ones and mark
+        | their counts and totals as estimates, and the requests list sorts only
+        | this many of the latest calls by cost, tokens or latency, and says so.
+        |
+        */
+
+        'exact_row_limit' => (int) env('SPECTRA_DASHBOARD_EXACT_ROW_LIMIT', 50000),
+
+        /*
+        |--------------------------------------------------------------------------
         | Date Format
         |--------------------------------------------------------------------------
         |

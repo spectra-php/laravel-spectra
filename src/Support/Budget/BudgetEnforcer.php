@@ -6,6 +6,7 @@ namespace Spectra\Support\Budget;
 
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Cache;
@@ -17,6 +18,7 @@ use Spectra\Events\BudgetThresholdReached;
 use Spectra\Exceptions\BudgetExceededException;
 use Spectra\Models\SpectraBudget;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Query\RollupSchema;
 
 /**
  * Checks budgets before a request (blocking when a hard limit is reached)
@@ -464,27 +466,10 @@ class BudgetEnforcer
 
     /**
      * Get the model's spend since the start of the day, week or month, in whole cents.
-     *
-     * The key is bound as a string here and below: trackable_id is a string
-     * column, and MySQL compares it with a number as doubles, which can't use
-     * the index.
      */
     protected function getCostForPeriod(Model $budgetable, string $period): int
     {
-        $start = match ($period) {
-            'day' => today(),
-            'week' => now()->startOfWeek(),
-            'month' => now()->startOfMonth(),
-            default => today(),
-        };
-
-        $cost = (float) SpectraRequest::query()
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', (string) $budgetable->getKey())
-            ->where('created_at', '>=', $start)
-            ->sum('total_cost_in_cents');
-
-        return $this->toWholeCents($cost);
+        return $this->toWholeCents((float) $this->usageRows($budgetable, $this->periodStart($period))->sum('total_cost_in_cents'));
     }
 
     /**
@@ -492,12 +477,7 @@ class BudgetEnforcer
      */
     protected function getTotalCost(Model $budgetable): int
     {
-        $cost = (float) SpectraRequest::query()
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', (string) $budgetable->getKey())
-            ->sum('total_cost_in_cents');
-
-        return $this->toWholeCents($cost);
+        return $this->toWholeCents((float) $this->usageRows($budgetable)->sum('total_cost_in_cents'));
     }
 
     /**
@@ -505,19 +485,7 @@ class BudgetEnforcer
      */
     protected function getTokensForPeriod(Model $budgetable, string $period): int
     {
-        $start = match ($period) {
-            'day' => today(),
-            'week' => now()->startOfWeek(),
-            'month' => now()->startOfMonth(),
-            default => today(),
-        };
-
-        return (int) SpectraRequest::query()
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', (string) $budgetable->getKey())
-            ->where('created_at', '>=', $start)
-            ->selectRaw('SUM(prompt_tokens + completion_tokens) as total')
-            ->value('total');
+        return $this->sumTokens($this->usageRows($budgetable, $this->periodStart($period)));
     }
 
     /**
@@ -525,11 +493,7 @@ class BudgetEnforcer
      */
     protected function getTotalTokens(Model $budgetable): int
     {
-        return (int) SpectraRequest::query()
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', (string) $budgetable->getKey())
-            ->selectRaw('SUM(prompt_tokens + completion_tokens) as total')
-            ->value('total');
+        return $this->sumTokens($this->usageRows($budgetable));
     }
 
     /**
@@ -537,18 +501,63 @@ class BudgetEnforcer
      */
     protected function getRequestsForPeriod(Model $budgetable, string $period): int
     {
-        $start = match ($period) {
-            'day' => today(),
+        $rows = $this->usageRows($budgetable, $this->periodStart($period));
+
+        return $this->usesDailyStats() ? (int) $rows->sum('request_count') : $rows->count();
+    }
+
+    /**
+     * Add up the tokens of the usage rows.
+     *
+     * @param  Builder<SpectraRequest>  $rows
+     */
+    protected function sumTokens(Builder $rows): int
+    {
+        return (int) $rows
+            ->selectRaw($this->usesDailyStats() ? 'SUM(total_tokens) as total' : 'SUM(prompt_tokens + completion_tokens) as total')
+            ->value('total');
+    }
+
+    /**
+     * Get the rows that hold the model's usage, since a moment when given: its
+     * daily stats, which every budget period starts on a day of, or else its
+     * requests. Every saved call passes through here, so a heavy user's budget
+     * must not cost more than a light one's.
+     *
+     * The key is bound as a string: trackable_id is a string column, and MySQL
+     * compares it with a number as doubles, which can't use the index.
+     *
+     * @return Builder<SpectraRequest>
+     */
+    protected function usageRows(Model $budgetable, ?CarbonInterface $since = null): Builder
+    {
+        $onDailyStats = $this->usesDailyStats();
+
+        return SpectraRequest::query()
+            ->when($onDailyStats, fn (Builder $query) => $query->from('spectra_daily_stats'))
+            ->where('trackable_type', $budgetable->getMorphClass())
+            ->where('trackable_id', (string) $budgetable->getKey())
+            ->when($since, fn (Builder $query, CarbonInterface $start) => $query->where($onDailyStats ? 'date' : 'created_at', '>=', $start));
+    }
+
+    /**
+     * Determine if usage is read from the daily stats.
+     */
+    protected function usesDailyStats(): bool
+    {
+        return app(RollupSchema::class)->isReadable();
+    }
+
+    /**
+     * Get when the current day, week or month started.
+     */
+    protected function periodStart(string $period): CarbonInterface
+    {
+        return match ($period) {
             'week' => now()->startOfWeek(),
             'month' => now()->startOfMonth(),
             default => today(),
         };
-
-        return SpectraRequest::query()
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', (string) $budgetable->getKey())
-            ->where('created_at', '>=', $start)
-            ->count();
     }
 
     /**

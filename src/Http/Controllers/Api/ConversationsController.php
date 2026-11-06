@@ -37,7 +37,8 @@ class ConversationsController extends BaseApiController
         }
 
         $dateRange = DateRange::fromRequest($request);
-        $paginated = $getFilteredConversations($request, $dateRange);
+        $page = $getFilteredConversations($request, $dateRange);
+        $paginated = $page->paginator;
 
         return new ConversationsResponse(
             data: $formatConversationsList($paginated),
@@ -49,6 +50,7 @@ class ConversationsController extends BaseApiController
             available_finish_reasons: $filters->finish_reasons,
             available_reasoning_efforts: $filters->reasoning_efforts,
             available_trackable_types: $filters->trackable_types,
+            total_is_estimate: $page->totalIsEstimate,
         );
     }
 }

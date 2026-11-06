@@ -45,4 +45,26 @@ class Percentiles
 
         return $result;
     }
+
+    /**
+     * Get the given percentiles of values already read, by the same rank.
+     *
+     * @param  array<int, int|float|string>  $values
+     * @param  array<int, int>  $percentiles
+     * @return array<string, int|null>
+     */
+    public function ofValues(array $values, array $percentiles = [50, 95, 99]): array
+    {
+        sort($values, SORT_NUMERIC);
+        $count = count($values);
+        $result = [];
+
+        foreach ($percentiles as $percentile) {
+            $result["p{$percentile}"] = $count === 0
+                ? null
+                : (int) round((float) $values[max(0, (int) ceil($percentile / 100 * $count) - 1)]);
+        }
+
+        return $result;
+    }
 }

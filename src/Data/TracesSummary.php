@@ -20,5 +20,6 @@ readonly class TracesSummary extends DataTransferObject
         public float $avg_cost_in_cents,
         public float $avg_request_count,
         public int $avg_duration_ms,
+        public bool $estimated = false,
     ) {}
 }

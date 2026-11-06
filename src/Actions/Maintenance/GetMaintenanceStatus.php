@@ -11,6 +11,7 @@ use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraSpan;
 use Spectra\Support\Maintenance\MaintenanceAccess;
 use Spectra\Support\Maintenance\MaintenanceHistory;
+use Spectra\Support\Maintenance\TableSize;
 use Spectra\Support\Tracking\RecordingSwitch;
 
 /**
@@ -25,6 +26,7 @@ class GetMaintenanceStatus
      */
     public function __construct(
         private readonly PreviewPrune $previewPrune,
+        private readonly TableSize $tableSize,
     ) {}
 
     /**
@@ -39,9 +41,9 @@ class GetMaintenanceStatus
             can_manage: MaintenanceAccess::allowed(),
             recording_paused: RecordingSwitch::isPaused(fresh: true),
             totals: [
-                'requests' => SpectraRequest::query()->count(),
-                'spans' => PruneEntries::spansTableExists() ? SpectraSpan::query()->count() : 0,
-                'daily_stats' => SpectraDailyStat::query()->count(),
+                'requests' => $this->tableSize->rows(new SpectraRequest),
+                'spans' => PruneEntries::spansTableExists() ? $this->tableSize->rows(new SpectraSpan) : 0,
+                'daily_stats' => $this->tableSize->rows(new SpectraDailyStat),
                 'oldest_request_at' => $oldest === null ? null : Date::parse($oldest)->toIso8601String(),
             ],
             preview: ($this->previewPrune)($hours, $statsDays),

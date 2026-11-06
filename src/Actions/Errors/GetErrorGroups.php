@@ -32,20 +32,30 @@ class GetErrorGroups
     /** Models listed per group. */
     private const MODELS = 3;
 
+    /** A group's latest failures its models are counted from. */
+    private const MODEL_SAMPLE = 1000;
+
     /**
      * Get the failure totals and the groups.
      */
     public function __invoke(DateRange $dateRange): ErrorsResponse
     {
-        $totals = RequestAggregateQuery::make($dateRange)->countAs('request_count')->failedCount()->first();
+        $totalsQuery = RequestAggregateQuery::fromRollups($dateRange);
+        $isOnRollups = $totalsQuery->isOnRollups();
+        $totals = $totalsQuery->countAs('request_count')->failedCount()->first();
         $requestCount = $totals->request_count ?? 0;
         $failedCount = $totals->failed_count ?? 0;
         $isMigrated = $this->hasFingerprintColumn();
 
-        $groups = $isMigrated ? $this->getGroups($dateRange, $failedCount) : collect();
-        $ungrouped = $isMigrated
-            ? $this->queryFailures($dateRange)->whereNull('error_fingerprint')->count()
-            : $failedCount;
+        $rows = $isMigrated ? $this->getGroupRows($dateRange) : collect();
+        $groups = $isMigrated ? $this->getGroups($rows, $dateRange, $failedCount) : collect();
+        // The stats know every failure and the groups the fingerprinted ones, so
+        // the rest doesn't need a walk through every call of the period.
+        $ungrouped = match (true) {
+            ! $isMigrated => $failedCount,
+            $isOnRollups => max(0, $failedCount - (int) $rows->sum('failure_count')),
+            default => $this->queryFailures($dateRange)->whereNull('error_fingerprint')->count(),
+        };
 
         return new ErrorsResponse(
             request_count: $requestCount,
@@ -58,21 +68,35 @@ class GetErrorGroups
     }
 
     /**
-     * Get the groups with the most failures in the period.
+     * Count the failures of every group, most first.
      *
-     * @return Collection<int, ErrorGroup>
+     * A fingerprint is only saved on a failed call, so the index on it answers
+     * this without reading the calls themselves.
+     *
+     * @return Collection<int, stdClass>
      */
-    private function getGroups(DateRange $dateRange, int $failedCount): Collection
+    private function getGroupRows(DateRange $dateRange): Collection
     {
-        $rows = $this->queryFailures($dateRange)
+        return RequestAggregateQuery::make($dateRange)
+            ->toQuery()
             ->whereNotNull('error_fingerprint')
             ->toBase()
             ->select('error_fingerprint')
             ->selectRaw('COUNT(*) as failure_count, MIN(created_at) as first_seen_at, MAX(created_at) as last_seen_at')
             ->groupBy('error_fingerprint')
             ->orderByDesc('failure_count')
-            ->limit(self::LIMIT)
             ->get();
+    }
+
+    /**
+     * Get the groups with the most failures in the period.
+     *
+     * @param  Collection<int, stdClass>  $rows
+     * @return Collection<int, ErrorGroup>
+     */
+    private function getGroups(Collection $rows, DateRange $dateRange, int $failedCount): Collection
+    {
+        $rows = $rows->take(self::LIMIT);
 
         if ($rows->isEmpty()) {
             return collect();
@@ -119,24 +143,22 @@ class GetErrorGroups
      */
     private function getLatestFailures(DateRange $dateRange, array $fingerprints): array
     {
-        $table = (new SpectraRequest)->getTable();
+        $latest = [];
 
-        $latestTimes = $this->queryFailures($dateRange)
-            ->whereIn('error_fingerprint', $fingerprints)
-            ->toBase()
-            ->select('error_fingerprint')
-            ->selectRaw('MAX(created_at) as latest_at')
-            ->groupBy('error_fingerprint');
+        foreach ($fingerprints as $fingerprint) {
+            // One index lookup per group.
+            $failure = RequestAggregateQuery::make($dateRange)
+                ->toQuery()
+                ->where('error_fingerprint', $fingerprint)->latest()
+                ->orderByDesc('id')
+                ->first(['id', 'provider', 'status_code', 'error_type', 'error_message', 'error_fingerprint']);
 
-        return $this->queryFailures($dateRange)
-            ->joinSub($latestTimes, 'latest', fn ($join) => $join
-                ->on("{$table}.error_fingerprint", '=', 'latest.error_fingerprint')
-                ->on("{$table}.created_at", '=', 'latest.latest_at'))
-            ->orderByDesc("{$table}.id")
-            ->get(["{$table}.id", "{$table}.provider", "{$table}.status_code", "{$table}.error_type", "{$table}.error_message", "{$table}.error_fingerprint"])
-            ->unique('error_fingerprint')
-            ->keyBy(fn (SpectraRequest $request): string => (string) $request->error_fingerprint)
-            ->all();
+            if ($failure !== null) {
+                $latest[$fingerprint] = $failure;
+            }
+        }
+
+        return $latest;
     }
 
     /**
@@ -147,20 +169,27 @@ class GetErrorGroups
      */
     private function getModels(DateRange $dateRange, array $fingerprints): array
     {
-        return $this->queryFailures($dateRange)
-            ->whereIn('error_fingerprint', $fingerprints)
-            ->toBase()
-            ->select('error_fingerprint', 'model')
-            ->selectRaw('COUNT(*) as failure_count')
-            ->groupBy('error_fingerprint', 'model')
-            ->orderByDesc('failure_count')
-            ->get()
-            ->groupBy('error_fingerprint')
-            ->map(fn (Collection $models) => $models->take(self::MODELS)->map(fn (stdClass $model) => [
-                'model' => (string) $model->model,
-                'count' => (int) $model->failure_count,
-            ])->values()->all())
-            ->all();
+        $models = [];
+
+        foreach ($fingerprints as $fingerprint) {
+            // The group's latest failures: its models rarely change, and reading
+            // all of them for every group grows with the failures of the period.
+            $models[$fingerprint] = RequestAggregateQuery::make($dateRange)
+                ->toQuery()
+                ->where('error_fingerprint', $fingerprint)
+                ->toBase()
+                ->latest('created_at')
+                ->limit(self::MODEL_SAMPLE)
+                ->pluck('model')
+                ->countBy()
+                ->sortDesc()
+                ->take(self::MODELS)
+                ->map(fn (int $count, int|string $model) => ['model' => (string) $model, 'count' => $count])
+                ->values()
+                ->all();
+        }
+
+        return $models;
     }
 
     /**
@@ -181,7 +210,8 @@ class GetErrorGroups
 
         $days = collect(range(0, (int) $start->diffInDays($end)))->map(fn (int $offset) => $start->copy()->addDays($offset)->toDateString());
 
-        $counts = $this->queryFailures(new DateRange($start, $end->copy()->endOfDay()))
+        $counts = RequestAggregateQuery::make(new DateRange($start, $end->copy()->endOfDay()))
+            ->toQuery()
             ->whereIn('error_fingerprint', $fingerprints)
             ->toBase()
             ->select('error_fingerprint')

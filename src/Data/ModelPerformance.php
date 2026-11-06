@@ -24,5 +24,6 @@ readonly class ModelPerformance extends DataTransferObject
         public ?int $latency_p95,
         public ?int $latency_p99,
         public ?int $ttft_p50,
+        public bool $sampled = false,
     ) {}
 }

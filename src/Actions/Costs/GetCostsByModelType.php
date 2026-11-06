@@ -23,13 +23,14 @@ class GetCostsByModelType
     public function __invoke(DateRange $dateRange): Collection
     {
         return CostByModelType::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->groupByColumns('model_type')
                 ->countAs('requests')
                 ->tokenSum()
                 ->usageSums()
                 ->successfulCost()
                 ->orderByDesc('cost')
+                ->orderBy('model_type')
                 ->get()
         );
     }

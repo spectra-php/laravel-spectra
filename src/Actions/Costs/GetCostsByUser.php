@@ -34,13 +34,15 @@ class GetCostsByUser
     {
         // Group by type + id: ids alone collide across polymorphic types
         // (User 1 and Admin 1 must not be merged into one row).
-        $items = RequestAggregateQuery::make($dateRange)
+        $items = RequestAggregateQuery::fromRollups($dateRange)
             ->withTrackable()
             ->forTrackableTypes(($this->getUserTrackableTypes)())
             ->groupByColumns('trackable_type', 'trackable_id')
             ->countAs('requests')
             ->successfulCost()
             ->orderByDesc('cost')
+            ->orderBy('trackable_type')
+            ->orderBy('trackable_id')
             ->limit($limit)
             ->get();
 

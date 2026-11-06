@@ -23,11 +23,12 @@ class GetCostsByProvider
     public function __invoke(DateRange $dateRange): Collection
     {
         return CostByProvider::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->successfulOnly()
                 ->groupByColumns('provider')
                 ->successfulCost()
                 ->orderByDesc('cost')
+                ->orderBy('provider')
                 ->get()
         );
     }

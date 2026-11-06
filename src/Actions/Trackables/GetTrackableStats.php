@@ -19,7 +19,7 @@ class GetTrackableStats
      */
     public function __invoke(string $type, string $id, DateRange $dateRange): TrackableStatsDto
     {
-        $stats = RequestAggregateQuery::make($dateRange)
+        $stats = RequestAggregateQuery::fromRollups($dateRange)
             ->forTrackable($type, $id)
             ->countAs('total_requests')
             ->tokenSum()

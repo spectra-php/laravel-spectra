@@ -23,12 +23,14 @@ class GetTopModels
     public function __invoke(DateRange $dateRange, string $layout, int $limit = 5): Collection
     {
         return TopModel::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->forLayout($layout)
                 ->groupByColumns('model', 'provider')
                 ->countAs()
                 ->successfulCost()
                 ->orderByDesc('count')
+                ->orderBy('model')
+                ->orderBy('provider')
                 ->limit($limit)
                 ->get()
         );

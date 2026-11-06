@@ -37,7 +37,8 @@ class TracesController extends BaseApiController
         }
 
         $dateRange = DateRange::fromRequest($request);
-        $paginated = $getFilteredTraces($request, $dateRange);
+        $page = $getFilteredTraces($request, $dateRange);
+        $paginated = $page->paginator;
 
         return new TracesResponse(
             data: $formatTracesList($paginated),
@@ -49,6 +50,7 @@ class TracesController extends BaseApiController
             available_finish_reasons: $filters->finish_reasons,
             available_reasoning_efforts: $filters->reasoning_efforts,
             available_trackable_types: $filters->trackable_types,
+            total_is_estimate: $page->totalIsEstimate,
         );
     }
 }

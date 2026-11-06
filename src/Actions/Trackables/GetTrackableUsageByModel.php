@@ -23,13 +23,14 @@ class GetTrackableUsageByModel
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {
         return UsageByModel::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->forTrackable($type, $id)
                 ->groupByColumns('provider', 'model')
                 ->countAs('requests')
                 ->tokenSum()
                 ->successfulCost()
                 ->orderByDesc('requests')
+                ->orderBy('model')
                 ->get()
         );
     }

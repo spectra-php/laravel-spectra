@@ -38,7 +38,7 @@ class GetCostOverview
      */
     protected function getCostSince(CarbonInterface $from, ?CarbonInterface $to = null): float
     {
-        return RequestAggregateQuery::make(new DateRange($from, $to))
+        return RequestAggregateQuery::fromRollups(new DateRange($from, $to))
             ->successfulOnly()
             ->sumCost();
     }

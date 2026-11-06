@@ -14,10 +14,14 @@ use Spectra\Support\Query\RequestAggregateQuery;
 /**
  * The overview's Performance card: for the most used models, their error rate
  * and latency percentiles. Averages hide the slow tail a user waits through;
- * p95 and p99 show it.
+ * p95 and p99 show it. Each model's percentiles cover its latest calls, up to
+ * a limit; `sampled` says when that was fewer than all of them.
  */
 class GetModelPerformance
 {
+    /** How many of a model's latest successful calls its percentiles read. */
+    private const SAMPLE = 2000;
+
     /**
      * Create a new get model performance action instance.
      */
@@ -32,24 +36,34 @@ class GetModelPerformance
      */
     public function __invoke(DateRange $dateRange, string $layout, int $limit = 10): Collection
     {
-        return RequestAggregateQuery::make($dateRange)
+        return RequestAggregateQuery::fromRollups($dateRange)
             ->forLayout($layout)
             ->groupByColumns('provider', 'model')
             ->countAs('request_count')
             ->failedCount()
             ->orderByDesc('request_count')
+            ->orderBy('model')
+            ->orderBy('provider')
             ->limit($limit)
             ->get()
             ->map(function (SpectraRequest $row) use ($dateRange, $layout): ModelPerformance {
-                $successful = RequestAggregateQuery::make($dateRange)
-                    ->forLayout($layout)
-                    ->successfulOnly()
-                    ->toQuery()
-                    ->where('provider', $row->provider)
-                    ->where('model', $row->model);
+                $successful = RequestAggregateQuery::make($dateRange)->forLayout($layout)->successfulOnly();
 
-                $latency = $this->percentiles->of($successful, 'latency_ms');
-                $timeToFirstToken = $this->percentiles->of($successful->clone()->where('is_streaming', true), 'time_to_first_token_ms', [50]);
+                // Only the model's latest calls: every percentile the query
+                // used to rank sorted all of them, so this scales with the
+                // sample and not the table. Below the limit it is every call.
+                $calls = $successful->toQuery()
+                    ->toBase()
+                    ->where('provider', $row->provider)
+                    ->where('model', $row->model)->latest()
+                    ->limit(self::SAMPLE)
+                    ->get(['latency_ms', 'time_to_first_token_ms', 'is_streaming']);
+
+                $latency = $this->percentiles->ofValues($calls->pluck('latency_ms')->filter(fn (mixed $value) => $value !== null)->values()->all());
+                $timeToFirstToken = $this->percentiles->ofValues(
+                    $calls->filter(fn (object $call) => (bool) $call->is_streaming && $call->time_to_first_token_ms !== null)->pluck('time_to_first_token_ms')->values()->all(),
+                    [50],
+                );
 
                 return new ModelPerformance(
                     provider: $row->provider,
@@ -61,6 +75,7 @@ class GetModelPerformance
                     latency_p95: $latency['p95'],
                     latency_p99: $latency['p99'],
                     ttft_p50: $timeToFirstToken['p50'],
+                    sampled: $calls->count() === self::SAMPLE,
                 );
             })
             ->values();

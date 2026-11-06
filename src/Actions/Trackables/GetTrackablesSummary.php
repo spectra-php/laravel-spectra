@@ -20,7 +20,7 @@ class GetTrackablesSummary
      */
     public function __invoke(Request $request, DateRange $dateRange): TrackablesSummaryResponse
     {
-        $summary = RequestAggregateQuery::make($dateRange)
+        $summary = RequestAggregateQuery::forTrackableFilters($dateRange, $request)
             ->withTrackable()
             ->filteredBy($request)
             ->countAs('total_requests')
@@ -31,7 +31,7 @@ class GetTrackablesSummary
             ->successfulLatency()
             ->first();
 
-        $totalTrackables = RequestAggregateQuery::make($dateRange)
+        $totalTrackables = RequestAggregateQuery::forTrackableFilters($dateRange, $request)
             ->withTrackable()
             ->filteredBy($request)
             ->countDistinct('trackable_type', 'trackable_id');

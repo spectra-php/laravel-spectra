@@ -70,6 +70,9 @@ class TestCase extends Orchestra
         // start a session or encrypt a cookie need a key of their own.
         config()->set('app.key', 'base64:'.Str::toBase64(Str::repeat('s', 32)));
         config()->set('cache.default', 'array');
+        // Rows from a factory are not in the daily stats. Tests of the screens
+        // on the daily stats turn this on (RollupParityTest).
+        config()->set('spectra.dashboard.read_from_rollups', false);
 
         $this->configureDatabase($app);
 

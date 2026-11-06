@@ -20,12 +20,23 @@ class GetAvailableTrackableTypes
      */
     public function __invoke(): array
     {
-        return SpectraRequest::query()
-            ->whereNotNull('trackable_type')
-            ->distinct()
-            ->orderBy('trackable_type')
-            ->pluck('trackable_type')
-            ->map(fn (mixed $type) => (string) $type)
-            ->all();
+        $types = [];
+        $last = null;
+
+        // One index lookup per type: a type is the next value after the last
+        // one. DISTINCT walks every row of the index on PostgreSQL.
+        do {
+            $next = SpectraRequest::query()
+                ->whereNotNull('trackable_type')
+                ->when($last !== null, fn ($query) => $query->where('trackable_type', '>', $last))
+                ->orderBy('trackable_type')
+                ->value('trackable_type');
+
+            if ($next !== null) {
+                $types[] = $last = (string) $next;
+            }
+        } while ($next !== null);
+
+        return $types;
     }
 }

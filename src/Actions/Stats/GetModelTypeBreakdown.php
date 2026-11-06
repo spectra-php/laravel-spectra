@@ -23,12 +23,13 @@ class GetModelTypeBreakdown
     public function __invoke(DateRange $dateRange, string $layout): Collection
     {
         return ModelTypeStat::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->forLayout($layout)
                 ->groupByColumns('model_type')
                 ->countAs()
                 ->successfulCost()
                 ->successfulLatency()
+                ->orderBy('model_type')
                 ->get()
         );
     }

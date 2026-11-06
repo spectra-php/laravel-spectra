@@ -28,6 +28,9 @@ readonly class RequestsResponse extends PaginatedResponse
         public array $available_finish_reasons,
         public array $available_reasoning_efforts,
         public array $available_trackable_types,
+        public bool $total_is_estimate = false,
+        public ?string $next_cursor = null,
+        public ?int $sorted_within_latest = null,
     ) {
         parent::__construct(data: $data, current_page: $current_page, last_page: $last_page, total: $total);
     }

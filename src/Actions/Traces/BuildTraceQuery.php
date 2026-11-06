@@ -52,7 +52,7 @@ class BuildTraceQuery
      *
      * @return Builder<SpectraRequest>
      */
-    private function matchingTraceIds(Request $request, DateRange $dateRange): Builder
+    public function matchingTraceIds(Request $request, DateRange $dateRange): Builder
     {
         $calls = SpectraRequest::query()->select('trace_id')->whereNotNull('trace_id');
 
