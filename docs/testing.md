@@ -112,7 +112,7 @@ Traces queued with `Spectra::queueForReview()` are remembered too (see [Annotati
 $fake->assertQueuedForReview('support-review');
 ```
 
-[Dashboards](/dashboards#testing) created with `Spectra::dashboard()` are kept in memory, so your tests need no migrations:
+[Shared dashboards](/dashboards#testing) created with `Spectra::dashboard()` are kept in memory, so your tests need no migrations:
 
 ```php
 $fake->assertDashboardCreated('Usage');

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { VueDraggable } from 'vue-draggable-plus';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
 import Breadcrumb from '@/components/Breadcrumb.vue';
@@ -9,10 +10,17 @@ import type { DashboardSectionName, DashboardSummary, DashboardsResponse, Dashbo
 
 // Design a shared dashboard: who it's for and which widgets it shows, in order.
 // Opens empty, from another dashboard (`from`), or for a trackable (`type`, `id`).
+// The widgets sit in the same grid as DashboardView, so the layout here is the
+// layout a viewer gets. They are placeholders: real numbers need a saved dashboard.
 type WidgetType = DashboardWidgetData['type'];
 
+const sizes: { value: DashboardWidgetSize; label: string }[] = [
+    { value: 'full', label: 'Full' },
+    { value: 'half', label: 'Half' },
+];
+
 const catalog: { type: WidgetType; label: string; description: string; costs?: boolean }[] = [
-    { type: 'stats', label: 'Headline numbers', description: 'Requests, tokens and average latency, and spend when costs are shown.' },
+    { type: 'stats', label: 'Headline numbers', description: 'Requests, tokens and average latency, and spend when the Costs page is on.' },
     { type: 'requests_trend', label: 'Requests over time', description: 'Requests per day.' },
     { type: 'cost_trend', label: 'Cost over time', description: 'Spend per day.', costs: true },
     { type: 'usage_by_model', label: 'Top models', description: 'The five most used models. This shows the viewer the models you use.' },
@@ -75,6 +83,8 @@ const move = (index: number, by: number) => {
     const [widget] = widgets.value.splice(index, 1);
     widgets.value.splice(index + by, 0, widget);
 };
+
+const newWidget = (widget: { type: WidgetType }) => ({ type: widget.type, size: 'full' as DashboardWidgetSize });
 
 const save = async () => {
     saving.value = true;
@@ -141,38 +151,88 @@ onMounted(async () => {
             <div class="space-y-4 lg:col-span-2">
                 <div class="card">
                     <div class="card-header"><h3>Widgets</h3></div>
-                    <ul class="divide-y divide-gray-100 dark:divide-gray-800">
-                        <li v-for="(widget, index) in widgets" :key="widget.type" class="flex flex-wrap items-center gap-3 px-5 py-3">
-                            <div class="min-w-0 flex-1 basis-56">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ details(widget.type)?.label }}</div>
-                                <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                    {{ hidesCostWidget(widget.type) ? 'Hidden from viewers until you turn on the Costs page.' : details(widget.type)?.description }}
+                    <div class="relative p-5">
+                        <VueDraggable
+                            v-model="widgets"
+                            class="grid min-h-28 grid-cols-1 gap-4 lg:grid-cols-2"
+                            group="widgets"
+                            handle=".widget-handle"
+                            ghost-class="opacity-40"
+                            :animation="150"
+                            :force-fallback="true"
+                            :fallback-tolerance="3"
+                            :delay="150"
+                            :delay-on-touch-only="true"
+                        >
+                            <div
+                                v-for="(widget, index) in widgets"
+                                :key="widget.type"
+                                class="flex min-w-0 flex-col justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+                                :class="widget.size === 'full' || widget.type === 'stats' ? 'lg:col-span-2' : ''"
+                            >
+                                <div class="widget-handle flex cursor-grab items-start gap-2 select-none active:cursor-grabbing">
+                                    <svg class="mt-0.5 size-4 shrink-0 text-gray-400" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                        <circle cx="6" cy="3.5" r="1.25" /><circle cx="10" cy="3.5" r="1.25" />
+                                        <circle cx="6" cy="8" r="1.25" /><circle cx="10" cy="8" r="1.25" />
+                                        <circle cx="6" cy="12.5" r="1.25" /><circle cx="10" cy="12.5" r="1.25" />
+                                    </svg>
+                                    <div class="min-w-0">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ details(widget.type)?.label }}</div>
+                                        <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                            {{ hidesCostWidget(widget.type) ? 'Hidden from viewers until you turn on the Costs page.' : details(widget.type)?.description }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <div v-if="widget.type !== 'stats'" class="inline-flex items-center rounded-md bg-gray-100 p-0.5 dark:bg-gray-800/80" role="group" :aria-label="`Width of ${details(widget.type)?.label}`">
+                                        <button
+                                            v-for="size in sizes"
+                                            :key="size.value"
+                                            type="button"
+                                            :aria-pressed="widget.size === size.value"
+                                            :class="[
+                                                'rounded px-2.5 py-1 text-xs font-semibold transition-colors',
+                                                widget.size === size.value
+                                                    ? 'bg-white text-gray-900 shadow-xs dark:bg-gray-800 dark:text-white'
+                                                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+                                            ]"
+                                            @click="widget.size = size.value"
+                                        >{{ size.label }}</button>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <button type="button" class="btn btn-ghost btn-sm" :disabled="index === 0" :aria-label="`Move ${details(widget.type)?.label} earlier`" @click="move(index, -1)">↑</button>
+                                        <button type="button" class="btn btn-ghost btn-sm" :disabled="index === widgets.length - 1" :aria-label="`Move ${details(widget.type)?.label} later`" @click="move(index, 1)">↓</button>
+                                        <button type="button" class="btn btn-ghost btn-sm" @click="widgets.splice(index, 1)">Remove</button>
+                                    </div>
                                 </div>
                             </div>
-                            <select v-if="widget.type !== 'stats'" v-model="widget.size" class="form-select form-select-sm w-auto" :aria-label="`Width of ${details(widget.type)?.label}`">
-                                <option value="full">Full width</option>
-                                <option value="half">Half width</option>
-                            </select>
-                            <div class="flex items-center gap-1">
-                                <button type="button" class="btn btn-ghost btn-sm" :disabled="index === 0" :aria-label="`Move ${details(widget.type)?.label} up`" @click="move(index, -1)">↑</button>
-                                <button type="button" class="btn btn-ghost btn-sm" :disabled="index === widgets.length - 1" :aria-label="`Move ${details(widget.type)?.label} down`" @click="move(index, 1)">↓</button>
-                                <button type="button" class="btn btn-ghost btn-sm" @click="widgets.splice(index, 1)">Remove</button>
-                            </div>
-                        </li>
-                        <li v-if="!widgets.length" class="px-5 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Add at least one widget.</li>
-                    </ul>
+                        </VueDraggable>
+                        <p v-if="!widgets.length" class="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">Add at least one widget.</p>
+                    </div>
                     <div v-if="available.length" class="border-t border-gray-100 px-5 py-4 dark:border-gray-800">
                         <div class="stat-label mb-2">Add a widget</div>
-                        <div class="flex flex-wrap gap-2">
+                        <VueDraggable
+                            :model-value="available"
+                            class="flex flex-wrap gap-2"
+                            :group="{ name: 'widgets', pull: 'clone', put: false }"
+                            :sort="false"
+                            :clone="newWidget"
+                            ghost-class="opacity-40"
+                            :animation="150"
+                            :force-fallback="true"
+                            :fallback-tolerance="3"
+                            :delay="150"
+                            :delay-on-touch-only="true"
+                        >
                             <button
                                 v-for="widget in available"
                                 :key="widget.type"
                                 type="button"
-                                class="btn btn-secondary btn-sm"
+                                class="btn btn-secondary btn-sm cursor-grab active:cursor-grabbing"
                                 v-tooltip="widget.description"
-                                @click="widgets.push({ type: widget.type, size: 'full' })"
+                                @click="widgets.push(newWidget(widget))"
                             >{{ widget.label }}</button>
-                        </div>
+                        </VueDraggable>
                     </div>
                 </div>
             </div>

@@ -45,10 +45,14 @@ class UpdateDashboardController extends BaseApiController
             'is_active' => ['required', 'boolean'],
         ]);
 
-        if ($trackables->classFor($input['trackable_type']) === null) {
+        $class = $trackables->classFor($input['trackable_type']);
+
+        if ($class === null) {
             throw ValidationException::withMessages(['trackable_type' => 'This trackable type is not an Eloquent model.']);
         }
 
+        // Viewers are matched on the morph class, which isn't the class name on an app with a morph map.
+        $input['trackable_type'] = (new $class)->getMorphClass();
         if ($trackables->find($input['trackable_type'], $input['trackable_id']) === null) {
             throw ValidationException::withMessages(['trackable_id' => 'No trackable of this type has this id.']);
         }

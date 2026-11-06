@@ -3,7 +3,7 @@
 <a name="from-3x-to-4"></a>
 ## From 3.x to 4.0 {#from-3x-to-4}
 
-Spectra 4.0 adds [scores](/scores), [alerts](/alerts), [redaction](/configuration#redaction), payload sampling, [prompt versions](/prompts), [tool spans](/tools), error grouping, [review queues](/annotations), [evaluations](/evaluations), a [Playground](/playground), [dashboards](/dashboards) and a [Maintenance screen](/dashboard#maintenance). Most apps only need to run the installer once. Read the rest of this section if `spectra:install` runs in a deploy script, if others use your dashboard in production, if your code reads `RequestContext::$id`, or if you wrote a pricing class or bill with the scraped prices file.
+Spectra 4.0 adds [scores](/scores), [alerts](/alerts), [redaction](/configuration#redaction), payload sampling, [prompt versions](/prompts), [tool spans](/tools), error grouping, [review queues](/annotations), [evaluations](/evaluations), a [Playground](/playground), [shared dashboards](/dashboards) and a [Maintenance screen](/dashboard#maintenance). Most apps only need to run the installer once. Read the rest of this section if `spectra:install` runs in a deploy script, if others use your dashboard in production, if your code reads `RequestContext::$id`, or if you wrote a pricing class or bill with the scraped prices file.
 
 The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Laravel 12 or 13.
 

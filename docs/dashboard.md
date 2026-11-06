@@ -188,7 +188,7 @@ Press **New prompt** or pick a recent call on the Playground screen, or use **Op
 <a name="dashboards"></a>
 ## Dashboards
 
-[Dashboards](/dashboards) are read-only pages you design here and share with people who can't open Spectra's own dashboard, such as a customer who wants to see their own usage. You choose the widgets and who can see it, and get a link to give them. They're off until you set `SPECTRA_DASHBOARDS_ENABLED=true`, and designing one needs the `manageSpectra` gate.
+This screen is where you design [shared dashboards](/dashboards): read-only pages you share with people who can't open Spectra's own dashboard, such as a customer who wants to see their own usage. You choose the widgets and who can see it, and get a link to give them. They're off until you set `SPECTRA_DASHBOARDS_ENABLED=true`, and designing one needs the `manageSpectra` gate.
 
 <a name="costs"></a>
 ## Costs

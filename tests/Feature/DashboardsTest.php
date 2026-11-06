@@ -551,6 +551,27 @@ describe('designing them', function () {
             ->assertJsonValidationErrors('trackable_type');
     });
 
+    it('saves a class name as the morph alias, so its trackable can open the page', function () {
+        Relation::morphMap(['member' => User::class]);
+        $user = dashboardViewer();
+
+        $id = $this->postJson('/spectra/api/dashboards', dashboardInput(['trackable_type' => User::class, 'trackable_id' => (string) $user->id]))
+            ->assertCreated()
+            ->json('id');
+
+        expect(SpectraDashboard::query()->findOrFail($id)->trackable_type)->toBe('member');
+        $this->actingAs($user)->get("/spectra/dashboards/{$id}")->assertOk();
+    })->after(fn () => Relation::$morphMap = []);
+
+    it('repairs a class name saved earlier when the dashboard is changed', function () {
+        Relation::morphMap(['member' => User::class]);
+        $dashboard = dashboardFor(dashboardViewer(), ['trackable_type' => User::class]);
+
+        $this->putJson("/spectra/api/dashboards/{$dashboard->id}", dashboardInput(['trackable_type' => User::class]))->assertOk();
+
+        expect($dashboard->refresh()->trackable_type)->toBe('member');
+    })->after(fn () => Relation::$morphMap = []);
+
     it('rejects an id with no trackable behind it', function () {
         $this->postJson('/spectra/api/dashboards', dashboardInput(['trackable_id' => '99999']))
             ->assertUnprocessable()

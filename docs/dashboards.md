@@ -1,24 +1,24 @@
-# Dashboards
+# Shared Dashboards
 
-A customer asks how much AI usage their account has had this month. Spectra knows, but its dashboard shows everyone's data, so you can't give them access to it. A dashboard solves that: you design a small read-only page, choose whose data it shows, and give that person the link. They log in to your app as usual and see only their own numbers.
+A customer asks how much AI usage their account has had this month. Spectra knows, but its dashboard shows everyone's data, so you can't give them access to it. A shared dashboard solves that: you design a small read-only page, choose whose data it shows, and give that person the link. They log in to your app as usual and see only their own numbers.
 
 <a name="what-is-a-dashboard"></a>
-## What Is a Dashboard?
+## What Is a Shared Dashboard? {#what-is-a-dashboard}
 
-A dashboard is a saved page with two parts: the **widgets** it shows, such as total requests and the latest calls, and the **trackable** it shows them for. A trackable is any model you attribute AI calls to, such as a `User` or a `Team`.
+A shared dashboard is a saved page with two parts: the **widgets** it shows, such as total requests and the latest calls, and the **trackable** it shows them for. A trackable is any model you attribute AI calls to, such as a `User` or a `Team`.
 
-A dashboard is always for one trackable. For example, you might:
+A shared dashboard is always for one trackable. For example, you might:
 
 - Make one page for your biggest customer, showing their spend and budget.
 - Create one for each customer when they sign up, and link to it from your app's account settings.
 - Give a team lead a page for their `Team`, without giving them Spectra's own dashboard.
 
-This is separate from [Spectra's own dashboard](/dashboard), the admin screens at `/spectra`. Viewers of a dashboard can't open those, and don't need to.
+This is separate from [Spectra's own dashboard](/dashboard), the admin screens at `/spectra`. Viewers of a shared dashboard can't open those, and don't need to. Inside Spectra, you'll find shared dashboards under **Dashboards** in the sidebar.
 
 <a name="turning-them-on"></a>
 ## Turning Them On
 
-Dashboards give people who can't open Spectra's own dashboard access to data, so they are off until you turn them on. Add this to your `.env`:
+Shared dashboards give people who can't open Spectra's own dashboard access to data, so they are off until you turn them on. Add this to your `.env`:
 
 ```ini
 SPECTRA_DASHBOARDS_ENABLED=true
@@ -30,16 +30,16 @@ Then run the installer, which publishes and runs [the migration](/migrations#das
 php artisan spectra:install
 ```
 
-Designing a dashboard needs the `manageSpectra` gate, which allows only the `local` environment until you define it:
+Designing a shared dashboard needs the `manageSpectra` gate, which allows only the `local` environment until you define it:
 
 ```php
 Gate::define('manageSpectra', fn ($user) => $user->isAdmin());
 ```
 
 <a name="creating-a-dashboard"></a>
-## Creating a Dashboard
+## Creating a Shared Dashboard {#creating-a-dashboard}
 
-Open **Dashboards** in Spectra's sidebar and press **New dashboard**. Name it, choose who can see it, and add the widgets you want, in the order you want them. **Share a dashboard** on a trackable's page starts one for that trackable. **Preview** shows exactly what the viewer gets, and **Copy link** gives you the URL to send them.
+Open **Dashboards** in Spectra's sidebar and press **New dashboard**. Name it, choose who can see it, and drag the widgets you want into place, or click one to add it at the end. The widgets sit in the same layout your viewers get, and each can take the full width or half of it. **Share a dashboard** on a trackable's page starts one for that trackable. **Preview** shows exactly what the viewer gets, and **Copy link** gives you the URL to send them.
 
 <a name="from-code"></a>
 ### From Code
@@ -72,25 +72,25 @@ Spectra::dashboard()->create(
 );
 ```
 
-Without `widgets`, a dashboard shows the headline numbers, requests over time and recent requests. The name and the trackable identify a dashboard, so creating the same one again changes it and keeps its link. That makes it safe to call from a seeder or a deploy script. A wrong argument throws an `InvalidArgumentException`.
+Without `widgets`, a shared dashboard shows the headline numbers, requests over time and recent requests. The name and the trackable identify a shared dashboard, so creating the same one again changes it and keeps its link. That makes it safe to call from a seeder or a deploy script. A wrong argument throws an `InvalidArgumentException`.
 
-To find and delete dashboards:
+To find and delete shared dashboards:
 
 ```php
-// Every dashboard.
+// Every shared dashboard.
 Spectra::dashboard()->list();
 
 // The ones for this user.
 Spectra::dashboard()->list($user);
 
-// Every dashboard for a type.
+// Every shared dashboard for a type.
 Spectra::dashboard()->list(User::class);
 
 // By the model or its id. Returns whether one was deleted.
 Spectra::dashboard()->delete($dashboard);
 ```
 
-`list()` includes paused dashboards, so check `is_active` before you link to one. Deleting a dashboard ends its link. The calls it showed stay stored.
+`list()` includes paused shared dashboards, so check `is_active` before you link to one. Deleting a shared dashboard ends its link. The calls it showed stay stored.
 
 <a name="widgets"></a>
 ## Widgets
@@ -112,7 +112,7 @@ They're the same widgets as the Overview in Spectra's own dashboard, narrowed to
 <a name="what-viewers-see"></a>
 ## What Viewers See
 
-A dashboard shows totals and a short list of calls, and nothing a viewer could use to read your prompts:
+A shared dashboard shows totals and a short list of calls, and nothing a viewer could use to read your prompts:
 
 - **System prompts, tools and raw request bodies are never sent**, and neither are metadata, origins or tool arguments and results, whichever widgets and pages you choose.
 - **Message text is hidden unless you turn it on.** With **Show message text**, viewers can read their own messages, the replies and error messages. Without it, they see only the numbers.
@@ -123,7 +123,7 @@ A dashboard shows totals and a short list of calls, and nothing a viewer could u
 <a name="pages"></a>
 ## Pages
 
-Besides its widgets, a dashboard can link to more pages in a header, each showing only that viewer's data. They are off until you turn them on, and with none on there is no header:
+Besides its widgets, a shared dashboard can link to more pages in a header, each showing only that viewer's data. They are off until you turn them on, and with none on there is no header:
 
 | Page | Shows |
 | --- | --- |
@@ -149,15 +149,15 @@ A trace or a conversation can hold calls from more than one trackable, so a view
 These pages run on their own endpoints under `/spectra/dashboards/{id}`, and viewers never reach the API of Spectra's own dashboard.
 
 <a name="who-can-open-a-dashboard"></a>
-## Who Can Open a Dashboard
+## Who Can Open a Shared Dashboard {#who-can-open-a-dashboard}
 
 Spectra has no login of its own. Viewers log in through your app:
 
 1. They open the link. If they aren't logged in, your app's `auth` middleware sends them to your login page.
 2. After logging in, your app sends them back. Your login must redirect with `redirect()->intended()`, as Laravel's starter kits do.
-3. Spectra checks that the logged-in user is the dashboard's trackable. Anyone else gets a 403, so forwarding the link gives nobody access.
+3. Spectra checks that the logged-in user is the shared dashboard's trackable. Anyone else gets a 403, so forwarding the link gives nobody access.
 
-Pausing a dashboard makes its link answer 404 until you turn it back on.
+Pausing a shared dashboard makes its link answer 404 until you turn it back on.
 
 <a name="teams-and-other-trackables"></a>
 ### Teams and Other Trackables
@@ -183,7 +183,7 @@ class TeamDashboards implements DashboardTrackableResolver
 $this->app->bind(DashboardTrackableResolver::class, TeamDashboards::class);
 ```
 
-Return the trackable the viewer may see, or `null` to refuse them. Spectra also checks that what you return is what the dashboard is for.
+Return the trackable the viewer may see, or `null` to refuse them. Spectra also checks that what you return is what the shared dashboard is for.
 
 <a name="the-pages-middleware"></a>
 ### The Pages' Middleware
@@ -201,7 +201,7 @@ Viewers' pages have their own middleware, so restricting Spectra's own dashboard
 <a name="testing"></a>
 ## Testing
 
-Under `Spectra::fake()`, dashboards are kept in memory, so your tests need no migrations. Arguments are checked as they are for the real thing:
+Under `Spectra::fake()`, shared dashboards are kept in memory, so your tests need no migrations. Arguments are checked as they are for the real thing:
 
 ```php
 $fake = Spectra::fake();

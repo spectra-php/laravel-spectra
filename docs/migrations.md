@@ -149,9 +149,9 @@ php artisan spectra:install
 Until it runs, the Evals screen asks you to, and `Spectra::dataset()` and `spectra:eval` fail with a database error.
 
 <a name="dashboards-migration"></a>
-## The Dashboards Migration
+## The Shared Dashboards Migration {#dashboards-migration}
 
-`create_spectra_dashboards_table` creates the `spectra_dashboards` table for [dashboards](/dashboards), `add_sections_to_spectra_dashboards_table` adds its `sections` and `show_messages` columns, and `drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table` removes `show_costs` and requires `trackable_id`. Run the installer to publish and run them:
+`create_spectra_dashboards_table` creates the `spectra_dashboards` table for [shared dashboards](/dashboards), `add_sections_to_spectra_dashboards_table` adds its `sections` and `show_messages` columns, and `drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table` removes `show_costs` and requires `trackable_id`. Run the installer to publish and run them:
 
 ```shell
 php artisan spectra:install
