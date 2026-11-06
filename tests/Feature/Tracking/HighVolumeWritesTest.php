@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Sleep;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Sleep;
 use Spectra\Jobs\PersistSpectraRequestJob;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
