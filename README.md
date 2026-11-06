@@ -25,7 +25,7 @@
 Spectra is an AI observability package for Laravel, built to track AI requests, measure usage, calculate costs across different pricing units, enforce budgets, and inspect AI operations through a unified dashboard and API. This lets you focus on shipping reliable AI features without getting buried in provider-specific operational complexity.
 
 <p align="center">
-  <a href="https://spectraphp.com/dashboard"><img alt="A tour of the dashboard, one screen at a time: the overview, requests, request details, traces, the trace timeline, conversations, a conversation transcript, errors, prompts, evals, review, costs, trackables, one trackable's details, and dark mode" src="docs/public/images/readme/tour.gif" width="100%" /></a>
+  <a href="https://spectraphp.com/dashboard"><img alt="A tour of the dashboard, one screen at a time: the overview, requests, request details, traces, the trace timeline, conversations, a conversation transcript, errors, prompts, datasets, evals, the playground, review, costs, trackables, one trackable's details, a shared dashboard, and dark mode" src="docs/public/images/readme/tour.gif" width="100%" /></a>
 </p>
 
 <p align="center">

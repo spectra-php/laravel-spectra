@@ -2,6 +2,8 @@
 
 A customer asks how much AI usage their account has had this month. Spectra knows, but its dashboard shows everyone's data, so you can't give them access to it. A shared dashboard solves that: you design a small read-only page, choose whose data it shows, and give that person the link. They log in to your app as usual and see only their own numbers.
 
+<img class="screenshot" src="/images/dashboard/dashboard-view.png" alt="A shared dashboard as its viewer sees it: one user's requests, spend, tokens and latency, with links to more pages at the top" />
+
 <a name="what-is-a-dashboard"></a>
 ## What Is a Shared Dashboard? {#what-is-a-dashboard}
 
@@ -39,7 +41,13 @@ Gate::define('manageSpectra', fn ($user) => $user->isAdmin());
 <a name="creating-a-dashboard"></a>
 ## Creating a Shared Dashboard {#creating-a-dashboard}
 
-Open **Dashboards** in Spectra's sidebar and press **New dashboard**. Name it, choose who can see it, and drag the widgets you want into place, or click one to add it at the end. The widgets sit in the same layout your viewers get, and each can take the full width or half of it. **Share a dashboard** on a trackable's page starts one for that trackable. **Preview** shows exactly what the viewer gets, and **Copy link** gives you the URL to send them.
+Open **Dashboards** in Spectra's sidebar and press **New dashboard**. Name it, choose who can see it, and drag the widgets you want into place, or click one to add it at the end. The widgets sit in the same layout your viewers get, and each can take the full width or half of it. **Share a dashboard** on a trackable's page starts one for that trackable.
+
+<img class="screenshot" src="/images/dashboard/dashboard-edit.png" alt="The shared dashboard form: widgets in their layout on the left, and the name, trackable and pages on the right" />
+
+The **Dashboards** screen lists what you've made. **Preview** shows exactly what the viewer gets, and **Copy link** gives you the URL to send them.
+
+<img class="screenshot" src="/images/dashboard/dashboards.png" alt="The Dashboards screen listing three shared dashboards, with Copy link, Preview, Edit, Duplicate and Delete" />
 
 <a name="from-code"></a>
 ### From Code

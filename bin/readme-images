@@ -36,11 +36,14 @@ TOUR = [
     ('conversation-detail', 'Conversation transcript', 'Each turn and its running cost'),
     ('errors', 'Errors', 'Failed calls grouped by cause'),
     ('prompts', 'Prompts', 'Cost, latency and scores per version'),
-    ('eval-run', 'Evals', 'Datasets, runs and comparisons'),
+    ('eval-dataset', 'Datasets', 'The test cases your evals run over'),
+    ('eval-run', 'Evals', 'Score each run and compare them'),
+    ('playground-call', 'Playground', 'Change a real call and run it again'),
     ('review-queue', 'Review', 'Label traces by hand'),
     ('costs', 'Costs', 'Spend by provider, model and user'),
     ('trackables', 'Trackables', 'Spend per user or team'),
     ('trackable-detail', 'Trackable details', "One user's spend and requests"),
+    ('dashboard-view', 'Shared dashboards', 'Read-only usage pages for your customers'),
     ('overview-dark', 'Dark mode', 'Follows your system theme'),
 ]
 

@@ -54,7 +54,7 @@ The `dashboard.layout` option narrows the dashboard to one model type, for examp
 
 The requests list shows every tracked AI call: its model and type, its tags, its usage (tokens, images, characters or seconds), its cost, latency and status. Search by model, or paste a request ID, response ID or trace ID. Filter by model type, provider, tag, finish reason, trackable type (only the calls attributed to a `User`, a `Team`, ...) and more, and sort by time, cost, usage or latency.
 
-<img class="screenshot" src="/images/dashboard/requests-filters.png" alt="The requests filters: model, status, tag, finish reason, tool calls and reasoning" />
+<img class="screenshot" src="/images/dashboard/requests-filters.png" alt="The requests filters: model, status, tag, finish reason, tool calls, reasoning and trackable type" />
 
 <a name="request-details"></a>
 ### Request Details
@@ -192,6 +192,8 @@ Press **New request** on the Playground screen, which lists what you've sent fro
 
 <a name="dashboards"></a>
 ## Dashboards
+
+<img class="screenshot" src="/images/dashboard/dashboards.png" alt="The Dashboards screen listing three shared dashboards" />
 
 This screen is where you design [shared dashboards](/dashboards): read-only pages you share with people who can't open Spectra's own dashboard, such as a customer who wants to see their own usage. You choose the widgets and who can see it, and get a link to give them. They're off until you set `SPECTRA_DASHBOARDS_ENABLED=true`, and designing one needs the `manageSpectra` gate.
 
