@@ -45,7 +45,7 @@ Each outside API is called from one class (`OtlpExporter`, the Firecrawl scraper
 Write an interface in `Contracts/` only for a second implementation, a test fake, or an extension point users implement (`Handler`, `SpanBuilder`, `RequestExporter`, the optional `Extracts…` / `Has…` capabilities handlers opt into). Name it as a noun or capability with no `Interface` suffix, and bind the default in `SpectraServiceProvider::register()`.
 
 ## Let users replace, not patch
-Anything a user may want to change is a config key or a container binding they can override: custom providers and pricing classes in `config('spectra.providers')` and `config('spectra.costs.pricing')`, a custom `integrations.request_transformer`, `SpanBuilder` or exporter. Don't make them extend an internal class to change one behaviour.
+Anything a user may want to change is a config key or a container binding they can override: custom providers in `config('spectra.providers')`, your own prices in `config('spectra.costs.pricing_path')`, a custom `integrations.request_transformer`, `SpanBuilder` or exporter. Don't make them extend an internal class to change one behaviour.
 
 ## Traits are Concerns
 A trait lives in a `Concerns/` folder next to the classes that use it (`src/Concerns/` when several areas use it), is named for one capability (`MatchesEndpoints`, `ExtractsModelField`, `HasAiBudget`), and has no `Trait` suffix. If describing it needs "and", split it.

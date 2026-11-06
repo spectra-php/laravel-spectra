@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 /**
  * How the service provider treats a user's published config: built-in
- * providers and pricing classes stay active under it, and a bad watcher
+ * providers stay active under it, and a bad watcher
  * entry is reported instead of breaking the app's boot.
  */
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Str;
-use Spectra\Pricing\OpenAIPricing;
 use Spectra\Providers\Groq\Groq;
 use Spectra\Providers\OpenAI\OpenAI;
 use Spectra\SpectraServiceProvider;
@@ -45,15 +44,6 @@ it('turns a built-in provider off when the published config sets it to false', f
         ->toContain('openai');
 });
 
-it('keeps built-in pricing classes active under a published pricing list', function () {
-    config(['spectra.costs.pricing' => ['groq' => false]]);
-
-    (new SpectraServiceProvider($this->app))->register();
-
-    expect(config('spectra.costs.pricing.openai'))->toBe(OpenAIPricing::class)
-        ->and(config('spectra.costs.pricing.groq'))->toBeFalse();
-});
-
 it('reports a watcher class that does not exist and keeps booting', function () {
     Exceptions::fake();
     config(['spectra.watcher.watchers' => ['App\\Watchers\\Misspelled']]);
@@ -82,7 +72,7 @@ function configPublishedWithKeys(array $keys, ?array $node = null, string $prefi
             continue;
         }
 
-        $isSection = is_array($value) && $value !== [] && ! array_is_list($value) && ! in_array($path, ['providers', 'costs.pricing'], true);
+        $isSection = is_array($value) && $value !== [] && ! array_is_list($value) && $path !== 'providers';
         $published[$key] = $isSection ? configPublishedWithKeys($keys, $value, $path) : $value;
     }
 

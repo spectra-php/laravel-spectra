@@ -140,7 +140,7 @@ Schedule::command('spectra:rebuild-stats --yesterday')->dailyAt('01:00');
 <a name="spectra-pricing-scrape"></a>
 ## `spectra:pricing-scrape`
 
-Reads the providers' pricing pages with [Firecrawl](https://firecrawl.dev) and saves the prices that differ from the built-in catalog to the [scraped prices file](/pricing#scraped-prices). Needs `SPECTRA_FIRECRAWL_API_KEY` (or `FIRECRAWL_API_KEY`) in your `.env` file. Set `SPECTRA_USE_SCRAPED_PRICES=true` to bill with the saved prices.
+Reads the providers' pricing pages with [Firecrawl](https://firecrawl.dev) and saves the prices that differ from the bundled catalog, and the models it doesn't have, to [your pricing file](/pricing#your-own-prices). Needs `SPECTRA_FIRECRAWL_API_KEY` (or `FIRECRAWL_API_KEY`) in your `.env` file, and `SPECTRA_PRICING_PATH` to bill with the saved prices.
 
 ```shell
 php artisan spectra:pricing-scrape [provider*] [--all] [--url=*] [--path=] [--dry-run]
@@ -154,7 +154,7 @@ php artisan spectra:pricing-scrape [provider*] [--all] [--url=*] [--path=] [--dr
 | `provider*` | The providers to scrape. Default: the providers in `SPECTRA_SCRAPE_PROVIDERS`, else the providers your app has tracked requests for. See [Which Providers Are Scraped](/pricing#scraped-providers). |
 | `--all` | Scrape every provider with pricing pages. |
 | `--url=*` | Scrape these pages instead of the provider's own. Needs exactly one provider. |
-| `--path=` | Read and write this file instead of `spectra.costs.scraped_prices_path`. |
+| `--path=` | Write this file instead of `spectra.costs.pricing_path` (default: `resources/spectra/pricing.json`). Pointed at the package's `resources/pricing/catalog.json`, it updates the bundled catalog itself, every model of each provider. |
 | `--dry-run` | Print the changes without writing the file. |
 
 <a name="spectra-pricing-scrape-examples"></a>
@@ -219,7 +219,7 @@ The run, with every example's output and scores, shows on the dashboard's Evals 
 | `spectra:install` | Interactive setup; publishes missing migrations | After `composer require` and after upgrading |
 | `spectra:prune --hours=168` | Delete old request data, review queue items and media | Scheduled daily for retention management |
 | `spectra:rebuild-stats --yesterday` | Rebuild aggregated statistics | Scheduled daily, after data corrections, or once after upgrading |
-| `spectra:pricing-scrape` | Save new provider prices to the scraped prices file | Before a release picks them up; review and commit the file |
+| `spectra:pricing-scrape` | Save new provider prices to your pricing file | Before a release picks them up; review and commit the file |
 | `spectra:pause` / `spectra:resume` | Stop and restart storing requests | During load tests or incidents |
 | `spectra:check-alerts` | Check the alert rules and notify | Scheduled every few minutes |
 | `spectra:eval SupportAnswerEval` | Run an evaluation over its dataset | After changing a prompt or model, or in CI |

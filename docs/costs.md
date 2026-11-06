@@ -1,6 +1,6 @@
 # Costs
 
-Spectra calculates the cost of every tracked AI request. It uses the [pricing catalog](/pricing) (or your [scraped prices](/pricing#scraped-prices), when you turn them on) and the metrics extracted from each response: tokens, image count, audio duration, page count, or character count, depending on the model type.
+Spectra calculates the cost of every tracked AI request. It uses the [pricing catalog](/pricing) (and [your own pricing file](/pricing#your-own-prices), when you have one) and the metrics extracted from each response: tokens, image count, audio duration, page count, or character count, depending on the model type.
 
 The dashboard's **Costs** screen shows where the money goes: daily spend, the share of each provider, cost per model and the users who spend the most (see [Dashboard](/dashboard#costs)).
 
@@ -322,4 +322,4 @@ A request costs zero when:
 
 A model that is missing from its provider's catalog is not silent: Spectra logs a warning once per process for each such model (`no price for the openai model 'ft:gpt-4o-mini:acme'`), and the dashboard's Overview says under the spend total how many successful calls in the period were recorded at $0 for want of a price, and for which models. Providers without a catalog (Ollama, a custom provider) are tracked at $0 on purpose and are left out of both.
 
-To add pricing for a missing model, create a [custom pricing class](/pricing#customizing-pricing) or add it to the [scraped prices file](/pricing#scraped-prices).
+To add pricing for a missing model, add it to [your pricing file](/pricing#your-own-prices), by hand or with [`spectra:pricing-scrape`](/pricing#scraping-prices).

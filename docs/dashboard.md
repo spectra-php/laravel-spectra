@@ -4,7 +4,7 @@ Spectra ships with a dashboard for exploring your AI traffic. It lives at `/spec
 
 The screens are in the sidebar on the left; the arrows at its bottom collapse it to icons, and the dashboard remembers your choice in the browser. The top bar holds the actions: pause and resume recording, prune old data, refresh the screen, the Review screen, the Maintenance screen, and dark mode. Pausing and pruning show only to users the `manageSpectra` gate allows (see [Maintenance](#maintenance)).
 
-Every screen has a period picker (today, this week, this month, this year, all time) and a date range picker. The lists filter by model type, provider, tag, finish reason and more, and keep the filters in the URL, so you can share a filtered view.
+Every screen has a period picker (today, this week, this month, this year, all time) and a date range picker. The lists filter by model type, provider, tag, finish reason, trackable type and more, and keep the filters in the URL, so you can share a filtered view.
 
 As everywhere in Spectra, request counts include failed requests, while cost and latency cover successful requests only (see [Costs](/costs#querying-costs)).
 
@@ -52,7 +52,7 @@ The `dashboard.layout` option narrows the dashboard to one model type, for examp
 
 <img class="screenshot" src="/images/dashboard/requests.png" alt="The requests list" />
 
-The requests list shows every tracked AI call: its model and type, its tags, its usage (tokens, images, characters or seconds), its cost, latency and status. Search by model, or paste a request ID, response ID or trace ID. Filter by model type, provider, tag, finish reason and more, and sort by time, cost, usage or latency.
+The requests list shows every tracked AI call: its model and type, its tags, its usage (tokens, images, characters or seconds), its cost, latency and status. Search by model, or paste a request ID, response ID or trace ID. Filter by model type, provider, tag, finish reason, trackable type (only the calls attributed to a `User`, a `Team`, ...) and more, and sort by time, cost, usage or latency.
 
 <img class="screenshot" src="/images/dashboard/requests-filters.png" alt="The requests filters: model, status, tag, finish reason, tool calls and reasoning" />
 
@@ -185,7 +185,7 @@ The costs screen shows where the money goes:
 - **Spend over time**, one point per day.
 - **Breakdown** of spend by provider or by model type.
 - **Cost by model**, with the usage in the model's own unit: tokens, images, videos or characters.
-- **Top users** by spend.
+- **Top users** by spend, for every kind of trackable or for one (only users, only teams, ...).
 
 See [Costs](/costs) for how each cost is calculated.
 
@@ -194,7 +194,7 @@ See [Costs](/costs) for how each cost is calculated.
 
 <img class="screenshot" src="/images/dashboard/trackables.png" alt="The trackables list" />
 
-A trackable is the model a request is attributed to: the signed-in user by default, or a team, project or any other Eloquent model you choose (see [User Attribution](/usage#user-attribution)). The trackables list shows each one's requests, tokens, media, cost, average latency and most used model. Filter by trackable type and provider, and sort by cost, requests or usage.
+A trackable is the model a request is attributed to: the signed-in user by default, or a team, project or any other Eloquent model you choose (see [User Attribution](/usage#user-attribution)). The trackables list shows each one's requests, tokens, media, cost, average latency and most used model. Filter by trackable type (the `User`, `Team`, ... the requests were attributed to), provider, tag and more, and sort by cost, requests or usage.
 
 <a name="trackable-details"></a>
 ### Trackable Details
@@ -213,7 +213,7 @@ The wrench icon in the top bar opens the Maintenance screen. It shows how many r
 - **Prune old data.** Pick how much to keep (24 hours to 1 year) and, optionally, how many days of daily stats to keep. The screen counts what would be deleted before you confirm. It runs [`spectra:prune`](/commands#spectra-prune) on the queue.
 - **Pause recording.** While paused, AI calls keep working but nothing is stored, so their cost doesn't count toward budgets. Same as [`spectra:pause`](/commands#spectra-pause).
 - **Rebuild stats.** Recomputes the daily stats of the days whose requests are still stored, on the queue. Days whose requests were pruned keep their stats.
-- **Prices.** Read-only: whether requests are billed with the built-in catalog alone or with the [scraped prices file](/pricing#scraped-prices) too, and how many models the deployed file holds per provider. The dashboard runs in production, so it never checks or changes prices. Run [`spectra:pricing-scrape`](/commands#spectra-pricing-scrape) where you develop, review its changes, then commit the file and deploy it.
+- **Prices.** Read-only: the bundled catalog (when it was generated, how many models), [your own pricing file](/pricing#your-own-prices) when `SPECTRA_PRICING_PATH` is set (whether it exists and how many models it holds per provider), and whether the [pricing cache](/pricing#caching) is on. The dashboard runs in production, so it never checks or changes prices. Run [`spectra:pricing-scrape`](/commands#spectra-pricing-scrape) where you develop, review its changes, then commit the file and deploy it.
 
 Prunes and rebuilds run as queued jobs on Spectra's queue connection (`queue.connection` and `queue.queue`), one of each at a time, and the screen refreshes while one is queued. Without a queue worker they wait in the queue; with the `sync` driver they run during the request.
 

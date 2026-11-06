@@ -18,29 +18,14 @@ use Workbench\App\Pricing\ModelsDevDrift;
  * with models.dev and reports what differs, minus what the baseline accepts.
  */
 beforeEach(function () {
-    $this->app->instance(PricingLookup::class, new PricingLookup([new class extends ProviderPricing
-    {
-        public function provider(): string
-        {
-            return 'openai';
-        }
-
-        protected function define(): void
-        {
-            $this->model('gpt-x', fn ($m) => $m
-                ->canGenerateText()
-                ->tier('standard', inputPrice: 100, outputPrice: 400, cachedInputPrice: 10)
-                ->tier('standard', inputPrice: 200, outputPrice: 600, aboveInputTokens: 200_000));
-
-            $this->model('gpt-x-image', fn ($m) => $m
-                ->canGenerateImages()
-                ->cost(inputPrice: 50, outputPrice: 300, imageOutputPrice: 3000));
-
-            $this->model('gpt-x-tts', fn ($m) => $m
-                ->pricingUnit(PricingUnit::Characters)
-                ->cost(pricePerUnit: 1500));
-        }
-    }]));
+    $this->app->instance(PricingLookup::class, new PricingLookup([new ProviderPricing('openai', [
+        'gpt-x' => ['capabilities' => ['text'], 'tiers' => [
+            ['tier' => 'standard', 'input_price' => 100, 'output_price' => 400, 'cached_input_price' => 10],
+            ['tier' => 'standard', 'input_price' => 200, 'output_price' => 600, 'above_input_tokens' => 200_000],
+        ]],
+        'gpt-x-image' => ['capabilities' => ['images'], 'tiers' => [['tier' => 'standard', 'input_price' => 50, 'output_price' => 300, 'image_output_price' => 3000]]],
+        'gpt-x-tts' => ['pricing_unit' => PricingUnit::Characters->value, 'tiers' => [['tier' => 'standard', 'price_per_unit' => 1500]]],
+    ])]));
 
     $this->catalog = [
         'openai' => ['models' => [

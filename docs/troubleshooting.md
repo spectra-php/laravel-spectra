@@ -41,11 +41,11 @@ Common problems with Spectra, and how to fix them.
 
 **Checklist:**
 
-1. **A pricing class exists.** The pricing catalog needs an entry for each model you use. Prices live in `ProviderPricing` classes, registered in `config/spectra.php` under `costs.pricing`. See [Pricing](/pricing).
+1. **The model is in the catalog.** The pricing catalog needs an entry for each model you use. Prices live in the catalog bundled with Spectra and in [your own pricing file](/pricing#your-own-prices). See [Pricing](/pricing).
 
-2. **The model name matches.** The model id must match a catalog entry: by its exact id, an alias, or the id without a snapshot date or routing suffix. See [How Spectra Finds a Model](/pricing#model-lookup). Compare the `snapshot` and `model` values in your request records with the pricing class definitions.
+2. **The model name matches.** The model id must match a catalog entry: by its exact id, an alias, or the id without a snapshot date or routing suffix. See [How Spectra Finds a Model](/pricing#model-lookup). Compare the `snapshot` and `model` values in your request records with the ids in the catalog.
 
-3. **The pricing tier exists.** If you use a non-standard tier (such as `batch` or `flex`), the provider's pricing class needs an entry for that tier.
+3. **The pricing tier exists.** If you use a non-standard tier (such as `batch` or `flex`), the model needs a row for that tier; without one it bills at `standard`.
 
 4. **The pricing unit matches the metrics.** The `pricingUnit` on the model definition must match the metrics in the response. For example, a model with `pricingUnit('tokens')` requires non-null `prompt_tokens` and `completion_tokens` values.
 

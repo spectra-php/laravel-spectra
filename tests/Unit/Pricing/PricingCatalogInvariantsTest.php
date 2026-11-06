@@ -3,18 +3,17 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Arr;
-use PHPUnit\Framework\Assert;
 use Spectra\Enums\PricingTier;
 use Spectra\Enums\PricingUnit;
-use Spectra\Pricing\FalAiPricing;
-use Spectra\Pricing\ProviderPricing;
+use Spectra\Support\Pricing\PricingCatalog;
 
 /**
- * Guardrails over the entire built-in pricing catalog. These prevent the class
- * of bug where a model silently bills $0 — e.g. an unsupported pricing unit, or
- * a per-unit model that lacks the `standard` tier the cost calculator falls back
- * to, a tier name that silently bills at standard, or fal.ai video prices
- * that drift from the catalog. Every configured provider/model is checked.
+ * Guardrails over the bundled pricing catalog. These prevent the class of
+ * bug where a model silently bills $0 — e.g. an unsupported pricing unit, or
+ * a per-unit model that lacks the `standard` tier the cost calculator falls
+ * back to, a tier name that silently bills at standard, or fal.ai video
+ * prices that drift from their variants. Every bundled provider/model is
+ * checked.
  */
 
 /** @return array<int, array{0: string, 1: string, 2: array<string, mixed>, 3: array<int, array<string, mixed>>}> */
@@ -22,11 +21,7 @@ function spectraCatalogRows(): array
 {
     $rows = [];
 
-    foreach (config('spectra.costs.pricing', []) as $class) {
-        /** @var ProviderPricing $pricing */
-        $pricing = app($class);
-        $provider = $pricing->provider();
-
+    foreach (PricingCatalog::bundled() as $provider => $pricing) {
         foreach ($pricing->models() as $definition) {
             $rows[] = [
                 $provider,
@@ -40,7 +35,33 @@ function spectraCatalogRows(): array
     return $rows;
 }
 
-it('defines a non-empty catalog for every configured provider', function () {
+it('bundles a catalog for every built-in provider', function () {
+    expect(array_keys(PricingCatalog::bundled()))->toBe([
+        'anthropic', 'cohere', 'elevenlabs', 'falai', 'google', 'groq', 'mistral', 'openai', 'openrouter', 'replicate', 'scaleway', 'xai',
+    ]);
+});
+
+it('lists pricing pages for every provider but OpenRouter, which reports its costs', function () {
+    foreach (PricingCatalog::bundled() as $provider => $pricing) {
+        if ($provider === 'openrouter') {
+            expect($pricing->sources())->toBe([]);
+
+            continue;
+        }
+
+        expect($pricing->sources())->not->toBeEmpty("{$provider} has no pricing pages to scrape");
+    }
+});
+
+it('prices the separately billed tool calls of OpenAI, Anthropic and xAI', function () {
+    $bundled = PricingCatalog::bundled();
+
+    expect($bundled['openai']->toolCallPricing())->toHaveKeys(['web_search_call', 'file_search_call', 'code_interpreter_call'])
+        ->and($bundled['anthropic']->toolCallPricing())->toHaveKey('web_search_requests')
+        ->and($bundled['xai']->toolCallPricing())->toHaveKey('x_search_post');
+});
+
+it('defines a non-empty catalog for every bundled provider', function () {
     expect(spectraCatalogRows())->not->toBeEmpty();
 });
 
@@ -115,41 +136,48 @@ it('never lists the same model id or alias twice within a provider', function ()
 
     foreach (spectraCatalogRows() as [$provider, $name, $model, $tiers]) {
         foreach ([$name, ...$model['aliases']] as $id) {
-            Assert::assertArrayNotHasKey("{$provider}|{$id}", $seen, "{$provider}/{$id} is listed by both {$name} and ".($seen["{$provider}|{$id}"] ?? ''));
+            expect($seen)->not->toHaveKey("{$provider}|{$id}", message: "{$provider}/{$id} is listed by both {$name} and ".($seen["{$provider}|{$id}"] ?? ''));
 
             $seen["{$provider}|{$id}"] = $name;
         }
     }
 });
 
-it('prices every fal.ai video model in the catalog at its default VIDEO_PRICES entry', function () {
-    $catalog = collect((new FalAiPricing)->models())->keyBy(fn ($definition) => $definition->getInternalName());
+it('prices every fal.ai video model with variants at its first resolution with audio', function () {
+    $checked = 0;
 
-    foreach (FalAiPricing::VIDEO_PRICES as $model => $resolutions) {
-        $definition = $catalog->get($model);
+    foreach (PricingCatalog::bundled()['falai']->models() as $definition) {
+        $variants = $definition->getVariants();
 
-        expect($definition)->not->toBeNull("{$model} is in VIDEO_PRICES but not in the catalog");
+        if ($variants === []) {
+            continue;
+        }
 
+        $model = $definition->getInternalName();
         $standard = collect($definition->toTiersArray())->firstWhere('tier', PricingTier::Standard->value);
 
         expect($definition->toModelArray()['pricing_unit'])->toBe(PricingUnit::Second->value, $model)
-            ->and($standard['price_per_unit'])->toEqual(Arr::first($resolutions)[0], $model);
+            ->and($standard['price_per_unit'])->toEqual(Arr::first($variants)['audio'], $model);
 
-        foreach ($resolutions as $resolution => $prices) {
-            expect($prices[0])->toBeGreaterThan(0, "{$model} {$resolution} with audio")
-                ->and($prices[1])->toBeGreaterThan(0, "{$model} {$resolution} without audio");
+        foreach ($variants as $resolution => $prices) {
+            expect($prices['audio'])->toBeGreaterThan(0, "{$model} {$resolution} with audio")
+                ->and($prices['silent'])->toBeGreaterThan(0, "{$model} {$resolution} without audio");
         }
+
+        $checked++;
     }
+
+    expect($checked)->toBeGreaterThan(0);
 });
 
-it('lists every per-second fal.ai video model in VIDEO_PRICES', function () {
-    foreach ((new FalAiPricing)->models() as $definition) {
+it('lists variants for every per-second fal.ai video model', function () {
+    foreach (PricingCatalog::bundled()['falai']->models() as $definition) {
         $model = $definition->toModelArray();
 
         if ($model['type'] !== 'video' || $model['pricing_unit'] !== PricingUnit::Second->value) {
             continue;
         }
 
-        Assert::assertArrayHasKey($definition->getInternalName(), FalAiPricing::VIDEO_PRICES, "{$definition->getInternalName()} has no resolution / audio prices");
+        expect($definition->getVariants())->not->toBeEmpty("{$definition->getInternalName()} has no resolution / audio prices");
     }
 });

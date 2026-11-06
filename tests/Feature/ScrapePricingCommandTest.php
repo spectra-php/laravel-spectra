@@ -7,21 +7,22 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Pricing\PricingFile;
 use Spectra\Support\Pricing\PricingLookup;
-use Spectra\Support\Pricing\ScrapedPricesFile;
-use Spectra\Tests\Fixtures\FakeAnthropicPricing;
-use Spectra\Tests\Fixtures\FakeOpenAIPricing;
+use Spectra\Tests\Fixtures\FakeCatalogs;
 
 /**
  * spectra:pricing-scrape reads each provider's pricing pages with Firecrawl
- * and saves the prices that differ from the catalog to the scraped prices file.
+ * and saves the prices that differ from the bundled catalog to the app's
+ * pricing file. Written to the bundled catalog itself, it rewrites each
+ * provider in full.
  */
 beforeEach(function () {
+    $this->bundled = FakeCatalogs::useBundled();
     $this->path = storage_path('framework/testing/pricing-'.uniqid().'.json');
 
     config([
-        'spectra.costs.pricing' => ['openai' => FakeOpenAIPricing::class],
-        'spectra.costs.scraped_prices_path' => $this->path,
+        'spectra.costs.pricing_path' => $this->path,
         'spectra.costs.firecrawl.api_key' => 'fc-test',
         'spectra.costs.firecrawl.providers' => ['openai'],
     ]);
@@ -43,14 +44,14 @@ beforeEach(function () {
         ]]),
     ]);
 
-    $this->readFile = fn () => json_decode(File::get($this->path), true, 512, JSON_THROW_ON_ERROR);
+    $this->readFile = fn (?string $path = null) => json_decode(File::get($path ?? $this->path), true, 512, JSON_THROW_ON_ERROR);
 });
 
 afterEach(function () {
-    File::delete($this->path);
+    File::delete([$this->path, $this->bundled]);
 });
 
-it('saves the changed and new models to the scraped prices file', function () {
+it('saves the changed and new models to your pricing file', function () {
     ($this->firecrawl)([
         ['model_id' => 'gpt-x', 'tier' => 'standard', 'input' => 0.9, 'output' => 4],
         ['model_id' => 'gpt-y', 'tier' => 'standard', 'input' => 0.3, 'output' => 1.2],
@@ -64,7 +65,7 @@ it('saves the changed and new models to the scraped prices file', function () {
             ['gpt-z <fg=green>(new)</>', 'standard', 'input', '—', '2 /1M', '| gpt-z | $2.00 | $8.00 | - |'],
             ['gpt-z <fg=green>(new)</>', 'standard', 'output', '—', '8 /1M', '| gpt-z | $2.00 | $8.00 | - |'],
         ])
-        ->expectsOutputToContain('SPECTRA_USE_SCRAPED_PRICES=true')
+        ->doesntExpectOutputToContain('SPECTRA_PRICING_PATH')
         ->assertSuccessful();
 
     $file = ($this->readFile)();
@@ -72,6 +73,7 @@ it('saves the changed and new models to the scraped prices file', function () {
     expect(array_keys($file['providers']['openai']['models']))->toBe(['gpt-x', 'gpt-z'])
         ->and($file['providers']['openai']['currency'])->toBe('USD')
         ->and($file['providers']['openai']['sources'])->toBe(['https://example.test/pricing'])
+        ->and($file['providers']['openai'])->not->toHaveKey('notes')
         ->and($file['providers']['openai']['models']['gpt-x']['tiers'][0])->toBe(
             ['tier' => 'standard', 'input_price' => 90, 'output_price' => 400, 'cached_input_price' => 10],
         );
@@ -85,22 +87,83 @@ it('saves the changed and new models to the scraped prices file', function () {
         && Str::contains($request['formats'][1]['prompt'], 'gpt-x, gpt-y, image-x (per image)'));
 });
 
-it('prices requests from the saved file once scraped prices are on', function () {
+it('prices requests from the saved file at once, cache included', function () {
+    expect(app(PricingLookup::class)->get('openai', 'gpt-x')['input'])->toBe(100);
     ($this->firecrawl)([
         ['model_id' => 'gpt-x', 'tier' => 'standard', 'input' => 0.9],
     ]);
 
     $this->artisan('spectra:pricing-scrape')->assertSuccessful();
-
-    config(['spectra.costs.use_scraped_prices' => true]);
     $this->app->forgetInstance(PricingLookup::class);
 
     expect(app(PricingLookup::class)->get('openai', 'gpt-x')['input'])->toBe(90)
         ->and(app(PricingLookup::class)->get('openai', 'gpt-x', promptTokens: 300_000)['input'])->toBe(200);
 });
 
+it('rewrites a provider in full when it updates the bundled catalog', function () {
+    ($this->firecrawl)([
+        ['model_id' => 'gpt-x', 'tier' => 'standard', 'input' => 0.9, 'output' => 4],
+        ['model_id' => 'gpt-z', 'tier' => 'standard', 'input' => 2, 'output' => 8],
+    ]);
+
+    $this->artisan('spectra:pricing-scrape', ['--path' => $this->bundled])
+        ->doesntExpectOutputToContain('SPECTRA_PRICING_PATH')
+        ->assertSuccessful();
+
+    $file = ($this->readFile)($this->bundled);
+    $openai = $file['providers']['openai'];
+
+    expect(array_keys($file['providers']))->toBe(['anthropic', 'openai'])
+        ->and(array_keys($openai['models']))->toBe(['gpt-x', 'gpt-y', 'image-x', 'gpt-z'])
+        ->and($openai['models']['gpt-x']['tiers'][0]['input_price'])->toBe(90)
+        ->and($openai['models']['gpt-y']['tiers'][0]['input_price'])->toBe(30)
+        ->and($openai['models']['image-x']['tiers'])->toHaveCount(2)
+        ->and($openai['notes'])->toBe(['A test catalog.'])
+        ->and($openai['sources'])->toBe(['https://example.test/pricing'])
+        ->and($openai['scraped_at'])->not->toBeNull()
+        ->and($file['providers']['anthropic']['models'])->toHaveKey('claude-x');
+});
+
+it('keeps a provider only your file has whole', function () {
+    (new PricingFile($this->path))->write(['providers' => [
+        'acme' => ['sources' => ['https://example.test/acme'], 'models' => [
+            'acme-1' => ['tiers' => [['tier' => 'standard', 'input_price' => 100, 'output_price' => 400]]],
+            'acme-2' => ['tiers' => [['tier' => 'standard', 'input_price' => 200, 'output_price' => 800]]],
+        ]],
+    ]]);
+    ($this->firecrawl)([
+        ['model_id' => 'acme-1', 'tier' => 'standard', 'input' => 1.5, 'output' => 4],
+    ], "| acme-1 | $1.50 | $4.00 |\n| acme-2 | $2.00 | $8.00 |");
+
+    $this->artisan('spectra:pricing-scrape', ['provider' => ['acme']])->assertSuccessful();
+
+    $acme = ($this->readFile)()['providers']['acme'];
+
+    expect(array_keys($acme['models']))->toBe(['acme-1', 'acme-2'])
+        ->and($acme['models']['acme-1']['tiers'][0]['input_price'])->toBe(150)
+        ->and($acme['models']['acme-2']['tiers'][0]['input_price'])->toBe(200)
+        ->and($acme['sources'])->toBe(['https://example.test/acme']);
+});
+
+it('tells you how to bill with a file that is not the configured one', function () {
+    $other = storage_path('framework/testing/pricing-other-'.uniqid().'.json');
+    ($this->firecrawl)([
+        ['model_id' => 'gpt-x', 'tier' => 'standard', 'input' => 0.9],
+    ]);
+
+    try {
+        $this->artisan('spectra:pricing-scrape', ['--path' => $other])
+            ->expectsOutputToContain('SPECTRA_PRICING_PATH=')
+            ->assertSuccessful();
+
+        expect(File::exists($other))->toBeTrue();
+    } finally {
+        File::delete($other);
+    }
+});
+
 it('removes a provider from the file once its prices match the catalog', function () {
-    (new ScrapedPricesFile($this->path))->write(['providers' => [
+    (new PricingFile($this->path))->write(['providers' => [
         'openai' => ['models' => ['gpt-x' => ['tiers' => [['tier' => 'standard', 'input_price' => 1]]]]],
         'acme' => ['models' => ['acme-1' => ['tiers' => [['tier' => 'standard', 'input_price' => 1]]]]],
     ]]);
@@ -114,7 +177,7 @@ it('removes a provider from the file once its prices match the catalog', functio
 });
 
 it('keeps the file entries of a provider Firecrawl could not read', function () {
-    (new ScrapedPricesFile($this->path))->write(['providers' => [
+    (new PricingFile($this->path))->write(['providers' => [
         'openai' => ['models' => ['gpt-x' => ['tiers' => [['tier' => 'standard', 'input_price' => 1]]]]],
     ]]);
     Http::fake(['api.firecrawl.dev/*' => Http::response(['success' => false, 'error' => 'Payment required'], 402)]);
@@ -165,10 +228,7 @@ it('scrapes the given pages for one provider', function () {
 
 describe('choosing providers', function () {
     beforeEach(function () {
-        config([
-            'spectra.costs.pricing' => ['openai' => FakeOpenAIPricing::class, 'anthropic' => FakeAnthropicPricing::class],
-            'spectra.costs.firecrawl.providers' => [],
-        ]);
+        config(['spectra.costs.firecrawl.providers' => []]);
         ($this->firecrawl)([]);
     });
 

@@ -9,7 +9,6 @@ use Illuminate\Support\Str;
 use Spectra\Enums\PricingTier;
 use Spectra\Enums\PricingUnit;
 use Spectra\Pricing\ProviderPricing;
-use Spectra\Pricing\ScrapedPricing;
 use Spectra\Support\Pricing\ModelDefinition;
 use Spectra\Support\Pricing\PricingLookup;
 
@@ -464,8 +463,8 @@ class ScrapedPriceMapper
             return null;
         }
 
-        $entry = ScrapedPricing::definitionToArray($definition);
-        $entry['tiers'] = Arr::map($tiers, ScrapedPricing::tierToArray(...));
+        $entry = ProviderPricing::definitionToArray($definition);
+        $entry['tiers'] = Arr::map($tiers, ProviderPricing::tierToArray(...));
 
         return $entry;
     }
@@ -513,7 +512,7 @@ class ScrapedPriceMapper
             $this->recordNewRow($id, $scrapedRow, $this->filterPricesForUnit($scrapedRow['prices'], $unit), $unit);
         }
 
-        $tiers = collect($tiers)->values()->map(ScrapedPricing::tierToArray(...))->all();
+        $tiers = collect($tiers)->values()->map(ProviderPricing::tierToArray(...))->all();
 
         [$type, $capabilities] = match (PricingUnit::tryFrom($unit) ?? PricingUnit::Tokens) {
             PricingUnit::Tokens => ['text', ['text']],
@@ -559,7 +558,7 @@ class ScrapedPriceMapper
             'input_price' => $prices['input_price'] ?? 0.0,
             'output_price' => $prices['output_price'] ?? 0.0,
         ];
-        foreach (array_slice(ScrapedPricing::PRICE_FIELDS, 2) as $field) {
+        foreach (array_slice(ProviderPricing::PRICE_FIELDS, 2) as $field) {
             $tierRow[$field] = $prices[$field] ?? null;
         }
         $tierRow['above_input_tokens'] = $row['above'];
@@ -636,7 +635,7 @@ class ScrapedPriceMapper
                 continue;
             }
 
-            foreach (ScrapedPricing::PRICE_FIELDS as $other) {
+            foreach (ProviderPricing::PRICE_FIELDS as $other) {
                 $value = $row[$other] ?? null;
 
                 if ($other !== $field && is_numeric($value) && abs((float) $value - $new) < 0.000001) {

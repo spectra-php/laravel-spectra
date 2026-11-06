@@ -3,16 +3,17 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Arr;
+use Spectra\Pricing\ProviderPricing;
 use Spectra\Support\Pricing\Scraping\PriceChange;
 use Spectra\Support\Pricing\Scraping\ScrapedPriceMapper;
-use Spectra\Tests\Fixtures\FakeOpenAIPricing;
+use Spectra\Tests\Fixtures\FakeCatalogs;
 
 /**
- * ScrapedPriceMapper turns Firecrawl's rows (currency units) into scraped prices
+ * ScrapedPriceMapper turns Firecrawl's rows (currency units) into pricing
  * file entries (cents), only for models whose prices differ or are new.
  */
 beforeEach(function () {
-    $this->map = fn (array $rows) => (new ScrapedPriceMapper)->map(new FakeOpenAIPricing, $rows, '2026-10-31');
+    $this->map = fn (array $rows) => (new ScrapedPriceMapper)->map(FakeCatalogs::openai(), $rows, '2026-10-31');
 });
 
 it('leaves out models whose prices match the catalog', function () {
@@ -194,17 +195,13 @@ it('ignores negative and non-numeric prices', function () {
 });
 
 it('updates the dated row in effect, not a future one', function () {
-    $pricing = new class extends FakeOpenAIPricing
-    {
-        protected function define(): void
-        {
-            $this->model('gpt-d', fn ($m) => $m
-                ->canGenerateText()
-                ->cost(inputPrice: 100, outputPrice: 400)
-                ->cost(inputPrice: 80, outputPrice: 320, since: '2026-06-01')
-                ->cost(inputPrice: 60, outputPrice: 240, since: '2027-01-01'));
-        }
-    };
+    $pricing = new ProviderPricing('openai', [
+        'gpt-d' => ['capabilities' => ['text'], 'tiers' => [
+            ['tier' => 'standard', 'input_price' => 100, 'output_price' => 400],
+            ['tier' => 'standard', 'input_price' => 80, 'output_price' => 320, 'since' => '2026-06-01'],
+            ['tier' => 'standard', 'input_price' => 60, 'output_price' => 240, 'since' => '2027-01-01'],
+        ]],
+    ]);
 
     $result = (new ScrapedPriceMapper)->map($pricing, [
         ['model_id' => 'gpt-d', 'tier' => 'standard', 'input' => 0.7],
@@ -215,9 +212,9 @@ it('updates the dated row in effect, not a future one', function () {
 
 it('starts each map with no leftover changes', function () {
     $mapper = new ScrapedPriceMapper;
-    $mapper->map(new FakeOpenAIPricing, [['model_id' => 'gpt-y', 'tier' => 'standard', 'input' => 0.4]]);
+    $mapper->map(FakeCatalogs::openai(), [['model_id' => 'gpt-y', 'tier' => 'standard', 'input' => 0.4]]);
 
-    $result = $mapper->map(new FakeOpenAIPricing, []);
+    $result = $mapper->map(FakeCatalogs::openai(), []);
 
     expect($result->changes)->toBe([])
         ->and($result->skipped)->toBe([]);

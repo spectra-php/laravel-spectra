@@ -6,8 +6,9 @@ Spectra 4.0 adds scores, alerts, redaction, payload sampling, prompt
 versions, tool spans, error grouping, review queues, evaluations and a
 maintenance screen. Most apps only need to run the installer once. Read the
 rest of this section if `spectra:install` runs in a deploy script, if
-others use your dashboard in production, or if your code reads
-`RequestContext::$id`.
+others use your dashboard in production, if your code reads
+`RequestContext::$id`, or if you wrote a pricing class or bill with the
+scraped prices file.
 
 The full guide is at https://spectraphp.com/upgrade#from-3x-to-4.
 
@@ -71,7 +72,33 @@ actions on the command line.
 `Spectra::track()` can score the call before it is saved. It used to be a
 separate ULID that was never stored; if you kept it, it won't match any row.
 
-### 5. Other changes
+### 5. Prices come from a file
+
+The pricing catalog is a JSON file bundled with the package,
+`resources/pricing/catalog.json`, generated from the providers' pricing
+pages. The `Spectra\Pricing\*Pricing` classes, `ProviderPricing::define()`
+and `populate()`, the `costs.pricing` config map and the
+`costs.use_scraped_prices` and `costs.scraped_prices_path` keys are gone.
+
+- If you only used the built-in prices, nothing changes. A published config
+  that still lists `costs.pricing` logs one warning per process until you
+  remove the key.
+- If you extended a pricing class or wrote one for a custom provider, move
+  its models to your own pricing file and set `SPECTRA_PRICING_PATH`. The
+  fields are the builder's parameters in snake_case, and `toolCallPricing()`
+  becomes the provider's `tool_calls`. A model in your file replaces the
+  bundled model with the same id, so list every tier row it needs.
+- If you billed with the scraped prices file, set `SPECTRA_PRICING_PATH` to
+  its path. Until you do, a published config with `use_scraped_prices` on
+  still reads `scraped_prices_path`.
+- `spectra:pricing-scrape` writes to `SPECTRA_PRICING_PATH` (default
+  `resources/spectra/pricing.json`); setting the path is the switch.
+
+The lookup's index is kept in your cache store (`costs.cache`, on by
+default) and rebuilt when a pricing file changes. `SPECTRA_PRICING_CACHE=false`
+parses the files once per process instead, as before.
+
+### 6. Other changes
 
 - `spectra:prune` also deletes scores and review queue items older than the
   cutoff.

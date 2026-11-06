@@ -12,11 +12,13 @@ use Spectra\Enums\PricingTier;
 use Spectra\Pricing\ProviderPricing;
 
 /**
- * In-memory index over every configured pricing catalog.
+ * In-memory index over every active pricing catalog.
  *
  * Resolves a provider/model pair (including aliases, dated snapshots and
  * routing suffixes) to its catalog entry, and picks the price row for a tier,
- * prompt size and request date.
+ * prompt size and request date. The index is plain arrays, and the lookup
+ * serializes to it, so PricingCatalog can keep it in the cache instead of
+ * parsing the pricing files on every request.
  *
  * @phpstan-type Price array{
  *     input: int|float,
@@ -41,7 +43,16 @@ use Spectra\Pricing\ProviderPricing;
  *     can_generate_video: bool,
  *     can_generate_audio: bool,
  *     retired_on: ?string,
+ *     variants: array<string, mixed>,
  *     tiers: array<string, list<Price>>,
+ * }
+ * @phpstan-type Index array{
+ *     models: array<string, ModelData>,
+ *     aliases: array<string, string>,
+ *     currencies: array<string, string>,
+ *     model_currencies: array<string, string>,
+ *     tool_call_currencies: array<string, string>,
+ *     tool_call_pricing: array<string, array<string, float>>,
  * }
  */
 class PricingLookup
@@ -86,11 +97,48 @@ class PricingLookup
     /**
      * Create a new pricing lookup over the given provider catalogs.
      *
-     * @param  ProviderPricing[]  $pricingClasses
+     * @param  ProviderPricing[]  $catalogs
      */
     public function __construct(
-        protected array $pricingClasses = []
+        protected array $catalogs = []
     ) {}
+
+    /**
+     * Serialize the index only (not the catalogs it was built from), so the
+     * cache holds plain arrays.
+     *
+     * @return Index
+     */
+    public function __serialize(): array
+    {
+        $this->resolve();
+
+        return [
+            'models' => $this->models,
+            'aliases' => $this->aliases,
+            'currencies' => $this->currencies,
+            'model_currencies' => $this->modelCurrencies,
+            'tool_call_currencies' => $this->toolCallCurrencies,
+            'tool_call_pricing' => $this->toolCallPricing,
+        ];
+    }
+
+    /**
+     * Restore the index from the cache. Warnings start over: they are per process.
+     *
+     * @param  Index  $data
+     */
+    public function __unserialize(array $data): void
+    {
+        $this->models = $data['models'];
+        $this->aliases = $data['aliases'];
+        $this->currencies = $data['currencies'];
+        $this->modelCurrencies = $data['model_currencies'];
+        $this->toolCallCurrencies = $data['tool_call_currencies'];
+        $this->toolCallPricing = $data['tool_call_pricing'];
+        $this->catalogs = [];
+        $this->resolved = true;
+    }
 
     /**
      * Get the price row for a model.
@@ -177,7 +225,7 @@ class PricingLookup
 
         $this->reportedUnpriced[$key] = true;
 
-        Log::warning("Spectra: no price for the {$provider} model '{$model}'; its requests are recorded at \$0. Add it to a pricing catalog or the scraped prices file (see the costs docs).");
+        Log::warning("Spectra: no price for the {$provider} model '{$model}'; its requests are recorded at \$0. Add it to your pricing file (see the costs docs).");
     }
 
     /**
@@ -250,6 +298,19 @@ class PricingLookup
             'video' => $modelData['can_generate_video'],
             'audio' => $modelData['can_generate_audio'],
         ];
+    }
+
+    /**
+     * Get the prices of a model's options (a fal.ai video model's resolutions
+     * with and without audio), for the provider's cost multiplier.
+     *
+     * @return array<string, mixed>
+     */
+    public function getVariants(string $provider, string $model): array
+    {
+        $key = $this->resolveKey($provider, $model);
+
+        return $key !== null ? $this->models[$key]['variants'] : [];
     }
 
     /**
@@ -429,7 +490,7 @@ class PricingLookup
     }
 
     /**
-     * Build all model definitions from pricing classes. Called once on first access.
+     * Index every catalog's models. Called once on first access.
      */
     protected function resolve(): void
     {
@@ -437,7 +498,7 @@ class PricingLookup
             return;
         }
 
-        foreach ($this->pricingClasses as $pricing) {
+        foreach ($this->catalogs as $pricing) {
             $provider = $pricing->provider();
             $currency = Str::upper($pricing->currency());
             $this->currencies[$provider] = $currency;
@@ -480,6 +541,7 @@ class PricingLookup
                     'can_generate_video' => $modelArray['can_generate_video'],
                     'can_generate_audio' => $modelArray['can_generate_audio'],
                     'retired_on' => $modelArray['retired_on'],
+                    'variants' => $modelArray['variants'],
                     'tiers' => $tiers,
                 ];
 

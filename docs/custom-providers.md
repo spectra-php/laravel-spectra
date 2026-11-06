@@ -475,7 +475,7 @@ You may also return these extra keys. Spectra applies them to the request:
 | Key | Type | Meaning |
 | --- | --- | --- |
 | `reported_cost_in_cents` | `float` | The cost the provider reported, in US cents. It replaces the catalog price. |
-| `tool_calls` | `array<string, int>` | Billable server-tool usage, keyed like the provider's [`toolCallPricing()`](/pricing#tool-call-pricing) |
+| `tool_calls` | `array<string, int>` | Billable server-tool usage, keyed like the provider's [`tool_calls`](/pricing#tool-call-pricing) |
 | `pricing_tier` | `string` | The tier the provider says it served. Ignored when a tier was set explicitly. |
 | `cost_multiplier` | `float` | A price multiplier, for example `1.1` for US-only inference |
 
@@ -663,7 +663,7 @@ new Metrics(document: new DocumentMetrics(pages: 12));
 | `video` | `?VideoMetrics` | Video count and duration |
 | `search` | `?SearchMetrics` | Billed search units |
 | `document` | `?DocumentMetrics` | Pages, for models billed per page |
-| `toolCalls` | `array<string, int>` | Billable server-tool usage, keyed like the provider's [`toolCallPricing()`](/pricing#tool-call-pricing) (for example, `['web_search_requests' => 3]`) |
+| `toolCalls` | `array<string, int>` | Billable server-tool usage, keyed like the provider's [`tool_calls`](/pricing#tool-call-pricing) (for example, `['web_search_requests' => 3]`) |
 | `reportedCostInCents` | `?float` | The cost the provider reported for this request, in US cents. When set, it replaces the catalog price. |
 
 ```php
@@ -736,47 +736,32 @@ class AcmeChatHandler extends OpenAiCompatibleChatHandler
 <a name="adding-pricing"></a>
 ## Adding Pricing
 
-To track costs, create a pricing class for your custom provider. Extend `ProviderPricing` and define the models in its `define()` method:
+To track costs, add your provider to [your pricing file](/pricing#your-own-prices) and point `SPECTRA_PRICING_PATH` at it. A provider the bundled catalog doesn't have is added as is, with its models keyed by the id used in API requests:
 
-```php
-<?php
-
-namespace App\Pricing;
-
-use Spectra\Pricing\ProviderPricing;
-
-class MistralPricing extends ProviderPricing
+```json
 {
-    public function provider(): string
-    {
-        return 'mistral';
-    }
-
-    protected function define(): void
-    {
-        $this->model('mistral-large-latest', fn ($m) => $m
-            ->displayName('Mistral Large')
-            ->canGenerateText()
-            ->tier('standard', inputPrice: 200, outputPrice: 600));
-
-        $this->model('mistral-small-latest', fn ($m) => $m
-            ->displayName('Mistral Small')
-            ->canGenerateText()
-            ->tier('standard', inputPrice: 10, outputPrice: 30));
+    "providers": {
+        "mistral": {
+            "currency": "USD",
+            "sources": ["https://docs.mistral.ai/inference/pricing"],
+            "models": {
+                "mistral-large-latest": {
+                    "display_name": "Mistral Large",
+                    "capabilities": ["text"],
+                    "tiers": [{ "tier": "standard", "input_price": 200, "output_price": 600 }]
+                },
+                "mistral-small-latest": {
+                    "display_name": "Mistral Small",
+                    "capabilities": ["text"],
+                    "tiers": [{ "tier": "standard", "input_price": 10, "output_price": 30 }]
+                }
+            }
+        }
     }
 }
 ```
 
-Then register it in `config/spectra.php`:
-
-```php
-'costs' => [
-    'pricing' => [
-        'mistral' => \App\Pricing\MistralPricing::class,
-        // ...existing providers...
-    ],
-],
-```
+With `sources`, [`spectra:pricing-scrape`](/pricing#scraping-prices) keeps the provider's prices current from its pricing page. See [The Pricing File](/pricing#the-pricing-file) for every field.
 
 > [!TIP]
 > All prices in the pricing catalog are stored in **cents**. For token-based models, prices are in cents per million tokens (for example, `200` means $2.00 per million tokens). For unit-based models (images, audio, video), prices are in cents per unit.

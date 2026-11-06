@@ -131,7 +131,7 @@ class SpectraServiceProvider extends ServiceProvider
             $app->make(RequestTransformer::class)
         ));
 
-        $this->app->singleton(PricingLookup::class, fn () => new PricingLookup(PricingCatalog::active()));
+        $this->app->singleton(PricingLookup::class, fn () => PricingCatalog::lookup());
 
         $this->app->alias(PricingLookup::class, 'spectra.pricing');
 
@@ -426,8 +426,6 @@ class SpectraServiceProvider extends ServiceProvider
         'costs.exchange_rates',
         // 2.x
         'tracking.propagate_tags',
-        'costs.use_scraped_prices',
-        'costs.scraped_prices_path',
         'costs.firecrawl',
         // 3.0
         'tracking.capture_origin',
@@ -437,17 +435,18 @@ class SpectraServiceProvider extends ServiceProvider
         'storage.redaction',
         'tracking.tool_spans',
         'dashboard.maintenance',
+        'costs.pricing_path',
+        'costs.cache',
     ];
 
     /**
      * Maps whose built-in entries stay active under the user's published
-     * config: a published config lists the providers and pricing classes of
-     * its day, and would otherwise hide every one added later. The user's
-     * entries win; `false` turns a built-in off.
+     * config: a published config lists the providers of its day, and would
+     * otherwise hide every one added later. The user's entries win; `false`
+     * turns a built-in off.
      */
     protected const BUILT_IN_MAPS = [
         'providers',
-        'costs.pricing',
     ];
 
     /**
@@ -474,7 +473,7 @@ class SpectraServiceProvider extends ServiceProvider
     }
 
     /**
-     * Keep the built-in providers and pricing classes under the user's published entries.
+     * Keep the built-in providers under the user's published entries.
      */
     protected function mergeBuiltInMaps(): void
     {

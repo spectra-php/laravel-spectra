@@ -3,18 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Str;
-use Spectra\Pricing\AnthropicPricing;
-use Spectra\Pricing\CoherePricing;
-use Spectra\Pricing\ElevenLabsPricing;
-use Spectra\Pricing\FalAiPricing;
-use Spectra\Pricing\GooglePricing;
-use Spectra\Pricing\GroqPricing;
-use Spectra\Pricing\MistralPricing;
-use Spectra\Pricing\OpenAIPricing;
-use Spectra\Pricing\OpenRouterPricing;
-use Spectra\Pricing\ReplicatePricing;
-use Spectra\Pricing\ScalewayPricing;
-use Spectra\Pricing\XAiPricing;
 use Spectra\Providers\Anthropic\Anthropic;
 use Spectra\Providers\Cohere\Cohere;
 use Spectra\Providers\ElevenLabs\ElevenLabs;
@@ -830,82 +818,54 @@ return [
 
         /*
         |--------------------------------------------------------------------------
-        | Pricing Definitions
+        | Pricing File
         |--------------------------------------------------------------------------
         |
-        | Map provider slugs to their pricing definition classes. Each class
-        | defines models and their pricing tiers. Spectra ships with built-in
-        | pricing for all supported providers.
+        | Prices come from the catalog bundled with Spectra
+        | (resources/pricing/catalog.json in the package), generated from the
+        | providers' pricing pages. To bill with prices of your own, point
+        | `pricing_path` at a file in the same format: a model in it replaces
+        | the bundled model with the same id, and every other model keeps its
+        | bundled price. `php artisan spectra:pricing-scrape` writes that file
+        | for you. Commit it, so every environment bills the same prices. A
+        | relative path is relative to the app's root.
         |
-        | To add custom models, extend a built-in class and override populate():
-        |
-        |   class MyOpenAIPricing extends \Spectra\Pricing\OpenAIPricing {
-        |       protected function populate(): void {
-        |           $this->model('ft:gpt-4o:my-org', fn ($m) => $m
-        |               ->displayName('My Fine-tune')
-        |               ->canGenerateText()
-        |               ->cost(300, 1200));
-        |       }
-        |   }
-        |
-        | Then replace the openai entry with your class.
-        |
-        | Built-in entries you leave out stay active, so new providers reach
-        | you without republishing this file. Set an entry to false to turn a
-        | built-in pricing class off, e.g. 'groq' => false.
-        |
-        | Docs: https://spectraphp.com/pricing#customizing-pricing
+        | Docs: https://spectraphp.com/pricing#your-own-prices
         |
         */
 
-        'pricing' => [
-            'openai' => OpenAIPricing::class,
-            'anthropic' => AnthropicPricing::class,
-            'google' => GooglePricing::class,
-            'xai' => XAiPricing::class,
-            'mistral' => MistralPricing::class,
-            'openrouter' => OpenRouterPricing::class,
-            'replicate' => ReplicatePricing::class,
-            'cohere' => CoherePricing::class,
-            'groq' => GroqPricing::class,
-            'falai' => FalAiPricing::class,
-            'scaleway' => ScalewayPricing::class,
-            'elevenlabs' => ElevenLabsPricing::class,
-        ],
+        'pricing_path' => env('SPECTRA_PRICING_PATH'),
 
         /*
         |--------------------------------------------------------------------------
-        | Scraped Prices
+        | Pricing Cache
         |--------------------------------------------------------------------------
         |
-        | `php artisan spectra:pricing-scrape` reads the providers' pricing
-        | pages through Firecrawl and saves the prices that differ from the
-        | built-in catalog to this file. Turn `use_scraped_prices` on to bill
-        | with them: a model in the file replaces the built-in model with the
-        | same id, and every other model keeps its built-in price. Tracking
-        | only reads the file; it never calls Firecrawl.
+        | The pricing files are read and indexed once per process. With the
+        | cache on, the index is kept in your cache store instead and rebuilt
+        | when a pricing file changes or the package is updated. `store` is a
+        | store from config/cache.php (null: the default store); `ttl` is in
+        | seconds (0: until a file changes).
         |
-        | Commit the file, so every environment bills the same prices.
-        |
-        | `scraped_prices_path` is where the file is saved and read, by default
-        | resources/spectra/scraped-prices.json.
-        |
-        | Docs: https://spectraphp.com/pricing#scraped-prices
+        | Docs: https://spectraphp.com/pricing#caching
         |
         */
 
-        'use_scraped_prices' => (bool) env('SPECTRA_USE_SCRAPED_PRICES', false),
-
-        'scraped_prices_path' => env('SPECTRA_SCRAPED_PRICES_PATH', resource_path('spectra/scraped-prices.json')),
+        'cache' => [
+            'enabled' => (bool) env('SPECTRA_PRICING_CACHE', true),
+            'store' => env('SPECTRA_PRICING_CACHE_STORE'),
+            'ttl' => (int) env('SPECTRA_PRICING_CACHE_TTL', 86400),
+        ],
 
         /*
         |--------------------------------------------------------------------------
         | Firecrawl
         |--------------------------------------------------------------------------
         |
-        | `spectra:pricing-scrape` uses Firecrawl's JSON extraction to read
-        | the providers' pricing pages. Only the command needs a key; tracking
-        | never calls Firecrawl. Timeout is in seconds, per page. The
+        | `spectra:pricing-scrape` reads the providers' pricing pages with
+        | Firecrawl's JSON extraction and saves the prices that differ from
+        | the bundled catalog to your pricing file. Only the command needs a
+        | key; tracking never calls Firecrawl. Timeout is in seconds, per page. The
         | unprefixed FIRECRAWL_API_KEY, FIRECRAWL_API_URL and FIRECRAWL_TIMEOUT
         | variables are still read when the SPECTRA_ ones are not set.
         |

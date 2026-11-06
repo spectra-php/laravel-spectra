@@ -3,7 +3,7 @@
 <a name="from-3x-to-4"></a>
 ## From 3.x to 4.0
 
-Spectra 4.0 adds [scores](/scores), [alerts](/alerts), [redaction](/configuration#redaction), payload sampling, [prompt versions](/prompts), [tool spans](/tools), error grouping, [review queues](/annotations), [evaluations](/evaluations) and a [Maintenance screen](/dashboard#maintenance). Most apps only need to run the installer once. Read the rest of this section if `spectra:install` runs in a deploy script, if others use your dashboard in production, or if your code reads `RequestContext::$id`.
+Spectra 4.0 adds [scores](/scores), [alerts](/alerts), [redaction](/configuration#redaction), payload sampling, [prompt versions](/prompts), [tool spans](/tools), error grouping, [review queues](/annotations), [evaluations](/evaluations) and a [Maintenance screen](/dashboard#maintenance). Most apps only need to run the installer once. Read the rest of this section if `spectra:install` runs in a deploy script, if others use your dashboard in production, if your code reads `RequestContext::$id`, or if you wrote a pricing class or bill with the scraped prices file.
 
 The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Laravel 12 or 13.
 
@@ -14,6 +14,7 @@ The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Larav
 3. If others use your dashboard in production, [define the new gates](#v4-gates).
 4. If you kept `RequestContext::$id`, [it is the saved id now](#v4-request-context).
 5. If you report on failed requests or read the daily stats, [recheck the numbers and rebuild the stats](#v4-failed-requests).
+6. If you extended a pricing class, wrote one for a custom provider, or bill with the scraped prices file, [move the prices to a pricing file](#v4-pricing-file).
 
 <a name="v4-migrations"></a>
 ### Run the Installer (Recommended)
@@ -67,6 +68,18 @@ php artisan spectra:rebuild-stats
 ```
 
 The stats are rebuilt from the request records that still exist, so if you pruned old requests, rebuild only the days you still have requests for, with `--from` (see [`spectra:rebuild-stats`](/commands#spectra-rebuild-stats)). Reports built on the old numbers change; recheck them after upgrading.
+
+<a name="v4-pricing-file"></a>
+### Prices Come from a File
+
+The pricing catalog is no longer a set of PHP classes but a JSON file bundled with the package, `resources/pricing/catalog.json`, generated from the providers' pricing pages and reviewed before each release. The `Spectra\Pricing\*Pricing` classes, `ProviderPricing::define()` and `populate()`, the `costs.pricing` config map and the `costs.use_scraped_prices` and `costs.scraped_prices_path` keys are gone. See [Pricing](/pricing).
+
+- If you only used the built-in prices, nothing changes. A published config that still lists `costs.pricing` keeps working; Spectra logs one warning per process until you remove the key.
+- If you extended a pricing class, or wrote one for a custom provider, move its models to [your own pricing file](/pricing#your-own-prices) and set `SPECTRA_PRICING_PATH`. The file's fields are the builder's parameters in snake_case (`inputPrice` is `input_price`, `aliases()` is `aliases`, `retiredOn()` is `retired_on`), and `toolCallPricing()` becomes the provider's `tool_calls`. A model in your file replaces the bundled model with the same id, so list every tier row it needs.
+- If you billed with the scraped prices file, set `SPECTRA_PRICING_PATH` to its path. Until you do, a published config with `use_scraped_prices` on still reads `scraped_prices_path`.
+- [`spectra:pricing-scrape`](/commands#spectra-pricing-scrape) writes to `SPECTRA_PRICING_PATH` (default `resources/spectra/pricing.json`). There is no switch to bill with the file any more: setting the path is the switch.
+
+The lookup's index is now kept in your cache store (`costs.cache`, on by default) and rebuilt when a pricing file changes. Set `SPECTRA_PRICING_CACHE=false` to parse the files once per process instead, as before. See [Caching](/pricing#caching).
 
 <a name="v4-other-changes"></a>
 ### Other Changes

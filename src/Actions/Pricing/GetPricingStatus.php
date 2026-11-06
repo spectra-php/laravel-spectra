@@ -8,12 +8,14 @@ use Illuminate\Support\Str;
 use RuntimeException;
 use Spectra\Data\Responses\PricingStatusResponse;
 use Spectra\Support\Pricing\PricingCatalog;
+use Spectra\Support\Pricing\PricingFile;
 
 /**
- * What the dashboard's prices card shows: whether requests are billed with
- * the scraped prices file, and what the file holds. Read-only: prices are
- * checked and written with spectra:pricing-scrape where you develop, never
- * from the dashboard, which runs in production.
+ * What the dashboard's prices card shows: the catalog bundled with Spectra,
+ * the app's own pricing file (whether it exists and what it holds) and the
+ * cache. Read-only: prices are checked and written with
+ * spectra:pricing-scrape where you develop, never from the dashboard, which
+ * runs in production.
  */
 class GetPricingStatus
 {
@@ -22,20 +24,22 @@ class GetPricingStatus
      */
     public function __invoke(): PricingStatusResponse
     {
+        $file = PricingCatalog::userFile();
+
         return new PricingStatusResponse(
-            uses_scraped_prices: PricingCatalog::usesScrapedPrices(),
-            file: $this->file(),
+            bundled: $this->summarise(PricingCatalog::bundledFile()),
+            file: $file !== null ? $this->summarise($file) : null,
+            cache: ['enabled' => PricingCatalog::cacheEnabled(), 'store' => PricingCatalog::cacheStoreName()],
         );
     }
 
     /**
-     * Summarise the scraped prices file.
+     * Summarise a pricing file: its path, when it was generated, and the models per provider.
      *
      * @return array<string, mixed>
      */
-    protected function file(): array
+    protected function summarise(PricingFile $file): array
     {
-        $file = PricingCatalog::scrapedPricesFile();
         $path = $file->path();
         $projectRoot = base_path(DIRECTORY_SEPARATOR);
         $summary = [
@@ -43,20 +47,22 @@ class GetPricingStatus
             'exists' => $file->exists(),
             'generated_at' => null,
             'error' => null,
+            'models' => 0,
             'providers' => [],
         ];
 
         try {
-            $scrapedPrices = $file->read();
+            $prices = $file->read();
         } catch (RuntimeException $e) {
             return [...$summary, 'error' => $e->getMessage()];
         }
 
-        $summary['generated_at'] = is_string($scrapedPrices['generated_at'] ?? null) ? $scrapedPrices['generated_at'] : null;
-        $summary['providers'] = collect((array) $scrapedPrices['providers'])->map(fn (mixed $section) => [
-            'scraped_at' => is_array($section) ? ($section['scraped_at'] ?? null) : null,
+        $summary['generated_at'] = is_string($prices['generated_at'] ?? null) ? $prices['generated_at'] : null;
+        $summary['providers'] = collect((array) $prices['providers'])->map(fn (mixed $section) => [
+            'scraped_at' => is_array($section) && is_string($section['scraped_at'] ?? null) ? $section['scraped_at'] : null,
             'models' => is_array($section) && is_array($section['models'] ?? null) ? count($section['models']) : 0,
         ])->all();
+        $summary['models'] = (int) collect($summary['providers'])->sum('models');
 
         return $summary;
     }

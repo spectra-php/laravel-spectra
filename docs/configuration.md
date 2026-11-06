@@ -270,23 +270,13 @@ Configure cost calculation and pricing tiers.
         ],
     ],
 
-    'pricing' => [
-        'openai'     => \Spectra\Pricing\OpenAIPricing::class,
-        'anthropic'  => \Spectra\Pricing\AnthropicPricing::class,
-        'google'     => \Spectra\Pricing\GooglePricing::class,
-        'xai'        => \Spectra\Pricing\XAiPricing::class,
-        'mistral'    => \Spectra\Pricing\MistralPricing::class,
-        'openrouter' => \Spectra\Pricing\OpenRouterPricing::class,
-        'replicate'  => \Spectra\Pricing\ReplicatePricing::class,
-        'cohere'     => \Spectra\Pricing\CoherePricing::class,
-        'groq'       => \Spectra\Pricing\GroqPricing::class,
-        'falai'      => \Spectra\Pricing\FalAiPricing::class,
-        'scaleway'   => \Spectra\Pricing\ScalewayPricing::class,
-        'elevenlabs' => \Spectra\Pricing\ElevenLabsPricing::class,
-    ],
+    'pricing_path' => env('SPECTRA_PRICING_PATH'),
 
-    'use_scraped_prices'  => (bool) env('SPECTRA_USE_SCRAPED_PRICES', false),
-    'scraped_prices_path' => env('SPECTRA_SCRAPED_PRICES_PATH', resource_path('spectra/scraped-prices.json')),
+    'cache' => [
+        'enabled' => (bool) env('SPECTRA_PRICING_CACHE', true),
+        'store'   => env('SPECTRA_PRICING_CACHE_STORE'),
+        'ttl'     => (int) env('SPECTRA_PRICING_CACHE_TTL', 86400),
+    ],
 
     'firecrawl' => [
         'api_key'   => env('SPECTRA_FIRECRAWL_API_KEY', env('FIRECRAWL_API_KEY')),
@@ -304,10 +294,11 @@ Configure cost calculation and pricing tiers.
 | `exchange_rates` | `array` | `[]` | How many units of `currency` one unit of another currency is worth. For example, `['EUR' => 1.17]` when you report in USD, or `['USD' => 0.86]` when you report in EUR. A missing rate counts as 1:1, and Spectra logs a warning once per process. Spectra does not fetch rates, so update them from time to time. |
 | `currency_symbol` | `string` | `$` | Symbol shown before cost values in the dashboard. Display only. |
 | `provider_settings.*.default_tier` | `string` | `standard` | The tier used when you did not set one (with `Spectra::withPricingTier()` or the `pricing_tier` option), and neither the request nor the response says which tier was used. Tiers: `standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, `hd`. Any provider slug may be listed. See [Which Tier Is Used](/costs#tier-order). |
-| `pricing` | `array` | See above | Map provider slugs to their `ProviderPricing` class. Built-in classes you leave out of your published config stay active; set an entry to `false` to turn one off (`'groq' => false`). See [Pricing](/pricing) for customization. |
-| `use_scraped_prices` | `bool` | `false` | Bill with the models in `scraped_prices_path`: each replaces the built-in model with the same id. When it's off, the file is ignored. A config published before these keys existed doesn't need them: Spectra adds them with their defaults. See [Scraped Prices](/pricing#scraped-prices). |
-| `scraped_prices_path` | `string` | `resources/spectra/scraped-prices.json` | The scraped prices file (JSON), written by `spectra:pricing-scrape`. |
-| `firecrawl.*` | `array` | See above | API key, base URL, per-page timeout (seconds) and the default providers for [`spectra:pricing-scrape`](/pricing#scraping-prices). Without `providers`, it scrapes the providers your app has tracked requests for. Tracking never calls Firecrawl. The unprefixed `FIRECRAWL_API_KEY`, `FIRECRAWL_API_URL` and `FIRECRAWL_TIMEOUT` still work when the `SPECTRA_` names are not set. |
+| `pricing_path` | `string\|null` | `null` | Your own pricing file (JSON), in the format of the [bundled catalog](/pricing#the-pricing-file). Each model in it replaces the bundled model with the same id; every other model keeps its bundled price. A relative path is relative to the app's root. `spectra:pricing-scrape` writes it. See [Your Own Prices](/pricing#your-own-prices). |
+| `cache.enabled` | `bool` | `true` | Keep the pricing index in the cache instead of parsing the pricing files once per process. It is rebuilt when a file changes. See [Caching](/pricing#caching). |
+| `cache.store` | `string\|null` | `null` | The cache store to keep it in, from `config/cache.php`. `null` is your default store. |
+| `cache.ttl` | `int` | `86400` | Seconds to keep the index. `0` keeps it until a file changes. |
+| `firecrawl.*` | `array` | See above | API key, base URL, per-page timeout (seconds) and the default providers for [`spectra:pricing-scrape`](/pricing#scraping-prices), which saves the prices that differ from the bundled catalog to `pricing_path`. Without `providers`, it scrapes the providers your app has tracked requests for. Tracking never calls Firecrawl. The unprefixed `FIRECRAWL_API_KEY`, `FIRECRAWL_API_URL` and `FIRECRAWL_TIMEOUT` still work when the `SPECTRA_` names are not set. |
 
 <a name="budget"></a>
 ## Budget
@@ -535,8 +526,10 @@ SPECTRA_WATCHER_ENABLED=true
 # Costs
 SPECTRA_OPENAI_PRICING_TIER=standard
 SPECTRA_ANTHROPIC_PRICING_TIER=standard
-SPECTRA_USE_SCRAPED_PRICES=false
-SPECTRA_SCRAPED_PRICES_PATH=
+SPECTRA_PRICING_PATH=
+SPECTRA_PRICING_CACHE=true
+SPECTRA_PRICING_CACHE_STORE=
+SPECTRA_PRICING_CACHE_TTL=86400
 SPECTRA_FIRECRAWL_API_KEY=
 SPECTRA_FIRECRAWL_API_URL=https://api.firecrawl.dev/v2
 SPECTRA_FIRECRAWL_TIMEOUT=180

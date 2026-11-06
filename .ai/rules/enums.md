@@ -12,7 +12,7 @@ A fixed set of values is a string-backed enum in `src/Enums/` (`tests/Unit/ArchT
 Enum values are written to users' databases (`model_type`, `pricing_tier`) and their config (`default_tier`). Never rename or remove a value; add a new case instead.
 
 ## Every value a handler can produce needs a case
-`PricingTier::tryFrom()` returns null for an unknown value and the caller falls back to the default, so a missing case silently bills the wrong price (`hd` once fell back to standard). When a handler or pricing class starts using a new tier or type, add the case first and test that it resolves.
+`PricingTier::tryFrom()` returns null for an unknown value and the caller falls back to the default, so a missing case silently bills the wrong price (`hd` once fell back to standard). When a handler or the catalog starts using a new tier or type, add the case first and test that it resolves.
 
 ## Compare cases, not strings
 Compare against enum cases in code (`ModelType::Stt`, `PricingTier::Flex->value` at the edges). Use `->value` only where a string is stored or sent: columns, config, JSON, `RequestContext` fields that hold strings.

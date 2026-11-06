@@ -7,7 +7,6 @@ namespace Spectra\Support\Pricing\Scraping;
 use Illuminate\Support\Arr;
 use Spectra\Enums\PricingTier;
 use Spectra\Pricing\ProviderPricing;
-use Spectra\Pricing\ScrapedPricing;
 
 /**
  * The tiers and price fields a provider's catalog uses.
@@ -64,7 +63,7 @@ final class CatalogShape
             foreach ($definition->toTiersArray() as $row) {
                 $tiers[$row['tier']] = true;
 
-                foreach (ScrapedPricing::PRICE_FIELDS as $field) {
+                foreach (ProviderPricing::PRICE_FIELDS as $field) {
                     if ($row[$field] !== null) {
                         $fields[$field] = true;
                     }

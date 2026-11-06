@@ -23,7 +23,7 @@ Every handler converts the provider's usage into `Metrics`: `TokenMetrics` total
 Provider responses change without notice. Never assume a key exists (`?? null`, `data_get()`), default to zero or null, and never throw from a handler: an unknown shape must still record the request, with whatever it could read. Type-check only where a wrong type gives a wrong number, a broken loop or a `TypeError` (`is_numeric()` before maths, `is_array()` before a `foreach`, `is_string()` before a typed `string` parameter), as `.ai/rules/src.md` § "Read provider payloads plainly" says; the pipeline's guards catch the rest.
 
 ## Every catalog model is reachable
-Each model in a provider's pricing class must be reachable through one of its handlers, with an endpoint and metrics that produce a non-zero cost. Adding a priced model type (embeddings, rerank, speech, transcription) means adding its handler, a fixture and a feature test that asserts the cost end to end.
+Each model in a provider's section of `resources/pricing/catalog.json` must be reachable through one of its handlers, with an endpoint and metrics that produce a non-zero cost. Adding a priced model type (embeddings, rerank, speech, transcription) means adding its handler, a fixture and a feature test that asserts the cost end to end.
 
 ## Reuse the OpenAI-compatible base
 Groq, Mistral, xAI, OpenRouter and other OpenAI-style chat APIs extend `Providers/Concerns/OpenAiCompatibleChatHandler` and `OpenAiCompatibleStreaming`. Override only what differs; don't copy the base.
@@ -35,7 +35,7 @@ When a provider is served under another path layout (Azure OpenAI's `/openai/dep
 Async generation (video, Replicate and fal predictions, background responses) is billed when the poll finishes. `GuzzleMiddleware::rememberJob()` caches the model and the submit body per job id, and the poll merges it back, so durations and options reach the metrics. Keep large values (`data:` URIs) out of that cache.
 
 ## Register a provider in config
-Built-in providers are listed in `config('spectra.providers')` and their pricing in `config('spectra.costs.pricing')`. A new provider also needs its slug's logo in `resources/js/components/ProviderLogo.vue`, a row in the supported providers table in `docs/models.md`, and a line in `CHANGELOG.md`.
+Built-in providers are listed in `config('spectra.providers')` and their prices in `resources/pricing/catalog.json`. A new provider also needs its slug's logo in `resources/js/components/ProviderLogo.vue`, a row in the supported providers table in `docs/models.md`, and a line in `CHANGELOG.md`.
 
 ## Spectra's own provider calls are untracked
 When a handler fetches something itself (a generated file, a token count), call `Http::withoutAITracking()`, so Spectra never records or bills its own requests.

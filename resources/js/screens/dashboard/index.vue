@@ -313,7 +313,7 @@ onUnmounted(() => {
                     <div
                         v-if="stats.unpriced?.request_count"
                         class="mt-1.5 text-xs text-amber-700 dark:text-amber-300"
-                        v-tooltip="'No price for ' + stats.unpriced.models.join(', ') + '. Add the model to a pricing catalog or the scraped prices file.'"
+                        v-tooltip="'No price for ' + stats.unpriced.models.join(', ') + '. Add the model to your pricing file.'"
                     >
                         {{ formatNumber(stats.unpriced.request_count) }} {{ stats.unpriced.request_count === 1 ? 'call' : 'calls' }} without a price ({{ stats.unpriced.models.slice(0, 2).join(', ') }}{{ stats.unpriced.models.length > 2 ? ', …' : '' }})
                     </div>

@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\FalAi;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsCostMultiplierForModel;
-use Spectra\Pricing\FalAiPricing;
 use Spectra\Providers\FalAi\Handlers\ImageHandler;
 use Spectra\Providers\FalAi\Handlers\QueueStatusHandler;
 use Spectra\Providers\FalAi\Handlers\VideoHandler;
 use Spectra\Providers\Provider;
+use Spectra\Support\Pricing\PricingLookup;
 
 /**
  * fal.ai model APIs on `fal.run` (direct) and `queue.fal.run` (queued).
@@ -71,7 +72,8 @@ class FalAi extends Provider implements ExtractsCostMultiplierForModel
      * Get the cost multiplier a fal.ai request's options put on the model's catalog price.
      *
      * Video models cost more or less than their catalog price with another
-     * resolution or without audio ({@see FalAiPricing::VIDEO_PRICES}).
+     * resolution or without audio: the catalog lists each resolution's price
+     * per second with and without audio as the model's `variants`.
      *
      * Recraft charges twice the raster price for vector styles
      * (`style: vector_illustration...`): $0.08 instead of $0.04 per image.
@@ -84,7 +86,7 @@ class FalAi extends Provider implements ExtractsCostMultiplierForModel
      */
     public function extractCostMultiplierForModel(string $model, array $responseData, array $requestData): ?float
     {
-        $videoMultiplier = FalAiPricing::videoCostMultiplier($model, $requestData);
+        $videoMultiplier = $this->videoCostMultiplier(app(PricingLookup::class)->getVariants('falai', $model), $requestData);
 
         if ($videoMultiplier !== null) {
             return $videoMultiplier;
@@ -93,5 +95,37 @@ class FalAi extends Provider implements ExtractsCostMultiplierForModel
         $style = $requestData['style'] ?? null;
 
         return is_string($style) && Str::startsWith($style, 'vector_illustration') ? 2.0 : null;
+    }
+
+    /**
+     * Get the cost of a video request relative to the model's catalog price.
+     *
+     * The catalog price is the first resolution with audio. The multiplier
+     * comes from the request's `resolution` and `generate_audio`; it is null
+     * for a model without variants or a default request.
+     *
+     * @param  array<string, mixed>  $variants  Resolution => ['audio' => cents, 'silent' => cents]
+     * @param  array<string, mixed>  $requestData
+     */
+    protected function videoCostMultiplier(array $variants, array $requestData): ?float
+    {
+        $default = Arr::first($variants);
+
+        if (! is_array($default) || ! is_numeric($default['audio'] ?? null) || (float) $default['audio'] <= 0) {
+            return null;
+        }
+
+        $resolution = $requestData['resolution'] ?? null;
+        $requested = is_string($resolution) ? ($variants[$resolution] ?? null) : null;
+        $row = is_array($requested) ? $requested : $default;
+        $price = ($requestData['generate_audio'] ?? true) === false ? ($row['silent'] ?? $row['audio'] ?? null) : ($row['audio'] ?? null);
+
+        if (! is_numeric($price)) {
+            return null;
+        }
+
+        $multiplier = (float) $price / (float) $default['audio'];
+
+        return $multiplier !== 1.0 ? $multiplier : null;
     }
 }

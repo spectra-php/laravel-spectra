@@ -5,28 +5,29 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Spectra\Pricing\ScrapedPricing;
+use Spectra\Pricing\ProviderPricing;
 use Spectra\SpectraServiceProvider;
+use Spectra\Support\Pricing\PricingCatalog;
+use Spectra\Support\Pricing\PricingFile;
 use Spectra\Support\Pricing\PricingLookup;
-use Spectra\Support\Pricing\ScrapedPricesFile;
-use Spectra\Tests\Fixtures\FakeOpenAIExtraPricing;
-use Spectra\Tests\Fixtures\FakeOpenAIPricing;
+use Spectra\Tests\Fixtures\FakeCatalogs;
 
 /**
- * spectra.costs.use_scraped_prices lets the models in the scraped prices
- * file replace built-in models with the same id; everything else keeps its
- * built-in price. Off (the default), the file is ignored.
+ * Prices come from the bundled catalog. With spectra.costs.pricing_path
+ * set, the models in that file replace bundled models with the same id;
+ * everything else keeps its bundled price.
  */
 beforeEach(function () {
+    $this->bundled = FakeCatalogs::useBundled();
     $this->path = storage_path('framework/testing/pricing-'.uniqid().'.json');
 
     config([
-        'spectra.costs.pricing' => ['openai' => FakeOpenAIPricing::class],
-        'spectra.costs.scraped_prices_path' => $this->path,
+        'spectra.costs.pricing_path' => $this->path,
+        'spectra.costs.cache.enabled' => false,
     ]);
 
-    $this->writeScrapedPricesFile = function (array $providers): void {
-        (new ScrapedPricesFile($this->path))->write(['providers' => $providers]);
+    $this->writePricingFile = function (array $providers, ?string $path = null): void {
+        (new PricingFile($path ?? $this->path))->write(['providers' => $providers]);
         $this->app->forgetInstance(PricingLookup::class);
     };
 
@@ -52,35 +53,22 @@ beforeEach(function () {
 });
 
 afterEach(function () {
-    File::delete($this->path);
+    File::delete([$this->path, $this->bundled]);
 });
 
-it('ignores the file while scraped prices are off', function () {
-    config(['spectra.costs.use_scraped_prices' => false]);
-    ($this->writeScrapedPricesFile)($this->overrides);
+it('bills with the bundled catalog alone when no pricing path is set', function () {
+    config(['spectra.costs.pricing_path' => null]);
+    ($this->writePricingFile)($this->overrides);
 
     $lookup = app(PricingLookup::class);
 
     expect($lookup->get('openai', 'gpt-x')['input'])->toBe(100)
+        ->and($lookup->get('anthropic', 'claude-x')['output'])->toBe(1500)
         ->and($lookup->knows('openai', 'gpt-new'))->toBeFalse();
 });
 
-it('keeps every configured catalog, even two for the same provider', function (bool $useScrapedPrices) {
-    config([
-        'spectra.costs.use_scraped_prices' => $useScrapedPrices,
-        'spectra.costs.pricing' => ['openai' => FakeOpenAIPricing::class, 'openai-fine-tunes' => FakeOpenAIExtraPricing::class],
-    ]);
-    ($this->writeScrapedPricesFile)($this->overrides);
-
-    $lookup = app(PricingLookup::class);
-
-    expect($lookup->get('openai', 'gpt-y')['input'])->toBe(30)
-        ->and($lookup->get('openai', 'ft:gpt-x:acme')['input'])->toBe(300);
-})->with(['scraped prices off' => false, 'scraped prices on' => true]);
-
-it('replaces built-in models with the file and keeps the rest', function () {
-    config(['spectra.costs.use_scraped_prices' => true]);
-    ($this->writeScrapedPricesFile)($this->overrides);
+it('replaces bundled models with the file and keeps the rest', function () {
+    ($this->writePricingFile)($this->overrides);
 
     $lookup = app(PricingLookup::class);
 
@@ -92,12 +80,35 @@ it('replaces built-in models with the file and keeps the rest', function () {
         ->and($lookup->get('openai', 'gpt-x-2026-01-01')['input'])->toBe(90)
         ->and($lookup->get('openai', 'gpt-new')['output'])->toBe(20)
         ->and($lookup->get('openai', 'gpt-y')['input'])->toBe(30)
-        ->and($lookup->getUnit('openai', 'image-x'))->toBe('image');
+        ->and($lookup->getUnit('openai', 'image-x'))->toBe('image')
+        ->and($lookup->get('anthropic', 'claude-x')['input'])->toBe(300);
 });
 
-it('adds providers that have no built-in catalog', function () {
-    config(['spectra.costs.use_scraped_prices' => true]);
-    ($this->writeScrapedPricesFile)(['acme' => ['models' => [
+it('resolves a relative pricing path from the app root', function () {
+    $relative = 'spectra-test/pricing-'.uniqid().'.json';
+    config(['spectra.costs.pricing_path' => $relative]);
+    ($this->writePricingFile)($this->overrides, base_path($relative));
+
+    try {
+        expect(app(PricingLookup::class)->get('openai', 'gpt-x')['input'])->toBe(90);
+    } finally {
+        File::deleteDirectory(base_path('spectra-test'));
+    }
+});
+
+it('reads the 3.x scraped prices keys of a published config when pricing_path is not set', function () {
+    config([
+        'spectra.costs.pricing_path' => null,
+        'spectra.costs.use_scraped_prices' => true,
+        'spectra.costs.scraped_prices_path' => $this->path,
+    ]);
+    ($this->writePricingFile)($this->overrides);
+
+    expect(app(PricingLookup::class)->get('openai', 'gpt-x')['input'])->toBe(90);
+});
+
+it('adds providers that have no bundled catalog', function () {
+    ($this->writePricingFile)(['acme' => ['models' => [
         'acme-1' => ['tiers' => [['tier' => 'standard', 'input_price' => 1, 'output_price' => 2]]],
     ]]]);
 
@@ -107,8 +118,7 @@ it('adds providers that have no built-in catalog', function () {
         ->and($lookup->currency('acme'))->toBe('USD');
 });
 
-it('falls back to the built-in prices when the file is missing', function () {
-    config(['spectra.costs.use_scraped_prices' => true]);
+it('keeps the bundled prices when the file is missing', function () {
     Log::spy();
 
     expect(app(PricingLookup::class)->get('openai', 'gpt-x')['input'])->toBe(100);
@@ -116,8 +126,7 @@ it('falls back to the built-in prices when the file is missing', function () {
     Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => Str::contains($message, "doesn't exist"));
 });
 
-it('falls back to the built-in prices when the file is not valid JSON', function () {
-    config(['spectra.costs.use_scraped_prices' => true]);
+it('keeps the bundled prices when the file is not valid JSON', function () {
     File::ensureDirectoryExists(dirname($this->path));
     File::put($this->path, '{"providers": ');
     Log::spy();
@@ -127,10 +136,9 @@ it('falls back to the built-in prices when the file is not valid JSON', function
     Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => Str::contains($message, 'not valid JSON'));
 });
 
-it('skips a provider whose currency differs from its built-in catalog', function () {
-    config(['spectra.costs.use_scraped_prices' => true]);
+it('skips a provider whose currency differs from the bundled catalog', function () {
     $this->overrides['openai']['currency'] = 'EUR';
-    ($this->writeScrapedPricesFile)($this->overrides);
+    ($this->writePricingFile)($this->overrides);
     Log::spy();
 
     $lookup = app(PricingLookup::class);
@@ -142,9 +150,8 @@ it('skips a provider whose currency differs from its built-in catalog', function
 });
 
 it('skips a broken model and loads the others', function (array $broken, string $reason) {
-    config(['spectra.costs.use_scraped_prices' => true]);
     $this->overrides['openai']['models']['gpt-y'] = $broken;
-    ($this->writeScrapedPricesFile)($this->overrides);
+    ($this->writePricingFile)($this->overrides);
     Log::spy();
 
     $lookup = app(PricingLookup::class);
@@ -161,12 +168,12 @@ it('skips a broken model and loads the others', function (array $broken, string 
     'bad date' => [['tiers' => [['tier' => 'standard', 'input_price' => 1, 'since' => 'soon']]], 'Y-m-d'],
     'unknown capability' => [['capabilities' => ['telepathy'], 'tiers' => [['tier' => 'standard']]], 'telepathy'],
     'no standard tier' => [['tiers' => [['tier' => 'batch', 'input_price' => 1, 'output_price' => 2]]], 'no standard tier'],
+    'variants that are not an object' => [['variants' => 'hd', 'tiers' => [['tier' => 'standard', 'input_price' => 1]]], 'variants must be an object'],
 ]);
 
-it('keeps the built-in unit and type of a hand-written entry that leaves them out', function () {
-    config(['spectra.costs.use_scraped_prices' => true]);
+it('keeps the bundled unit and type of a hand-written entry that leaves them out', function () {
     $this->overrides['openai']['models']['image-x'] = ['tiers' => [['tier' => 'standard', 'price_per_unit' => 6]]];
-    ($this->writeScrapedPricesFile)($this->overrides);
+    ($this->writePricingFile)($this->overrides);
 
     $lookup = app(PricingLookup::class);
 
@@ -175,10 +182,9 @@ it('keeps the built-in unit and type of a hand-written entry that leaves them ou
         ->and($lookup->get('openai', 'image-x')['price_per_unit'])->toBe(6);
 });
 
-it('skips an entry whose pricing unit differs from the built-in model and keeps the built-in price', function () {
-    config(['spectra.costs.use_scraped_prices' => true]);
+it('skips an entry whose pricing unit differs from the bundled model and keeps the bundled price', function () {
     $this->overrides['openai']['models']['image-x'] = ['pricing_unit' => 'tokens', 'tiers' => [['tier' => 'standard', 'input_price' => 1, 'output_price' => 2]]];
-    ($this->writeScrapedPricesFile)($this->overrides);
+    ($this->writePricingFile)($this->overrides);
     Log::spy();
 
     $lookup = app(PricingLookup::class);
@@ -188,24 +194,28 @@ it('skips an entry whose pricing unit differs from the built-in model and keeps 
     Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => Str::contains($message, ["'image-x'", "pricing_unit 'tokens'", "'image'"]));
 });
 
-it('round-trips every built-in model through its JSON form', function () {
-    $classes = (require dirname(__DIR__, 3).'/config/spectra.php')['costs']['pricing'];
+it('round-trips every model of the bundled catalog through its JSON form', function () {
+    PricingCatalog::useBundledFile(null);
 
-    foreach ($classes as $class) {
-        foreach ((new $class)->models() as $definition) {
-            $json = json_decode(json_encode(ScrapedPricing::definitionToArray($definition), JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
-            $copy = ScrapedPricing::definitionFromArray($definition->getInternalName(), $json);
+    $catalogs = PricingCatalog::bundled();
 
-            expect($copy->toTiersArray())->toEqual($definition->toTiersArray(), "{$class}: {$definition->getInternalName()}")
+    expect($catalogs)->not->toBeEmpty();
+
+    foreach ($catalogs as $provider => $catalog) {
+        foreach ($catalog->models() as $definition) {
+            $json = json_decode(json_encode(ProviderPricing::definitionToArray($definition), JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+            $copy = ProviderPricing::definitionFromArray($definition->getInternalName(), $json);
+
+            expect($copy->toTiersArray())->toEqual($definition->toTiersArray(), "{$provider}: {$definition->getInternalName()}")
                 ->and($copy->toModelArray())->toBe($definition->toModelArray());
         }
     }
 });
 
 it('writes compact entries without empty fields', function () {
-    $definition = collect((new FakeOpenAIPricing)->models())->first(fn ($d) => $d->getInternalName() === 'gpt-y');
+    $definition = collect(FakeCatalogs::openai()->models())->first(fn ($d) => $d->getInternalName() === 'gpt-y');
 
-    expect(ScrapedPricing::definitionToArray($definition))->toBe([
+    expect(ProviderPricing::definitionToArray($definition))->toBe([
         'display_name' => 'GPT Y',
         'type' => 'text',
         'pricing_unit' => 'tokens',
@@ -214,27 +224,38 @@ it('writes compact entries without empty fields', function () {
     ]);
 });
 
-it('fills the scraped prices keys into a config published before they existed', function () {
-    config(['spectra.costs' => ['enabled' => true, 'pricing' => ['openai' => FakeOpenAIPricing::class]]]);
-    putenv('SPECTRA_USE_SCRAPED_PRICES=true');
+it('fills the pricing keys into a config published before they existed', function () {
+    config(['spectra.costs' => ['enabled' => true]]);
+    putenv('SPECTRA_PRICING_PATH=prices/mine.json');
 
     try {
         (new SpectraServiceProvider($this->app))->register();
     } finally {
-        putenv('SPECTRA_USE_SCRAPED_PRICES');
+        putenv('SPECTRA_PRICING_PATH');
     }
 
-    expect(config('spectra.costs.use_scraped_prices'))->toBeTrue()
-        ->and(config('spectra.costs.scraped_prices_path'))->toBe(resource_path('spectra/scraped-prices.json'))
-        ->and(config('spectra.costs.firecrawl.url'))->toBe('https://api.firecrawl.dev/v2')
-        ->and(config('spectra.costs.pricing.openai'))->toBe(FakeOpenAIPricing::class);
+    expect(config('spectra.costs.pricing_path'))->toBe('prices/mine.json')
+        ->and(config('spectra.costs.cache'))->toBe(['enabled' => true, 'store' => null, 'ttl' => 86400])
+        ->and(config('spectra.costs.firecrawl.url'))->toBe('https://api.firecrawl.dev/v2');
 });
 
-it('keeps scraped prices keys the app config already has', function () {
-    config(['spectra.costs.use_scraped_prices' => false, 'spectra.costs.firecrawl' => ['api_key' => 'mine']]);
+it('keeps pricing keys the app config already has', function () {
+    config(['spectra.costs.cache' => ['enabled' => false], 'spectra.costs.firecrawl' => ['api_key' => 'mine']]);
 
     (new SpectraServiceProvider($this->app))->register();
 
-    expect(config('spectra.costs.use_scraped_prices'))->toBeFalse()
+    expect(config('spectra.costs.cache'))->toBe(['enabled' => false])
         ->and(config('spectra.costs.firecrawl'))->toBe(['api_key' => 'mine']);
+});
+
+it('warns once when a published config still maps pricing classes, and prices as usual', function () {
+    PricingCatalog::resetWarnings();
+    config(['spectra.costs.pricing_path' => null, 'spectra.costs.pricing' => ['openai' => 'App\\Pricing\\MyOpenAIPricing']]);
+    Log::spy();
+
+    expect(app(PricingLookup::class)->get('openai', 'gpt-x')['input'])->toBe(100);
+    $this->app->forgetInstance(PricingLookup::class);
+    expect(app(PricingLookup::class)->get('openai', 'gpt-y')['input'])->toBe(30);
+
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => Str::contains($message, 'costs.pricing'))->once();
 });
