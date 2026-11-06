@@ -36,6 +36,6 @@ class DashboardConversationsController extends Controller
         abort_if($scope === null, 403);
         abort_unless($dashboard->hasSection(DashboardSection::Conversations), 404);
 
-        return $getConversations($scope, DateRange::forPeriod($input['period'] ?? $dashboard->default_period), $dashboard->show_costs);
+        return $getConversations($scope, DateRange::forPeriod($input['period'] ?? $dashboard->default_period), $dashboard->showsCosts());
     }
 }

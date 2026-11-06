@@ -1193,7 +1193,7 @@ export interface DashboardSummary {
     id: string;
     name: string;
     trackable_type: string;
-    trackable_id: string | null;
+    trackable_id: string;
     trackable_name: string | null;
     widgets: { type: DashboardWidgetData['type']; size: DashboardWidgetSize }[];
     default_period: string;

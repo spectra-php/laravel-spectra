@@ -123,7 +123,7 @@ class DashboardAssets
                 'name' => $dashboard->name,
                 'trackableName' => isset($trackable->name) && is_string($trackable->name) ? $trackable->name : null,
                 'sections' => $dashboard->enabledSections(),
-                'showCosts' => $dashboard->show_costs,
+                'showCosts' => $dashboard->showsCosts(),
                 'showMessages' => $dashboard->show_messages,
             ]);
 

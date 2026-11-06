@@ -36,6 +36,6 @@ class DashboardTracesController extends Controller
         abort_if($scope === null, 403);
         abort_unless($dashboard->hasSection(DashboardSection::Traces), 404);
 
-        return $getTraces($scope, DateRange::forPeriod($input['period'] ?? $dashboard->default_period), $dashboard->show_costs);
+        return $getTraces($scope, DateRange::forPeriod($input['period'] ?? $dashboard->default_period), $dashboard->showsCosts());
     }
 }

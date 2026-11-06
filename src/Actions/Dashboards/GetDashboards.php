@@ -40,7 +40,6 @@ class GetDashboards
                 trackable_name: $this->trackableName($dashboard),
                 widgets: $dashboard->widgets,
                 default_period: $dashboard->default_period,
-                show_costs: $dashboard->show_costs,
                 sections: $dashboard->sections ?? [],
                 show_messages: $dashboard->show_messages,
                 is_active: $dashboard->is_active,
@@ -50,14 +49,10 @@ class GetDashboards
     }
 
     /**
-     * Get the name of the one trackable the dashboard is for, when it has one.
+     * Get the name of the trackable the dashboard is for.
      */
     private function trackableName(SpectraDashboard $dashboard): ?string
     {
-        if ($dashboard->trackable_id === null) {
-            return null;
-        }
-
         $trackable = $this->trackables->find($dashboard->trackable_type, $dashboard->trackable_id);
 
         return isset($trackable->name) && is_string($trackable->name) ? $trackable->name : null;

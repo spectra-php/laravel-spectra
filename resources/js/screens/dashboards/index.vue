@@ -31,8 +31,6 @@ const load = async () => {
 const typeName = (type: string) => type.split('\\').pop() ?? type;
 
 const audience = (dashboard: DashboardSummary) => {
-    if (dashboard.trackable_id === null) return `Every ${typeName(dashboard.trackable_type)}`;
-
     return dashboard.trackable_name
         ? `${dashboard.trackable_name} (${typeName(dashboard.trackable_type)} #${dashboard.trackable_id})`
         : `${typeName(dashboard.trackable_type)} #${dashboard.trackable_id}`;
@@ -98,7 +96,7 @@ onMounted(load);
             <div v-else-if="!dashboards.length" class="card">
                 <div class="empty-state">
                     <p class="empty-state-title">No dashboards yet</p>
-                    <p class="empty-state-description">Create one for a single trackable, or for every user, and give them its link.</p>
+                    <p class="empty-state-description">Create one for a trackable, and give them its link.</p>
                     <router-link :to="{ name: 'dashboards-create' }" class="btn btn-primary btn-sm mt-4">New dashboard</router-link>
                 </div>
             </div>
@@ -121,7 +119,7 @@ onMounted(load);
                                 <td class="font-medium text-gray-900 dark:text-white">{{ dashboard.name }}</td>
                                 <td>{{ audience(dashboard) }}</td>
                                 <td class="text-right tabular-nums">{{ dashboard.widgets.length }}</td>
-                                <td>{{ dashboard.show_costs ? 'Shown' : 'Hidden' }}</td>
+                                <td>{{ dashboard.sections.includes('costs') ? 'Shown' : 'Hidden' }}</td>
                                 <td><span class="badge" :class="dashboard.is_active ? 'badge-success' : 'badge-secondary'">{{ dashboard.is_active ? 'Active' : 'Paused' }}</span></td>
                                 <td class="whitespace-nowrap text-right">
                                     <div v-if="confirmingDelete === dashboard.id" class="inline-flex items-center gap-2">

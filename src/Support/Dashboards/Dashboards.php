@@ -28,18 +28,17 @@ class Dashboards
     ) {}
 
     /**
-     * Save a dashboard: a read-only page for a trackable, which logs in through
-     * your app and sees only its own data. Pass a model, or a type with an id; a
-     * type alone is every trackable of that type. The name and the trackable
-     * identify it, so creating the same one again changes it and keeps its URL.
+     * Save a dashboard: a read-only page for one trackable, which logs in through
+     * your app and sees only its own data. Pass a model, or a type with an id. The
+     * name and the trackable identify it, so creating the same one again changes
+     * it and keeps its URL.
      *
      *   $url = Spectra::dashboard()->create('Usage', $user, widgets: ['stats', 'recent_requests'])->url();
      *   Spectra::dashboard()->create('Usage', User::class, trackableId: 123);
-     *   Spectra::dashboard()->create('Usage', User::class);
      *
      * @param  array<int, DashboardWidget|string|array{type: DashboardWidget|string, size?: string}>  $widgets  Without widgets: the headline numbers, requests per day and the latest requests
      * @param  string  $period  The period it opens on: today, week, month or year
-     * @param  array<int, DashboardSection|string>  $sections  The pages it links to in its header: requests, traces, conversations, errors and costs
+     * @param  array<int, DashboardSection|string>  $sections  The pages it links to in its header: requests, traces, conversations, errors and costs. With costs, viewers also see costs in its widgets and other pages
      * @param  bool  $showMessages  Let viewers read the user's messages, the replies and error messages
      *
      * @throws InvalidArgumentException when an argument is wrong
@@ -50,12 +49,11 @@ class Dashboards
         int|string|null $trackableId = null,
         array $widgets = [],
         string $period = 'month',
-        bool $showCosts = false,
         bool $active = true,
         array $sections = [],
         bool $showMessages = false,
     ): SpectraDashboard {
-        $attributes = $this->attributes($name, $trackable, $trackableId, $widgets, $period, $showCosts, $active, $sections, $showMessages);
+        $attributes = $this->attributes($name, $trackable, $trackableId, $widgets, $period, $active, $sections, $showMessages);
 
         return SpectraDashboard::query()->updateOrCreate(
             ['name' => $attributes['name'], 'trackable_type' => $attributes['trackable_type'], 'trackable_id' => $attributes['trackable_id']],
@@ -82,10 +80,9 @@ class Dashboards
     }
 
     /**
-     * Get the saved dashboards, newest first. With a model, or a type and an id:
-     * the ones that trackable can open, including those for every trackable of
-     * its type. With a type alone: every one for that type. Paused dashboards are
-     * included; check `is_active` before linking to one.
+     * Get the saved dashboards, newest first: the ones for a model, or a type and
+     * an id, or every one for a type alone. Paused dashboards are included; check
+     * `is_active` before linking to one.
      *
      * @return Collection<int, SpectraDashboard>
      *
@@ -98,9 +95,7 @@ class Dashboards
         if ($trackable !== null) {
             [$type, $id] = $this->target($trackable, $trackableId);
 
-            $query->where('trackable_type', $type)->when($id !== null, fn (Builder $query) => $query->where(
-                fn (Builder $query) => $query->where('trackable_id', $id)->orWhereNull('trackable_id'),
-            ));
+            $query->where('trackable_type', $type)->when($id !== null, fn (Builder $query) => $query->where('trackable_id', $id));
         }
 
         return $query->get()->values();
@@ -111,7 +106,7 @@ class Dashboards
      *
      * @param  array<int, DashboardWidget|string|array{type: DashboardWidget|string, size?: string}>  $widgets
      * @param  array<int, DashboardSection|string>  $sections
-     * @return array{name: string, trackable_type: string, trackable_id: string|null, widgets: list<array{type: string, size: string}>, default_period: string, show_costs: bool, is_active: bool, sections: list<string>, show_messages: bool}
+     * @return array{name: string, trackable_type: string, trackable_id: string, widgets: list<array{type: string, size: string}>, default_period: string, is_active: bool, sections: list<string>, show_messages: bool}
      *
      * @throws InvalidArgumentException when an argument is wrong
      */
@@ -121,7 +116,6 @@ class Dashboards
         int|string|null $trackableId,
         array $widgets,
         string $period,
-        bool $showCosts,
         bool $active,
         array $sections,
         bool $showMessages,
@@ -131,7 +125,8 @@ class Dashboards
 
         [$type, $id] = $this->target($trackable, $trackableId);
 
-        throw_if(is_string($trackable) && $id !== null && $this->trackables->find($type, $id) === null, InvalidArgumentException::class, "No [{$type}] trackable has the id [{$id}].");
+        throw_if($id === null, InvalidArgumentException::class, 'A shared dashboard is for one trackable: pass a model, or a type with an id.');
+        throw_if(is_string($trackable) && $this->trackables->find($type, $id) === null, InvalidArgumentException::class, "No [{$type}] trackable has the id [{$id}].");
 
         return [
             'name' => $name,
@@ -139,7 +134,6 @@ class Dashboards
             'trackable_id' => $id,
             'widgets' => $this->widgets($widgets),
             'default_period' => $period,
-            'show_costs' => $showCosts,
             'is_active' => $active,
             'sections' => $this->sections($sections),
             'show_messages' => $showMessages,
@@ -147,8 +141,7 @@ class Dashboards
     }
 
     /**
-     * Get the morph type and id a trackable argument names; a null id is every
-     * trackable of the type.
+     * Get the morph type and id a trackable argument names; a type alone has no id.
      *
      * @return array{0: string, 1: string|null}
      *

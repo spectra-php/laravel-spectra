@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Spectra\Contracts\DashboardTrackableResolver;
 use Spectra\Enums\DashboardSection;
@@ -52,12 +53,12 @@ function dashboardViewer(string $name = 'Viewer'): User
     return User::query()->create(['name' => $name, 'email' => fake()->unique()->safeEmail(), 'password' => 'secret']);
 }
 
-function dashboardFor(Model|string $target, array $attributes = []): SpectraDashboard
+function dashboardFor(Model $target, array $attributes = []): SpectraDashboard
 {
     return SpectraDashboard::query()->create([
         'name' => 'Usage',
-        'trackable_type' => $target instanceof Model ? $target->getMorphClass() : $target,
-        'trackable_id' => $target instanceof Model ? (string) $target->getKey() : null,
+        'trackable_type' => $target->getMorphClass(),
+        'trackable_id' => (string) $target->getKey(),
         'widgets' => [['type' => 'stats', 'size' => 'full']],
         ...$attributes,
     ]);
@@ -183,30 +184,13 @@ describe('who gets in', function () {
 });
 
 describe('whose data', function () {
-    it('shows every viewer of an all-users dashboard only their own numbers', function () {
-        $first = dashboardViewer();
-        $second = dashboardViewer();
-        dashboardCall($first);
-        dashboardCall($second);
-        dashboardCall($second);
-        $dashboard = dashboardFor($first->getMorphClass());
-
-        $this->actingAs($first);
-        $firstCount = dashboardWidgetData(dashboardData($dashboard), 'stats')['total_requests'];
-
-        $this->actingAs($second);
-        $secondCount = dashboardWidgetData(dashboardData($dashboard), 'stats')['total_requests'];
-
-        expect($firstCount)->toBe(1)->and($secondCount)->toBe(2);
-    });
-
     it('ignores a type and id in the query string', function () {
         $viewer = dashboardViewer();
         $victim = dashboardViewer();
         dashboardCall($victim);
 
         $this->actingAs($viewer);
-        $response = dashboardData(dashboardFor($viewer->getMorphClass()), "?type={$victim->getMorphClass()}&id={$victim->id}&trackable_id={$victim->id}");
+        $response = dashboardData(dashboardFor($viewer), "?type={$victim->getMorphClass()}&id={$victim->id}&trackable_id={$victim->id}");
 
         expect(dashboardWidgetData($response, 'stats')['total_requests'])->toBe(0);
     });
@@ -237,7 +221,7 @@ describe('whose data', function () {
         dashboardCall($user);
 
         $this->actingAs($user);
-        $response = dashboardData(dashboardFor('member'));
+        $response = dashboardData(dashboardFor($user));
 
         expect(dashboardWidgetData($response, 'stats')['total_requests'])->toBe(1);
 
@@ -252,14 +236,14 @@ describe('whose data', function () {
         {
             public function __construct(private readonly Model $team) {}
 
-            public function resolve(Authenticatable $viewer, string $type, ?string $id): Model
+            public function resolve(Authenticatable $viewer, string $type, string $id): Model
             {
                 return $this->team;
             }
         });
 
         $this->actingAs($user);
-        $response = dashboardData(dashboardFor('team'));
+        $response = dashboardData(dashboardFor($team));
 
         expect(dashboardWidgetData($response, 'stats')['total_requests'])->toBe(1)
             ->and($response->json('trackable_name'))->toBe('Acme');
@@ -274,7 +258,7 @@ describe('whose data', function () {
         {
             public function __construct(private readonly Model $wrong) {}
 
-            public function resolve(Authenticatable $viewer, string $type, ?string $id): Model
+            public function resolve(Authenticatable $viewer, string $type, string $id): Model
             {
                 return $this->wrong;
             }
@@ -304,7 +288,7 @@ describe('what a response may contain', function () {
         ]);
 
         $this->actingAs($user);
-        $body = dashboardData(dashboardFor($user, ['widgets' => everyWidget(), 'show_costs' => true]))->getContent();
+        $body = dashboardData(dashboardFor($user, ['widgets' => everyWidget(), 'sections' => ['costs']]))->getContent();
 
         expect($body)->not->toContain('TOP-SECRET')
             ->and($body)->not->toContain($call->id);
@@ -337,7 +321,7 @@ describe('what a response may contain', function () {
         dashboardCall($user, ['total_cost_in_cents' => 987.65]);
 
         $this->actingAs($user);
-        $response = dashboardData(dashboardFor($user, ['widgets' => everyWidget(), 'show_costs' => true]));
+        $response = dashboardData(dashboardFor($user, ['widgets' => everyWidget(), 'sections' => ['costs']]));
 
         expect(dashboardWidgetData($response, 'stats')['total_cost'])->toEqualWithDelta(987.65, 0.001)
             ->and(dashboardWidgetData($response, 'cost_trend')[0]['cost'])->toEqualWithDelta(987.65, 0.001);
@@ -497,10 +481,9 @@ describe('designing them', function () {
         return [
             'name' => 'Usage',
             'trackable_type' => (new User)->getMorphClass(),
-            'trackable_id' => null,
+            'trackable_id' => (string) dashboardViewer()->id,
             'widgets' => [['type' => 'stats', 'size' => 'full']],
             'default_period' => 'month',
-            'show_costs' => false,
             'is_active' => true,
             ...$input,
         ];
@@ -527,7 +510,7 @@ describe('designing them', function () {
 
     it('refuses someone with only viewSpectra', function () {
         Gate::define('manageSpectra', fn ($user = null) => false);
-        $dashboard = dashboardFor((new User)->getMorphClass());
+        $dashboard = dashboardFor(dashboardViewer());
 
         $listed = $this->getJson('/spectra/api/dashboards')->assertOk();
 
@@ -535,7 +518,7 @@ describe('designing them', function () {
         $this->postJson('/spectra/api/dashboards', dashboardInput())->assertForbidden();
         $this->putJson("/spectra/api/dashboards/{$dashboard->id}", dashboardInput())->assertForbidden();
         $this->deleteJson("/spectra/api/dashboards/{$dashboard->id}")->assertForbidden();
-        $this->getJson("/spectra/api/dashboards/{$dashboard->id}/preview?trackable_id=1")->assertForbidden();
+        $this->getJson("/spectra/api/dashboards/{$dashboard->id}/preview")->assertForbidden();
     });
 
     it('says when the migration has not run, instead of failing', function () {
@@ -572,16 +555,20 @@ describe('designing them', function () {
         'unknown size' => [[['type' => 'stats', 'size' => 'huge']]],
     ]);
 
-    it('previews an all-users dashboard for the id the admin gives', function () {
+    it('previews what the dashboard\'s trackable would see', function () {
         $user = dashboardViewer();
         dashboardCall($user);
-        $dashboard = dashboardFor($user->getMorphClass());
+        dashboardCall(dashboardViewer());
 
-        $response = $this->getJson("/spectra/api/dashboards/{$dashboard->id}/preview?trackable_id={$user->id}")->assertOk();
+        $response = $this->getJson('/spectra/api/dashboards/'.dashboardFor($user)->id.'/preview')->assertOk();
 
         expect(dashboardWidgetData($response, 'stats')['total_requests'])->toBe(1);
-        $this->getJson("/spectra/api/dashboards/{$dashboard->id}/preview")->assertUnprocessable();
-        $this->getJson("/spectra/api/dashboards/{$dashboard->id}/preview?trackable_id=99999")->assertNotFound();
+    });
+
+    it('requires a trackable id', function () {
+        $this->postJson('/spectra/api/dashboards', dashboardInput(['trackable_id' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('trackable_id');
     });
 });
 
@@ -589,12 +576,12 @@ describe('from code', function () {
     it('creates a dashboard for a model, and gives its URL', function () {
         $user = dashboardViewer();
 
-        $dashboard = Spectra::dashboard()->create('Usage', $user, widgets: ['stats', ['type' => DashboardWidget::RecentRequests, 'size' => 'half']], showCosts: true);
+        $dashboard = Spectra::dashboard()->create('Usage', $user, widgets: ['stats', ['type' => DashboardWidget::RecentRequests, 'size' => 'half']], sections: ['costs']);
 
         expect($dashboard->trackable_type)->toBe($user->getMorphClass())
             ->and($dashboard->trackable_id)->toBe((string) $user->id)
             ->and($dashboard->widgets)->toBe([['type' => 'stats', 'size' => 'full'], ['type' => 'recent_requests', 'size' => 'half']])
-            ->and($dashboard->show_costs)->toBeTrue()
+            ->and($dashboard->showsCosts())->toBeTrue()
             ->and($dashboard->url())->toEndWith("/spectra/dashboards/{$dashboard->id}");
     });
 
@@ -607,31 +594,19 @@ describe('from code', function () {
             ->and($dashboard->trackable_id)->toBe((string) $user->id);
     });
 
-    it('creates a dashboard for every trackable of a type, which each viewer can open', function () {
-        $user = dashboardViewer();
-        dashboardCall($user);
-
-        $dashboard = Spectra::dashboard()->create('Usage', User::class);
-
-        $this->actingAs($user);
-
-        expect($dashboard->trackable_id)->toBeNull()
-            ->and(dashboardWidgetData(dashboardData($dashboard), 'stats')['total_requests'])->toBe(1);
-    });
-
     it('stores the morph alias when given the class', function () {
         Relation::morphMap(['member' => User::class]);
 
-        $dashboard = Spectra::dashboard()->create('Usage', User::class);
+        $dashboard = Spectra::dashboard()->create('Usage', User::class, trackableId: dashboardViewer()->id);
 
         expect($dashboard->trackable_type)->toBe('member');
     })->after(fn () => Relation::$morphMap = []);
 
     it('starts on the default widgets and hides costs', function () {
-        $dashboard = Spectra::dashboard()->create('Usage', User::class);
+        $dashboard = Spectra::dashboard()->create('Usage', dashboardViewer());
 
         expect(collect($dashboard->widgets)->pluck('type')->all())->toBe(['stats', 'requests_trend', 'recent_requests'])
-            ->and($dashboard->show_costs)->toBeFalse();
+            ->and($dashboard->showsCosts())->toBeFalse();
     });
 
     it('changes the same dashboard when created again, keeping its URL', function () {
@@ -646,12 +621,12 @@ describe('from code', function () {
     });
 
     it('keeps dashboards apart by name and by trackable', function () {
+        $user = dashboardViewer();
+        Spectra::dashboard()->create('Usage', $user);
         Spectra::dashboard()->create('Usage', dashboardViewer());
-        Spectra::dashboard()->create('Usage', dashboardViewer());
-        Spectra::dashboard()->create('Usage', User::class);
-        Spectra::dashboard()->create('Costs', User::class);
+        Spectra::dashboard()->create('Costs', $user);
 
-        expect(SpectraDashboard::query()->count())->toBe(4);
+        expect(SpectraDashboard::query()->count())->toBe(3);
     });
 
     it('rejects wrong arguments', function (Closure $call, string $message) {
@@ -661,6 +636,7 @@ describe('from code', function () {
         'model and id' => [fn (User $user) => Spectra::dashboard()->create('Usage', $user, trackableId: 1), 'not both'],
         'unsaved model' => [fn () => Spectra::dashboard()->create('Usage', new User), 'saved trackable'],
         'not a model' => [fn () => Spectra::dashboard()->create('Usage', 'stdClass'), 'not an Eloquent model'],
+        'type without an id' => [fn () => Spectra::dashboard()->create('Usage', User::class), 'for one trackable'],
         'missing id' => [fn () => Spectra::dashboard()->create('Usage', User::class, trackableId: 99999), 'has the id'],
         'unknown widget' => [fn (User $user) => Spectra::dashboard()->create('Usage', $user, widgets: ['raw_prompts']), 'Unknown dashboard widget'],
         'unknown size' => [fn (User $user) => Spectra::dashboard()->create('Usage', $user, widgets: [['type' => 'stats', 'size' => 'huge']]), 'widget size'],
@@ -669,8 +645,8 @@ describe('from code', function () {
     ]);
 
     it('deletes a dashboard by model and by id', function () {
-        $first = Spectra::dashboard()->create('First', User::class);
-        $second = Spectra::dashboard()->create('Second', User::class);
+        $first = Spectra::dashboard()->create('First', dashboardViewer());
+        $second = Spectra::dashboard()->create('Second', dashboardViewer());
 
         expect(Spectra::dashboard()->delete($first))->toBeTrue()
             ->and(Spectra::dashboard()->delete($second->id))->toBeTrue()
@@ -682,29 +658,28 @@ describe('from code', function () {
     })->with(['unknown uuid' => '01a1b04c-d820-7140-bea1-3e85e8d94cfb', 'not a uuid' => 'not-a-uuid']);
 
     it('lists every dashboard, newest first', function () {
-        $older = Spectra::dashboard()->create('Older', User::class);
+        $older = Spectra::dashboard()->create('Older', dashboardViewer());
         $older->forceFill(['created_at' => now()->subDay()])->save();
-        Spectra::dashboard()->create('Newer', User::class);
+        Spectra::dashboard()->create('Newer', dashboardViewer());
 
         expect(Spectra::dashboard()->list()->pluck('name')->all())->toBe(['Newer', 'Older']);
     });
 
-    it('lists what a trackable can open, including those for its whole type', function () {
+    it('lists the dashboards of one trackable', function () {
         $user = dashboardViewer();
         Spectra::dashboard()->create('Theirs', $user);
-        Spectra::dashboard()->create('Everyone', User::class);
         Spectra::dashboard()->create('Someone else', dashboardViewer());
 
-        $byModel = Spectra::dashboard()->list($user)->pluck('name')->sort()->values()->all();
-        $byId = Spectra::dashboard()->list(User::class, $user->id)->pluck('name')->sort()->values()->all();
+        $byModel = Spectra::dashboard()->list($user)->pluck('name')->all();
+        $byId = Spectra::dashboard()->list(User::class, $user->id)->pluck('name')->all();
 
-        expect($byModel)->toBe(['Everyone', 'Theirs'])->and($byId)->toBe($byModel);
+        expect($byModel)->toBe(['Theirs'])->and($byId)->toBe($byModel);
     });
 
     it('lists every dashboard for a type', function () {
-        Spectra::dashboard()->create('Theirs', dashboardViewer());
-        Spectra::dashboard()->create('Everyone', User::class);
-        SpectraDashboard::query()->create(['name' => 'Teams', 'trackable_type' => 'team', 'widgets' => []]);
+        Spectra::dashboard()->create('First', dashboardViewer());
+        Spectra::dashboard()->create('Second', dashboardViewer());
+        SpectraDashboard::query()->create(['name' => 'Teams', 'trackable_type' => 'team', 'trackable_id' => '1', 'widgets' => []]);
 
         expect(Spectra::dashboard()->list(User::class))->toHaveCount(2);
     });
@@ -712,7 +687,7 @@ describe('from code', function () {
     it('keeps dashboards in memory on the fake', function () {
         $fake = Spectra::fake();
 
-        $dashboard = Spectra::dashboard()->create('Usage', User::class);
+        $dashboard = Spectra::dashboard()->create('Usage', dashboardViewer());
 
         $fake->assertDashboardCreated('Usage');
         expect($dashboard->url())->toContain('/spectra/dashboards/')
@@ -725,14 +700,14 @@ describe('from code', function () {
     it('checks arguments on the fake too', function () {
         Spectra::fake();
 
-        expect(fn () => Spectra::dashboard()->create('Usage', User::class, widgets: ['raw_prompts']))->toThrow(InvalidArgumentException::class);
+        expect(fn () => Spectra::dashboard()->create('Usage', dashboardViewer(), widgets: ['raw_prompts']))->toThrow(InvalidArgumentException::class);
     });
 });
 
 describe('the pages in the header', function () {
     function dashboardWithSections(Model|string $target, array $attributes = []): SpectraDashboard
     {
-        return dashboardFor($target, ['sections' => ['requests', 'traces', 'conversations', 'errors', 'costs'], 'show_costs' => true, ...$attributes]);
+        return dashboardFor($target, ['sections' => ['requests', 'traces', 'conversations', 'errors', 'costs'], ...$attributes]);
     }
 
     function dashboardSection(SpectraDashboard $dashboard, string $path): TestResponse
@@ -768,16 +743,6 @@ describe('the pages in the header', function () {
         $this->actingAs($user);
 
         $this->get("/spectra/dashboards/{$dashboard->id}/traces/some-trace")->assertOk()->assertSee('window.SpectraViewer', false);
-    });
-
-    it('hides the Costs page on a dashboard that hides costs', function () {
-        $user = dashboardViewer();
-        $dashboard = dashboardWithSections($user, ['show_costs' => false]);
-
-        $this->actingAs($user);
-
-        dashboardSection($dashboard, 'costs')->assertNotFound();
-        expect($dashboard->enabledSections())->not->toContain('costs');
     });
 
     it('lists only the viewer\'s calls, with no id or text when messages are off', function () {
@@ -872,7 +837,7 @@ describe('the pages in the header', function () {
         dashboardCall($user, ['trace_id' => 'mine', 'conversation_id' => 'chat', 'total_cost_in_cents' => 987.65]);
 
         $this->actingAs($user);
-        $dashboard = dashboardWithSections($user, ['show_costs' => false]);
+        $dashboard = dashboardWithSections($user, ['sections' => ['traces', 'conversations']]);
 
         foreach (['traces', 'traces/mine', 'conversations', 'conversations/chat'] as $path) {
             expect(dashboardSection($dashboard, $path)->assertOk()->getContent())->not->toContain('987.65');
@@ -962,13 +927,29 @@ describe('the pages in the header', function () {
         Gate::define('manageSpectra', fn ($user = null) => true);
 
         $id = $this->postJson('/spectra/api/dashboards', dashboardInput(['sections' => ['traces', 'errors'], 'show_messages' => true]))->assertCreated()->json('id');
-        $fromCode = Spectra::dashboard()->create('Code', User::class, showCosts: true, sections: [DashboardSection::Requests, 'costs'], showMessages: true);
+        $fromCode = Spectra::dashboard()->create('Code', dashboardViewer(), sections: [DashboardSection::Requests, 'costs'], showMessages: true);
 
         expect(SpectraDashboard::query()->findOrFail($id)->enabledSections())->toBe(['traces', 'errors'])
             ->and(SpectraDashboard::query()->findOrFail($id)->show_messages)->toBeTrue()
             ->and($fromCode->enabledSections())->toBe(['requests', 'costs'])
             ->and($fromCode->show_messages)->toBeTrue();
         $this->postJson('/spectra/api/dashboards', dashboardInput(['sections' => ['raw_prompts']]))->assertUnprocessable();
-        expect(fn () => Spectra::dashboard()->create('Code', User::class, sections: ['raw_prompts']))->toThrow(InvalidArgumentException::class, 'Unknown dashboard section');
+        expect(fn () => Spectra::dashboard()->create('Code', dashboardViewer(), sections: ['raw_prompts']))->toThrow(InvalidArgumentException::class, 'Unknown dashboard section');
+    });
+
+    it('moves a dashboard that showed costs to the Costs page, and drops one for a whole type', function () {
+        $migration = include __DIR__.'/../../database/migrations/2026_11_06_000004_drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table.php';
+        $migration->down();
+
+        $row = fn (array $columns) => SpectraDashboard::query()->toBase()->insert(['id' => (string) Str::uuid(), 'trackable_type' => 'user', 'widgets' => '[]', ...$columns]);
+        $row(['name' => 'Showed costs', 'trackable_id' => '1', 'show_costs' => true, 'sections' => '["traces"]']);
+        $row(['name' => 'Hid costs', 'trackable_id' => '2', 'show_costs' => false]);
+        $row(['name' => 'Whole type', 'trackable_id' => null, 'show_costs' => true]);
+
+        $migration->up();
+
+        expect(SpectraDashboard::query()->pluck('name')->sort()->values()->all())->toBe(['Hid costs', 'Showed costs'])
+            ->and(SpectraDashboard::query()->where('name', 'Showed costs')->sole()->enabledSections())->toBe(['traces', 'costs'])
+            ->and(SpectraDashboard::query()->where('name', 'Hid costs')->sole()->showsCosts())->toBeFalse();
     });
 });

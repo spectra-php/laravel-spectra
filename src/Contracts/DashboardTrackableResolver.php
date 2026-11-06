@@ -15,11 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 interface DashboardTrackableResolver
 {
     /**
-     * Get the trackable the viewer may see, or null to refuse them.
-     *
-     * With an id, the dashboard is for that one trackable: return it when the
-     * viewer may see it. With a null id, the dashboard is for every trackable
-     * of the type: return the viewer's own.
+     * Get the dashboard's trackable when the viewer may see it, or null to refuse them.
      */
-    public function resolve(Authenticatable $viewer, string $type, ?string $id): ?Model;
+    public function resolve(Authenticatable $viewer, string $type, string $id): ?Model;
 }

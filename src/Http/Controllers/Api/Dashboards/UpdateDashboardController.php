@@ -16,8 +16,7 @@ use Spectra\Support\Dashboards\DashboardAccess;
 use Spectra\Support\Dashboards\DashboardTrackables;
 
 /**
- * PUT /api/dashboards/{id}: change a saved shared dashboard. A null trackable
- * id means every trackable of the type. The type must be an Eloquent model, and
+ * PUT /api/dashboards/{id}: change a saved shared dashboard. The type must be an Eloquent model, and
  * a given id must exist, so a typo can't save a page nobody can open.
  */
 class UpdateDashboardController extends BaseApiController
@@ -34,13 +33,12 @@ class UpdateDashboardController extends BaseApiController
         $input = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'trackable_type' => ['required', 'string', 'max:255'],
-            'trackable_id' => ['nullable', 'string', 'max:255'],
+            'trackable_id' => ['required', 'string', 'max:255'],
             'widgets' => ['required', 'array', 'min:1'],
             'widgets.*' => ['required', 'array:type,size'],
             'widgets.*.type' => ['required', 'distinct', Rule::enum(DashboardWidget::class)],
             'widgets.*.size' => ['required', 'in:full,half'],
             'default_period' => ['required', 'string', 'in:today,week,month,year'],
-            'show_costs' => ['required', 'boolean'],
             'sections' => ['sometimes', 'array'],
             'sections.*' => ['distinct', Rule::enum(DashboardSection::class)],
             'show_messages' => ['sometimes', 'boolean'],
@@ -51,9 +49,7 @@ class UpdateDashboardController extends BaseApiController
             throw ValidationException::withMessages(['trackable_type' => 'This trackable type is not an Eloquent model.']);
         }
 
-        $input['trackable_id'] ??= null;
-
-        if ($input['trackable_id'] !== null && $trackables->find($input['trackable_type'], $input['trackable_id']) === null) {
+        if ($trackables->find($input['trackable_type'], $input['trackable_id']) === null) {
             throw ValidationException::withMessages(['trackable_id' => 'No trackable of this type has this id.']);
         }
 

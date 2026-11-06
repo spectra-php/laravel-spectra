@@ -38,12 +38,11 @@ class FakeDashboards extends Dashboards
         int|string|null $trackableId = null,
         array $widgets = [],
         string $period = 'month',
-        bool $showCosts = false,
         bool $active = true,
         array $sections = [],
         bool $showMessages = false,
     ): SpectraDashboard {
-        $attributes = $this->attributes($name, $trackable, $trackableId, $widgets, $period, $showCosts, $active, $sections, $showMessages);
+        $attributes = $this->attributes($name, $trackable, $trackableId, $widgets, $period, $active, $sections, $showMessages);
 
         $existing = collect($this->dashboards)->first(fn (SpectraDashboard $dashboard) => $dashboard->name === $attributes['name']
             && $dashboard->trackable_type === $attributes['trackable_type']
@@ -88,7 +87,7 @@ class FakeDashboards extends Dashboards
 
         return $dashboards
             ->filter(fn (SpectraDashboard $dashboard) => $dashboard->trackable_type === $type
-                && ($id === null || $dashboard->trackable_id === null || $dashboard->trackable_id === $id))
+                && ($id === null || $dashboard->trackable_id === $id))
             ->values();
     }
 }

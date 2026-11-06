@@ -17,13 +17,9 @@ class ViewerAsTrackable implements DashboardTrackableResolver
     /**
      * Get the viewer when they are the trackable the dashboard is for.
      */
-    public function resolve(Authenticatable $viewer, string $type, ?string $id): ?Model
+    public function resolve(Authenticatable $viewer, string $type, string $id): ?Model
     {
-        if (! $viewer instanceof Model || $viewer->getMorphClass() !== $type) {
-            return null;
-        }
-
-        if ($id !== null && $id !== (string) $viewer->getKey()) {
+        if (! $viewer instanceof Model || $viewer->getMorphClass() !== $type || (string) $viewer->getKey() !== $id) {
             return null;
         }
 

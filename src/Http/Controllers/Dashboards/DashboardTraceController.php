@@ -33,7 +33,7 @@ class DashboardTraceController extends Controller
         abort_if($scope === null, 403);
         abort_unless($dashboard->hasSection(DashboardSection::Traces), 404);
 
-        $trace = $getTrace($scope, $traceId, $dashboard->show_costs, $dashboard->show_messages);
+        $trace = $getTrace($scope, $traceId, $dashboard->showsCosts(), $dashboard->show_messages);
 
         abort_if($trace === null, 404);
 

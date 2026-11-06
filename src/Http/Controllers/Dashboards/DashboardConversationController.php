@@ -33,7 +33,7 @@ class DashboardConversationController extends Controller
         abort_if($scope === null, 403);
         abort_unless($dashboard->hasSection(DashboardSection::Conversations), 404);
 
-        $conversation = $getConversation($scope, $conversationId, $dashboard->show_costs, $dashboard->show_messages);
+        $conversation = $getConversation($scope, $conversationId, $dashboard->showsCosts(), $dashboard->show_messages);
 
         abort_if($conversation === null, 404);
 

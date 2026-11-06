@@ -13,9 +13,8 @@ use Spectra\Support\Dashboards\DashboardAccess;
 use Spectra\Support\Dashboards\DashboardTrackables;
 
 /**
- * GET /api/dashboards/{id}/preview: exactly what a viewer gets, for an
- * admin to check. A dashboard for every trackable of a type previews the
- * `trackable_id` the admin gives, because it has no owner of its own.
+ * GET /api/dashboards/{id}/preview: exactly what the dashboard's viewer gets, for
+ * an admin to check.
  */
 class PreviewDashboardController extends BaseApiController
 {
@@ -31,16 +30,11 @@ class PreviewDashboardController extends BaseApiController
         abort_unless(DashboardAccess::allowed(), 403);
 
         $input = $request->validate([
-            'trackable_id' => ['nullable', 'string', 'max:255'],
             'period' => ['nullable', 'string', 'in:today,week,month,year'],
         ]);
 
         $dashboard = SpectraDashboard::query()->findOrFail($id);
-        $trackableId = $dashboard->trackable_id ?? $input['trackable_id'] ?? null;
-
-        abort_if($trackableId === null, 422, 'Enter a trackable id to preview this dashboard.');
-
-        $trackable = $trackables->find($dashboard->trackable_type, $trackableId);
+        $trackable = $trackables->find($dashboard->trackable_type, $dashboard->trackable_id);
 
         abort_if($trackable === null, 404, 'No trackable of this type has this id.');
 

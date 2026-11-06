@@ -52,14 +52,14 @@ class BuildDashboard
         foreach ($dashboard->widgets as $entry) {
             $widget = DashboardWidget::tryFrom($entry['type']);
 
-            if ($widget === null || ($widget->requiresCosts() && ! $dashboard->show_costs)) {
+            if ($widget === null || ($widget->requiresCosts() && ! $dashboard->showsCosts())) {
                 continue;
             }
 
             $widgets->push(new DashboardWidgetData(
                 type: $widget->value,
                 size: $entry['size'],
-                data: $this->widgetData($widget, $trackable, $dateRange, $dashboard->show_costs),
+                data: $this->widgetData($widget, $trackable, $dateRange, $dashboard->showsCosts()),
             ));
         }
 
@@ -67,7 +67,7 @@ class BuildDashboard
             name: $dashboard->name,
             trackable_name: isset($trackable->name) && is_string($trackable->name) ? $trackable->name : null,
             period: $period,
-            show_costs: $dashboard->show_costs,
+            show_costs: $dashboard->showsCosts(),
             widgets: $widgets,
         );
     }

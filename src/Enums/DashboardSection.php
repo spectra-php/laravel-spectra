@@ -14,13 +14,4 @@ enum DashboardSection: string
     case Conversations = 'conversations';
     case Errors = 'errors';
     case Costs = 'costs';
-
-    /**
-     * Determine whether the section shows nothing but cost, so it is left out
-     * of a dashboard that hides costs.
-     */
-    public function requiresCosts(): bool
-    {
-        return $this === self::Costs;
-    }
 }

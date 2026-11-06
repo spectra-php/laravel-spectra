@@ -33,6 +33,7 @@ Spectra ships these migration files:
 | `change_trace_id_to_string_on_spectra_requests_table` | Stores trace ids as strings of up to 64 characters, like the spans and scores tables, so `Spectra::withTraceId()` takes any id on every database (see [below](#trace-id-migration)) |
 | `create_spectra_dashboards_table` | Creates `spectra_dashboards`, for [dashboards](/dashboards) (see [below](#dashboards-migration)) |
 | `add_sections_to_spectra_dashboards_table` | Adds `sections` and `show_messages` to `spectra_dashboards`, for a dashboard's [pages](/dashboards#pages) (see [below](#dashboards-migration)) |
+| `drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table` | Makes the Costs page the one switch for a dashboard's costs, and ties every dashboard to one trackable (see [below](#dashboards-migration)) |
 
 <a name="publishing-schema-migrations"></a>
 ### Publishing Schema Migrations
@@ -150,7 +151,7 @@ Until it runs, the Evals screen asks you to, and `Spectra::dataset()` and `spect
 <a name="dashboards-migration"></a>
 ## The Dashboards Migration
 
-`create_spectra_dashboards_table` creates the `spectra_dashboards` table for [dashboards](/dashboards), and `add_sections_to_spectra_dashboards_table` adds its `sections` and `show_messages` columns. Run the installer to publish and run them:
+`create_spectra_dashboards_table` creates the `spectra_dashboards` table for [dashboards](/dashboards), `add_sections_to_spectra_dashboards_table` adds its `sections` and `show_messages` columns, and `drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table` removes `show_costs` and requires `trackable_id`. Run the installer to publish and run them:
 
 ```shell
 php artisan spectra:install

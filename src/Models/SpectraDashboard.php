@@ -11,18 +11,16 @@ use Spectra\Enums\DashboardSection;
 
 /**
  * A read-only page an admin designs for someone outside the dashboard: the
- * widgets it shows, and the trackable it shows them for. A null trackable id
- * means every trackable of the type, each seeing only its own numbers.
+ * widgets and pages it shows, and the one trackable it shows them for.
  *
  * @property string $id
  * @property string $name
  * @property string $trackable_type
- * @property string|null $trackable_id
+ * @property string $trackable_id
  * @property list<array{type: string, size: string}> $widgets
  * @property string $default_period
  * @property list<string>|null $sections
  * @property bool $show_messages
- * @property bool $show_costs
  * @property bool $is_active
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
@@ -35,7 +33,6 @@ class SpectraDashboard extends Model
 
     protected $attributes = [
         'default_period' => 'month',
-        'show_costs' => false,
         'show_messages' => false,
         'is_active' => true,
     ];
@@ -49,7 +46,6 @@ class SpectraDashboard extends Model
             'widgets' => 'json',
             'sections' => 'json',
             'show_messages' => 'boolean',
-            'show_costs' => 'boolean',
             'is_active' => 'boolean',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
@@ -73,16 +69,20 @@ class SpectraDashboard extends Model
     }
 
     /**
-     * Determine whether the dashboard links to a section. Costs need the
-     * dashboard to show costs, whatever is saved.
+     * Determine whether the dashboard links to a section.
      */
     public function hasSection(DashboardSection $section): bool
     {
-        if ($section->requiresCosts() && ! $this->show_costs) {
-            return false;
-        }
-
         return in_array($section->value, $this->sections ?? [], true);
+    }
+
+    /**
+     * Determine whether viewers see costs: the Costs page is the one switch for
+     * them, on its own page and across the dashboard's widgets and other pages.
+     */
+    public function showsCosts(): bool
+    {
+        return $this->hasSection(DashboardSection::Costs);
     }
 
     /**
@@ -103,10 +103,7 @@ class SpectraDashboard extends Model
      */
     public function isFor(Model $trackable): bool
     {
-        if ($trackable->getMorphClass() !== $this->trackable_type) {
-            return false;
-        }
-
-        return $this->trackable_id === null || $this->trackable_id === (string) $trackable->getKey();
+        return $trackable->getMorphClass() === $this->trackable_type
+            && (string) $trackable->getKey() === $this->trackable_id;
     }
 }

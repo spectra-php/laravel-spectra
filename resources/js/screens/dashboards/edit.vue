@@ -36,7 +36,6 @@ const id = computed(() => (route.params.id as string | undefined) ?? null);
 
 const name = ref('');
 const trackableType = ref('');
-const audience = ref<'one' | 'every'>('one');
 const trackableId = ref('');
 const widgets = ref<{ type: WidgetType; size: DashboardWidgetSize }[]>([
     { type: 'stats', size: 'full' },
@@ -44,32 +43,29 @@ const widgets = ref<{ type: WidgetType; size: DashboardWidgetSize }[]>([
     { type: 'recent_requests', size: 'full' },
 ]);
 const period = ref('month');
-const showCosts = ref(false);
 const sections = ref<DashboardSectionName[]>([]);
 const showMessages = ref(false);
 const active = ref(true);
 
-const sectionOptions: { value: DashboardSectionName; label: string; description: string; costs?: boolean }[] = [
+const sectionOptions: { value: DashboardSectionName; label: string; description: string }[] = [
     { value: 'requests', label: 'Requests', description: 'Their calls: model, usage, status and time.' },
     { value: 'traces', label: 'Traces', description: 'Their traces and timelines. Tool arguments and results are never shown.' },
     { value: 'conversations', label: 'Conversations', description: 'Their conversations, turn by turn.' },
     { value: 'errors', label: 'Errors', description: 'Their failed calls, grouped by cause.' },
-    { value: 'costs', label: 'Costs', description: 'Their spend over time, by provider and by model.', costs: true },
+    { value: 'costs', label: 'Costs', description: 'Their spend, here and across the dashboard. These are what you pay the provider, so a customer could work out your margin.' },
 ];
 
 const details = (type: WidgetType) => catalog.find((widget) => widget.type === type);
 const available = computed(() => catalog.filter((widget) => !widgets.value.some((chosen) => chosen.type === widget.type)));
-const hidesCostWidget = (type: WidgetType) => Boolean(details(type)?.costs) && !showCosts.value;
-const canSave = computed(() => Boolean(name.value.trim() && trackableType.value.trim() && widgets.value.length && (audience.value === 'every' || trackableId.value.trim())));
+const hidesCostWidget = (type: WidgetType) => Boolean(details(type)?.costs) && !sections.value.includes('costs');
+const canSave = computed(() => Boolean(name.value.trim() && trackableType.value.trim() && widgets.value.length && trackableId.value.trim()));
 
 const fill = (dashboard: DashboardSummary) => {
     name.value = dashboard.name;
     trackableType.value = dashboard.trackable_type;
-    audience.value = dashboard.trackable_id === null ? 'every' : 'one';
-    trackableId.value = dashboard.trackable_id ?? '';
+    trackableId.value = dashboard.trackable_id;
     widgets.value = dashboard.widgets.map((widget) => ({ ...widget }));
     period.value = dashboard.default_period;
-    showCosts.value = dashboard.show_costs;
     sections.value = [...dashboard.sections];
     showMessages.value = dashboard.show_messages;
     active.value = dashboard.is_active;
@@ -86,10 +82,9 @@ const save = async () => {
     const body = {
         name: name.value.trim(),
         trackable_type: trackableType.value.trim(),
-        trackable_id: audience.value === 'every' ? null : trackableId.value.trim(),
+        trackable_id: trackableId.value.trim(),
         widgets: widgets.value,
         default_period: period.value,
-        show_costs: showCosts.value,
         sections: sections.value,
         show_messages: showMessages.value,
         is_active: active.value,
@@ -151,7 +146,7 @@ onMounted(async () => {
                             <div class="min-w-0 flex-1 basis-56">
                                 <div class="text-sm font-medium text-gray-900 dark:text-white">{{ details(widget.type)?.label }}</div>
                                 <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                    {{ hidesCostWidget(widget.type) ? 'Hidden from viewers until you show costs.' : details(widget.type)?.description }}
+                                    {{ hidesCostWidget(widget.type) ? 'Hidden from viewers until you turn on the Costs page.' : details(widget.type)?.description }}
                                 </div>
                             </div>
                             <select v-model="widget.size" class="form-select form-select-sm w-auto" :aria-label="`Width of ${details(widget.type)?.label}`">
@@ -197,16 +192,7 @@ onMounted(async () => {
                                 <option v-for="type in screen?.trackable_types ?? []" :key="type" :value="type"></option>
                             </datalist>
                         </div>
-                        <fieldset>
-                            <legend class="stat-label mb-1.5">Who can see it</legend>
-                            <label class="flex items-center gap-2 py-1 text-sm">
-                                <input v-model="audience" type="radio" value="one" /> One trackable
-                            </label>
-                            <label class="flex items-center gap-2 py-1 text-sm">
-                                <input v-model="audience" type="radio" value="every" /> Every one of this type, each seeing their own data
-                            </label>
-                        </fieldset>
-                        <div v-if="audience === 'one'">
+                        <div>
                             <label for="shared-id" class="stat-label mb-1.5 block">Trackable ID</label>
                             <input id="shared-id" v-model="trackableId" type="text" required class="form-input" />
                         </div>
@@ -219,15 +205,11 @@ onMounted(async () => {
                                 <option value="year">This year</option>
                             </select>
                         </div>
-                        <label class="flex items-start gap-2 text-sm">
-                            <input v-model="showCosts" type="checkbox" class="mt-0.5" />
-                            <span>Show costs<span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">These are what you pay the provider, so a customer could work out your margin.</span></span>
-                        </label>
                         <fieldset>
                             <legend class="stat-label mb-1.5">Pages in its header</legend>
-                            <label v-for="option in sectionOptions" :key="option.value" class="flex items-start gap-2 py-1 text-sm" :class="option.costs && !showCosts ? 'opacity-50' : ''">
-                                <input v-model="sections" type="checkbox" class="mt-0.5" :value="option.value" :disabled="option.costs && !showCosts" />
-                                <span>{{ option.label }}<span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{{ option.costs && !showCosts ? 'Needs Show costs.' : option.description }}</span></span>
+                            <label v-for="option in sectionOptions" :key="option.value" class="flex items-start gap-2 py-1 text-sm">
+                                <input v-model="sections" type="checkbox" class="mt-0.5" :value="option.value" />
+                                <span>{{ option.label }}<span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{{ option.description }}</span></span>
                             </label>
                         </fieldset>
                         <label class="flex items-start gap-2 text-sm">

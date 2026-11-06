@@ -7,10 +7,10 @@ A customer asks how much AI usage their account has had this month. Spectra know
 
 A dashboard is a saved page with two parts: the **widgets** it shows, such as total requests and the latest calls, and the **trackable** it shows them for. A trackable is any model you attribute AI calls to, such as a `User` or a `Team`.
 
-A dashboard can be for one trackable, or for every trackable of a type. For example, you might:
+A dashboard is always for one trackable. For example, you might:
 
 - Make one page for your biggest customer, showing their spend and budget.
-- Make one page for every `User`, and link to it from your app's account settings. Everyone opens the same link and sees only their own data.
+- Create one for each customer when they sign up, and link to it from your app's account settings.
 - Give a team lead a page for their `Team`, without giving them Spectra's own dashboard.
 
 This is separate from [Spectra's own dashboard](/dashboard), the admin screens at `/spectra`. Viewers of a dashboard can't open those, and don't need to.
@@ -55,8 +55,6 @@ $dashboard = Spectra::dashboard()->create('Usage', $user);
 // ...or a type and an id.
 Spectra::dashboard()->create('Usage', User::class, trackableId: 123);
 
-// For every user, each seeing their own data.
-Spectra::dashboard()->create('Usage', User::class);
 
 // The link to give them.
 $dashboard->url();
@@ -70,7 +68,7 @@ Spectra::dashboard()->create(
     $team,
     widgets: ['stats', ['type' => 'budget', 'size' => 'half'], ['type' => 'usage_by_model', 'size' => 'half']],
     period: 'week',
-    showCosts: true,
+    sections: ['costs'],
 );
 ```
 
@@ -82,7 +80,7 @@ To find and delete dashboards:
 // Every dashboard.
 Spectra::dashboard()->list();
 
-// What this user can open, including those for every user.
+// The ones for this user.
 Spectra::dashboard()->list($user);
 
 // Every dashboard for a type.
@@ -99,13 +97,13 @@ Spectra::dashboard()->delete($dashboard);
 
 | Widget | Shows |
 | --- | --- |
-| `stats` | Requests with a daily trend, tokens, average latency and any media usage, plus spend when costs are shown |
+| `stats` | Requests with a daily trend, tokens, average latency and any media usage, plus spend when the Costs page is on |
 | `requests_trend` | Requests per day |
-| `cost_trend` | Spend per day. Left out unless costs are shown |
-| `usage_by_model` | The five most used models, plus cost when costs are shown |
+| `cost_trend` | Spend per day. Left out unless the Costs page is on |
+| `usage_by_model` | The five most used models, plus cost when the Costs page is on |
 | `usage_by_provider` | The share of requests by provider and by model type |
 | `recent_requests` | The latest 10 calls: model, usage, status and time |
-| `budget` | Usage against the trackable's [budget](/budgets) limits. Cost limits show only when costs are shown |
+| `budget` | Usage against the trackable's [budget](/budgets) limits. Cost limits show only when the Costs page is on |
 | `performance` | Error rate and latency percentiles per model |
 | `scores` | [Scores](/scores) on the trackable's calls, traces and conversations, by name. Comments are never sent |
 
@@ -118,7 +116,7 @@ A dashboard shows totals and a short list of calls, and nothing a viewer could u
 
 - **System prompts, tools and raw request bodies are never sent**, and neither are metadata, origins or tool arguments and results, whichever widgets and pages you choose.
 - **Message text is hidden unless you turn it on.** With **Show message text**, viewers can read their own messages, the replies and error messages. Without it, they see only the numbers.
-- **Costs are hidden unless you turn them on.** They are what you pay the provider, so a customer could work out your margin. On a dashboard that hides them, the server doesn't send them at all.
+- **Costs are hidden until you turn on the Costs page.** They are what you pay the provider, so a customer could work out your margin. Without it, the server doesn't send them at all.
 - **Model and provider names are shown** by `usage_by_model`, `usage_by_provider`, `recent_requests` and `performance`. Leave those widgets out if you'd rather not say which ones you use.
 - **Score names are shown** by `scores`. Names like `hallucination` or a reviewer's label can be internal, so check yours before adding this widget.
 
@@ -133,7 +131,7 @@ Besides its widgets, a dashboard can link to more pages in a header, each showin
 | `traces` | Their traces, with a timeline of each |
 | `conversations` | Their conversations, turn by turn |
 | `errors` | Their failed calls, grouped by cause |
-| `costs` | Their spend over time, by provider and by model. Needs costs to be shown |
+| `costs` | Their spend over time, by provider and by model. Also shows costs in the widgets and on the other pages |
 
 Choose them on the dashboard's form, or in code:
 
@@ -173,14 +171,9 @@ use Spectra\Contracts\DashboardTrackableResolver;
 
 class TeamDashboards implements DashboardTrackableResolver
 {
-    public function resolve(Authenticatable $viewer, string $type, ?string $id): ?Model
+    public function resolve(Authenticatable $viewer, string $type, string $id): ?Model
     {
-        // A dashboard for every team: show the viewer's current team.
-        if ($id === null) {
-            return $viewer->currentTeam;
-        }
-
-        // A dashboard for one team: the viewer must belong to it.
+        // The viewer must belong to the team the dashboard is for.
         return $viewer->teams()->find($id);
     }
 }
