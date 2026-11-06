@@ -26,83 +26,16 @@ Spectra is an AI observability package for Laravel, built to track AI requests, 
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/public/images/dashboard/overview-dark.png" />
-    <img alt="The Spectra dashboard overview: requests, spend, tokens and latency, alerts, media usage, daily volume, a breakdown by provider, performance per model and scores" src="docs/public/images/dashboard/overview.png" width="100%" />
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/images/readme/overview-dark.png" />
+    <img alt="The Spectra dashboard overview: requests, spend, tokens and latency, the alerts that are firing, and media usage" src="docs/public/images/readme/overview.png" width="100%" />
   </picture>
 </p>
 
-<table>
-  <tr>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/requests.png?raw=true" target="_blank" rel="noopener"><img alt="The requests list" src="docs/public/images/dashboard/thumbnails/requests.png" width="100%" /></a>
-      <p align="center"><strong>Requests</strong><br />Usage, cost and latency per call</p>
-    </td>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/request-detail.png?raw=true" target="_blank" rel="noopener"><img alt="A single request" src="docs/public/images/dashboard/thumbnails/request-detail.png" width="100%" /></a>
-      <p align="center"><strong>Request details</strong><br />Trace, tokens, cache hits and payload</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/traces.png?raw=true" target="_blank" rel="noopener"><img alt="The traces list" src="docs/public/images/dashboard/thumbnails/traces.png" width="100%" /></a>
-      <p align="center"><strong>Traces</strong><br />AI calls grouped by request or job</p>
-    </td>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/trace-detail.png?raw=true" target="_blank" rel="noopener"><img alt="A trace timeline" src="docs/public/images/dashboard/thumbnails/trace-detail.png" width="100%" /></a>
-      <p align="center"><strong>Trace timeline</strong><br />Calls, spans and tools in order</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/conversations.png?raw=true" target="_blank" rel="noopener"><img alt="The conversations list" src="docs/public/images/dashboard/thumbnails/conversations.png" width="100%" /></a>
-      <p align="center"><strong>Conversations</strong><br />Multi-turn chats and their cost</p>
-    </td>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/conversation-detail.png?raw=true" target="_blank" rel="noopener"><img alt="A conversation transcript" src="docs/public/images/dashboard/thumbnails/conversation-detail.png" width="100%" /></a>
-      <p align="center"><strong>Conversation transcript</strong><br />Each turn and its running cost</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/errors.png?raw=true" target="_blank" rel="noopener"><img alt="The errors screen" src="docs/public/images/dashboard/thumbnails/errors.png" width="100%" /></a>
-      <p align="center"><strong>Errors</strong><br />Failed calls grouped by cause</p>
-    </td>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/prompts.png?raw=true" target="_blank" rel="noopener"><img alt="The prompts screen" src="docs/public/images/dashboard/thumbnails/prompts.png" width="100%" /></a>
-      <p align="center"><strong>Prompts</strong><br />Cost, latency and scores per version</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/eval-run.png?raw=true" target="_blank" rel="noopener"><img alt="An evaluation run" src="docs/public/images/dashboard/thumbnails/eval-run.png" width="100%" /></a>
-      <p align="center"><strong>Evals</strong><br />Datasets, runs and comparisons</p>
-    </td>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/review-queue.png?raw=true" target="_blank" rel="noopener"><img alt="A review queue" src="docs/public/images/dashboard/thumbnails/review-queue.png" width="100%" /></a>
-      <p align="center"><strong>Review</strong><br />Label traces by hand</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/costs.png?raw=true" target="_blank" rel="noopener"><img alt="The costs screen" src="docs/public/images/dashboard/thumbnails/costs.png" width="100%" /></a>
-      <p align="center"><strong>Costs</strong><br />Spend by provider, model and user</p>
-    </td>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/trackables.png?raw=true" target="_blank" rel="noopener"><img alt="The trackables list" src="docs/public/images/dashboard/thumbnails/trackables.png" width="100%" /></a>
-      <p align="center"><strong>Trackables</strong><br />Spend per user or team</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/trackable-detail.png?raw=true" target="_blank" rel="noopener"><img alt="One user's usage" src="docs/public/images/dashboard/thumbnails/trackable-detail.png" width="100%" /></a>
-      <p align="center"><strong>Trackable details</strong><br />One user's spend and requests</p>
-    </td>
-    <td width="50%">
-      <a href="docs/public/images/dashboard/overview-dark.png?raw=true" target="_blank" rel="noopener"><img alt="The overview in dark mode" src="docs/public/images/dashboard/thumbnails/overview-dark.png" width="100%" /></a>
-      <p align="center"><strong>Dark mode</strong><br />Follows your system theme</p>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <a href="https://spectraphp.com/dashboard"><img alt="A tour of the dashboard, one screen at a time: requests, request details, traces, the trace timeline, conversations, a conversation transcript, errors, prompts, evals, review, costs, trackables, one trackable's details, and dark mode" src="docs/public/images/readme/tour.gif" width="100%" /></a>
+  <br />
+  <sub>Every screen of the dashboard, three seconds each. <a href="https://spectraphp.com/dashboard">See them at full size in the docs.</a></sub>
+</p>
 
 <p align="center">
   <a href="https://mayahi.net/services"><img alt="Hire me — I'm available for consulting and development work" src="art/hire-me.svg" width="100%" /></a>
