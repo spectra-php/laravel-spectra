@@ -26,23 +26,28 @@ class GetModelPerformance
     ) {}
 
     /**
-     * Get the error rate and latency percentiles of the most used models.
+     * Get the error rate and latency percentiles of the most used models, of
+     * one trackable when given.
      *
      * @return Collection<int, ModelPerformance>
      */
-    public function __invoke(DateRange $dateRange, string $layout, int $limit = 10): Collection
+    public function __invoke(DateRange $dateRange, string $layout, int $limit = 10, ?string $trackableType = null, ?string $trackableId = null): Collection
     {
-        return RequestAggregateQuery::make($dateRange)
-            ->forLayout($layout)
+        $scoped = function () use ($dateRange, $layout, $trackableType, $trackableId): RequestAggregateQuery {
+            $query = RequestAggregateQuery::make($dateRange)->forLayout($layout);
+
+            return $trackableType !== null && $trackableId !== null ? $query->forTrackable($trackableType, $trackableId) : $query;
+        };
+
+        return $scoped()
             ->groupByColumns('provider', 'model')
             ->countAs('request_count')
             ->failedCount()
             ->orderByDesc('request_count')
             ->limit($limit)
             ->get()
-            ->map(function (SpectraRequest $row) use ($dateRange, $layout): ModelPerformance {
-                $successful = RequestAggregateQuery::make($dateRange)
-                    ->forLayout($layout)
+            ->map(function (SpectraRequest $row) use ($scoped): ModelPerformance {
+                $successful = $scoped()
                     ->successfulOnly()
                     ->toQuery()
                     ->where('provider', $row->provider)

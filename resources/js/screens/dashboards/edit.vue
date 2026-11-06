@@ -15,10 +15,12 @@ const catalog: { type: WidgetType; label: string; description: string; costs?: b
     { type: 'stats', label: 'Headline numbers', description: 'Requests, tokens and average latency, and spend when costs are shown.' },
     { type: 'requests_trend', label: 'Requests over time', description: 'Requests per day.' },
     { type: 'cost_trend', label: 'Cost over time', description: 'Spend per day.', costs: true },
-    { type: 'usage_by_model', label: 'Usage by model', description: 'Which models ran. This shows the viewer the models you use.' },
-    { type: 'usage_by_provider', label: 'Requests by provider', description: 'Which providers ran. This shows the viewer the providers you use.' },
-    { type: 'recent_requests', label: 'Recent requests', description: 'The latest 20 calls: model, usage, latency and status. Never the prompt or response.' },
+    { type: 'usage_by_model', label: 'Top models', description: 'The five most used models. This shows the viewer the models you use.' },
+    { type: 'usage_by_provider', label: 'Breakdown', description: 'The share of requests by provider and by type. This shows the viewer the providers you use.' },
+    { type: 'recent_requests', label: 'Recent requests', description: 'The latest 10 calls: model, usage and status. Never the prompt or response.' },
     { type: 'budget', label: 'Budget', description: 'What is left of their budget limits.' },
+    { type: 'performance', label: 'Performance', description: 'Error rate and latency per model. This shows the viewer the models you use.' },
+    { type: 'scores', label: 'Scores', description: 'Feedback and evaluation results on their calls, by name. Comments are never shown. Review the names first: they can be internal.' },
 ];
 
 const route = useRoute();

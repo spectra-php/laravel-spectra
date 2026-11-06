@@ -22,6 +22,7 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraBudget;
 use Spectra\Models\SpectraDashboard;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraScore;
 use Spectra\Support\DashboardAssets;
 use Workbench\App\Models\User;
 
@@ -286,7 +287,7 @@ describe('whose data', function () {
 describe('what a response may contain', function () {
     function everyWidget(): array
     {
-        return collect(['stats', 'cost_trend', 'requests_trend', 'usage_by_model', 'usage_by_provider', 'recent_requests', 'budget'])
+        return collect(['stats', 'cost_trend', 'requests_trend', 'usage_by_model', 'usage_by_provider', 'recent_requests', 'budget', 'performance', 'scores'])
             ->map(fn (string $type) => ['type' => $type, 'size' => 'full'])
             ->all();
     }
@@ -324,8 +325,8 @@ describe('what a response may contain', function () {
             ->and(collect($response->json('widgets'))->pluck('type'))->not->toContain('cost_trend')
             ->and(dashboardWidgetData($response, 'stats')['total_cost'])->toBeNull()
             ->and(dashboardWidgetData($response, 'usage_by_model')[0]['cost'])->toBeNull()
-            ->and(dashboardWidgetData($response, 'usage_by_provider')[0]['cost'])->toBeNull()
-            ->and(dashboardWidgetData($response, 'recent_requests')[0]['cost'])->toBeNull()
+            ->and(dashboardWidgetData($response, 'usage_by_provider')['providers'][0]['cost'])->toBeNull()
+            ->and(dashboardWidgetData($response, 'stats')['cost_by_model_type'])->toBeNull()
             ->and(collect(dashboardWidgetData($response, 'budget'))->pluck('metric')->all())->toBe(['tokens']);
     });
 
@@ -338,6 +339,85 @@ describe('what a response may contain', function () {
 
         expect(dashboardWidgetData($response, 'stats')['total_cost'])->toEqualWithDelta(987.65, 0.001)
             ->and(dashboardWidgetData($response, 'cost_trend')[0]['cost'])->toEqualWithDelta(987.65, 0.001);
+    });
+
+    it('sends the requests per day for the requests card', function () {
+        $user = dashboardViewer();
+        dashboardCall($user, ['created_at' => now()->subDays(2)]);
+        dashboardCall($user, ['created_at' => now()->subDays(2)]);
+        dashboardCall($user, ['created_at' => now()]);
+
+        $this->actingAs($user);
+        $response = dashboardData(dashboardFor($user), '?period=year');
+
+        expect(dashboardWidgetData($response, 'stats')['request_trend'])->toBe([2, 1]);
+    });
+
+    it('shows performance from the trackable\'s own calls only', function () {
+        $user = dashboardViewer();
+        $other = dashboardViewer();
+        dashboardCall($user, ['latency_ms' => 100]);
+        dashboardCall($user, ['status_code' => 500, 'latency_ms' => 100]);
+        dashboardCall($other, ['latency_ms' => 90000]);
+        dashboardCall($other, ['model' => 'theirs-only', 'latency_ms' => 90000]);
+
+        $this->actingAs($user);
+        $response = dashboardData(dashboardFor($user, ['widgets' => [['type' => 'performance', 'size' => 'full']]]));
+        $rows = dashboardWidgetData($response, 'performance');
+
+        expect($rows)->toHaveCount(1)
+            ->and($rows[0]['model'])->toBe('gpt-4o')
+            ->and($rows[0]['request_count'])->toBe(2)
+            ->and($rows[0]['failed_count'])->toBe(1)
+            ->and($rows[0]['latency_p99'])->toBe(100);
+    });
+
+    it('shows scores on the trackable\'s own calls, traces and conversations only', function () {
+        $user = dashboardViewer();
+        $other = dashboardViewer();
+        $call = dashboardCall($user, ['trace_id' => 'trace-mine', 'conversation_id' => 'chat-mine']);
+        $theirs = dashboardCall($other, ['trace_id' => 'trace-theirs', 'conversation_id' => 'chat-theirs']);
+        $score = fn (array $attributes) => SpectraScore::query()->create(['type' => 'numeric', 'value' => 1, 'source' => 'api', 'comment' => 'TOP-SECRET-COMMENT', ...$attributes]);
+        $score(['name' => 'on_my_call', 'request_id' => $call->id]);
+        $score(['name' => 'on_my_trace', 'trace_id' => 'trace-mine']);
+        $score(['name' => 'on_my_chat', 'conversation_id' => 'chat-mine']);
+        $score(['name' => 'on_their_call', 'request_id' => $theirs->id]);
+        $score(['name' => 'on_their_trace', 'trace_id' => 'trace-theirs']);
+        $score(['name' => 'on_nothing']);
+
+        $this->actingAs($user);
+        $response = dashboardData(dashboardFor($user, ['widgets' => [['type' => 'scores', 'size' => 'full']]]));
+
+        expect(collect(dashboardWidgetData($response, 'scores'))->pluck('name')->sort()->values()->all())->toBe(['on_my_call', 'on_my_chat', 'on_my_trace'])
+            ->and($response->getContent())->not->toContain('TOP-SECRET');
+    });
+
+    it('breaks the trackable\'s requests down by provider and by model type', function () {
+        $user = dashboardViewer();
+        dashboardCall($user, ['model_type' => 'text']);
+        dashboardCall($user, ['model_type' => 'text']);
+        dashboardCall($user, ['model_type' => 'image', 'provider' => 'google']);
+        dashboardCall(dashboardViewer(), ['model_type' => 'video', 'provider' => 'xai']);
+
+        $this->actingAs($user);
+        $response = dashboardData(dashboardFor($user, ['widgets' => [['type' => 'usage_by_provider', 'size' => 'half']]]));
+        $breakdown = dashboardWidgetData($response, 'usage_by_provider');
+
+        expect(collect($breakdown['providers'])->pluck('provider')->sort()->values()->all())->toBe(['google', 'openai'])
+            ->and(collect($breakdown['model_types'])->pluck('count', 'model_type')->all())->toEqual(['image' => 1, 'text' => 2]);
+    });
+
+    it('lists the latest ten calls and the five most used models, as the Overview does', function () {
+        $user = dashboardViewer();
+        foreach (range(1, 12) as $index) {
+            dashboardCall($user, ['model' => 'model-'.($index % 7)]);
+        }
+
+        $this->actingAs($user);
+        $response = dashboardData(dashboardFor($user, ['widgets' => [['type' => 'recent_requests', 'size' => 'half'], ['type' => 'usage_by_model', 'size' => 'half']]]));
+
+        expect(dashboardWidgetData($response, 'recent_requests'))->toHaveCount(10)
+            ->and(dashboardWidgetData($response, 'usage_by_model'))->toHaveCount(5);
     });
 
     it('queries only the widgets on the dashboard, in the saved order', function () {

@@ -16,6 +16,8 @@ enum DashboardWidget: string
     case UsageByProvider = 'usage_by_provider';
     case RecentRequests = 'recent_requests';
     case Budget = 'budget';
+    case Performance = 'performance';
+    case Scores = 'scores';
 
     /**
      * Determine whether the widget shows nothing but cost, so it is left out

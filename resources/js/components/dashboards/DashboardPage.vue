@@ -46,8 +46,15 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-        <main class="mx-auto max-w-shell px-4 py-8 sm:px-6 lg:px-8">
+    <div class="relative min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+        <!-- The same faint glow as the dashboard's header -->
+        <div
+            class="pointer-events-none absolute inset-x-0 top-0 z-0 h-72 opacity-60 dark:opacity-100"
+            style="background: radial-gradient(60% 100% at 50% 0%, rgb(111 92 246 / 0.10) 0%, transparent 70%);"
+            aria-hidden="true"
+        ></div>
+
+        <main class="relative mx-auto max-w-shell px-4 py-8 sm:px-6 lg:px-8">
             <div v-if="failed" class="card">
                 <div class="empty-state">
                     <p class="empty-state-title">This dashboard could not be loaded</p>

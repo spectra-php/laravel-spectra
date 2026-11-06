@@ -99,15 +99,17 @@ Spectra::dashboard()->delete($dashboard);
 
 | Widget | Shows |
 | --- | --- |
-| `stats` | Requests, tokens, average latency and any media usage, plus spend when costs are shown |
+| `stats` | Requests with a daily trend, tokens, average latency and any media usage, plus spend when costs are shown |
 | `requests_trend` | Requests per day |
 | `cost_trend` | Spend per day. Left out unless costs are shown |
-| `usage_by_model` | Requests and tokens per model, plus cost when costs are shown |
-| `usage_by_provider` | Requests per provider, plus cost when costs are shown |
-| `recent_requests` | The latest 20 calls: model, usage, latency, status and time, plus cost when costs are shown |
+| `usage_by_model` | The five most used models, plus cost when costs are shown |
+| `usage_by_provider` | The share of requests by provider and by model type |
+| `recent_requests` | The latest 10 calls: model, usage, status and time |
 | `budget` | Usage against the trackable's [budget](/budgets) limits. Cost limits show only when costs are shown |
+| `performance` | Error rate and latency percentiles per model |
+| `scores` | [Scores](/scores) on the trackable's calls, traces and conversations, by name. Comments are never sent |
 
-Each widget is `full` or `half` width. Viewers can switch the page between today, this week, this month and this year. The budget widget uses each limit's own period instead.
+They're the same widgets as the Overview in Spectra's own dashboard, narrowed to the trackable. The Overview's alerts aren't offered, because alert rules cover your whole app. Each widget is `full` or `half` width. Viewers can switch the page between today, this week, this month and this year. The budget widget uses each limit's own period instead.
 
 <a name="what-viewers-see"></a>
 ## What Viewers See
@@ -116,7 +118,8 @@ A dashboard shows totals and a short list of calls, and nothing a viewer could u
 
 - **Prompts and responses are never sent**, and neither are a call's id, metadata or trace, whichever widgets you choose.
 - **Costs are hidden unless you turn them on.** They are what you pay the provider, so a customer could work out your margin. On a dashboard that hides them, the server doesn't send them at all.
-- **Model and provider names are shown** by `usage_by_model`, `usage_by_provider` and `recent_requests`. Leave those widgets out if you'd rather not say which ones you use.
+- **Model and provider names are shown** by `usage_by_model`, `usage_by_provider`, `recent_requests` and `performance`. Leave those widgets out if you'd rather not say which ones you use.
+- **Score names are shown** by `scores`. Names like `hallucination` or a reviewer's label can be internal, so check yours before adding this widget.
 
 <a name="who-can-open-a-dashboard"></a>
 ## Who Can Open a Dashboard

@@ -1,39 +1,36 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
-import Money from '@/components/Money.vue';
-import StatCard from '@/components/StatCard.vue';
+import HeadlineCards from '@/components/widgets/HeadlineCards.vue';
+import MediaUsageCard from '@/components/widgets/MediaUsageCard.vue';
 import type { DashboardStats } from '@/types/api';
 
-const props = defineProps<{ stats: DashboardStats }>();
+// The Overview's headline cards and media strip, for one trackable.
+const props = defineProps<{ stats: DashboardStats; periodLabel: string }>();
 
-const { formatNumber, formatCompact, formatDuration, formatDurationSeconds } = useHelpers();
+const { formatNumber, formatCompact, formatDurationSeconds } = useHelpers();
 
-// Media usage shows only for the kinds that appear in the period.
+const typeCost = (type: string) => props.stats.cost_by_model_type?.[type] ?? null;
+
 const mediaCards = computed(() => [
-    { key: 'images', show: props.stats.total_images > 0, label: 'Images', value: formatNumber(props.stats.total_images) },
-    { key: 'videos', show: props.stats.total_videos > 0, label: 'Videos', value: formatNumber(props.stats.total_videos) },
-    { key: 'tts', show: props.stats.total_tts_characters > 0, label: 'Text-to-speech characters', value: formatCompact(props.stats.total_tts_characters) },
-    { key: 'stt', show: props.stats.stt_duration_seconds > 0, label: 'Speech-to-text audio', value: formatDurationSeconds(props.stats.stt_duration_seconds) },
+    { key: 'images', show: props.stats.total_images > 0, label: 'Images', value: formatNumber(props.stats.total_images), unit: props.stats.total_images === 1 ? 'image' : 'images', cost: typeCost('image') },
+    { key: 'videos', show: props.stats.total_videos > 0, label: 'Videos', value: formatNumber(props.stats.total_videos), unit: props.stats.total_videos === 1 ? 'video' : 'videos', cost: typeCost('video') },
+    { key: 'tts', show: props.stats.total_tts_characters > 0, label: 'Text-to-speech', value: formatCompact(props.stats.total_tts_characters), unit: 'characters', cost: typeCost('tts') },
+    { key: 'stt', show: props.stats.stt_duration_seconds > 0, label: 'Speech-to-text', value: formatDurationSeconds(props.stats.stt_duration_seconds), unit: 'audio', cost: typeCost('stt') },
 ].filter((card) => card.show));
 </script>
 
 <template>
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Requests">
-            <div class="stat-value">{{ formatNumber(stats.total_requests) }}</div>
-        </StatCard>
-        <StatCard v-if="stats.total_cost !== null" label="Spend">
-            <div class="stat-value"><Money :cents="stats.total_cost" /></div>
-        </StatCard>
-        <StatCard label="Tokens">
-            <div class="stat-value" v-tooltip="formatNumber(stats.total_tokens) + ' tokens'">{{ formatCompact(stats.total_tokens) }}</div>
-        </StatCard>
-        <StatCard label="Average latency">
-            <div class="stat-value">{{ formatDuration(stats.avg_latency) }}</div>
-        </StatCard>
-        <StatCard v-for="card in mediaCards" :key="card.key" :label="card.label">
-            <div class="stat-value">{{ card.value }}</div>
-        </StatCard>
+    <div class="space-y-4">
+        <HeadlineCards
+            :requests="stats.total_requests"
+            :request-trend="stats.request_trend"
+            :cost="stats.total_cost"
+            :tokens="stats.total_tokens"
+            :avg-latency="stats.avg_latency"
+            :latency-by-model-type="stats.latency_by_model_type"
+            :period-label="periodLabel"
+        />
+        <MediaUsageCard v-if="mediaCards.length" :cards="mediaCards" />
     </div>
 </template>

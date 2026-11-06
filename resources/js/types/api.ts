@@ -1023,6 +1023,9 @@ export interface DashboardStats {
     stt_duration_seconds: number;
     avg_latency: number;
     total_cost: number | null;
+    request_trend: number[];
+    latency_by_model_type: ModelTypeLatency[];
+    cost_by_model_type: Record<string, number> | null;
 }
 
 export interface DashboardUsageRow {
@@ -1034,20 +1037,26 @@ export interface DashboardUsageRow {
     cost: number | null;
 }
 
+export interface DashboardBreakdown {
+    providers: DashboardUsageRow[];
+    model_types: { model_type: string; label: string; count: number }[];
+}
+
+// Under the keys the Overview's recent requests read, without an id or error details.
 export interface DashboardRequest {
     provider: string | null;
-    provider_name: string | null;
+    provider_display_name: string | null;
     model: string | null;
     model_type: string | null;
-    tokens: number;
-    images: number;
-    videos: number;
+    prompt_tokens: number;
+    completion_tokens: number;
+    image_count: number;
+    video_count: number;
     input_characters: number;
     duration_seconds: number;
-    latency_ms: number | null;
+    status_code: number | null;
     failed: boolean;
-    cost: number | null;
-    created_at: string | null;
+    created_at_human: string | null;
 }
 
 export interface DashboardBudgetLimit {
@@ -1064,9 +1073,11 @@ export type DashboardWidgetData = { size: DashboardWidgetSize } & (
     | { type: 'cost_trend'; data: CostByDate[] }
     | { type: 'requests_trend'; data: RequestByDate[] }
     | { type: 'usage_by_model'; data: DashboardUsageRow[] }
-    | { type: 'usage_by_provider'; data: DashboardUsageRow[] }
+    | { type: 'usage_by_provider'; data: DashboardBreakdown }
     | { type: 'recent_requests'; data: DashboardRequest[] }
     | { type: 'budget'; data: DashboardBudgetLimit[] }
+    | { type: 'performance'; data: ModelPerformance[] }
+    | { type: 'scores'; data: ScoreSummary[] }
 );
 
 export interface DashboardResponse {
