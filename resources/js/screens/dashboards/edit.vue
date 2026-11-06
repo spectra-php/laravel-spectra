@@ -205,8 +205,7 @@ onMounted(async () => {
                                 <option value="year">This year</option>
                             </select>
                         </div>
-                        <fieldset>
-                            <legend class="stat-label mb-1.5">Pages in its header</legend>
+                        <fieldset aria-label="Pages">
                             <label v-for="option in sectionOptions" :key="option.value" class="flex items-start gap-2 py-1 text-sm">
                                 <input v-model="sections" type="checkbox" class="mt-0.5" :value="option.value" />
                                 <span>{{ option.label }}<span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{{ option.description }}</span></span>
