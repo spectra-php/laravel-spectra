@@ -1,11 +1,15 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
+import type { ScoreType } from '@/types/api';
 
 // A score's value as a badge: Yes/No for yes/no scores, the number for
 // numeric ones, the label for categories.
-const props = defineProps({
-    type: { type: String, required: true },
-    value: { type: [Number, Boolean, String], default: null },
+const props = withDefaults(defineProps<{
+    type: ScoreType;
+    // String comes first: Vue casts '' and 'value' to true when Boolean does.
+    value?: string | number | boolean | null;
+}>(), {
+    value: null,
 });
 
 const text = computed(() => {

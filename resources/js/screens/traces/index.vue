@@ -1,16 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useLoading } from '@/composables/useLoading';
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 import RequestFilters from '@/components/RequestFilters.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import StatCard from '@/components/StatCard.vue';
 import Money from '@/components/Money.vue';
+import type { LocationQueryValue } from 'vue-router';
+import type { DashboardConfigResponse, ModelTypeOption, SoleTrackable, TraceListItem, TracesResponse, TracesSummary } from '@/types/api';
+import type { RequestFilterKey, RequestFilterValues } from '@/types/app';
 
 const router = useRouter();
 const route = useRoute();
@@ -18,17 +21,18 @@ const { formatNumber, formatDuration, apiRequest } = useHelpers();
 const { providers, loadProviders } = useProviders();
 const loading = useLoading();
 
-const traces = ref([]);
+const traces = ref<TraceListItem[]>([]);
 loading.value = true;
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
-const summary = ref(null);
-const availableTags = ref([]);
-const availableFinishReasons = ref([]);
-const availableReasoningEfforts = ref([]);
-const modelTypes = ref([]);
+const summary = ref<TracesSummary | null>(null);
+const availableTags = ref<string[]>([]);
+const availableFinishReasons = ref<string[]>([]);
+const availableReasoningEfforts = ref<string[]>([]);
+const availableTrackableTypes = ref<string[]>([]);
+const modelTypes = ref<ModelTypeOption[]>([]);
 const isBootstrapping = ref(true);
 
-const filterKeys = ['search', 'provider', 'model', 'status', 'tag', 'model_type', 'finish_reason', 'has_tool_calls', 'is_reasoning', 'reasoning_effort', 'trackable_type', 'trackable_id', 'sort_by', 'sort_dir'];
+const filterKeys: RequestFilterKey[] = ['search', 'provider', 'model', 'status', 'tag', 'model_type', 'finish_reason', 'has_tool_calls', 'is_reasoning', 'reasoning_effort', 'trackable_type', 'trackable_id', 'sort_by', 'sort_dir'];
 const clearableFilterKeys = filterKeys.filter((key) => !['sort_by', 'sort_dir'].includes(key));
 const traceSortOptions = [
     { value: 'started_at', label: 'Sort by Time' },
@@ -40,8 +44,8 @@ const traceSortOptions = [
 
 const filtersFromQuery = () => {
     const q = route.query;
-    const f = {};
-    const qs = (value) => Array.isArray(value) ? value[0] : value;
+    const f: RequestFilterValues = {};
+    const qs = (value: LocationQueryValue | LocationQueryValue[] | undefined) => Array.isArray(value) ? value[0] : value;
     for (const key of filterKeys) {
         const value = qs(q[key]);
         f[key] = typeof value === 'string' ? value : '';
@@ -51,7 +55,7 @@ const filtersFromQuery = () => {
     return f;
 };
 
-const filters = ref(filtersFromQuery());
+const filters = ref<RequestFilterValues>(filtersFromQuery());
 
 const { period, startDate, endDate, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery({
     filterKeys,
@@ -64,7 +68,7 @@ const loadTraces = async (page = 1) => {
     loading.value = true;
     try {
         const params = buildQueryParams(page);
-        const data = await apiRequest('get', '/traces?' + params.toString());
+        const data = await apiRequest<TracesResponse>('get', '/traces?' + params.toString());
         traces.value = data.data;
         summary.value = data.summary;
         migrated.value = data.migrated !== false;
@@ -76,6 +80,7 @@ const loadTraces = async (page = 1) => {
         availableTags.value = data.available_tags || [];
         availableFinishReasons.value = data.available_finish_reasons || [];
         availableReasoningEfforts.value = data.available_reasoning_efforts || [];
+        availableTrackableTypes.value = data.available_trackable_types || [];
     } catch (error) {
         console.error('Failed to load traces:', error);
     } finally {
@@ -98,24 +103,24 @@ const onRangeChange = async () => {
 
 const loadConfig = async () => {
     try {
-        const data = await apiRequest('get', '/config');
+        const data = await apiRequest<DashboardConfigResponse>('get', '/config');
         modelTypes.value = data.model_types || [];
     } catch (error) {
         // The type filter just stays empty.
     }
 };
 
-const goToTrace = (traceId) => {
+const goToTrace = (traceId: string) => {
     router.push({ name: 'trace-detail', params: { traceId } });
 };
 
-const changePage = async (page) => {
+const changePage = async (page: number) => {
     await loadTraces(page);
     await syncQueryToRouter(page);
 };
 
 const clearFilters = () => {
-    const f = {};
+    const f: RequestFilterValues = {};
     for (const key of filterKeys) f[key] = '';
     f.sort_by = 'started_at';
     f.sort_dir = 'desc';
@@ -124,7 +129,7 @@ const clearFilters = () => {
 
 const hasActiveFilters = () => clearableFilterKeys.some((key) => filters.value[key] !== '');
 
-const toggleSort = (field) => {
+const toggleSort = (field: string) => {
     if (filters.value.sort_by === field) {
         filters.value.sort_dir = filters.value.sort_dir === 'desc' ? 'asc' : 'desc';
     } else {
@@ -133,7 +138,7 @@ const toggleSort = (field) => {
     }
 };
 
-const sortIcon = (field) => {
+const sortIcon = (field: string) => {
     if (filters.value.sort_by !== field) return null;
     return filters.value.sort_dir === 'desc' ? 'down' : 'up';
 };
@@ -145,21 +150,21 @@ const sortableColumns = [
     { field: 'started_at', label: 'Started' },
 ];
 
-const formatStartedAt = (iso) => {
+const formatStartedAt = (iso: string | null) => {
     if (!iso) return '—';
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) return iso;
     return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
 
-const shortTraceId = (traceId) => String(traceId).slice(0, 8);
+const shortTraceId = (traceId: string) => String(traceId).slice(0, 8);
 
-const trackableLabel = (trackable) => trackable.name || `${String(trackable.type).split('\\').pop()} #${trackable.id}`;
+const trackableLabel = (trackable: SoleTrackable) => trackable.name || `${String(trackable.type).split('\\').pop()} #${trackable.id}`;
 
 onMounted(async () => {
     applyQueryState();
     filters.value = filtersFromQuery();
-    const initialPage = parseInt(route.query.page) || 1;
+    const initialPage = parseInt(route.query.page as string) || 1;
     await syncQueryToRouter(initialPage, true);
     await Promise.all([loadConfig(), loadProviders()]);
     await loadTraces(initialPage);
@@ -190,7 +195,7 @@ onUnmounted(() => {
         <!-- Totals over every matching trace -->
         <div class="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard label="Traces" :loading="loading && !summary">
-                <div class="stat-value !text-2xl">{{ formatNumber(summary?.trace_count ?? 0) }}</div>
+                <div class="stat-value text-2xl!">{{ formatNumber(summary?.trace_count ?? 0) }}</div>
                 <template #footer>
                     <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         <span v-if="summary?.failed_trace_count" class="text-red-600 dark:text-red-400">{{ formatNumber(summary.failed_trace_count) }} with a failed call</span>
@@ -199,15 +204,15 @@ onUnmounted(() => {
                 </template>
             </StatCard>
             <StatCard label="Total cost" :loading="loading && !summary">
-                <div class="stat-value !text-2xl"><Money :cents="summary?.total_cost_in_cents ?? 0" /></div>
+                <div class="stat-value text-2xl!"><Money :cents="summary?.total_cost_in_cents ?? 0" /></div>
                 <template #footer><div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Successful calls only</div></template>
             </StatCard>
             <StatCard label="Cost per trace" :loading="loading && !summary">
-                <div class="stat-value !text-2xl"><Money :cents="summary?.avg_cost_in_cents ?? 0" /></div>
+                <div class="stat-value text-2xl!"><Money :cents="summary?.avg_cost_in_cents ?? 0" /></div>
                 <template #footer><div class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ summary?.avg_request_count ?? 0 }} calls on average</div></template>
             </StatCard>
             <StatCard label="Duration per trace" :loading="loading && !summary">
-                <div class="stat-value !text-2xl">{{ formatDuration(summary?.avg_duration_ms ?? 0) }}</div>
+                <div class="stat-value text-2xl!">{{ formatDuration(summary?.avg_duration_ms ?? 0) }}</div>
                 <template #footer><div class="mt-1 text-xs text-gray-500 dark:text-gray-400">First call start to last call end</div></template>
             </StatCard>
         </div>
@@ -222,6 +227,7 @@ onUnmounted(() => {
                     :available-tags="availableTags"
                     :available-finish-reasons="availableFinishReasons"
                     :available-reasoning-efforts="availableReasoningEfforts"
+                    :available-trackable-types="availableTrackableTypes"
                     :sort-options="traceSortOptions"
                     :active-filter-keys="clearableFilterKeys"
                     :show-trace-badge="false"
@@ -257,10 +263,10 @@ onUnmounted(() => {
                     <tbody>
                         <template v-if="loading">
                             <tr v-for="i in 10" :key="i" class="border-b border-gray-100 dark:border-gray-800">
-                                <td class="px-5 py-4"><div class="h-4 w-48 animate-pulse rounded bg-gray-200 dark:bg-gray-800"></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-800"></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-20 animate-pulse rounded bg-gray-200 dark:bg-gray-800"></div></td>
-                                <td v-for="j in 4" :key="j" class="px-5 py-4"><div class="ml-auto h-4 w-14 animate-pulse rounded bg-gray-200 dark:bg-gray-800"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-48 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-24 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-20 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800"></div></td>
+                                <td v-for="j in 4" :key="j" class="px-5 py-4"><div class="ml-auto h-4 w-14 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800"></div></td>
                             </tr>
                         </template>
                         <template v-else>
@@ -291,13 +297,13 @@ onUnmounted(() => {
                                         </span>
                                     </div>
                                 </td>
-                                <td class="max-w-[12rem] truncate text-sm text-gray-600 dark:text-gray-300">
+                                <td class="max-w-48 truncate text-sm text-gray-600 dark:text-gray-300">
                                     <template v-if="trace.trackable">{{ trackableLabel(trace.trackable) }}</template>
                                     <span v-else class="text-gray-400 dark:text-gray-500">&mdash;</span>
                                 </td>
                                 <td class="text-right tabular-nums">
                                     {{ formatNumber(trace.request_count) }}
-                                    <span v-if="trace.failed_count" class="badge badge-danger ml-1 !px-1.5 !py-0 text-[11px]">{{ trace.failed_count }} failed</span>
+                                    <span v-if="trace.failed_count" class="badge badge-danger ml-1 px-1.5! py-0! text-[11px]">{{ trace.failed_count }} failed</span>
                                 </td>
                                 <td class="text-right tabular-nums">{{ formatDuration(trace.duration_ms) }}</td>
                                 <td class="text-right font-medium tabular-nums"><Money :cents="trace.total_cost_in_cents" /></td>
@@ -330,7 +336,7 @@ onUnmounted(() => {
             <div class="card-body border-t border-gray-100 dark:border-gray-800">
                 <div class="flex items-center justify-between">
                     <div class="text-sm text-gray-500 dark:text-gray-400">
-                        <span v-if="loading" class="inline-block h-4 w-48 animate-pulse rounded bg-gray-200 dark:bg-gray-800"></span>
+                        <span v-if="loading" class="inline-block h-4 w-48 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800"></span>
                         <span v-else>
                             Showing page <span class="font-medium text-gray-700 dark:text-gray-300">{{ pagination.current_page }}</span>
                             of <span class="font-medium text-gray-700 dark:text-gray-300">{{ pagination.last_page }}</span>

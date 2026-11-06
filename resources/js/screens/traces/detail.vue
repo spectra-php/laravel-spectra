@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
@@ -9,12 +9,14 @@ import Skeleton from '@/components/Skeleton.vue';
 import TraceWaterfall from '@/components/TraceWaterfall.vue';
 import Money from '@/components/Money.vue';
 import ScoresCard from '@/components/ScoresCard.vue';
+import type { AnnotationQueueSummary, AnnotationQueuesResponse, TraceDetailsResponse, TraceSpan } from '@/types/api';
+import type { ApiError } from '@/types/app';
 
 const route = useRoute();
 const { formatNumber, formatDuration, apiRequest } = useHelpers();
 const loading = useLoading();
 
-const trace = ref(null);
+const trace = ref<TraceDetailsResponse | null>(null);
 const notFound = ref(false);
 const copied = ref(false);
 loading.value = true;
@@ -23,10 +25,10 @@ const loadTrace = async () => {
     loading.value = true;
     notFound.value = false;
     try {
-        trace.value = await apiRequest('get', '/traces/' + encodeURIComponent(route.params.traceId));
+        trace.value = await apiRequest<TraceDetailsResponse>('get', '/traces/' + encodeURIComponent(route.params.traceId as string));
     } catch (error) {
         trace.value = null;
-        notFound.value = error?.response?.status === 404;
+        notFound.value = (error as ApiError)?.response?.status === 404;
         if (!notFound.value) console.error('Failed to load trace:', error);
     } finally {
         loading.value = false;
@@ -36,20 +38,20 @@ const loadTrace = async () => {
 onMounted(loadTrace);
 
 // Put this trace in a review queue, when the app has queues and the user may review.
-const reviewQueues = ref([]);
+const reviewQueues = ref<AnnotationQueueSummary[]>([]);
 const queuedIn = ref('');
 const queueError = ref('');
 onMounted(async () => {
     try {
-        const data = await apiRequest('get', '/annotations');
+        const data = await apiRequest<AnnotationQueuesResponse>('get', '/annotations');
         reviewQueues.value = data.can_annotate && data.migrated ? data.queues : [];
     } catch {
         reviewQueues.value = [];
     }
 });
-const queueForReview = async (event) => {
-    const queue = event.target.value;
-    event.target.value = '';
+const queueForReview = async (event: Event) => {
+    const queue = (event.target as HTMLSelectElement).value;
+    (event.target as HTMLSelectElement).value = '';
     if (!queue) return;
     queueError.value = '';
     try {
@@ -78,7 +80,7 @@ const startedAt = computed(() => {
 });
 
 // Origins in the order the trace reached them: the request, then the jobs it dispatched.
-const origins = computed(() => [...new Set((trace.value?.requests || []).map((step) => step.origin).filter(Boolean))]);
+const origins = computed(() => [...new Set((trace.value?.requests || []).map((step) => step.origin).filter(Boolean) as string[])]);
 
 // The request, job or command span at the top of the tree, when it is the only root and carries the
 // trace's own name: the heading already says what it is, so the timeline leaves its row out and the
@@ -88,12 +90,13 @@ const rootSpan = computed(() => {
     const spans = trace.value?.spans || [];
     if (!spans.length) return null;
 
-    const nodes = [...spans, ...(trace.value.requests || [])];
+    const nodes = [...spans, ...(trace.value!.requests || [])];
     const ids = new Set(nodes.map((node) => node.span_id).filter(Boolean));
     const roots = nodes.filter((node) => !(node.parent_span_id && ids.has(node.parent_span_id) && node.parent_span_id !== node.span_id));
-    const [root] = roots;
+    // Any node until spans.includes() below says it is a span.
+    const [root] = roots as TraceSpan[];
 
-    return roots.length === 1 && spans.includes(root) && ROOT_KINDS.includes(root.kind) && root.name === trace.value.origin ? root : null;
+    return roots.length === 1 && spans.includes(root) && ROOT_KINDS.includes(root.kind) && root.name === trace.value!.origin ? root : null;
 });
 
 // Spans drawn in the timeline: the hidden root is not one of them.
@@ -115,7 +118,7 @@ const trackableLabel = computed(() => {
 
 const copyTraceId = async () => {
     try {
-        await navigator.clipboard.writeText(trace.value.trace_id);
+        await navigator.clipboard.writeText(trace.value!.trace_id);
         copied.value = true;
         setTimeout(() => copied.value = false, 2000);
     } catch {
@@ -133,8 +136,8 @@ const copyTraceId = async () => {
             <div class="mb-6 h-8 w-72 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-800"></div>
             <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <div v-for="i in 4" :key="i" class="stat-card">
-                    <div class="mb-3 h-3 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-800"></div>
-                    <div class="h-7 w-28 animate-pulse rounded bg-gray-200 dark:bg-gray-800"></div>
+                    <div class="mb-3 h-3 w-16 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800"></div>
+                    <div class="h-7 w-28 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800"></div>
                 </div>
             </div>
             <div class="card"><div class="card-body"><Skeleton variant="chart" height="200px" /></div></div>
@@ -181,23 +184,23 @@ const copyTraceId = async () => {
             <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <div class="stat-card">
                     <div class="stat-label">Cost</div>
-                    <div class="stat-value !text-2xl"><Money :cents="trace.total_cost_in_cents" /></div>
+                    <div class="stat-value text-2xl!"><Money :cents="trace.total_cost_in_cents" /></div>
                     <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Successful calls only</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Duration</div>
                     <template v-if="rootSpan">
-                        <div class="stat-value !text-2xl">{{ formatDuration(rootSpan.duration_ms) }}</div>
+                        <div class="stat-value text-2xl!">{{ formatDuration(rootSpan.duration_ms) }}</div>
                         <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Whole {{ rootSpan.kind }} · calls {{ formatDuration(trace.duration_ms) }}</div>
                     </template>
                     <template v-else>
-                        <div class="stat-value !text-2xl">{{ formatDuration(trace.duration_ms) }}</div>
+                        <div class="stat-value text-2xl!">{{ formatDuration(trace.duration_ms) }}</div>
                         <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">First call start to last call end</div>
                     </template>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Calls</div>
-                    <div class="stat-value !text-2xl">{{ formatNumber(trace.request_count) }}</div>
+                    <div class="stat-value text-2xl!">{{ formatNumber(trace.request_count) }}</div>
                     <div class="mt-1 text-xs" :class="trace.failed_count ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'">
                         <template v-if="trace.failed_count">{{ formatNumber(trace.failed_count) }} failed · {{ formatNumber(successfulCount) }} succeeded</template>
                         <template v-else>All succeeded</template>
@@ -205,7 +208,7 @@ const copyTraceId = async () => {
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Tokens</div>
-                    <div class="stat-value !text-2xl">{{ formatNumber(trace.total_tokens) }}</div>
+                    <div class="stat-value text-2xl!">{{ formatNumber(trace.total_tokens) }}</div>
                     <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ trace.models.length }} {{ trace.models.length === 1 ? 'model' : 'models' }}</div>
                 </div>
             </div>

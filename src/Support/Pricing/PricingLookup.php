@@ -409,6 +409,28 @@ class PricingLookup
     }
 
     /**
+     * Get the ids of one provider's text models that are still running, sorted.
+     *
+     * @return list<string>
+     */
+    public function textModels(string $provider): array
+    {
+        $this->resolve();
+
+        $modelIds = [];
+
+        foreach ($this->models as $key => $modelData) {
+            if (Str::startsWith($key, "{$provider}|") && $modelData['can_generate_text'] && $modelData['retired_on'] === null) {
+                $modelIds[] = Str::after($key, '|');
+            }
+        }
+
+        sort($modelIds);
+
+        return $modelIds;
+    }
+
+    /**
      * Get all internal model names that can generate text.
      *
      * @return string[]

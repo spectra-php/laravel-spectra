@@ -1,8 +1,9 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useLoading } from '@/composables/useLoading';
+import type { ErrorGroup, ErrorsResponse } from '@/types/api';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import StatusCode from '@/components/StatusCode.vue';
@@ -16,12 +17,12 @@ const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryPara
 const loading = useLoading();
 
 loading.value = true;
-const data = ref({ request_count: 0, failed_count: 0, error_rate: 0, ungrouped_count: 0, migrated: true, groups: [] });
+const data = ref<ErrorsResponse>({ request_count: 0, failed_count: 0, error_rate: 0, ungrouped_count: 0, migrated: true, groups: [] });
 
 const load = async () => {
     loading.value = true;
     try {
-        data.value = await apiRequest('get', '/errors?' + buildQueryParams().toString());
+        data.value = await apiRequest<ErrorsResponse>('get', '/errors?' + buildQueryParams().toString());
     } catch (error) {
         console.error('Failed to load errors:', error);
     } finally {
@@ -34,28 +35,28 @@ const onRangeChange = async () => {
     await load();
 };
 
-const percent = (share) => `${(Number(share || 0) * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
-const rateClass = (rate) => (rate >= 0.05 ? 'text-red-600 dark:text-red-400' : rate >= 0.01 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white');
+const percent = (share: number) => `${(Number(share || 0) * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
+const rateClass = (rate: number) => (rate >= 0.05 ? 'text-red-600 dark:text-red-400' : rate >= 0.01 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white');
 
 const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-const ago = (iso) => {
+const ago = (iso: string | null) => {
     if (!iso) return '';
     const seconds = (new Date(iso).getTime() - Date.now()) / 1000;
-    const units = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]];
+    const units: [Intl.RelativeTimeFormatUnit, number][] = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]];
     for (const [unit, size] of units) {
         if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit);
     }
     return 'just now';
 };
-const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
+const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
 
 // Bars from a zero baseline, so a quiet day looks quiet.
-const bars = (trend) => {
+const bars = (trend: number[]) => {
     const max = Math.max(1, ...trend);
     return trend.map((count) => ({ count, height: count === 0 ? 0 : Math.max(12, Math.round((count / max) * 100)) }));
 };
 
-const callsLink = (group) => ({ name: 'requests', query: { error_fingerprint: group.fingerprint, period: period.value } });
+const callsLink = (group: ErrorGroup) => ({ name: 'requests', query: { error_fingerprint: group.fingerprint, period: period.value } });
 
 onMounted(async () => {
     applyQueryState();
@@ -147,7 +148,7 @@ onMounted(async () => {
                                         <StatusCode :code="group.status_code" :error="group.error_type" />
                                         <span v-if="group.error_type" class="truncate font-mono text-[11px] text-gray-500 dark:text-gray-400" v-tooltip.truncated="group.error_type">{{ group.error_type.split('\\').pop() }}</span>
                                     </span>
-                                    <span class="mt-1.5 line-clamp-2 break-words text-sm text-gray-900 group-hover:text-primary-600 dark:text-gray-100 dark:group-hover:text-primary-400" v-tooltip.truncated="group.message || ''">
+                                    <span class="mt-1.5 line-clamp-2 wrap-break-word text-sm text-gray-900 group-hover:text-primary-600 dark:text-gray-100 dark:group-hover:text-primary-400" v-tooltip.truncated="group.message || ''">
                                         {{ group.message || `HTTP ${group.status_code ?? 'error'} with no message` }}
                                     </span>
                                 </router-link>

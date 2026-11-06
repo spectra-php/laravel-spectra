@@ -1,12 +1,14 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 
 // A cost in cents, shown with the dashboard's one rounding rule. When that
 // rounds the amount, hovering or focusing it shows the exact amount in a
 // tooltip rendered on <body>, so a card's overflow can't clip it.
-const props = defineProps({
-    cents: { type: [Number, String], default: 0 },
+const props = withDefaults(defineProps<{
+    cents?: number | string;
+}>(), {
+    cents: 0,
 });
 
 const { formatCurrency, formatCurrencyExact } = useHelpers();
@@ -15,8 +17,8 @@ const shown = computed(() => formatCurrency(props.cents));
 const exact = computed(() => formatCurrencyExact(props.cents));
 const rounded = computed(() => exact.value !== shown.value);
 
-const anchor = ref(null);
-const position = ref(null);
+const anchor = ref<HTMLElement | null>(null);
+const position = ref<{ left: number; top: number } | null>(null);
 
 const show = () => {
     if (!rounded.value || !anchor.value) return;
@@ -38,7 +40,7 @@ onBeforeUnmount(hide);
     <span
         ref="anchor"
         :tabindex="rounded ? 0 : undefined"
-        :class="rounded ? 'cursor-help rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50' : undefined"
+        :class="rounded ? 'cursor-help rounded-xs focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50' : undefined"
         :aria-label="rounded ? exact : undefined"
         @mouseenter="show"
         @mouseleave="hide"

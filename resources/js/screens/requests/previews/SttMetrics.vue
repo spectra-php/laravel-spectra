@@ -1,19 +1,24 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import Money from '@/components/Money.vue';
+import type { RequestDetailsResponse } from '@/types/api';
 
-const props = defineProps({
-    request: { type: Object, required: true },
-    expanded: { type: Boolean, default: true },
+const props = withDefaults(defineProps<{
+    request: RequestDetailsResponse;
+    expanded?: boolean;
+}>(), {
+    expanded: true,
 });
 
-const emit = defineEmits(['toggle']);
+const emit = defineEmits<{
+    toggle: [];
+}>();
 
 const { formatNumber } = useHelpers();
 
 const hasTokens = computed(() => (props.request.prompt_tokens || 0) + (props.request.completion_tokens || 0) > 0);
-const hasDuration = computed(() => props.request.duration_seconds > 0);
+const hasDuration = computed(() => props.request.duration_seconds! > 0);
 </script>
 
 <template>
@@ -39,13 +44,13 @@ const hasDuration = computed(() => props.request.duration_seconds > 0);
         <div v-if="expanded" class="card-body">
             <!-- Token-based models (gpt-4o-transcribe, etc.) -->
             <div v-if="hasTokens" class="grid grid-cols-3 gap-6">
-                <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                     <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Input Tokens</div>
                     <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                         {{ formatNumber(request.prompt_tokens || 0) }}
                     </div>
                 </div>
-                <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                     <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Output Tokens</div>
                     <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                         {{ formatNumber(request.completion_tokens || 0) }}
@@ -61,7 +66,7 @@ const hasDuration = computed(() => props.request.duration_seconds > 0);
 
             <!-- Duration-based models (whisper-1) -->
             <div v-else class="grid grid-cols-2 gap-6">
-                <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                     <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Duration</div>
                     <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                         {{ (request.duration_seconds || 0).toFixed(1) }}s

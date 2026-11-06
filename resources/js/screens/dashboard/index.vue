@@ -1,10 +1,11 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useCharts } from '@/composables/useCharts';
+import type { ThemedChart } from '@/composables/useCharts';
 import { useLoading } from '@/composables/useLoading';
 import Skeleton from '@/components/Skeleton.vue';
 import StatCard from '@/components/StatCard.vue';
@@ -16,6 +17,10 @@ import Money from '@/components/Money.vue';
 import ScoreSummaryCard from '@/components/ScoreSummaryCard.vue';
 import PerformanceCard from '@/components/PerformanceCard.vue';
 import AlertsCard from '@/components/AlertsCard.vue';
+import type { AlertsResponse, DashboardConfigResponse, ModelPerformance, ModelTypeCost, PerformanceResponse, RecentRequest, RequestByProvider, ScoreSummary, ScoresResponse, StatsResponse } from '@/types/api';
+
+// A row of the breakdown doughnut: a provider's or a model type's, depending on the tab.
+type BreakdownRow = Partial<RequestByProvider & ModelTypeCost>;
 
 const router = useRouter();
 const { formatNumber, formatCompact, formatShortDate, formatDuration, formatDurationSeconds, truncate, providerChartColor, seriesColor, apiRequest } = useHelpers();
@@ -26,7 +31,7 @@ const loading = useLoading();
 
 loading.value = true;
 const layout = ref('full');
-const stats = ref({
+const stats = ref<StatsResponse>({
     total_requests: 0,
     total_cost_in_cents: 0,
     unpriced: { request_count: 0, models: [] },
@@ -57,14 +62,14 @@ const stats = ref({
     layout: 'full',
 });
 
-const requestsChartRef = ref(null);
-const providerChartRef = ref(null);
-const modelTypeChartRef = ref(null);
+const requestsChartRef = ref<HTMLCanvasElement | null>(null);
+const providerChartRef = ref<HTMLCanvasElement | null>(null);
+const modelTypeChartRef = ref<HTMLCanvasElement | null>(null);
 const breakdownTab = ref('provider');
 const showLatencyBreakdownModal = ref(false);
-let requestsChart = null;
-let providerChart = null;
-let modelTypeChart = null;
+let requestsChart: ThemedChart | null = null;
+let providerChart: ThemedChart | null = null;
+let modelTypeChart: ThemedChart | null = null;
 
 const latencyByModelType = computed(() => {
     const rows = stats.value.latency_by_model_type || [];
@@ -84,7 +89,7 @@ const closeLatencyBreakdown = () => {
 
 const loadConfig = async () => {
     try {
-        const data = await apiRequest('get', '/config');
+        const data = await apiRequest<DashboardConfigResponse>('get', '/config');
         layout.value = data.layout || 'full';
     } catch (error) {
         // fallback to full
@@ -92,23 +97,23 @@ const loadConfig = async () => {
 };
 
 // The Scores card; empty (and hidden) until the app records scores.
-const scoreSummary = ref([]);
+const scoreSummary = ref<ScoreSummary[]>([]);
 
 const loadScores = async () => {
     try {
-        scoreSummary.value = (await apiRequest('get', '/scores?' + buildQueryParams().toString())).scores || [];
+        scoreSummary.value = (await apiRequest<ScoresResponse>('get', '/scores?' + buildQueryParams().toString())).scores || [];
     } catch (error) {
         scoreSummary.value = [];
     }
 };
 
 // The Performance and Alerts cards.
-const performance = ref([]);
-const alerts = ref({ alerts: [], error: null });
+const performance = ref<ModelPerformance[]>([]);
+const alerts = ref<AlertsResponse>({ alerts: [], error: null });
 
 const loadPerformance = async () => {
     try {
-        performance.value = (await apiRequest('get', '/performance?' + buildQueryParams().toString())).models || [];
+        performance.value = (await apiRequest<PerformanceResponse>('get', '/performance?' + buildQueryParams().toString())).models || [];
     } catch (error) {
         performance.value = [];
     }
@@ -116,7 +121,7 @@ const loadPerformance = async () => {
 
 const loadAlerts = async () => {
     try {
-        alerts.value = await apiRequest('get', '/alerts');
+        alerts.value = await apiRequest<AlertsResponse>('get', '/alerts');
     } catch (error) {
         alerts.value = { alerts: [], error: null };
     }
@@ -128,7 +133,7 @@ const loadStats = async () => {
     loadPerformance();
     loadAlerts();
     try {
-        const data = await apiRequest('get', '/stats?' + buildQueryParams().toString());
+        const data = await apiRequest<StatsResponse>('get', '/stats?' + buildQueryParams().toString());
         stats.value = data;
         layout.value = data.layout || layout.value;
         // Draw once the chart containers are visible, so they get a real size.
@@ -204,11 +209,11 @@ const renderModelTypeChart = () => {
     });
 };
 
-const goToRequest = (id) => {
+const goToRequest = (id: string) => {
     router.push({ name: 'request-preview', params: { id } });
 };
 
-const formatUsage = (request) => {
+const formatUsage = (request: RecentRequest) => {
     const type = request.model_type;
     if (type === 'image') {
         const count = request.image_count || 0;
@@ -240,7 +245,7 @@ const requestTrend = computed(() => (stats.value.requests_by_date || []).map((d)
 // Legend rows for the breakdown doughnut: label, count, share and color.
 const breakdownRows = computed(() => {
     const byProvider = breakdownTab.value === 'provider';
-    const rows = byProvider ? (stats.value.requests_by_provider || []) : (stats.value.stats_by_model_type || []);
+    const rows: BreakdownRow[] = byProvider ? (stats.value.requests_by_provider || []) : (stats.value.stats_by_model_type || []);
     const total = rows.reduce((sum, row) => sum + Number(row.count || 0), 0) || 1;
 
     return rows.map((row, index) => ({
@@ -400,8 +405,8 @@ onUnmounted(() => {
                         <div v-show="breakdownTab === 'model-type'"><canvas ref="modelTypeChartRef"></canvas></div>
                     </div>
                     <ul v-if="!loading" class="space-y-2 text-sm">
-                        <li v-for="row in breakdownRows" :key="row.key" class="flex items-center gap-2.5">
-                            <span class="h-2.5 w-2.5 shrink-0 rounded-sm" :style="{ backgroundColor: row.color }" aria-hidden="true"></span>
+                        <li v-for="row in breakdownRows" :key="row.key as string" class="flex items-center gap-2.5">
+                            <span class="h-2.5 w-2.5 shrink-0 rounded-xs" :style="{ backgroundColor: row.color }" aria-hidden="true"></span>
                             <ProviderLogo
                                 v-if="row.provider"
                                 :provider="row.provider"
@@ -523,7 +528,7 @@ onUnmounted(() => {
                                     </td>
                                     <td class="text-right tabular-nums">{{ formatUsage(request) }}</td>
                                     <td><StatusCode :code="request.status_code" :error="request.error_type" /></td>
-                                    <td class="whitespace-nowrap text-right text-gray-500 transition-colors group-hover:text-primary-600 dark:text-gray-400 dark:group-hover:text-primary-400">
+                                    <td class="whitespace-nowrap text-right text-gray-500 transition-colors group-hover:text-primary-600! dark:text-gray-400 dark:group-hover:text-primary-400!">
                                         {{ request.created_at_human }}
                                     </td>
                                 </tr>
@@ -549,7 +554,7 @@ onUnmounted(() => {
         <!-- Latency by model type -->
         <div
             v-if="showLatencyBreakdownModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 p-4 backdrop-blur-sm"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 p-4 backdrop-blur-xs"
             @click="closeLatencyBreakdown"
         >
             <div class="w-full max-w-xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-pop dark:border-gray-800 dark:bg-gray-900" @click.stop>

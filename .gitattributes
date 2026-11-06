@@ -27,7 +27,7 @@ pint.json           export-ignore
 rector.php          export-ignore
 phpunit.xml         export-ignore
 postcss.config.js   export-ignore
-tailwind.config.js  export-ignore
 testbench.yaml      export-ignore
+tsconfig.json       export-ignore
 vite.config.js      export-ignore
 whisky.json         export-ignore

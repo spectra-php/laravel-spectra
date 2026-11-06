@@ -1,9 +1,10 @@
 import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import type { LocationQuery, LocationQueryValue } from 'vue-router';
 
 const allowedPeriods = ['today', 'week', 'month', 'year', 'all'];
 
-const periodLabels = {
+const periodLabels: Record<string, string> = {
     today: 'Today',
     week: 'This Week',
     month: 'This Month',
@@ -12,27 +13,29 @@ const periodLabels = {
     custom: 'Custom Range',
 };
 
+interface PeriodQueryOptions {
+    /** Additional filter keys to include in query sync. */
+    filterKeys?: readonly string[];
+    /** Getter for current filter values. */
+    getFilters?: () => Record<string, unknown>;
+}
+
 /**
  * Composable for period/date-range query state management.
  *
  * Handles reading period + custom date range from the URL query,
  * syncing state back to the router, and building API query params.
- *
- * @param {Object} options
- * @param {string[]} [options.filterKeys] - Additional filter keys to include in query sync
- * @param {() => Record<string, string>} [options.getFilters] - Getter for current filter values
- * @param {() => { current_page: number }} [options.getPagination] - Getter for current pagination
  */
-export function usePeriodQuery(options = {}) {
+export function usePeriodQuery(options: PeriodQueryOptions = {}) {
     const route = useRoute();
     const router = useRouter();
 
-    const period = ref('month');
-    const startDate = ref(null);
-    const endDate = ref(null);
+    const period = ref<string>('month');
+    const startDate = ref<string | null>(null);
+    const endDate = ref<string | null>(null);
 
-    const queryString = (value) => Array.isArray(value) ? value[0] : value;
-    const isValidDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+    const queryString = (value: LocationQueryValue | LocationQueryValue[] | undefined) => Array.isArray(value) ? value[0] : value;
+    const isValidDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
     const periodLabel = computed(() => {
         if (startDate.value && endDate.value) {
@@ -59,7 +62,7 @@ export function usePeriodQuery(options = {}) {
         }
     };
 
-    const buildQueryParams = (page = null) => {
+    const buildQueryParams = (page: number | null = null) => {
         const params = new URLSearchParams();
         if (page) params.set('page', String(page));
 
@@ -67,23 +70,23 @@ export function usePeriodQuery(options = {}) {
         params.set('period', hasCustomRange ? 'custom' : period.value);
 
         if (hasCustomRange) {
-            params.set('start_date', startDate.value);
-            params.set('end_date', endDate.value);
+            params.set('start_date', startDate.value as string);
+            params.set('end_date', endDate.value as string);
         }
 
         // Set filter keys if provided (single-valued, so set() not append())
         if (options.filterKeys && options.getFilters) {
             const filters = options.getFilters();
             for (const key of options.filterKeys) {
-                if (filters[key]) params.set(key, filters[key]);
+                if (filters[key]) params.set(key, filters[key] as string);
             }
         }
 
         return params;
     };
 
-    const buildRouteQuery = (page = null) => {
-        const query = {};
+    const buildRouteQuery = (page: number | null = null) => {
+        const query: Record<string, unknown> = {};
 
         // Include filter keys if provided
         if (options.filterKeys && options.getFilters) {
@@ -105,8 +108,8 @@ export function usePeriodQuery(options = {}) {
         return query;
     };
 
-    const normalizeComparableQuery = (query) => {
-        const normalized = {};
+    const normalizeComparableQuery = (query: Record<string, unknown> | LocationQuery) => {
+        const normalized: Record<string, string> = {};
         for (const [key, value] of Object.entries(query)) {
             if (value === null || value === undefined || value === '') continue;
             normalized[key] = Array.isArray(value) ? value.join(',') : String(value);
@@ -114,7 +117,7 @@ export function usePeriodQuery(options = {}) {
         return normalized;
     };
 
-    const syncQueryToRouter = async (page = null, replace = false) => {
+    const syncQueryToRouter = async (page: number | null = null, replace = false) => {
         const target = normalizeComparableQuery(buildRouteQuery(page));
         const current = normalizeComparableQuery(route.query);
 

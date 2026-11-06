@@ -490,6 +490,8 @@ SPECTRA_PRICING_CACHE_TTL=86400     # seconds; 0 keeps it until a file changes
 
 A cache store that can't be read or written never stops cost tracking: Spectra logs a warning once per process and builds the index from the files. Warnings about entries the files can't load are logged when the index is built, not on every request.
 
+A long-running process loads the index once and keeps it in memory, so queue workers, Horizon and Octane keep using the old prices until they restart. After you change a pricing file, restart them the way you do after a deploy (`php artisan queue:restart`, `php artisan horizon:terminate` or `php artisan octane:reload`).
+
 <a name="keeping-prices-current"></a>
 ## Keeping Prices Current
 

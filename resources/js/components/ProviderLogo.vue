@@ -1,8 +1,9 @@
 <template>
-    <component :is="logos[provider]" v-if="logos[provider]" />
+    <component :is="logos[provider as string]" v-if="logos[provider as string]" />
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { Component } from 'vue';
 import AnthropicLogo from './logos/AnthropicLogo.vue';
 import BedrockLogo from './logos/BedrockLogo.vue';
 import CohereLogo from './logos/CohereLogo.vue';
@@ -21,14 +22,14 @@ import ReplicateLogo from './logos/ReplicateLogo.vue';
 import ScalewayLogo from './logos/ScalewayLogo.vue';
 import XaiLogo from './logos/XaiLogo.vue';
 
-defineProps({
-    provider: String,
-});
+defineProps<{
+    provider?: string | null;
+}>();
 
 // Keyed by provider slug. bedrock/deepseek/meta/microsoft have no built-in
 // provider — they render only for user-registered custom providers that use
 // those slugs, so keep them even though no bundled provider maps to them.
-const logos = {
+const logos: Record<string, Component> = {
     anthropic: AnthropicLogo,
     bedrock: BedrockLogo,
     cohere: CohereLogo,

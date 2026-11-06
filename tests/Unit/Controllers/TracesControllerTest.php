@@ -93,6 +93,19 @@ it('keeps every call of a trace in its totals when a filter matches one call', f
         ->and($json['data'][0]['total_cost_in_cents'])->toEqualWithDelta(41.0, 0.0001);
 });
 
+it('keeps only the traces with a call attributed to the trackable type asked for', function () {
+    checkoutCall(0, ['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    checkoutCall(100, ['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['trace_id' => SEARCH_TRACE, 'trackable_type' => 'App\\Models\\Team', 'trackable_id' => '1']);
+
+    $json = callTraces(['trackable_type' => 'App\\Models\\User']);
+
+    expect($json['total'])->toBe(1)
+        ->and($json['data'][0]['trace_id'])->toBe(CHECKOUT_TRACE)
+        ->and($json['data'][0]['request_count'])->toBe(2)
+        ->and($json['available_trackable_types'])->toBe(['App\\Models\\Team', 'App\\Models\\User']);
+});
+
 it('keeps only traces with a failed call when filtering by errors', function () {
     checkoutCall(0, ['status_code' => 200]);
     checkoutCall(100, ['status_code' => 429]);

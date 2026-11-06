@@ -1,16 +1,21 @@
-<script setup>
+<script setup lang="ts">
 import ScoreValue from '@/components/ScoreValue.vue';
+import type { ScoreEntry } from '@/types/api';
 
 // The scores of a call, trace or conversation: feedback, model judgements
 // and reviewer labels, newest first.
-const props = defineProps({
-    scores: { type: Array, default: () => [] },
+const props = withDefaults(defineProps<{
+    scores?: ScoreEntry[];
     // Link each score given to one call to that call's screen.
-    linkRequests: { type: Boolean, default: true },
-    currentRequestId: { type: String, default: null },
+    linkRequests?: boolean;
+    currentRequestId?: string | null;
+}>(), {
+    scores: () => [],
+    linkRequests: true,
+    currentRequestId: null,
 });
 
-const formatTime = (iso) => {
+const formatTime = (iso: string | null) => {
     if (!iso) return '';
     const date = new Date(iso);
 

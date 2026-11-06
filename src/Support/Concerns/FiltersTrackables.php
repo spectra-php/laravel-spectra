@@ -23,8 +23,13 @@ trait FiltersTrackables
      */
     protected function applyTrackableFilters(Builder $query, Request $request): void
     {
-        if ($request->filled('type')) {
-            $query->where('trackable_type', $request->input('type'));
+        if ($request->filled('trackable_type')) {
+            $query->where('trackable_type', $request->input('trackable_type'));
+        }
+
+        // A list of types (the users screen's); an empty list matches nothing.
+        if (is_array($request->input('trackable_types'))) {
+            $query->whereIn('trackable_type', $request->input('trackable_types'));
         }
 
         if ($request->filled('provider')) {

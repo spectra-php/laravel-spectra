@@ -1,15 +1,23 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import type { LocationQueryValue } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useLoading } from '@/composables/useLoading';
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 import RequestFilters from '@/components/RequestFilters.vue';
 import StatCard from '@/components/StatCard.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import Money from '@/components/Money.vue';
+import type { DashboardConfigResponse, ModelTypeLatency, ModelTypeOption, TrackableListItem, TrackablesResponse, TrackablesSummaryResponse } from '@/types/api';
+import type { RequestFilterKey, RequestFilterValues } from '@/types/app';
+
+// `usersOnly` is the Users screen: the same list, limited to trackables whose model is a user.
+const props = defineProps<{ usersOnly?: boolean }>();
+const singular = props.usersOnly ? 'User' : 'Trackable';
+const plural = `${singular}s`;
 
 const router = useRouter();
 const route = useRoute();
@@ -17,18 +25,22 @@ const { formatNumber, formatCompact, formatDuration, formatDurationSeconds, apiR
 const { providers, loadProviders } = useProviders();
 const loading = useLoading();
 
-const trackables = ref([]);
+const trackables = ref<TrackableListItem[]>([]);
 loading.value = true;
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
-const summary = ref({ total_trackables: 0, total_requests: 0, total_tokens: 0, total_images: 0, total_videos: 0, total_tts_characters: 0, tts_duration_seconds: 0, stt_duration_seconds: 0, total_cost: 0, avg_latency: 0 });
-const latencyByModelTypeRaw = ref([]);
+const summary = ref<TrackablesSummaryResponse>({ total_trackables: 0, total_requests: 0, total_tokens: 0, total_images: 0, total_videos: 0, total_tts_characters: 0, tts_duration_seconds: 0, stt_duration_seconds: 0, total_cost: 0, avg_latency: 0 });
+const latencyByModelTypeRaw = ref<ModelTypeLatency[]>([]);
 const showLatencyBreakdownModal = ref(false);
-const modelTypes = ref([]);
-const availableTags = ref([]);
-const availableFinishReasons = ref([]);
+const modelTypes = ref<ModelTypeOption[]>([]);
+const availableTags = ref<string[]>([]);
+const availableFinishReasons = ref<string[]>([]);
+const availableTrackableTypes = ref<string[]>([]);
 const isBootstrapping = ref(true);
 
-const filterKeys = [
+// Every row on the Users screen has the same type when the app has one user model.
+const showTypes = computed(() => !props.usersOnly || availableTrackableTypes.value.length > 1);
+
+const filterKeys: RequestFilterKey[] = [
     'search',
     'provider',
     'model',
@@ -38,6 +50,7 @@ const filterKeys = [
     'finish_reason',
     'has_tool_calls',
     'trace_id',
+    'trackable_type',
     'sort_by',
     'sort_dir',
 ];
@@ -52,8 +65,8 @@ const trackableSortOptions = [
 
 const filtersFromQuery = () => {
     const query = route.query;
-    const state = {};
-    const qs = (value) => Array.isArray(value) ? value[0] : value;
+    const state: RequestFilterValues = {};
+    const qs = (value: LocationQueryValue | LocationQueryValue[]) => Array.isArray(value) ? value[0] : value;
 
     for (const key of filterKeys) {
         const value = qs(query[key]);
@@ -66,7 +79,7 @@ const filtersFromQuery = () => {
     return state;
 };
 
-const filters = ref(filtersFromQuery());
+const filters = ref<RequestFilterValues>(filtersFromQuery());
 
 const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery({
     filterKeys,
@@ -93,7 +106,8 @@ const loadTrackables = async (page = 1) => {
     loading.value = true;
     try {
         const params = buildQueryParams(page);
-        const data = await apiRequest('get', '/trackables?' + params.toString());
+        if (props.usersOnly) params.set('users_only', '1');
+        const data = await apiRequest<TrackablesResponse>('get', '/trackables?' + params.toString());
         trackables.value = data.data;
         pagination.value = {
             current_page: data.current_page,
@@ -104,6 +118,7 @@ const loadTrackables = async (page = 1) => {
         latencyByModelTypeRaw.value = data.latency_by_model_type || [];
         availableTags.value = data.available_tags || [];
         availableFinishReasons.value = data.available_finish_reasons || [];
+        availableTrackableTypes.value = data.available_trackable_types || [];
     } catch (error) {
         console.error('Failed to load trackables:', error);
     } finally {
@@ -124,9 +139,9 @@ const onRangeChange = async () => {
     await loadTrackables(1);
 };
 
-const goToTrackable = (trackable) => {
+const goToTrackable = (trackable: TrackableListItem) => {
     router.push({
-        name: 'trackable-detail',
+        name: props.usersOnly ? 'user-detail' : 'trackable-detail',
         params: { id: trackable.trackable_id },
         // Keep the period, so the trackable opens on the range the list shows.
         query: {
@@ -164,6 +179,7 @@ const clearFilters = () => {
         finish_reason: '',
         has_tool_calls: '',
         trace_id: '',
+        trackable_type: '',
         sort_by: 'cost',
         sort_dir: 'desc',
     };
@@ -173,7 +189,7 @@ const hasActiveFilters = () => {
     return clearableFilterKeys.some((key) => filters.value[key] !== '');
 };
 
-const toggleSort = (field) => {
+const toggleSort = (field: string) => {
     if (filters.value.sort_by === field) {
         filters.value.sort_dir = filters.value.sort_dir === 'desc' ? 'asc' : 'desc';
     } else {
@@ -182,12 +198,12 @@ const toggleSort = (field) => {
     }
 };
 
-const sortIcon = (field) => {
+const sortIcon = (field: string) => {
     if (filters.value.sort_by !== field) return null;
     return filters.value.sort_dir === 'desc' ? 'down' : 'up';
 };
 
-const getDisplayName = (trackable) => {
+const getDisplayName = (trackable: TrackableListItem) => {
     if (trackable.trackable_name) return trackable.trackable_name;
     if (trackable.trackable_email) return trackable.trackable_email;
 
@@ -196,17 +212,17 @@ const getDisplayName = (trackable) => {
     return `${className} #${trackable.trackable_id}`;
 };
 
-const getTypeName = (trackable) => {
+const getTypeName = (trackable: TrackableListItem) => {
     const parts = trackable.trackable_type.split('\\');
     return parts[parts.length - 1];
 };
 
-const getInitials = (trackable) => {
+const getInitials = (trackable: TrackableListItem) => {
     const name = trackable.trackable_name || trackable.trackable_email || getTypeName(trackable);
     return name.charAt(0).toUpperCase();
 };
 
-const usageSegments = (data) => {
+const usageSegments = (data: TrackableListItem) => {
     const segments = [];
     if (data.tokens) segments.push({ value: formatNumber(data.tokens), unit: 'tokens' });
     if (data.images) segments.push({ value: formatNumber(data.images), unit: data.images === 1 ? 'image' : 'images' });
@@ -233,7 +249,7 @@ const showStt = computed(() => ['full', 'audio'].includes(layout.value));
 
 const loadConfig = async () => {
     try {
-        const data = await apiRequest('get', '/config');
+        const data = await apiRequest<DashboardConfigResponse>('get', '/config');
         modelTypes.value = data.model_types || [];
         layout.value = data.layout || 'full';
     } catch (error) {
@@ -244,7 +260,7 @@ const loadConfig = async () => {
 onMounted(async () => {
     applyQueryState();
     filters.value = filtersFromQuery();
-    const initialPage = parseInt(route.query.page) || 1;
+    const initialPage = parseInt(route.query.page as string) || 1;
     await syncQueryToRouter(initialPage, true);
     await Promise.all([
         loadConfig(),
@@ -263,8 +279,8 @@ onUnmounted(() => {
     <div class="">
         <!-- Header -->
         <PageRangeHeader
-            title="Trackables"
-            subtitle="Usage and spend per user, team or any model you track"
+            :title="plural"
+            :subtitle="usersOnly ? 'Usage and spend per user' : 'Usage and spend per user, team or any model you track'"
             v-model:period="period"
             v-model:start-date="startDate"
             v-model:end-date="endDate"
@@ -274,7 +290,7 @@ onUnmounted(() => {
 
         <!-- Headline numbers -->
         <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Trackables" :loading="loading">
+            <StatCard :label="plural" :loading="loading">
                 <div class="stat-value">{{ formatNumber(summary.total_trackables) }}</div>
                 <template #footer>
                     <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">{{ formatNumber(summary.total_requests) }} requests in total</div>
@@ -284,7 +300,7 @@ onUnmounted(() => {
                 <div class="stat-value"><Money :cents="summary.total_cost" /></div>
                 <template #footer>
                     <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                        <template v-if="summary.total_trackables"><Money :cents="summary.total_cost / summary.total_trackables" /> per trackable on average</template>
+                        <template v-if="summary.total_trackables"><Money :cents="summary.total_cost / summary.total_trackables" /> per {{ singular.toLowerCase() }} on average</template>
                         <template v-else>No spend in this period</template>
                     </div>
                 </template>
@@ -337,9 +353,10 @@ onUnmounted(() => {
                     :model-types="modelTypes"
                     :available-tags="availableTags"
                     :available-finish-reasons="availableFinishReasons"
+                    :available-trackable-types="showTypes ? availableTrackableTypes : []"
                     :sort-options="trackableSortOptions"
                     :active-filter-keys="clearableFilterKeys"
-                    search-placeholder="Search trackables by ID..."
+                    :search-placeholder="`Search ${plural.toLowerCase()} by ID...`"
                     @clear="clearFilters"
                 />
             </div>
@@ -351,8 +368,8 @@ onUnmounted(() => {
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Trackable</th>
-                            <th>Type</th>
+                            <th>{{ singular }}</th>
+                            <th v-if="showTypes">Type</th>
                             <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white" @click="toggleSort('requests')">
                                 <span class="inline-flex items-center gap-1">
                                     Requests
@@ -385,17 +402,17 @@ onUnmounted(() => {
                                     <div class="flex items-center gap-3">
                                         <div class="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
                                         <div>
-                                            <div class="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mb-1"></div>
-                                            <div class="h-3 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+                                            <div class="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse mb-1"></div>
+                                            <div class="h-3 w-24 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse"></div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-5 py-4"><div class="h-6 w-16 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse"></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-12 bg-gray-200 dark:bg-gray-800 rounded animate-pulse ml-auto"></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded animate-pulse ml-auto"></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-14 bg-gray-200 dark:bg-gray-800 rounded animate-pulse ml-auto"></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-14 bg-gray-200 dark:bg-gray-800 rounded animate-pulse ml-auto"></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-20 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div></td>
+                                <td v-if="showTypes" class="px-5 py-4"><div class="h-6 w-16 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-12 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse ml-auto"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse ml-auto"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-14 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse ml-auto"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-14 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse ml-auto"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-20 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse"></div></td>
                             </tr>
                         </template>
                         <template v-else>
@@ -420,7 +437,7 @@ onUnmounted(() => {
                                         </div>
                                     </div>
                                 </td>
-                                <td>
+                                <td v-if="showTypes">
                                     <span class="badge badge-secondary">{{ getTypeName(trackable) }}</span>
                                 </td>
                                 <td class="text-right tabular-nums">{{ formatNumber(trackable.requests) }}</td>
@@ -443,13 +460,13 @@ onUnmounted(() => {
                                     <svg class="empty-state-icon mx-auto h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                     </svg>
-                                    <p class="empty-state-title text-base">No trackables found</p>
+                                    <p class="empty-state-title text-base">No {{ plural.toLowerCase() }} found</p>
                                     <p class="empty-state-description" v-if="hasActiveFilters()">
                                         Try adjusting your filters or
                                         <button @click="clearFilters" class="text-primary-600 dark:text-primary-400 hover:underline">clear all filters</button>
                                     </p>
                                     <p class="empty-state-description" v-else>
-                                        No entities have made AI requests yet
+                                        {{ usersOnly ? 'No users have' : 'No entities have' }} made AI requests yet
                                     </p>
                                 </div>
                             </td>
@@ -462,7 +479,7 @@ onUnmounted(() => {
             <div class="card-body border-t border-gray-100 dark:border-gray-800">
                 <div class="flex items-center justify-between">
                     <div class="text-sm text-gray-500 dark:text-gray-400">
-                        <span v-if="loading" class="inline-block w-48 h-4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></span>
+                        <span v-if="loading" class="inline-block w-48 h-4 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse"></span>
                         <span v-else>
                             Showing page <span class="font-medium text-gray-700 dark:text-gray-300">{{ pagination.current_page }}</span>
                             of <span class="font-medium text-gray-700 dark:text-gray-300">{{ pagination.last_page }}</span>

@@ -91,6 +91,18 @@ class RequestAggregateQuery
     }
 
     /**
+     * Scope the query to every trackable of the given types (morph classes).
+     *
+     * @param  array<int, string>  $types
+     */
+    public function forTrackableTypes(array $types): self
+    {
+        $this->query->whereIn('trackable_type', $types);
+
+        return $this;
+    }
+
+    /**
      * Limit the query to rows that belong to some trackable.
      */
     public function withTrackable(): self

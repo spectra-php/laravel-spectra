@@ -19,6 +19,7 @@ One root namespace, `Spectra\` → `src/`. Put new code next to its kind, never 
 | `Pricing/` + `Support/Pricing/` | Price catalogs per provider, and the lookup and cost calculation. `.ai/rules/pricing.md`. |
 | `Support/Budget/`, `Http/Middleware/` | Budget building, enforcement and the `spectra.budget` middleware. |
 | `Support/Query/` | `CostQueryBuilder` / `UsageQueryBuilder` (public API) and `RequestAggregateQuery` (internal, dashboard). |
+| `Support/Relations/` | The relations the model traits in `Concerns/` return (`StringKeyedMorphMany`, `StringKeyedMorphOne`): the parent's key compared as a string with Spectra's string morph id columns, on every driver. |
 | `Actions/{Area}/`, `Http/Controllers/` | The dashboard's read side. `.ai/rules/actions.md`, `.ai/rules/controllers.md`. |
 | `Integrations/` | Outside systems Spectra exports to (OpenTelemetry). |
 | `Data/`, `Enums/`, `Events/`, `Exceptions/`, `Contracts/`, `Concerns/` | Shared types; `Concerns/` holds the traits users add to their models and the handler traits shared across providers (`MatchesEndpoints`, `ExtractsModelField`). |

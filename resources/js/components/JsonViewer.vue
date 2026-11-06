@@ -1,23 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue';
 import hljs from 'highlight.js/lib/core';
 import json from 'highlight.js/lib/languages/json';
+import type { JsonObject, JsonValue } from '@/types/api';
 
 hljs.registerLanguage('json', json);
 
-const props = defineProps({
-    data: {
-        type: [Object, Array, String],
-        default: null
-    },
-    title: {
-        type: String,
-        default: null
-    },
-    maxHeight: {
-        type: String,
-        default: '24rem'
-    }
+const props = withDefaults(defineProps<{
+    data?: JsonObject | JsonValue[] | string | null;
+    title?: string | null;
+    maxHeight?: string;
+}>(), {
+    data: null,
+    title: null,
+    maxHeight: '24rem',
 });
 
 const copied = ref(false);
@@ -46,7 +42,7 @@ const highlightedCode = computed(() => {
     }
 });
 
-const copy = async (text) => {
+const copy = async (text: string) => {
     try {
         await navigator.clipboard.writeText(text);
     } catch {
@@ -89,6 +85,8 @@ const copy = async (text) => {
 </template>
 
 <style scoped>
+@reference "../../css/app.css";
+
 .json-viewer {
     @apply overflow-hidden border border-gray-200 dark:border-gray-800;
 }

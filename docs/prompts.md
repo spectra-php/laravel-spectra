@@ -59,6 +59,8 @@ For each version in the period it shows:
 
 Click a version to see its calls in the requests list. The requests list takes `prompt_name` and `prompt_version` filters, and each call's page shows the prompt it used.
 
+To try a new wording on one real call before you change your code, open the call in the [Playground](/playground).
+
 To compare versions on user feedback, record the feedback as a [score](/scores#user-feedback) on the trace the answer came from.
 
 <a name="rolling-out-a-new-version"></a>

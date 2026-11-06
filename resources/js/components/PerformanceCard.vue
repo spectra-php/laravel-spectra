@@ -1,18 +1,21 @@
-<script setup>
+<script setup lang="ts">
 import { useHelpers } from '@/composables/useHelpers';
 import ProviderLogo from '@/components/ProviderLogo.vue';
+import type { ModelPerformance } from '@/types/api';
 
 // The overview's Performance card: per model, the error rate and latency
 // percentiles. Averages hide the slow tail; p95 and p99 show it.
-defineProps({
-    models: { type: Array, default: () => [] },
+withDefaults(defineProps<{
+    models?: ModelPerformance[];
+}>(), {
+    models: () => [],
 });
 
 const { formatNumber, formatDuration } = useHelpers();
 
-const latency = (ms) => (ms === null || ms === undefined ? '—' : formatDuration(ms));
-const errorRate = (rate) => `${(Number(rate || 0) * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
-const errorClass = (rate) => {
+const latency = (ms: number | null) => (ms === null || ms === undefined ? '—' : formatDuration(ms));
+const errorRate = (rate: number) => `${(Number(rate || 0) * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
+const errorClass = (rate: number) => {
     if (rate >= 0.05) return 'text-red-600 dark:text-red-400';
     if (rate >= 0.01) return 'text-amber-600 dark:text-amber-400';
 

@@ -1,14 +1,19 @@
 name: Fix PHP code style issues
 
+# On main, Pint fixes the style and commits the result. On every other
+# branch and on pull requests it only checks, so the workflow fails on a
+# style problem instead of pushing a commit onto someone's branch or fork.
 on:
   push:
-    branches: [main]
     paths:
       - '**.php'
+      - 'pint.json'
+      - '.github/workflows/pint.yml'
   pull_request:
-    branches: [main]
     paths:
       - '**.php'
+      - 'pint.json'
+      - '.github/workflows/pint.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,8 +35,11 @@ jobs:
 
       - name: Fix PHP code style issues
         uses: aglipanci/laravel-pint-action@2.6
+        with:
+          testMode: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Commit changes
+        if: github.ref == 'refs/heads/main'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: Fix styling

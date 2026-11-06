@@ -1,12 +1,17 @@
-<script setup>
+<script setup lang="ts">
+import type { AlertEntry } from '@/types/api';
+
 // The overview's Alerts card: each rule from spectra.alerts.rules with its
 // value now and whether it is firing (as of the last spectra:check-alerts).
-defineProps({
-    alerts: { type: Array, default: () => [] },
-    error: { type: String, default: null },
+withDefaults(defineProps<{
+    alerts?: AlertEntry[];
+    error?: string | null;
+}>(), {
+    alerts: () => [],
+    error: null,
 });
 
-const formatTime = (iso) => {
+const formatTime = (iso: string | null) => {
     if (!iso) return '';
     const date = new Date(iso);
 

@@ -1,11 +1,12 @@
 import axios from 'axios';
 import { inject } from 'vue';
+import type { ApiError, HttpMethod, ShowAlert } from '@/types/app';
 
 export function useHelpers() {
     const spectra = window.Spectra;
-    const showAlert = inject('showAlert', () => {});
+    const showAlert = inject<ShowAlert>('showAlert', () => {});
 
-    const truncate = (string, length = 50) => {
+    const truncate = (string: string | null | undefined, length = 50) => {
         if (!string) return '';
         return string.length > length ? string.substring(0, length) + '...' : string;
     };
@@ -16,7 +17,7 @@ export function useHelpers() {
      * $0.0007), and anything under $0.0001 as "<$0.0001". The exact amount
      * is in formatCurrencyExact(), which <Money> shows on hover.
      */
-    const formatCurrency = (cents) => {
+    const formatCurrency = (cents: number | string | null | undefined) => {
         const symbol = spectra.currencySymbol || '$';
         const value = Number(cents || 0) / 100;
         const sign = value < 0 ? '-' : '';
@@ -35,7 +36,7 @@ export function useHelpers() {
      * Format a cost given in cents with every significant digit and never in
      * e-notation ($0.00000544), for tooltips.
      */
-    const formatCurrencyExact = (cents) => {
+    const formatCurrencyExact = (cents: number | string | null | undefined) => {
         const symbol = spectra.currencySymbol || '$';
         const value = Number(cents || 0) / 100;
         const sign = value < 0 ? '-' : '';
@@ -44,7 +45,7 @@ export function useHelpers() {
     };
 
     /** "2026-10-01" → "Oct 1" (dates from the API are calendar days, read as UTC). */
-    const formatShortDate = (date) => {
+    const formatShortDate = (date: string | null | undefined) => {
         if (!date) return '';
         const parsed = new Date(String(date).length === 10 ? date + 'T00:00:00Z' : date);
         if (Number.isNaN(parsed.getTime())) return String(date);
@@ -53,27 +54,27 @@ export function useHelpers() {
     };
 
     /** 1234 → "1,234"; 1_234_567 → "1.23M" when compact. */
-    const formatCompact = (num) => {
+    const formatCompact = (num: number | string | null | undefined) => {
         const value = Number(num || 0);
         if (Math.abs(value) < 10_000) return value.toLocaleString('en-US');
 
         return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(value);
     };
 
-    const formatNumber = (num) => {
+    const formatNumber = (num: number | string | null | undefined) => {
         if (num === null || num === undefined) return '0';
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     };
 
-    const formatDuration = (ms) => {
+    const formatDuration = (ms: number | null | undefined) => {
         if (ms === null || ms === undefined) return '0ms';
         if (ms < 1000) return Math.round(ms) + 'ms';
         if (ms < 60000) return (ms / 1000).toFixed(2) + 's';
         return (ms / 60000).toFixed(2) + 'm';
     };
 
-    const statusClass = (status) => {
-        const classes = {
+    const statusClass = (status: string) => {
+        const classes: Record<string, string> = {
             success: 'badge-success',
             completed: 'badge-success',
             failed: 'badge-danger',
@@ -102,52 +103,53 @@ export function useHelpers() {
 
     const providerSlots = ['openai', 'anthropic', 'google', 'xai', 'mistral', 'groq', 'openrouter', 'cohere'];
 
-    const seriesColor = (index) => {
+    const seriesColor = (index: number) => {
         const palette = isDark() ? seriesPalette.dark : seriesPalette.light;
 
         return palette[index] ?? (isDark() ? seriesPalette.other.dark : seriesPalette.other.light);
     };
 
-    const providerBrandColors = Object.fromEntries(
+    const providerBrandColors: Record<string, { badge: string }> = Object.fromEntries(
         [...providerSlots, 'replicate', 'falai', 'elevenlabs', 'scaleway', 'ollama', 'azure'].map((slug) => [
             slug,
             { badge: 'badge-provider-' + slug },
         ]),
     );
 
-    const providerClass = (provider) => {
-        return providerBrandColors[provider]?.badge || 'badge-secondary';
+    const providerClass = (provider: string | null | undefined) => {
+        return providerBrandColors[provider as string]?.badge || 'badge-secondary';
     };
 
-    const providerChartColor = (provider) => {
-        const slot = providerSlots.indexOf(provider);
+    const providerChartColor = (provider: string | null | undefined) => {
+        const slot = providerSlots.indexOf(provider as string);
 
         return seriesColor(slot === -1 ? 99 : slot);
     };
 
-    const apiRequest = async (method, endpoint, data = {}) => {
+    const apiRequest = async <T = unknown>(method: HttpMethod, endpoint: string, data: object = {}): Promise<T> => {
         const url = '/' + spectra.path + '/api' + endpoint;
         try {
             const headers = spectra.csrfToken ? { 'X-CSRF-TOKEN': spectra.csrfToken } : {};
-            const response = await axios({ method, url, data, headers });
+            const response = await axios<T>({ method, url, data, headers });
             return response.data;
         } catch (error) {
-            showAlert('danger', 'API request failed: ' + (error.response?.data?.message || error.message));
+            const failure = error as ApiError;
+            showAlert('danger', 'API request failed: ' + (failure.response?.data?.message || failure.message));
             throw error;
         }
     };
 
-    const alertSuccess = (message) => {
+    const alertSuccess = (message: string) => {
         showAlert('success', message);
     };
 
-    const alertError = (message) => {
+    const alertError = (message: string) => {
         showAlert('danger', message);
     };
 
     const currencySymbol = spectra.currencySymbol || '$';
 
-    const formatDurationSeconds = (seconds) => {
+    const formatDurationSeconds = (seconds: number | null | undefined) => {
         if (!seconds) return '0s';
         if (seconds < 60) return seconds.toFixed(1) + 's';
         const m = Math.floor(seconds / 60);

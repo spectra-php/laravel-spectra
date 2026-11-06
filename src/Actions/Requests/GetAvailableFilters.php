@@ -4,18 +4,26 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Requests;
 
+use Spectra\Actions\Trackables\GetAvailableTrackableTypes;
 use Spectra\Data\Responses\AvailableFiltersResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraTag;
 
 /**
  * The filter options the request and trackable screens offer: every tag, and
- * the finish reasons and reasoning efforts actually stored.
+ * the finish reasons, reasoning efforts and trackable types actually stored.
  */
 class GetAvailableFilters
 {
     /**
-     * Get every tag and the stored finish reasons and reasoning efforts.
+     * Create a new get available filters action instance.
+     */
+    public function __construct(
+        private readonly GetAvailableTrackableTypes $getAvailableTrackableTypes,
+    ) {}
+
+    /**
+     * Get every tag and the stored finish reasons, reasoning efforts and trackable types.
      */
     public function __invoke(): AvailableFiltersResponse
     {
@@ -41,6 +49,7 @@ class GetAvailableFilters
                 ->sort()
                 ->values()
                 ->toArray(),
+            trackable_types: ($this->getAvailableTrackableTypes)(),
         );
     }
 }

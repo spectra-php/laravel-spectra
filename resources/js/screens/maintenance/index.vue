@@ -1,13 +1,15 @@
-<script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { useRoute } from 'vue-router';
+<script setup lang="ts">
+import { ref, computed, inject, watch, onMounted, onUnmounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
+import type { MaintenanceQueuedResponse, MaintenanceStatusResponse, PrunePreview, RecordingResponse } from '@/types/api';
+import type { RefreshView } from '@/types/app';
 import StatCard from '@/components/StatCard.vue';
 import PricingCard from './PricingCard.vue';
 
 const { formatNumber, apiRequest, alertSuccess } = useHelpers();
 const loading = useLoading();
+const refreshView = inject<RefreshView>('refreshView', () => {});
 
 const retentionOptions = [
     { hours: 24, label: '24 hours' },
@@ -18,18 +20,18 @@ const retentionOptions = [
 ];
 const statsRetentionOptions = [90, 180, 365, 730];
 
-const status = ref(null);
+const status = ref<MaintenanceStatusResponse | null>(null);
 const hours = ref(168);
 const pruneStats = ref(false);
 const statsDays = ref(365);
 const confirmingPrune = ref(false);
 const busy = ref({ prune: false, rebuild: false, recording: false });
-let pollTimer = null;
+let pollTimer: ReturnType<typeof setTimeout> | null = null;
 
 const canManage = computed(() => status.value?.can_manage === true);
-const preview = computed(() => status.value?.preview || {});
-const totals = computed(() => status.value?.totals || {});
-const pending = computed(() => status.value?.pending || {});
+const preview = computed<Partial<PrunePreview>>(() => status.value?.preview || {});
+const totals = computed<Partial<MaintenanceStatusResponse['totals']>>(() => status.value?.totals || {});
+const pending = computed<Partial<MaintenanceStatusResponse['pending']>>(() => status.value?.pending || {});
 const nothingToPrune = computed(() => !preview.value.requests && !preview.value.spans && !preview.value.scores && !preview.value.review_items && !preview.value.daily_stats);
 
 const queryString = () => {
@@ -47,7 +49,7 @@ const retentionPayload = () => ({
 const loadStatus = async ({ quiet = false } = {}) => {
     if (!quiet) loading.value = true;
     try {
-        status.value = await apiRequest('get', '/maintenance?' + queryString());
+        status.value = await apiRequest<MaintenanceStatusResponse>('get', '/maintenance?' + queryString());
         schedulePoll();
     } catch (error) {
         console.error('Failed to load maintenance status:', error);
@@ -58,7 +60,7 @@ const loadStatus = async ({ quiet = false } = {}) => {
 
 // While a queued prune or rebuild hasn't reported back, refresh every few seconds.
 const schedulePoll = () => {
-    clearTimeout(pollTimer);
+    clearTimeout(pollTimer!);
     if (pending.value.prune || pending.value.rebuild_stats) {
         pollTimer = setTimeout(() => loadStatus({ quiet: true }), 3000);
     }
@@ -77,7 +79,7 @@ const prune = async () => {
 
     busy.value.prune = true;
     try {
-        await apiRequest('post', '/maintenance/prune', retentionPayload());
+        await apiRequest<MaintenanceQueuedResponse>('post', '/maintenance/prune', retentionPayload());
         alertSuccess('Prune queued. The numbers below update when it finishes.');
         confirmingPrune.value = false;
         await loadStatus({ quiet: true });
@@ -89,7 +91,7 @@ const prune = async () => {
 const rebuildStats = async () => {
     busy.value.rebuild = true;
     try {
-        await apiRequest('post', '/maintenance/rebuild-stats');
+        await apiRequest<MaintenanceQueuedResponse>('post', '/maintenance/rebuild-stats');
         alertSuccess('Stats rebuild queued.');
         await loadStatus({ quiet: true });
     } finally {
@@ -100,15 +102,14 @@ const rebuildStats = async () => {
 const toggleRecording = async () => {
     busy.value.recording = true;
     try {
-        const data = await apiRequest('post', '/maintenance/recording', { paused: !status.value.recording_paused });
-        status.value.recording_paused = data.recording_paused;
-        alertSuccess(data.recording_paused ? 'Recording paused.' : 'Recording resumed.');
+        await apiRequest<RecordingResponse>('post', '/maintenance/recording', { paused: !status.value!.recording_paused });
+        refreshView();
     } finally {
         busy.value.recording = false;
     }
 };
 
-const formatDateTime = (value) => {
+const formatDateTime = (value: string | null | undefined) => {
     if (!value) return '—';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
@@ -116,7 +117,7 @@ const formatDateTime = (value) => {
     return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 };
 
-const retentionLabel = (value) => retentionOptions.find((option) => option.hours === value)?.label || `${value} hours`;
+const retentionLabel = (value: number) => retentionOptions.find((option) => option.hours === value)?.label || `${value} hours`;
 
 const pruneSummary = computed(() => {
     const parts = [`${formatNumber(preview.value.requests || 0)} requests`];
@@ -129,16 +130,8 @@ const pruneSummary = computed(() => {
     return parts.join(', ');
 });
 
-// The top bar's prune button opens this screen at #prune.
-const route = useRoute();
-onMounted(async () => {
-    await loadStatus();
-    if (route.hash === '#prune') {
-        await nextTick();
-        document.getElementById('prune')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-});
-onUnmounted(() => clearTimeout(pollTimer));
+onMounted(() => loadStatus());
+onUnmounted(() => clearTimeout(pollTimer!));
 </script>
 
 <template>
@@ -180,7 +173,7 @@ onUnmounted(() => clearTimeout(pollTimer));
 
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <!-- Prune -->
-            <div id="prune" class="card scroll-mt-24 lg:col-span-2">
+            <div class="card lg:col-span-2">
                 <div class="card-header">
                     <h2>Prune old data</h2>
                     <span v-if="pending.prune" class="badge badge-info"><span class="spinner h-2.5 w-2.5 border-[1.5px]" aria-hidden="true"></span> Queued</span>
@@ -200,7 +193,7 @@ onUnmounted(() => clearTimeout(pollTimer));
 
                     <div class="flex flex-wrap items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
                         <label class="inline-flex items-center gap-2">
-                            <input v-model="pruneStats" type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900" :disabled="!canManage" />
+                            <input v-model="pruneStats" type="checkbox" class="rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900" :disabled="!canManage" />
                             Also delete daily stats older than
                         </label>
                         <select v-model.number="statsDays" class="form-select form-select-sm" :disabled="!canManage || !pruneStats">
@@ -208,7 +201,7 @@ onUnmounted(() => clearTimeout(pollTimer));
                         </select>
                     </div>
 
-                    <div class="rounded-lg bg-gray-50 px-4 py-3 text-sm dark:bg-white/[0.03]">
+                    <div class="rounded-lg bg-gray-50 px-4 py-3 text-sm dark:bg-white/3">
                         <span v-if="!status" class="text-gray-400">Counting…</span>
                         <span v-else-if="nothingToPrune" class="text-gray-500 dark:text-gray-400">Nothing is older than {{ retentionLabel(hours) }}.</span>
                         <span v-else class="text-gray-700 dark:text-gray-300">
@@ -219,7 +212,7 @@ onUnmounted(() => clearTimeout(pollTimer));
                     <div class="flex flex-wrap items-center gap-2">
                         <button
                             type="button"
-                            :class="['btn', confirmingPrune ? 'bg-red-600 text-white shadow-sm hover:bg-red-500' : 'btn-secondary']"
+                            :class="['btn', confirmingPrune ? 'bg-red-600 text-white shadow-xs hover:bg-red-500' : 'btn-secondary']"
                             :disabled="!canManage || nothingToPrune || busy.prune || pending.prune"
                             @click="prune"
                         >

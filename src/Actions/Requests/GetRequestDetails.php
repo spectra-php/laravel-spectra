@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Requests;
 
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Spectra\Actions\Scores\GetScores;
 use Spectra\Actions\Traces\GetTraceDetails;
 use Spectra\Data\Responses\RequestDetailsResponse;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Playground\PlaygroundAccess;
+use Spectra\Support\Playground\PlaygroundClient;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Query\TraceSchema;
 
@@ -29,6 +33,7 @@ class GetRequestDetails
         private readonly GetTraceDetails $getTraceDetails,
         private readonly GetScores $getScores,
         private readonly TraceSchema $traceSchema,
+        private readonly PlaygroundClient $playgroundClient,
     ) {}
 
     /**
@@ -59,6 +64,7 @@ class GetRequestDetails
             $details['media_storage_enabled'] = (bool) config('spectra.storage.media.enabled');
         }
 
+        $details['can_open_in_playground'] = PlaygroundAccess::allowed() && $this->playgroundClient->supports($request);
         $details['scores'] = ($this->getScores)(requestId: $request->id);
 
         // The trace card orders calls by started_at; until the trace
@@ -90,20 +96,23 @@ class GetRequestDetails
         }
 
         $response = $request->response;
-        $urls = [];
+        $outputItems = Arr::wrap($response['output'] ?? []);
 
-        /** @var array<int, array<string, mixed>> $outputItems */
-        $outputItems = $response['output'] ?? [];
         $imageOutputs = collect($outputItems)
-            ->filter(fn (array $item) => ($item['type'] ?? '') === 'image_generation_call');
+            ->filter(fn (mixed $item) => is_array($item) && ($item['type'] ?? '') === 'image_generation_call');
 
         if ($imageOutputs->isNotEmpty()) {
-            foreach ($imageOutputs->values() as $index => $item) {
-                $urls[] = "/{$basePath}/api/requests/{$requestId}/images/{$index}";
-            }
-
-            return $urls;
+            return $imageOutputs->values()->keys()->map(
+                fn (int $index) => "/{$basePath}/api/requests/{$requestId}/images/{$index}"
+            )->all();
         }
+
+        // Replicate's output is one image URL or a list of them.
+        /** @var array<int, string> $urls */
+        $urls = collect($outputItems)
+            ->filter(fn (mixed $item) => is_string($item) && Str::isUrl($item, ['http', 'https']))
+            ->values()
+            ->all();
 
         foreach ($response['data'] ?? [] as $index => $item) {
             if (filled($item['b64_json'] ?? null) && $item['b64_json'] !== '[stripped]') {

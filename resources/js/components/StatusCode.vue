@@ -1,17 +1,14 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 
-const props = defineProps({
-    code: {
-        type: [Number, String, null],
-        default: null,
-    },
+const props = withDefaults(defineProps<{
+    code?: number | string | null;
     // The call's error_type: a 2xx answer that carries one (a stream that
     // broke off, a job the provider reports as failed) is a failed call.
-    error: {
-        type: [String, Boolean, null],
-        default: null,
-    },
+    error?: string | boolean | null;
+}>(), {
+    code: null,
+    error: null,
 });
 
 const numericCode = computed(() => {

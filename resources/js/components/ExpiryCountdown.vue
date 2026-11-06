@@ -1,15 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
-const props = defineProps({
-    expiresAt: { type: String, required: true },
-    formattedExpiresAt: { type: String, default: '' },
+const props = withDefaults(defineProps<{
+    expiresAt: string;
+    formattedExpiresAt?: string | null;
+}>(), {
+    formattedExpiresAt: '',
 });
 
-const emit = defineEmits(['expired']);
+const emit = defineEmits<{
+    expired: [];
+}>();
 
 const now = ref(Date.now());
-let timer = null;
+let timer: ReturnType<typeof setInterval> | null = null;
 
 const expiresAtMs = computed(() => new Date(props.expiresAt).getTime());
 const remaining = computed(() => Math.max(0, expiresAtMs.value - now.value));
@@ -24,7 +28,7 @@ const display = computed(() => {
     const minutes = Math.floor((total % 3600) / 60);
     const seconds = total % 60;
 
-    const pad = (n) => String(n).padStart(2, '0');
+    const pad = (n: number) => String(n).padStart(2, '0');
 
     if (days > 0) {
         return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
@@ -35,7 +39,7 @@ const display = computed(() => {
 const tick = () => {
     now.value = Date.now();
     if (hasExpired.value) {
-        clearInterval(timer);
+        clearInterval(timer!);
         timer = null;
         emit('expired');
     }

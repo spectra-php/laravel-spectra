@@ -1,45 +1,31 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import PeriodRangePicker from '@/components/PeriodRangePicker.vue';
 import DocsLink from '@/components/DocsLink.vue';
+import type { PeriodRangeChange } from '@/types/app';
 
-const props = defineProps({
-    title: {
-        type: String,
-        required: true,
-    },
-    subtitle: {
-        type: String,
-        default: null,
-    },
-    docs: {
-        type: String,
-        default: null,
-    },
-    period: {
-        type: String,
-        required: true,
-    },
-    startDate: {
-        type: String,
-        default: null,
-    },
-    endDate: {
-        type: String,
-        default: null,
-    },
-    loading: {
-        type: Boolean,
-        default: false,
-    },
+const props = withDefaults(defineProps<{
+    title: string;
+    subtitle?: string | null;
+    docs?: string | null;
+    period: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    loading?: boolean;
+}>(), {
+    subtitle: null,
+    docs: null,
+    startDate: null,
+    endDate: null,
+    loading: false,
 });
 
-const emit = defineEmits([
-    'update:period',
-    'update:startDate',
-    'update:endDate',
-    'change',
-]);
+const emit = defineEmits<{
+    'update:period': [value: string];
+    'update:startDate': [value: string | null];
+    'update:endDate': [value: string | null];
+    change: [payload: PeriodRangeChange];
+}>();
 
 const periodModel = computed({
     get: () => props.period,

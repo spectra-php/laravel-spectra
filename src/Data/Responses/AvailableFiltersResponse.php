@@ -18,10 +18,12 @@ readonly class AvailableFiltersResponse extends DataTransferObject
      * @param  array<int, string>  $tags
      * @param  array<int, string>  $finish_reasons
      * @param  array<int, string>  $reasoning_efforts
+     * @param  array<int, string>  $trackable_types
      */
     public function __construct(
         public array $tags,
         public array $finish_reasons,
         public array $reasoning_efforts,
+        public array $trackable_types,
     ) {}
 }

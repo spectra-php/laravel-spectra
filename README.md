@@ -38,7 +38,7 @@ Official documentation can be found on [spectraphp.com](https://spectraphp.com).
 
 ## Upgrading to 4.0
 
-Spectra 4.0 adds scores, alerts, redaction, payload sampling, prompt versions, tool spans, error grouping, review queues, evaluations and a maintenance screen. Most apps only need to run `php artisan spectra:install` once. Check the guide if `spectra:install` runs in a deploy script, if others use your dashboard in production, if your code reads `RequestContext::$id`, or if you wrote a pricing class. See the [upgrade guide](UPGRADE.md) and the [changelog](CHANGELOG.md).
+Spectra 4.0 adds scores, alerts, redaction, payload sampling, prompt versions, tool spans, error grouping, review queues, evaluations, a playground and a maintenance screen. Most apps only need to run `php artisan spectra:install` once. Check the guide if `spectra:install` runs in a deploy script, if others use your dashboard in production, if your code reads `RequestContext::$id`, or if you wrote a pricing class. See the [upgrade guide](UPGRADE.md) and the [changelog](CHANGELOG.md).
 
 ## Code of Conduct
 

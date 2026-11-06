@@ -315,3 +315,12 @@ Spectra 2.0 stores the trackable type as the morph alias (`$model->getMorphClass
 **Symptoms:** A `BudgetThresholdReached` event fired once, and not again on later requests.
 
 This is expected. Warning, critical, and exceeded alerts fire once per budget, limit, and period. See [Alerts Fire Once per Period](/budgets#alerts-fire-once).
+
+<a name="playground-wont-run"></a>
+## The Playground Won't Open or Run a Call
+
+- **The screen says the Playground is off.** Set `SPECTRA_PLAYGROUND_ENABLED=true`. If you cache your config, run `php artisan config:cache` again.
+- **The screen says you can't use it.** Define the `manageSpectra` gate for your user. See [Who Can Use It](/playground#who-can-use-it).
+- **A request has no Open in Playground button.** It isn't a text call to a chat endpoint, its request body wasn't stored, or it went to a custom provider. See [What Can Be Opened](/playground#what-can-be-opened).
+- **It says no API key was found.** Set `spectra.api_keys.{provider}` in `config/spectra.php`. See [API Keys and Base URLs](/playground#api-keys-and-base-urls).
+- **The provider rejects a run that worked in your app.** The stored body may have lost something, or the call may need a header Spectra doesn't store. See [When a Run Differs From the Original](/playground#when-a-run-differs-from-the-original).

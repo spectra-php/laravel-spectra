@@ -5,28 +5,27 @@ declare(strict_types=1);
 namespace Spectra\Actions\Trackables;
 
 use Spectra\Models\SpectraRequest;
-use Spectra\Support\DateRange;
 
 /**
- * The trackable types (morph classes) that made requests in the period, for
- * the trackables screen's type filter.
+ * The trackable types (morph classes) that ever made a request, for the
+ * trackable-type filter of the requests, traces, conversations, trackables
+ * and costs screens.
  */
 class GetAvailableTrackableTypes
 {
     /**
-     * Get the trackable types that made requests in the date range.
+     * Get every stored trackable type, sorted.
      *
      * @return array<int, string>
      */
-    public function __invoke(DateRange $dateRange): array
+    public function __invoke(): array
     {
-        $query = SpectraRequest::query()
+        return SpectraRequest::query()
             ->whereNotNull('trackable_type')
-            ->select('trackable_type')
-            ->distinct();
-
-        $dateRange->apply($query);
-
-        return $query->pluck('trackable_type')->toArray();
+            ->distinct()
+            ->orderBy('trackable_type')
+            ->pluck('trackable_type')
+            ->map(fn (mixed $type) => (string) $type)
+            ->all();
     }
 }

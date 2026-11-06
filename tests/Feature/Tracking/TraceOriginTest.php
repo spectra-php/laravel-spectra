@@ -73,9 +73,9 @@ it('names a call by the innermost job and returns to the outer one after it', fu
 });
 
 it('forgets a job that threw', function () {
-    expect(fn () => dispatch(new RecordsOriginJob(OriginJobMode::Fail)))->toThrow(RuntimeException::class);
+    expect(fn () => dispatch(new RecordsOriginJob(OriginJobMode::Fail)))->toThrow(RuntimeException::class)
 
-    expect(RecordsOriginJob::$origins)->toBe([RecordsOriginJob::class])
+        ->and(RecordsOriginJob::$origins)->toBe([RecordsOriginJob::class])
         ->and(app(TraceOrigin::class)->current())->toBeNull();
 });
 

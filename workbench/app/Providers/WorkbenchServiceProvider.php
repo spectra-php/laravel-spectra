@@ -4,8 +4,14 @@ declare(strict_types=1);
 
 namespace Workbench\App\Providers;
 
+use GuzzleHttp\Promise\PromiseInterface;
+use Illuminate\Http\Client\Request;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Sleep;
+use Illuminate\Support\Str;
 
 class WorkbenchServiceProvider extends ServiceProvider
 {
@@ -39,5 +45,74 @@ class WorkbenchServiceProvider extends ServiceProvider
                 'scores' => ['needs_fix' => 'boolean'],
             ],
         ]);
+
+        // The demo's Playground runs against a fake provider, so trying it here
+        // or retaking its screenshots needs no key and costs nothing.
+        if (! $this->app->runningInConsole()) {
+            $this->fakePlaygroundProvider();
+        }
+    }
+
+    /**
+     * Answer the Playground's chat calls with a canned reply in each API's shape.
+     * A system prompt that asks for it gets a short answer, so an edit shows.
+     */
+    protected function fakePlaygroundProvider(): void
+    {
+        config()->set('spectra.dashboard.playground.enabled', true);
+        config()->set('spectra.api_keys', [
+            'openai' => 'demo',
+            'anthropic' => 'demo',
+            'google' => 'demo',
+            'groq' => 'demo',
+            'xai' => 'demo',
+            'mistral' => 'demo',
+            'openrouter' => 'demo',
+            'cohere' => 'demo',
+        ]);
+
+        Http::fake(fn (Request $request) => $this->fakeChatResponse($request));
+    }
+
+    /**
+     * Get the canned answer for a chat call, in the shape of its endpoint.
+     *
+     * @return PromiseInterface|Response|null
+     */
+    protected function fakeChatResponse(Request $request): mixed
+    {
+        $path = (string) parse_url($request->url(), PHP_URL_PATH);
+
+        if (! Str::contains($path, ['chat/completions', '/responses', '/messages', ':generateContent', '/v2/chat'])) {
+            return null;
+        }
+
+        // A model name that says so fails, to show how a failed run looks.
+        if (Str::contains((string) ($request['model'] ?? ''), 'does-not-exist')) {
+            Sleep::for(210)->milliseconds();
+
+            return Http::response(['error' => ['message' => "The model `{$request['model']}` does not exist or you do not have access to it.", 'type' => 'invalid_request_error', 'code' => 'model_not_found']], 404);
+        }
+
+        $body = $request->body();
+        $wantsShort = Str::contains(Str::lower($body), ['short', 'concise', 'one sentence']);
+        $model = $request['model'] ?? 'gemini-2.5-flash';
+
+        $text = $wantsShort
+            ? 'Refunds reach your card within 5 to 10 business days of approval.'
+            : "Thanks for reaching out! Once a refund is approved, it usually takes 5 to 10 business days to appear on your card, depending on your bank.\n\nYou can check its status at any time under Orders in your account. If it still hasn't arrived after 10 business days, reply here with your order number and I'll look into it with our payments team.";
+
+        // Roughly four characters to a token, as the provider would report it.
+        $promptTokens = (int) ceil(strlen($body) / 4);
+        $replyTokens = (int) ceil(strlen($text) / 4);
+
+        Sleep::for($wantsShort ? 640 : 1180)->milliseconds();
+
+        return Http::response(match (true) {
+            Str::contains($path, ':generateContent') => ['modelVersion' => $model, 'candidates' => [['content' => ['role' => 'model', 'parts' => [['text' => $text]]], 'finishReason' => 'STOP']], 'usageMetadata' => ['promptTokenCount' => $promptTokens, 'candidatesTokenCount' => $replyTokens, 'totalTokenCount' => $promptTokens + $replyTokens]],
+            Str::endsWith($path, '/responses') => ['id' => 'resp_demo', 'object' => 'response', 'status' => 'completed', 'model' => $model, 'output' => [['type' => 'message', 'role' => 'assistant', 'content' => [['type' => 'output_text', 'text' => $text]]]], 'usage' => ['input_tokens' => $promptTokens, 'output_tokens' => $replyTokens, 'total_tokens' => $promptTokens + $replyTokens]],
+            Str::endsWith($path, '/messages') => ['id' => 'msg_demo', 'type' => 'message', 'role' => 'assistant', 'model' => $model, 'content' => [['type' => 'text', 'text' => $text]], 'stop_reason' => 'end_turn', 'usage' => ['input_tokens' => $promptTokens, 'output_tokens' => $replyTokens]],
+            default => ['id' => 'chatcmpl_demo', 'object' => 'chat.completion', 'model' => $model, 'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => $text], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => $promptTokens, 'completion_tokens' => $replyTokens, 'total_tokens' => $promptTokens + $replyTokens]],
+        });
     }
 }

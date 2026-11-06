@@ -8,8 +8,8 @@ use Spectra\Data\TracesSummary;
 
 /**
  * The traces screen: one page of traces, the totals over every trace the
- * filters keep, and the tag, finish-reason and reasoning-effort filter
- * options. Until the trace migrations run there is nothing to list, and
+ * filters keep, and the tag, finish-reason, reasoning-effort and
+ * trackable-type filter options. Until the trace migrations run there is nothing to list, and
  * `migrated` says so.
  */
 readonly class TracesResponse extends PaginatedResponse
@@ -21,6 +21,7 @@ readonly class TracesResponse extends PaginatedResponse
      * @param  array<int, string>  $available_tags
      * @param  array<int, string>  $available_finish_reasons
      * @param  array<int, string>  $available_reasoning_efforts
+     * @param  array<int, string>  $available_trackable_types
      */
     public function __construct(
         array $data,
@@ -31,6 +32,7 @@ readonly class TracesResponse extends PaginatedResponse
         public array $available_tags,
         public array $available_finish_reasons,
         public array $available_reasoning_efforts,
+        public array $available_trackable_types,
         public bool $migrated = true,
     ) {
         parent::__construct(data: $data, current_page: $current_page, last_page: $last_page, total: $total);
@@ -50,6 +52,7 @@ readonly class TracesResponse extends PaginatedResponse
             available_tags: $filters->tags,
             available_finish_reasons: $filters->finish_reasons,
             available_reasoning_efforts: $filters->reasoning_efforts,
+            available_trackable_types: $filters->trackable_types,
             migrated: false,
         );
     }

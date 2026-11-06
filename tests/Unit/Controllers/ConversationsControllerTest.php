@@ -98,6 +98,19 @@ it('keeps every call of a conversation in its totals when a filter matches one c
         ->and($json['data'][0]['total_cost_in_cents'])->toEqualWithDelta(7.0, 0.0001);
 });
 
+it('keeps only the conversations with a call attributed to the trackable type asked for', function () {
+    supportCall(0, 1, ['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    supportCall(10, 2, ['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['conversation_id' => 'sales-7', 'trackable_type' => 'App\\Models\\Team', 'trackable_id' => '1']);
+
+    $json = callConversations(['trackable_type' => 'App\\Models\\User']);
+
+    expect($json['total'])->toBe(1)
+        ->and($json['data'][0]['conversation_id'])->toBe('support-42')
+        ->and($json['data'][0]['request_count'])->toBe(2)
+        ->and($json['available_trackable_types'])->toBe(['App\\Models\\Team', 'App\\Models\\User']);
+});
+
 it('finds a conversation by part of its id and sorts by last activity', function () {
     supportCall(0, 1);
     SpectraRequest::factory()->create(['conversation_id' => 'sales-7', 'created_at' => Date::parse('2026-11-04 09:00:00')]);

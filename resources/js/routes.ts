@@ -1,3 +1,4 @@
+import type { RouteRecordRaw } from 'vue-router';
 import Dashboard from './screens/dashboard/index.vue';
 import Requests from './screens/requests/index.vue';
 import RequestPreview from './screens/requests/preview.vue';
@@ -11,13 +12,16 @@ import Errors from './screens/errors/index.vue';
 import Evals from './screens/evals/index.vue';
 import EvalRun from './screens/evals/run.vue';
 import Dataset from './screens/evals/dataset.vue';
+import Playground from './screens/playground/index.vue';
+import PlaygroundCall from './screens/playground/call.vue';
 import Trackables from './screens/trackables/index.vue';
 import TrackableDetail from './screens/trackables/detail.vue';
+import Users from './screens/users/index.vue';
 import Maintenance from './screens/maintenance/index.vue';
 import Review from './screens/review/index.vue';
 import ReviewQueue from './screens/review/queue.vue';
 
-export default [
+const routes: RouteRecordRaw[] = [
     {
         path: '/',
         name: 'dashboard',
@@ -84,6 +88,26 @@ export default [
         component: Dataset,
     },
     {
+        path: '/playground',
+        name: 'playground',
+        component: Playground,
+    },
+    {
+        path: '/playground/:id',
+        name: 'playground-call',
+        component: PlaygroundCall,
+    },
+    {
+        path: '/users',
+        name: 'users',
+        component: Users,
+    },
+    {
+        path: '/users/view/:id',
+        name: 'user-detail',
+        component: TrackableDetail,
+    },
+    {
         path: '/trackables',
         name: 'trackables',
         component: Trackables,
@@ -109,3 +133,5 @@ export default [
         component: Maintenance,
     },
 ];
+
+export default routes;

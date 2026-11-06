@@ -1,33 +1,21 @@
-<script setup>
+<script setup lang="ts">
 import Skeleton from '@/components/Skeleton.vue';
 
-defineProps({
-    label: {
-        type: String,
-        required: true,
-    },
+withDefaults(defineProps<{
+    label: string;
     // Kept for backwards compatibility with older screens; no longer rendered.
-    gradient: {
-        type: String,
-        default: null,
-    },
+    gradient?: string | null;
     // Optional accent dot color (any CSS color).
-    accent: {
-        type: String,
-        default: null,
-    },
-    loading: {
-        type: Boolean,
-        default: false,
-    },
-    periodLabel: {
-        type: String,
-        default: null,
-    },
-    skeletonWidth: {
-        type: String,
-        default: '60%',
-    },
+    accent?: string | null;
+    loading?: boolean;
+    periodLabel?: string | null;
+    skeletonWidth?: string;
+}>(), {
+    gradient: null,
+    accent: null,
+    loading: false,
+    periodLabel: null,
+    skeletonWidth: '60%',
 });
 </script>
 

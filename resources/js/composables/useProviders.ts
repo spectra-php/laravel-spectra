@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import { useHelpers } from './useHelpers';
+import type { Provider, ProvidersResponse } from '@/types/api';
 
 /**
  * Composable for loading and resolving provider metadata.
@@ -9,11 +10,11 @@ import { useHelpers } from './useHelpers';
  */
 export function useProviders() {
     const { apiRequest } = useHelpers();
-    const providers = ref([]);
+    const providers = ref<Provider[]>([]);
 
     const loadProviders = async () => {
         try {
-            const data = await apiRequest('get', '/providers');
+            const data = await apiRequest<ProvidersResponse>('get', '/providers');
             providers.value = data.providers || [];
         } catch (error) {
             providers.value = [];
@@ -21,7 +22,7 @@ export function useProviders() {
     };
 
     const providerMetaBySlug = computed(() => {
-        const map = {};
+        const map: Record<string, Provider> = {};
         for (const provider of providers.value) {
             if (!provider?.internal_name) continue;
             map[provider.internal_name] = provider;
@@ -29,8 +30,8 @@ export function useProviders() {
         return map;
     });
 
-    const providerDisplayName = (provider, fallback = null) => {
-        return providerMetaBySlug.value[provider]?.display_name || fallback || provider;
+    const providerDisplayName = (provider: string | null | undefined, fallback: string | null = null) => {
+        return providerMetaBySlug.value[provider as string]?.display_name || fallback || provider;
     };
 
     return {

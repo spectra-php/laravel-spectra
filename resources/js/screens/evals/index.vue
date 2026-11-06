@@ -1,8 +1,9 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
 import { useEvalFormat } from '@/composables/useEvalFormat';
+import type { Evaluation, EvalsResponse } from '@/types/api';
 import Skeleton from '@/components/Skeleton.vue';
 import DocsLink from '@/components/DocsLink.vue';
 
@@ -12,15 +13,15 @@ const { summaryText } = useEvalFormat();
 const loading = useLoading();
 
 loading.value = true;
-const data = ref({ evaluations: [], datasets: [], migrated: true });
+const data = ref<Pick<EvalsResponse, 'evaluations' | 'datasets' | 'migrated'>>({ evaluations: [], datasets: [], migrated: true });
 
-const scoreNames = (evaluation) => [...new Set(evaluation.runs.flatMap((run) => Object.keys(run.summary || {})))];
-const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
+const scoreNames = (evaluation: Evaluation) => [...new Set(evaluation.runs.flatMap((run) => Object.keys(run.summary || {})))];
+const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
 const isEmpty = computed(() => !data.value.evaluations.length && !data.value.datasets.length);
 
 onMounted(async () => {
     try {
-        data.value = await apiRequest('get', '/evals');
+        data.value = await apiRequest<EvalsResponse>('get', '/evals');
     } catch (error) {
         console.error('Failed to load evaluations:', error);
     } finally {

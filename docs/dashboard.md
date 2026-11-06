@@ -2,7 +2,7 @@
 
 Spectra ships with a dashboard for exploring your AI traffic. It lives at `/spectra` and, by default, opens only in the `local` environment. To open it elsewhere, define the `viewSpectra` gate (see [Dashboard Authorization](/installation#dashboard-authorization)). To change its path, middleware or layout, see [Configuration](/configuration#dashboard).
 
-The screens are in the sidebar on the left; the arrows at its bottom collapse it to icons, and the dashboard remembers your choice in the browser. The top bar holds the actions: pause and resume recording, prune old data, refresh the screen, the Review screen, the Maintenance screen, and dark mode. Pausing and pruning show only to users the `manageSpectra` gate allows (see [Maintenance](#maintenance)).
+The screens are in the sidebar on the left; the arrows at its bottom collapse it to icons, and the dashboard remembers your choice in the browser. The top bar holds the actions: pause and resume recording, refresh the screen, the Review screen, the Maintenance screen, and dark mode. Pausing shows only to users the `manageSpectra` gate allows (see [Maintenance](#maintenance)).
 
 Every screen has a period picker (today, this week, this month, this year, all time) and a date range picker. The lists filter by model type, provider, tag, finish reason, trackable type and more, and keep the filters in the URL, so you can share a filtered view.
 
@@ -174,6 +174,17 @@ A call's page has an **Add to dataset** card that saves the call as an example:
 
 <img class="screenshot" src="/images/dashboard/request-add-to-dataset.png" alt="The Add to dataset card on a call" />
 
+<a name="playground"></a>
+## Playground
+
+<img class="screenshot" src="/images/dashboard/playground-call.png" alt="A call opened in the Playground, with a new answer compared with the original" />
+
+The [Playground](/playground) opens a real call so you can change its prompt, model or settings, send it again, and compare the new answer's reply, cost, tokens and latency with the original. Each run is a real call that costs money, so it's off until you set `SPECTRA_PLAYGROUND_ENABLED=true`, and using it needs the `manageSpectra` gate.
+
+Pick a recent call on the Playground screen, or use **Open in Playground** on a request's page:
+
+<img class="screenshot" src="/images/dashboard/request-open-in-playground.png" alt="The Open in Playground button on a request's page" />
+
 <a name="costs"></a>
 ## Costs
 
@@ -185,7 +196,7 @@ The costs screen shows where the money goes:
 - **Spend over time**, one point per day.
 - **Breakdown** of spend by provider or by model type.
 - **Cost by model**, with the usage in the model's own unit: tokens, images, videos or characters.
-- **Top users** by spend, for every kind of trackable or for one (only users, only teams, ...).
+- **Top users** by spend. Only trackables whose model is authenticatable count as users; teams, conversations and other trackables are in the [trackables list](#trackables). **All users** opens the Users screen.
 
 See [Costs](/costs) for how each cost is calculated.
 
@@ -195,6 +206,8 @@ See [Costs](/costs) for how each cost is calculated.
 <img class="screenshot" src="/images/dashboard/trackables.png" alt="The trackables list" />
 
 A trackable is the model a request is attributed to: the signed-in user by default, or a team, project or any other Eloquent model you choose (see [User Attribution](/usage#user-attribution)). The trackables list shows each one's requests, tokens, media, cost, average latency and most used model. Filter by trackable type (the `User`, `Team`, ... the requests were attributed to), provider, tag and more, and sort by cost, requests or usage.
+
+The **Users** screen is the same list with only the users: the trackables whose model is authenticatable.
 
 <a name="trackable-details"></a>
 ### Trackable Details
@@ -242,4 +255,4 @@ vendor/bin/testbench workbench:build
 vendor/bin/testbench serve
 ```
 
-Then open `http://localhost:8000/spectra`.
+Then open `http://localhost:8000/spectra`. The demo's [Playground](/playground) is on and answers from a fake provider, so trying it needs no API key and costs nothing. To see a failed run, use a model name with `does-not-exist` in it.

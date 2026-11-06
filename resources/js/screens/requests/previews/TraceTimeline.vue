@@ -1,12 +1,13 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import TraceWaterfall from '@/components/TraceWaterfall.vue';
 import Money from '@/components/Money.vue';
+import type { TraceDetailsResponse } from '@/types/api';
 
-const props = defineProps({
-    trace: { type: Object, required: true },
-});
+const props = defineProps<{
+    trace: TraceDetailsResponse;
+}>();
 
 const { formatNumber, formatDuration } = useHelpers();
 

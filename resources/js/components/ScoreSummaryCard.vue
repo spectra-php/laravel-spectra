@@ -1,17 +1,20 @@
-<script setup>
+<script setup lang="ts">
 import { useHelpers } from '@/composables/useHelpers';
+import type { ScoreSummary } from '@/types/api';
 
 // The overview's Scores card: each score name given in the period, how often,
 // and its average, the share of yes, or its most common labels. One tile per
 // score, so a name stays next to its value on wide screens.
-defineProps({
-    scores: { type: Array, default: () => [] },
+withDefaults(defineProps<{
+    scores?: ScoreSummary[];
+}>(), {
+    scores: () => [],
 });
 
 const { formatNumber } = useHelpers();
 
-const number = (value) => Number(value ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
-const percent = (score) => Math.round(Number(score.average ?? 0) * 100);
+const number = (value: number | null) => Number(value ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const percent = (score: ScoreSummary) => Math.round(Number(score.average ?? 0) * 100);
 </script>
 
 <template>

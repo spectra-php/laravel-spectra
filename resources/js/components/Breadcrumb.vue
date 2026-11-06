@@ -1,11 +1,9 @@
-<script setup>
-defineProps({
-    items: {
-        type: Array,
-        required: true,
-        validator: (items) => items.every((item) => item.label),
-    },
-});
+<script setup lang="ts">
+import type { RouteLocationRaw } from 'vue-router';
+
+defineProps<{
+    items: { label: string; to?: RouteLocationRaw }[];
+}>();
 </script>
 
 <template>

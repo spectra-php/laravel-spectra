@@ -166,6 +166,33 @@ it('shows a request without its trace card and says the trace migrations are mis
         ->and($json['model'])->toBe('GPT-4o');
 });
 
+it('shows a Replicate image request by its output URL', function () {
+    $prediction = $this->loadMockResponse('replicate/prediction-flux-1.1-pro.json');
+    $request = SpectraRequest::factory()->create(['model_type' => 'image', 'response' => $prediction]);
+
+    $json = app()->call([app(ShowRequestController::class), '__invoke'], ['id' => $request->id])->toArray();
+
+    expect($json['image_urls'])->toBe([$prediction['output']]);
+});
+
+it('shows every image of a Replicate request whose output is a list', function () {
+    $urls = ['https://replicate.delivery/a.webp', 'https://replicate.delivery/b.webp'];
+    $request = SpectraRequest::factory()->create(['model_type' => 'image', 'response' => ['output' => $urls]]);
+
+    $json = app()->call([app(ShowRequestController::class), '__invoke'], ['id' => $request->id])->toArray();
+
+    expect($json['image_urls'])->toBe($urls);
+});
+
+it('answers 404 for a stored image index when the output is only a URL', function () {
+    $request = SpectraRequest::factory()->create([
+        'model_type' => 'image',
+        'response' => $this->loadMockResponse('replicate/prediction-flux-1.1-pro.json'),
+    ]);
+
+    app()->call([app(ServeImageController::class), '__invoke'], ['id' => $request->id, 'index' => 0]);
+})->throws(NotFoundHttpException::class);
+
 it('returns tag ids as their UUIDs', function () {
     $tag = SpectraTag::findOrCreateByName('feature:search');
 

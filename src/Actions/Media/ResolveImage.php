@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Media;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spectra\Data\MediaContent;
@@ -60,10 +61,8 @@ class ResolveImage
     private function extractBase64(array $response, int $index): ?string
     {
         // Responses API: output[].result where type === 'image_generation_call'
-        /** @var array<int, array<string, mixed>> $outputItems */
-        $outputItems = $response['output'] ?? [];
-        $imageItems = collect($outputItems)
-            ->filter(fn (array $item) => ($item['type'] ?? '') === 'image_generation_call' && filled($item['result'] ?? null))
+        $imageItems = collect(Arr::wrap($response['output'] ?? []))
+            ->filter(fn (mixed $item) => is_array($item) && ($item['type'] ?? '') === 'image_generation_call' && filled($item['result'] ?? null))
             ->values();
 
         if ($imageItems->isNotEmpty()) {

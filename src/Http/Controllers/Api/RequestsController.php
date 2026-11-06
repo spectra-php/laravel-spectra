@@ -38,6 +38,7 @@ class RequestsController extends BaseApiController
             available_tags: $filters->tags,
             available_finish_reasons: $filters->finish_reasons,
             available_reasoning_efforts: $filters->reasoning_efforts,
+            available_trackable_types: $filters->trackable_types,
         );
     }
 }

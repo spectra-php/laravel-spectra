@@ -138,7 +138,7 @@ Media files are stored as flat file paths in the `media_storage_path` JSON colum
 <a name="api-keys"></a>
 ## API Keys
 
-You can set an API key for each provider here. Spectra uses these keys for its own calls, such as media downloads and counting Google embedding tokens (with the `countTokens` API). A key set here wins over every other config location.
+You can set an API key for each provider here. Spectra uses these keys for its own calls, such as media downloads, [Playground](/playground) runs and counting Google embedding tokens (with the `countTokens` API). A key set here wins over every other config location.
 
 To find a key, Spectra checks several config locations for each provider, in order. For Google, it checks `spectra.api_keys.google` → `services.google.api_key` → `services.google.key` → `prism.providers.gemini.api_key` → `ai.providers.google.key`, and uses the first key it finds.
 
@@ -232,6 +232,10 @@ Configure the built-in SPA dashboard.
     'path'        => env('SPECTRA_PATH', 'spectra'),
     'middleware'   => ['web'],
     'maintenance' => env('SPECTRA_DASHBOARD_MAINTENANCE', true),
+    'playground'  => [
+        'enabled' => env('SPECTRA_PLAYGROUND_ENABLED', false),
+        'timeout' => env('SPECTRA_PLAYGROUND_TIMEOUT', 120),
+    ],
     'layout'      => env('SPECTRA_DASHBOARD_LAYOUT', 'full'),
     'date_format' => env('SPECTRA_DATE_FORMAT', 'M j, Y g:i:s A'),
 ],
@@ -244,6 +248,8 @@ Configure the built-in SPA dashboard.
 | `path` | `string` | `spectra` | URI path where the dashboard is served. |
 | `middleware` | `array` | `['web']` | Middleware applied to dashboard routes. Add `'auth'` to require authentication. |
 | `maintenance` | `bool` | `true` | Allow the [Maintenance screen](/dashboard#maintenance) to prune, rebuild stats and pause recording. Running them also needs the `manageSpectra` gate. When `false`, the screen is read-only. |
+| `playground.enabled` | `bool` | `false` | Let the [Playground](/playground) send stored calls to their provider again. Each run uses your API key and costs money. Using it also needs the `manageSpectra` gate. |
+| `playground.timeout` | `int` | `120` | How long a Playground run may wait for the provider, in seconds. |
 | `layout` | `string` | `full` | Which model types the dashboard displays. Options: `full`, `text`, `embedding`, `image`, `video`, `audio`. |
 | `date_format` | `string` | `M j, Y g:i:s A` | PHP date format string for timestamps in the dashboard. |
 
@@ -517,6 +523,8 @@ SPECTRA_DOMAIN=
 SPECTRA_DASHBOARD_ENABLED=true
 SPECTRA_PATH=spectra
 SPECTRA_DASHBOARD_MAINTENANCE=true
+SPECTRA_PLAYGROUND_ENABLED=false
+SPECTRA_PLAYGROUND_TIMEOUT=120
 SPECTRA_DASHBOARD_LAYOUT=full
 SPECTRA_DATE_FORMAT="M j, Y g:i:s A"
 

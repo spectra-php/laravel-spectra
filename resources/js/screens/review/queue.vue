@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
@@ -8,6 +8,8 @@ import StatusCode from '@/components/StatusCode.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Money from '@/components/Money.vue';
 import ScoresCard from '@/components/ScoresCard.vue';
+import type { AnnotationItemResponse, AnnotationQueueScore, AnnotationQueueSummary, AnnotationReviewItem, ScoreValue } from '@/types/api';
+import type { ApiError } from '@/types/app';
 
 // One review queue: the trace waiting longest, what each of its calls was
 // asked and answered, and the queue's scores to give. Submitting saves the
@@ -17,14 +19,15 @@ const { formatNumber, formatDuration, apiRequest } = useHelpers();
 const loading = useLoading();
 
 loading.value = true;
-const queue = ref(null);
-const item = ref(null);
+const queue = ref<AnnotationQueueSummary | null>(null);
+const item = ref<AnnotationReviewItem | null>(null);
 const canAnnotate = ref(false);
-const values = ref({});
+const values = ref<Record<string, ScoreValue>>({});
 const comment = ref('');
 const saving = ref(false);
 const error = ref('');
 const reviewed = ref(0);
+const loadFailed = ref(false);
 
 const resetForm = () => {
     values.value = Object.fromEntries((queue.value?.scores || []).map((score) => [score.name, null]));
@@ -34,8 +37,9 @@ const resetForm = () => {
 
 const load = async () => {
     loading.value = true;
+    loadFailed.value = false;
     try {
-        const data = await apiRequest('get', `/annotations/${encodeURIComponent(route.params.queue)}/next`);
+        const data = await apiRequest<AnnotationItemResponse>('get', `/annotations/${encodeURIComponent(route.params.queue as string)}/next`);
         queue.value = data.queue;
         item.value = data.item;
         canAnnotate.value = data.can_annotate;
@@ -43,24 +47,25 @@ const load = async () => {
         window.scrollTo({ top: 0 });
     } catch (e) {
         console.error('Failed to load the next trace:', e);
+        loadFailed.value = true;
     } finally {
         loading.value = false;
     }
 };
 
 // Whole numbers in a short range get one button each; anything else a number field.
-const steps = (score) => {
+const steps = (score: AnnotationQueueScore) => {
     if (score.min === null || score.max === null || !Number.isInteger(score.min) || !Number.isInteger(score.max) || score.max - score.min > 10) return null;
-    return Array.from({ length: score.max - score.min + 1 }, (_, index) => score.min + index);
+    return Array.from({ length: score.max - score.min + 1 }, (_, index) => score.min! + index);
 };
 
-const choose = (score, value) => {
+const choose = (score: AnnotationQueueScore, value: ScoreValue) => {
     values.value[score.name] = values.value[score.name] === value ? null : value;
 };
 
 const hasInput = computed(() => Object.values(values.value).some((value) => value !== null && value !== '') || comment.value.trim() !== '');
 
-const send = async (action) => {
+const send = async (action: 'review' | 'skip') => {
     if (!item.value || saving.value) return;
     if (action === 'review' && !hasInput.value) {
         error.value = 'Give at least one score or a comment, or skip this trace.';
@@ -74,13 +79,13 @@ const send = async (action) => {
         if (action === 'review') reviewed.value++;
         await load();
     } catch (e) {
-        error.value = e?.response?.data?.message || 'The review could not be saved.';
+        error.value = (e as ApiError)?.response?.data?.message || 'The review could not be saved.';
     } finally {
         saving.value = false;
     }
 };
 
-const onKeydown = (event) => {
+const onKeydown = (event: KeyboardEvent) => {
     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
         event.preventDefault();
         send('review');
@@ -112,6 +117,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
         </div>
 
         <div v-if="loading && !item" class="card"><Skeleton variant="table-row" :lines="6" /></div>
+
+        <div v-else-if="loadFailed" class="card">
+            <div class="empty-state">
+                <p class="empty-state-title">The next trace could not be loaded</p>
+                <p class="empty-state-description">Refresh to try again, or check the queue still exists. <router-link :to="{ name: 'review' }" class="text-primary-600 hover:underline dark:text-primary-400">Back to the queues</router-link></p>
+            </div>
+        </div>
 
         <div v-else-if="!item" class="card">
             <div class="empty-state">
@@ -146,13 +158,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                     <div class="card-body space-y-3 text-sm">
                         <div v-if="call.prompt">
                             <p class="mb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">Asked</p>
-                            <p class="whitespace-pre-wrap break-words text-gray-700 dark:text-gray-300">{{ call.prompt }}</p>
+                            <p class="whitespace-pre-wrap wrap-break-word text-gray-700 dark:text-gray-300">{{ call.prompt }}</p>
                         </div>
                         <div v-if="call.reply">
                             <p class="mb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">Answered</p>
-                            <p class="whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100">{{ call.reply }}</p>
+                            <p class="whitespace-pre-wrap wrap-break-word text-gray-900 dark:text-gray-100">{{ call.reply }}</p>
                         </div>
-                        <p v-if="call.error_message" class="whitespace-pre-wrap break-words font-mono text-xs text-red-600 dark:text-red-400">{{ call.error_message }}</p>
+                        <p v-if="call.error_message" class="whitespace-pre-wrap wrap-break-word font-mono text-xs text-red-600 dark:text-red-400">{{ call.error_message }}</p>
                         <p v-if="!call.prompt && !call.reply && !call.error_message" class="text-xs text-gray-500 dark:text-gray-400">No text was stored for this call (store_prompts, store_responses or payload sampling).</p>
                     </div>
                 </div>
@@ -165,7 +177,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                 <form class="card" @submit.prevent="send('review')">
                     <div class="card-header"><h3>Your review</h3></div>
                     <div class="card-body space-y-5">
-                        <div v-for="score in queue.scores" :key="score.name">
+                        <div v-for="score in queue!.scores" :key="score.name">
                             <p class="mb-2 font-mono text-xs font-medium text-gray-700 dark:text-gray-300">{{ score.name }}</p>
 
                             <div v-if="score.type === 'boolean'" class="grid grid-cols-2 gap-2">
@@ -176,7 +188,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                                     class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
                                     :class="values[score.name] === option.value
                                         ? (option.value ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-red-500 bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300')
-                                        : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.04]'"
+                                        : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/4'"
                                     :aria-pressed="values[score.name] === option.value"
                                     @click="choose(score, option.value)"
                                 >{{ option.label }}</button>
@@ -187,8 +199,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                                     v-for="step in steps(score)"
                                     :key="step"
                                     type="button"
-                                    class="h-8 min-w-[2rem] rounded-lg border px-2 text-sm font-medium tabular-nums transition-colors"
-                                    :class="values[score.name] === step ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300' : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.04]'"
+                                    class="h-8 min-w-8 rounded-lg border px-2 text-sm font-medium tabular-nums transition-colors"
+                                    :class="values[score.name] === step ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300' : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/4'"
                                     :aria-pressed="values[score.name] === step"
                                     @click="choose(score, step)"
                                 >{{ step }}</button>
@@ -210,7 +222,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                                     :key="option"
                                     type="button"
                                     class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
-                                    :class="values[score.name] === option ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300' : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.04]'"
+                                    :class="values[score.name] === option ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300' : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/4'"
                                     :aria-pressed="values[score.name] === option"
                                     @click="choose(score, option)"
                                 >{{ option }}</button>

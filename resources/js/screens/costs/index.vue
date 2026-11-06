@@ -1,15 +1,20 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useCharts } from '@/composables/useCharts';
+import type { ThemedChart } from '@/composables/useCharts';
 import { useLoading } from '@/composables/useLoading';
 import Skeleton from '@/components/Skeleton.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import StatCard from '@/components/StatCard.vue';
 import Money from '@/components/Money.vue';
+import type { CostByModel, CostByModelType, CostByProvider, CostsResponse } from '@/types/api';
+
+// A row of the breakdown doughnut: a provider's or a model type's, depending on the tab.
+type BreakdownRow = Partial<CostByProvider & CostByModelType>;
 
 const { formatNumber, formatCompact, formatCurrency, formatShortDate, providerChartColor, seriesColor, apiRequest } = useHelpers();
 const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery();
@@ -18,7 +23,7 @@ const { createLineChart, createDoughnutChart } = useCharts();
 const loading = useLoading();
 
 loading.value = true;
-const stats = ref({
+const stats = ref<Omit<CostsResponse, 'cost_overview'>>({
     total_cost_in_cents: 0,
     costs_by_provider: [],
     costs_by_model: [],
@@ -27,18 +32,21 @@ const stats = ref({
     costs_by_user: [],
 });
 
-const costChartRef = ref(null);
-const providerChartRef = ref(null);
-const modelTypeChartRef = ref(null);
+// The short class name: `App\Models\User` shows as `User`, a morph alias as itself.
+const trackableTypeLabel = (type: string | null) => String(type).split('\\').pop();
+
+const costChartRef = ref<HTMLCanvasElement | null>(null);
+const providerChartRef = ref<HTMLCanvasElement | null>(null);
+const modelTypeChartRef = ref<HTMLCanvasElement | null>(null);
 const breakdownTab = ref('provider');
-let costChart = null;
-let providerChart = null;
-let modelTypeChart = null;
+let costChart: ThemedChart | null = null;
+let providerChart: ThemedChart | null = null;
+let modelTypeChart: ThemedChart | null = null;
 
 const loadStats = async () => {
     loading.value = true;
     try {
-        const data = await apiRequest('get', '/costs?' + buildQueryParams().toString());
+        const data = await apiRequest<CostsResponse>('get', '/costs?' + buildQueryParams().toString());
         stats.value = data;
         // Draw once the chart containers are visible, so they get a real size.
         loading.value = false;
@@ -69,7 +77,7 @@ const renderCostChart = () => {
     }, {
         label: 'Cost',
         yTicks: {
-            callback: (value) => formatCurrency(Number(value) * 100),
+            callback: (value: string | number) => formatCurrency(Number(value) * 100),
         },
         tooltipLabel: (dollars) => formatCurrency(dollars * 100),
         chartOptions: {
@@ -92,7 +100,7 @@ const renderProviderChart = () => {
         legend: false,
         tooltipCallbacks: {
             label: (context) => {
-                return context.label + ': ' + formatCurrency(context.raw);
+                return context.label + ': ' + formatCurrency(context.raw as number);
             },
         },
     });
@@ -112,13 +120,13 @@ const renderModelTypeChart = () => {
         legend: false,
         tooltipCallbacks: {
             label: (context) => {
-                return context.label + ': ' + formatCurrency(context.raw);
+                return context.label + ': ' + formatCurrency(context.raw as number);
             },
         },
     });
 };
 
-const formatUsage = (model) => {
+const formatUsage = (model: CostByModel) => {
     const type = model.model_type || 'text';
 
     if (type === 'image') {
@@ -153,7 +161,7 @@ const totalCost = computed(() => Number(stats.value.total_cost_in_cents || 0));
 // Legend rows for the breakdown doughnut, with amounts and shares.
 const breakdownRows = computed(() => {
     const byProvider = breakdownTab.value === 'provider';
-    const rows = byProvider ? (stats.value.costs_by_provider || []) : (stats.value.costs_by_model_type || []);
+    const rows: BreakdownRow[] = byProvider ? (stats.value.costs_by_provider || []) : (stats.value.costs_by_model_type || []);
     const total = rows.reduce((sum, row) => sum + Number(row.cost || 0), 0) || 1;
 
     return rows.map((row, index) => ({
@@ -175,7 +183,7 @@ const dailyAverage = computed(() => {
     return days ? totalCost.value / days : 0;
 });
 
-const initials = (name) => String(name || 'U').split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+const initials = (name: string | null) => String(name || 'U').split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
 onMounted(async () => {
     applyQueryState();
@@ -279,8 +287,8 @@ onUnmounted(() => {
                         <div v-show="breakdownTab === 'model-type'"><canvas ref="modelTypeChartRef"></canvas></div>
                     </div>
                     <ul v-if="!loading" class="space-y-2 text-sm">
-                        <li v-for="row in breakdownRows" :key="row.key" class="flex items-center gap-2.5">
-                            <span class="h-2.5 w-2.5 shrink-0 rounded-sm" :style="{ backgroundColor: row.color }" aria-hidden="true"></span>
+                        <li v-for="row in breakdownRows" :key="row.key as string" class="flex items-center gap-2.5">
+                            <span class="h-2.5 w-2.5 shrink-0 rounded-xs" :style="{ backgroundColor: row.color }" aria-hidden="true"></span>
                             <ProviderLogo
                                 v-if="row.provider"
                                 :provider="row.provider"
@@ -362,7 +370,7 @@ onUnmounted(() => {
                         <h3>Top users</h3>
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">By spend</p>
                     </div>
-                    <router-link :to="{ name: 'trackables' }" class="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">All trackables</router-link>
+                    <router-link :to="{ name: 'users' }" class="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">All users</router-link>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="table">
@@ -384,7 +392,7 @@ onUnmounted(() => {
                                             <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold text-gray-600 ring-1 ring-inset ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700">
                                                 {{ initials(user.user_name) }}
                                             </div>
-                                            <span class="truncate font-medium text-gray-900 dark:text-white">{{ user.user_name || 'User #' + user.user_id }}</span>
+                                            <span class="truncate font-medium text-gray-900 dark:text-white">{{ user.user_name || trackableTypeLabel(user.trackable_type) + ' #' + user.user_id }}</span>
                                         </div>
                                     </td>
                                     <td class="text-right tabular-nums">{{ formatNumber(user.requests) }}</td>

@@ -1,9 +1,11 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import type { Ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
 import { useEvalFormat } from '@/composables/useEvalFormat';
+import type { DatasetResponse } from '@/types/api';
 import Skeleton from '@/components/Skeleton.vue';
 
 // One dataset: its examples, and the evaluation runs over it.
@@ -13,13 +15,14 @@ const { text, summaryText } = useEvalFormat();
 const loading = useLoading();
 
 loading.value = true;
-const data = ref(null);
+// The cast skips Ref's deep unwrap, which can't resolve the recursive JsonValue here.
+const data = ref<DatasetResponse | null>(null) as Ref<DatasetResponse | null>;
 
-const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
+const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
 
 onMounted(async () => {
     try {
-        data.value = await apiRequest('get', `/datasets/${encodeURIComponent(route.params.id)}`);
+        data.value = await apiRequest<DatasetResponse>('get', `/datasets/${encodeURIComponent(route.params.id as string)}`);
     } catch (error) {
         console.error('Failed to load the dataset:', error);
     } finally {
@@ -80,8 +83,8 @@ onMounted(async () => {
                         <tbody>
                             <tr v-for="(example, index) in data.examples" :key="example.id" class="align-top">
                                 <td class="tabular-nums text-gray-400">{{ index + 1 }}</td>
-                                <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm" v-tooltip.truncated="text(example.input)">{{ text(example.input) }}</p></td>
-                                <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm text-gray-600 dark:text-gray-300">{{ text(example.expected) || '—' }}</p></td>
+                                <td><p class="line-clamp-4 whitespace-pre-wrap wrap-break-word text-sm" v-tooltip.truncated="text(example.input)">{{ text(example.input) }}</p></td>
+                                <td><p class="line-clamp-4 whitespace-pre-wrap wrap-break-word text-sm text-gray-600 dark:text-gray-300">{{ text(example.expected) || '—' }}</p></td>
                                 <td class="text-right text-xs">
                                     <router-link v-if="example.source_request_id" :to="{ name: 'request-preview', params: { id: example.source_request_id } }" class="text-primary-600 hover:underline dark:text-primary-400">A call</router-link>
                                     <span v-else class="text-gray-400">Code</span>

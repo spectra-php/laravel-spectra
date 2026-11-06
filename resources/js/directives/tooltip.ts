@@ -9,23 +9,33 @@
 // the window, wraps long text such as URLs, and shows on hover and on
 // keyboard focus. An empty value shows nothing. The text is also set as the
 // element's accessible description, as `title` was.
+import type { ObjectDirective } from 'vue';
 
-let tooltip = null;
-let owner = null;
+interface TooltipState {
+    text: string;
+    truncated: boolean;
+    enter: () => void;
+    leave: () => void;
+}
+
+type TooltipElement = HTMLElement & { _spectraTooltip?: TooltipState };
+
+let tooltip: HTMLElement | null = null;
+let owner: TooltipElement | null = null;
 
 const element = () => {
     if (tooltip) return tooltip;
 
     tooltip = document.createElement('div');
     tooltip.setAttribute('role', 'tooltip');
-    tooltip.className = 'pointer-events-none fixed z-[60] max-w-md whitespace-pre-line break-words rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium leading-snug text-white shadow-pop dark:bg-gray-100 dark:text-gray-900';
+    tooltip.className = 'pointer-events-none fixed z-60 max-w-md whitespace-pre-line wrap-break-word rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium leading-snug text-white shadow-pop dark:bg-gray-100 dark:text-gray-900';
     tooltip.style.display = 'none';
     document.body.appendChild(tooltip);
 
     return tooltip;
 };
 
-const isCutOff = (el) => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
+const isCutOff = (el: HTMLElement) => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
 
 const hide = () => {
     if (tooltip) tooltip.style.display = 'none';
@@ -33,13 +43,13 @@ const hide = () => {
     window.removeEventListener('scroll', hide, { capture: true });
 };
 
-const show = (el) => {
+const show = (el: TooltipElement) => {
     const state = el._spectraTooltip;
 
     if (!state?.text || (state.truncated && !isCutOff(el))) return;
 
     // A tooltip that only repeats text already shown in full adds nothing.
-    if (!state.truncated && el.textContent.trim() === state.text.trim() && !isCutOff(el)) return;
+    if (!state.truncated && el.textContent!.trim() === state.text.trim() && !isCutOff(el)) return;
 
     const tip = element();
     tip.textContent = state.text;
@@ -62,7 +72,7 @@ const show = (el) => {
     window.addEventListener('scroll', hide, { passive: true, capture: true });
 };
 
-const describe = (el, text) => {
+const describe = (el: HTMLElement, text: string) => {
     if (text) {
         el.setAttribute('aria-description', text);
     } else {
@@ -70,27 +80,28 @@ const describe = (el, text) => {
     }
 };
 
-const textOf = (value) => (value === null || value === undefined || value === false ? '' : String(value));
+const textOf = (value: unknown) => (value === null || value === undefined || value === false ? '' : String(value));
 
-export default {
+const directive: ObjectDirective<TooltipElement, unknown, 'truncated'> = {
     mounted(el, binding) {
-        el._spectraTooltip = {
+        const state: TooltipState = {
             text: textOf(binding.value),
             truncated: !!binding.modifiers.truncated,
             enter: () => show(el),
             leave: () => owner === el && hide(),
         };
-        describe(el, el._spectraTooltip.text);
+        el._spectraTooltip = state;
+        describe(el, state.text);
 
-        el.addEventListener('mouseenter', el._spectraTooltip.enter);
-        el.addEventListener('mouseleave', el._spectraTooltip.leave);
-        el.addEventListener('focusin', el._spectraTooltip.enter);
-        el.addEventListener('focusout', el._spectraTooltip.leave);
-        el.addEventListener('click', el._spectraTooltip.leave);
+        el.addEventListener('mouseenter', state.enter);
+        el.addEventListener('mouseleave', state.leave);
+        el.addEventListener('focusin', state.enter);
+        el.addEventListener('focusout', state.leave);
+        el.addEventListener('click', state.leave);
     },
 
     updated(el, binding) {
-        const state = el._spectraTooltip;
+        const state = el._spectraTooltip as TooltipState;
         state.text = textOf(binding.value);
         describe(el, state.text);
 
@@ -100,7 +111,7 @@ export default {
     },
 
     beforeUnmount(el) {
-        const state = el._spectraTooltip;
+        const state = el._spectraTooltip as TooltipState;
 
         if (owner === el) hide();
 
@@ -112,3 +123,5 @@ export default {
         delete el._spectraTooltip;
     },
 };
+
+export default directive;

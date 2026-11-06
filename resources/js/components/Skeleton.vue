@@ -1,22 +1,14 @@
-<script setup>
-defineProps({
-    variant: {
-        type: String,
-        default: 'text',
-        validator: (v) => ['text', 'circle', 'card', 'chart', 'table-row'].includes(v)
-    },
-    lines: {
-        type: Number,
-        default: 1
-    },
-    width: {
-        type: String,
-        default: null
-    },
-    height: {
-        type: String,
-        default: null
-    }
+<script setup lang="ts">
+withDefaults(defineProps<{
+    variant?: 'text' | 'circle' | 'card' | 'chart' | 'table-row';
+    lines?: number;
+    width?: string | null;
+    height?: string | null;
+}>(), {
+    variant: 'text',
+    lines: 1,
+    width: null,
+    height: null,
 });
 </script>
 
@@ -29,13 +21,13 @@ defineProps({
                 :key="i"
                 class="skeleton-line"
                 :class="{ 'w-3/4': i === lines && lines > 1 }"
-                :style="{ width, height }"
+                :style="{ width: width!, height: height! }"
             ></div>
         </template>
 
         <!-- Circle skeleton (for avatars) -->
         <template v-else-if="variant === 'circle'">
-            <div class="skeleton-circle" :style="{ width, height }"></div>
+            <div class="skeleton-circle" :style="{ width: width!, height: height! }"></div>
         </template>
 
         <!-- Card skeleton -->
@@ -73,6 +65,8 @@ defineProps({
 </template>
 
 <style scoped>
+@reference "../../css/app.css";
+
 .skeleton-line {
     @apply bg-gray-200 dark:bg-gray-700 rounded h-4 mb-2;
 }

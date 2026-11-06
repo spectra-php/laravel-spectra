@@ -3,7 +3,7 @@
 <a name="from-3x-to-4"></a>
 ## From 3.x to 4.0
 
-Spectra 4.0 adds [scores](/scores), [alerts](/alerts), [redaction](/configuration#redaction), payload sampling, [prompt versions](/prompts), [tool spans](/tools), error grouping, [review queues](/annotations), [evaluations](/evaluations) and a [Maintenance screen](/dashboard#maintenance). Most apps only need to run the installer once. Read the rest of this section if `spectra:install` runs in a deploy script, if others use your dashboard in production, if your code reads `RequestContext::$id`, or if you wrote a pricing class or bill with the scraped prices file.
+Spectra 4.0 adds [scores](/scores), [alerts](/alerts), [redaction](/configuration#redaction), payload sampling, [prompt versions](/prompts), [tool spans](/tools), error grouping, [review queues](/annotations), [evaluations](/evaluations), a [Playground](/playground) and a [Maintenance screen](/dashboard#maintenance). Most apps only need to run the installer once. Read the rest of this section if `spectra:install` runs in a deploy script, if others use your dashboard in production, if your code reads `RequestContext::$id`, or if you wrote a pricing class or bill with the scraped prices file.
 
 The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Laravel 12 or 13.
 
@@ -33,7 +33,7 @@ Then group the failures saved before the error fingerprint column existed:
 php artisan spectra:group-errors
 ```
 
-A published `config/spectra.php` doesn't need to be published again. The new keys (`alerts`, `annotations`, `storage.redaction`, `storage.sampling`, `tracking.tool_spans`, `dashboard.maintenance`) default to 3.x behaviour, and their `SPECTRA_*` environment variables work under the published config. Publish it again only to set the new options in the file.
+A published `config/spectra.php` doesn't need to be published again. The new keys (`alerts`, `annotations`, `storage.redaction`, `storage.sampling`, `tracking.tool_spans`, `dashboard.maintenance`, `dashboard.playground`) default to 3.x behaviour, and their `SPECTRA_*` environment variables work under the published config. Publish it again only to set the new options in the file.
 
 <a name="v4-install-scripts"></a>
 ### `spectra:install` in Scripts No Longer Migrates

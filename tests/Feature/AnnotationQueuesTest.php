@@ -101,9 +101,9 @@ it('saves no scores when another reviewer finished the item first', function () 
 
     // Both reviewers loaded the item while it was pending; the other one submits first.
     $stale = SpectraAnnotationItem::query()->findOrFail($item->id);
-    expect($queues->skip($item))->toBeTrue();
+    expect($queues->skip($item))->toBeTrue()
 
-    expect($queues->review($stale, ['helpful' => true]))->toBeFalse()
+        ->and($queues->review($stale, ['helpful' => true]))->toBeFalse()
         ->and(SpectraScore::query()->count())->toBe(0)
         ->and($item->fresh()->status)->toBe(AnnotationStatus::Skipped);
 });

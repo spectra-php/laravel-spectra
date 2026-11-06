@@ -1,8 +1,9 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
 import Skeleton from '@/components/Skeleton.vue';
+import type { AnnotationQueueScore, AnnotationQueueSummary, AnnotationQueuesResponse } from '@/types/api';
 
 // The review queues of spectra.annotations.queues: how many traces wait in
 // each, and how far the reviewers got.
@@ -10,16 +11,16 @@ const { formatNumber, apiRequest } = useHelpers();
 const loading = useLoading();
 
 loading.value = true;
-const data = ref({ queues: [], can_annotate: false, migrated: true });
+const data = ref<AnnotationQueuesResponse>({ queues: [], can_annotate: false, migrated: true });
 
-const done = (queue) => queue.completed_count + queue.skipped_count;
-const total = (queue) => done(queue) + queue.pending_count;
-const progress = (queue) => (total(queue) ? Math.round((done(queue) / total(queue)) * 100) : 0);
-const scoreLabel = (score) => (score.type === 'numeric' && score.min !== null && score.max !== null ? `${score.name} ${score.min}–${score.max}` : score.name);
+const done = (queue: AnnotationQueueSummary) => queue.completed_count + queue.skipped_count;
+const total = (queue: AnnotationQueueSummary) => done(queue) + queue.pending_count;
+const progress = (queue: AnnotationQueueSummary) => (total(queue) ? Math.round((done(queue) / total(queue)) * 100) : 0);
+const scoreLabel = (score: AnnotationQueueScore) => (score.type === 'numeric' && score.min !== null && score.max !== null ? `${score.name} ${score.min}–${score.max}` : score.name);
 
 onMounted(async () => {
     try {
-        data.value = await apiRequest('get', '/annotations');
+        data.value = await apiRequest<AnnotationQueuesResponse>('get', '/annotations');
     } catch (error) {
         console.error('Failed to load review queues:', error);
     } finally {

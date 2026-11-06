@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // Each logo gets its own gradient, mask and filter ids: with shared ids, a
 // logo removed from the page takes the others' fill with it.
 const uid = Math.random().toString(36).slice(2, 8);

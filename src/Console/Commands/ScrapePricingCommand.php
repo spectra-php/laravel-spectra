@@ -152,7 +152,7 @@ class ScrapePricingCommand extends Command
         if (is_string($path) && $path !== '') {
             $isAbsolute = str_starts_with($path, '/') || str_starts_with($path, '\\') || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
 
-            return new PricingFile($isAbsolute ? $path : (string) getcwd().DIRECTORY_SEPARATOR.$path);
+            return new PricingFile($isAbsolute ? $path : getcwd().DIRECTORY_SEPARATOR.$path);
         }
 
         return PricingCatalog::userFile() ?? new PricingFile(resource_path('spectra/pricing.json'));

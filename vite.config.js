@@ -11,8 +11,8 @@ export default defineConfig({
         assetsDir: '',
         emptyOutDir: false,
         chunkSizeWarningLimit: 2000,
-        rollupOptions: {
-            input: 'resources/js/app.js',
+        rolldownOptions: {
+            input: 'resources/js/app.ts',
             output: {
                 entryFileNames: 'app.js',
                 chunkFileNames: '[name].js',
@@ -22,7 +22,7 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, 'resources/js'),
+            '@': path.resolve(import.meta.dirname, 'resources/js'),
         },
     },
 });

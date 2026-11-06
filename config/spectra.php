@@ -670,6 +670,28 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Dashboard Playground
+        |--------------------------------------------------------------------------
+        |
+        | Whether the dashboard's Playground may send a stored call to its provider
+        | again, with your edits, to try a different prompt or model. Each run is a
+        | real call: it uses your API key, costs money, and sends the prompt to the
+        | provider. So it is off by default, and running it also needs the
+        | `manageSpectra` gate, which allows only the local environment unless you
+        | define it. `timeout` is how long a run may wait for the provider, in
+        | seconds.
+        |
+        | Docs: https://spectraphp.com/playground
+        |
+        */
+
+        'playground' => [
+            'enabled' => env('SPECTRA_PLAYGROUND_ENABLED', false),
+            'timeout' => env('SPECTRA_PLAYGROUND_TIMEOUT', 120),
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
         | Dashboard Layout
         |--------------------------------------------------------------------------
         |

@@ -1,89 +1,63 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import type { ModelTypeOption, Provider } from '@/types/api';
+import type { RequestFilterKey, RequestFilterValues } from '@/types/app';
 
-const filters = defineModel('filters', {
-    type: Object,
+const filters = defineModel<RequestFilterValues>('filters', {
     required: true,
 });
 
-const props = defineProps({
-    providers: {
-        type: Array,
-        default: () => [],
-    },
-    modelTypes: {
-        type: Array,
-        default: () => [],
-    },
-    availableTags: {
-        type: Array,
-        default: () => [],
-    },
-    availableFinishReasons: {
-        type: Array,
-        default: () => [],
-    },
-    availableReasoningEfforts: {
-        type: Array,
-        default: () => [],
-    },
-    searchPlaceholder: {
-        type: String,
-        default: 'Search by model or ID...',
-    },
-    sortOptions: {
-        type: Array,
-        default: () => ([
-            { value: 'created_at', label: 'Sort by Time' },
-            { value: 'total_cost_in_cents', label: 'Sort by Cost' },
-            { value: 'total_tokens', label: 'Sort by Usage' },
-            { value: 'latency_ms', label: 'Sort by Latency' },
-        ]),
-    },
-    activeFilterKeys: {
-        type: Array,
-        default: () => [
-            'search',
-            'provider',
-            'model',
-            'status',
-            'tag',
-            'model_type',
-            'finish_reason',
-            'has_tool_calls',
-            'is_reasoning',
-            'reasoning_effort',
-            'trace_id',
-        ],
-    },
-    clearTitle: {
-        type: String,
-        default: 'Clear all filters',
-    },
-    showModelType: {
-        type: Boolean,
-        default: true,
-    },
-    showProvider: {
-        type: Boolean,
-        default: true,
-    },
-    showSort: {
-        type: Boolean,
-        default: true,
-    },
-    showAdvancedFilters: {
-        type: Boolean,
-        default: true,
-    },
-    showTraceBadge: {
-        type: Boolean,
-        default: true,
-    },
-    showTrackableBadge: {
-        type: Boolean,
-        default: true,
-    },
+const props = withDefaults(defineProps<{
+    providers?: Provider[];
+    modelTypes?: ModelTypeOption[];
+    availableTags?: string[];
+    availableFinishReasons?: string[];
+    availableReasoningEfforts?: string[];
+    availableTrackableTypes?: string[];
+    searchPlaceholder?: string;
+    sortOptions?: { value: string; label: string }[];
+    activeFilterKeys?: RequestFilterKey[];
+    clearTitle?: string;
+    showModelType?: boolean;
+    showProvider?: boolean;
+    showSort?: boolean;
+    showAdvancedFilters?: boolean;
+    showTraceBadge?: boolean;
+    showTrackableBadge?: boolean;
+}>(), {
+    providers: () => [],
+    modelTypes: () => [],
+    availableTags: () => [],
+    availableFinishReasons: () => [],
+    availableReasoningEfforts: () => [],
+    availableTrackableTypes: () => [],
+    searchPlaceholder: 'Search by model or ID...',
+    sortOptions: () => ([
+        { value: 'created_at', label: 'Sort by Time' },
+        { value: 'total_cost_in_cents', label: 'Sort by Cost' },
+        { value: 'total_tokens', label: 'Sort by Usage' },
+        { value: 'latency_ms', label: 'Sort by Latency' },
+    ]),
+    activeFilterKeys: () => [
+        'search',
+        'provider',
+        'model',
+        'status',
+        'tag',
+        'model_type',
+        'finish_reason',
+        'has_tool_calls',
+        'is_reasoning',
+        'reasoning_effort',
+        'trace_id',
+    ],
+    clearTitle: 'Clear all filters',
+    showModelType: true,
+    showProvider: true,
+    showSort: true,
+    showAdvancedFilters: true,
+    showTraceBadge: true,
+    showTrackableBadge: true,
 });
 
 const hasBadges = computed(() => activeExtraFilters.value.length
@@ -91,14 +65,27 @@ const hasBadges = computed(() => activeExtraFilters.value.length
     || filters.value.conversation_id
     || filters.value.prompt_name
     || filters.value.error_fingerprint
-    || (props.showTrackableBadge && filters.value.trackable_type));
+    || (props.showTrackableBadge && hasTrackableBadge.value));
 
-const emit = defineEmits(['clear']);
+// The badge names one trackable; a type picked on its own is an extra filter chip.
+const hasTrackableBadge = computed(() => Boolean(filters.value.trackable_type && filters.value.trackable_id));
+
+// The short class name: `App\Models\User` shows as `User`, a morph alias as itself.
+const trackableTypeLabel = (type: string | undefined) => String(type).split('\\').pop();
+
+const onTrackableTypeChange = () => {
+    // A new type can't keep the id of the trackable the badge pointed at.
+    filters.value.trackable_id = '';
+};
+
+const emit = defineEmits<{
+    clear: [];
+}>();
 
 const showMoreFilters = ref(false);
-const moreFiltersEl = ref(null);
+const moreFiltersEl = ref<HTMLElement | null>(null);
 
-const extraFilterKeys = ['model', 'status', 'tag', 'finish_reason', 'has_tool_calls', 'is_reasoning', 'reasoning_effort'];
+const extraFilterKeys: RequestFilterKey[] = ['model', 'status', 'tag', 'finish_reason', 'has_tool_calls', 'is_reasoning', 'reasoning_effort', 'trackable_type'];
 
 const hasClearableFilters = computed(() => {
     if (!filters.value) return false;
@@ -107,11 +94,11 @@ const hasClearableFilters = computed(() => {
 
 const activeExtraFilters = computed(() => {
     if (!props.showAdvancedFilters || !filters.value) return [];
-    return extraFilterKeys.filter((key) => Boolean(filters.value[key]));
+    return extraFilterKeys.filter((key) => Boolean(filters.value[key]) && (key !== 'trackable_type' || !hasTrackableBadge.value));
 });
 
-const extraFilterLabel = (key) => {
-    const labels = {
+const extraFilterLabel = (key: RequestFilterKey) => {
+    const labels: Partial<Record<RequestFilterKey, string>> = {
         model: 'Model',
         status: 'Status',
         tag: 'Tag',
@@ -119,6 +106,7 @@ const extraFilterLabel = (key) => {
         has_tool_calls: 'Tools',
         is_reasoning: 'Reasoning',
         reasoning_effort: 'Effort',
+        trackable_type: 'Trackable type',
     };
 
     const label = labels[key] || key;
@@ -128,17 +116,21 @@ const extraFilterLabel = (key) => {
         value = value === '1' ? 'Yes' : 'No';
     }
 
+    if (key === 'trackable_type') {
+        value = trackableTypeLabel(value);
+    }
+
     return `${label}: ${value}`;
 };
 
-const removeExtraFilter = (key) => {
+const removeExtraFilter = (key: RequestFilterKey) => {
     if (!filters.value) return;
     filters.value[key] = '';
 };
 
-const onClickOutside = (event) => {
+const onClickOutside = (event: MouseEvent) => {
     if (!showMoreFilters.value || !moreFiltersEl.value) return;
-    if (moreFiltersEl.value.contains(event.target)) return;
+    if (moreFiltersEl.value.contains(event.target as Node)) return;
     showMoreFilters.value = false;
 };
 
@@ -200,7 +192,7 @@ onUnmounted(() => {
                 <button
                     @click="showMoreFilters = !showMoreFilters"
                     class="btn btn-secondary w-full justify-between"
-                    :class="{ '!border-primary-500 !text-primary-600 dark:!text-primary-400': activeExtraFilters.length > 0 }"
+                    :class="{ 'border-primary-500! text-primary-600! dark:text-primary-400!': activeExtraFilters.length > 0 }"
                 >
                     <span class="flex items-center gap-1.5">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -289,6 +281,15 @@ onUnmounted(() => {
                                 </option>
                             </select>
                         </div>
+                        <div v-if="availableTrackableTypes.length">
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Trackable Type</label>
+                            <select v-model="filters.trackable_type" class="form-select text-sm" @change="onTrackableTypeChange">
+                                <option value="">All</option>
+                                <option v-for="type in availableTrackableTypes" :key="type" :value="type">
+                                    {{ trackableTypeLabel(type) }}
+                                </option>
+                            </select>
+                        </div>
                     </div>
                 </Transition>
             </div>
@@ -369,10 +370,10 @@ onUnmounted(() => {
         </span>
 
         <span
-            v-if="showTrackableBadge && filters.trackable_type"
+            v-if="showTrackableBadge && hasTrackableBadge"
             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
         >
-            Trackable: <span class="font-mono">{{ filters.trackable_type.split('\\').pop() }}#{{ filters.trackable_id }}</span>
+            Trackable: <span class="font-mono">{{ trackableTypeLabel(filters.trackable_type) }}#{{ filters.trackable_id }}</span>
             <button @click="filters.trackable_type = ''; filters.trackable_id = ''" class="hover:text-violet-900 dark:hover:text-violet-100">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

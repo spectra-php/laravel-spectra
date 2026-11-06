@@ -1,9 +1,11 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import type { Ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
 import { useEvalFormat } from '@/composables/useEvalFormat';
+import type { EvalResultWithBaseline, EvalRunResponse } from '@/types/api';
 import Skeleton from '@/components/Skeleton.vue';
 import Money from '@/components/Money.vue';
 
@@ -18,14 +20,15 @@ const { text, scoreText, scoreClass, summaryText, delta } = useEvalFormat();
 const loading = useLoading();
 
 loading.value = true;
-const data = ref(null);
+// The cast skips Ref's deep unwrap, which can't resolve the recursive JsonValue here.
+const data = ref<EvalRunResponse | null>(null) as Ref<EvalRunResponse | null>;
 const changedOnly = ref(false);
 
 const load = async () => {
     loading.value = true;
     try {
-        const query = route.query.compare ? `?compare=${encodeURIComponent(route.query.compare)}` : '';
-        data.value = await apiRequest('get', `/evals/runs/${encodeURIComponent(route.params.id)}${query}`);
+        const query = route.query.compare ? `?compare=${encodeURIComponent(route.query.compare as string)}` : '';
+        data.value = await apiRequest<EvalRunResponse>('get', `/evals/runs/${encodeURIComponent(route.params.id as string)}${query}`);
     } catch (error) {
         console.error('Failed to load the run:', error);
     } finally {
@@ -35,16 +38,16 @@ const load = async () => {
 
 watch(() => [route.params.id, route.query.compare], load, { immediate: true });
 
-const compareWith = (event) => {
-    router.replace({ query: event.target.value ? { compare: event.target.value } : {} });
+const compareWith = (event: Event) => {
+    router.replace({ query: (event.target as HTMLSelectElement).value ? { compare: (event.target as HTMLSelectElement).value } : {} });
 };
 
 const scoreNames = computed(() => Object.keys(data.value?.run.summary || {}));
-const changed = (result) => result.baseline && (text(result.output) !== text(result.baseline.output) || JSON.stringify(result.scores) !== JSON.stringify(result.baseline.scores) || !!result.error !== !!result.baseline.error);
-const results = computed(() => (data.value?.results || []).filter((result) => !changedOnly.value || changed(result)));
-const scoreChanged = (result, name) => result.baseline && result.baseline.scores[name] !== undefined && result.baseline.scores[name] !== result.scores[name];
-const deltaClass = (value) => (value > 0 ? 'text-emerald-600 dark:text-emerald-400' : value < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400');
-const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
+const changed = (result: EvalResultWithBaseline) => result.baseline && (text(result.output) !== text(result.baseline.output) || JSON.stringify(result.scores) !== JSON.stringify(result.baseline.scores) || !!result.error !== !!result.baseline.error);
+const results = computed(() => (data.value?.results || []).filter((result) => !changedOnly.value || !data.value?.baseline || changed(result)));
+const scoreChanged = (result: EvalResultWithBaseline, name: string) => result.baseline && result.baseline.scores[name] !== undefined && result.baseline.scores[name] !== result.scores[name];
+const deltaClass = (value: number) => (value > 0 ? 'text-emerald-600 dark:text-emerald-400' : value < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400');
+const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
 </script>
 
 <template>
@@ -83,8 +86,8 @@ const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dat
                     <p class="mt-1 text-2xl font-semibold tabular-nums text-gray-900 dark:text-white">{{ summaryText(data.run.summary[name]) }}</p>
                     <p v-if="data.baseline" class="mt-0.5 text-xs tabular-nums">
                         <template v-if="delta(data.run.summary[name], data.baseline.summary[name]) !== null">
-                            <span :class="deltaClass(delta(data.run.summary[name], data.baseline.summary[name]))">
-                                {{ delta(data.run.summary[name], data.baseline.summary[name]) > 0 ? '+' : '' }}{{ delta(data.run.summary[name], data.baseline.summary[name]) }}{{ data.run.summary[name].type === 'boolean' ? ' pts' : '' }}
+                            <span :class="deltaClass(delta(data.run.summary[name], data.baseline.summary[name])!)">
+                                {{ delta(data.run.summary[name], data.baseline.summary[name])! > 0 ? '+' : '' }}{{ delta(data.run.summary[name], data.baseline.summary[name]) }}{{ data.run.summary[name].type === 'boolean' ? ' pts' : '' }}
                             </span>
                             <span class="text-gray-400"> vs {{ summaryText(data.baseline.summary[name]) }}</span>
                         </template>
@@ -103,7 +106,7 @@ const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dat
                         </p>
                     </div>
                     <label v-if="data.baseline" class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                        <input v-model="changedOnly" type="checkbox" class="rounded border-gray-300 dark:border-gray-600" />
+                        <input v-model="changedOnly" type="checkbox" class="rounded-sm border-gray-300 dark:border-gray-600" />
                         Changed only
                     </label>
                 </div>
@@ -130,12 +133,12 @@ const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dat
                         <tbody>
                             <tr v-for="(result, index) in results" :key="result.id" class="align-top">
                                 <td class="tabular-nums text-gray-400">{{ index + 1 }}</td>
-                                <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm" v-tooltip.truncated="text(result.input)">{{ text(result.input) }}</p></td>
-                                <td><p class="line-clamp-4 whitespace-pre-wrap break-words text-sm text-gray-600 dark:text-gray-300" v-tooltip.truncated="text(result.expected)">{{ text(result.expected) || '—' }}</p></td>
+                                <td><p class="line-clamp-4 whitespace-pre-wrap wrap-break-word text-sm" v-tooltip.truncated="text(result.input)">{{ text(result.input) }}</p></td>
+                                <td><p class="line-clamp-4 whitespace-pre-wrap wrap-break-word text-sm text-gray-600 dark:text-gray-300" v-tooltip.truncated="text(result.expected)">{{ text(result.expected) || '—' }}</p></td>
                                 <td>
-                                    <p v-if="result.error" class="line-clamp-4 break-words font-mono text-xs text-red-600 dark:text-red-400">{{ result.error }}</p>
-                                    <p v-else class="line-clamp-4 whitespace-pre-wrap break-words text-sm text-gray-900 dark:text-gray-100" v-tooltip.truncated="text(result.output)">{{ text(result.output) }}</p>
-                                    <p v-if="result.baseline" class="mt-2 line-clamp-3 whitespace-pre-wrap break-words border-l-2 border-gray-200 pl-2 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                                    <p v-if="result.error" class="line-clamp-4 wrap-break-word font-mono text-xs text-red-600 dark:text-red-400">{{ result.error }}</p>
+                                    <p v-else class="line-clamp-4 whitespace-pre-wrap wrap-break-word text-sm text-gray-900 dark:text-gray-100" v-tooltip.truncated="text(result.output)">{{ text(result.output) }}</p>
+                                    <p v-if="result.baseline" class="mt-2 line-clamp-3 whitespace-pre-wrap wrap-break-word border-l-2 border-gray-200 pl-2 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
                                         {{ result.baseline.error || text(result.baseline.output) }}
                                     </p>
                                 </td>
@@ -144,9 +147,9 @@ const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dat
                                         <span
                                             v-for="(value, name) in result.scores"
                                             :key="name"
-                                            class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
+                                            class="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11px]"
                                             :class="[scoreClass(value), scoreChanged(result, name) ? 'ring-1 ring-amber-400' : '']"
-                                            v-tooltip="scoreChanged(result, name) ? `${name}: was ${scoreText(result.baseline.scores[name])}` : name"
+                                            v-tooltip="scoreChanged(result, name) ? `${name}: was ${scoreText(result.baseline!.scores[name])}` : name"
                                         >
                                             <span class="font-mono opacity-70">{{ name }}</span> {{ scoreText(value) }}
                                         </span>
@@ -159,7 +162,7 @@ const formatDate = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dat
                                 </td>
                             </tr>
                             <tr v-if="!results.length">
-                                <td colspan="6" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">No example changed from the compared run.</td>
+                                <td colspan="6" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">{{ data.results.length ? 'No example changed from the compared run.' : 'This run has no results.' }}</td>
                             </tr>
                         </tbody>
                     </table>

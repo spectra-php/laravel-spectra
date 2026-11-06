@@ -1,26 +1,28 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
+import type { AddDatasetExampleResponse, EvalsResponse } from '@/types/api';
+import type { ApiError } from '@/types/app';
 
 // Save a call as an example of a dataset, to run evaluations over: its last
 // user message as the input, and its reply as the expected output if asked.
-const props = defineProps({
-    requestId: { type: String, required: true },
-});
+const props = defineProps<{
+    requestId: string;
+}>();
 
 const { apiRequest } = useHelpers();
 
 const available = ref(false);
-const datasets = ref([]);
+const datasets = ref<string[]>([]);
 const name = ref('');
 const replyIsExpected = ref(true);
 const saving = ref(false);
-const added = ref(null);
+const added = ref<{ name: string; id: string } | null>(null);
 const error = ref('');
 
 onMounted(async () => {
     try {
-        const data = await apiRequest('get', '/evals');
+        const data = await apiRequest<EvalsResponse>('get', '/evals');
         available.value = data.migrated && data.can_curate;
         datasets.value = data.datasets.map((dataset) => dataset.name);
         name.value = datasets.value[0] || '';
@@ -34,10 +36,10 @@ const add = async () => {
     saving.value = true;
     error.value = '';
     try {
-        const result = await apiRequest('post', '/datasets/examples', { dataset: name.value.trim(), request_id: props.requestId, reply_is_expected: replyIsExpected.value });
+        const result = await apiRequest<AddDatasetExampleResponse>('post', '/datasets/examples', { dataset: name.value.trim(), request_id: props.requestId, reply_is_expected: replyIsExpected.value });
         added.value = { name: name.value.trim(), id: result.dataset_id };
     } catch (e) {
-        error.value = e?.response?.data?.message || 'The call could not be added.';
+        error.value = (e as ApiError)?.response?.data?.message || 'The call could not be added.';
     } finally {
         saving.value = false;
     }
@@ -56,7 +58,7 @@ const add = async () => {
                 </datalist>
             </div>
             <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                <input v-model="replyIsExpected" type="checkbox" class="rounded border-gray-300 dark:border-gray-600" />
+                <input v-model="replyIsExpected" type="checkbox" class="rounded-sm border-gray-300 dark:border-gray-600" />
                 Use the reply as the expected output
             </label>
             <p v-if="error" class="text-xs text-red-600 dark:text-red-400">{{ error }}</p>

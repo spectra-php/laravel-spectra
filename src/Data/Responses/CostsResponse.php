@@ -13,8 +13,8 @@ use Spectra\Data\CostByUser;
 use Spectra\Data\DataTransferObject;
 
 /**
- * The costs screen: the period total, the summary cards, and cost by
- * provider, model, model type, day and trackable.
+ * The costs screen: the period total, the summary cards, and cost by provider,
+ * model, model type, day and user.
  */
 readonly class CostsResponse extends DataTransferObject
 {

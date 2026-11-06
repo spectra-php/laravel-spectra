@@ -23,6 +23,9 @@ use Spectra\Http\Controllers\Api\Maintenance\PruneController;
 use Spectra\Http\Controllers\Api\Maintenance\RebuildStatsController;
 use Spectra\Http\Controllers\Api\Maintenance\RecordingController;
 use Spectra\Http\Controllers\Api\PerformanceController;
+use Spectra\Http\Controllers\Api\Playground\PlaygroundController;
+use Spectra\Http\Controllers\Api\Playground\RunPlaygroundCallController;
+use Spectra\Http\Controllers\Api\Playground\ShowPlaygroundCallController;
 use Spectra\Http\Controllers\Api\PromptsController;
 use Spectra\Http\Controllers\Api\ProvidersController;
 use Spectra\Http\Controllers\Api\RequestsController;
@@ -82,6 +85,12 @@ Route::prefix('api')->group(function () {
     Route::post('/maintenance/rebuild-stats', RebuildStatsController::class);
     Route::post('/maintenance/recording', RecordingController::class);
     Route::get('/maintenance/pricing', PricingStatusController::class);
+
+    // Playground: anyone who may view the dashboard sees whether it is on; the
+    // calls and running them also need the option and the manageSpectra gate.
+    Route::get('/playground', PlaygroundController::class);
+    Route::get('/playground/{id}', ShowPlaygroundCallController::class)->whereUuid('id');
+    Route::post('/playground/{id}/run', RunPlaygroundCallController::class)->whereUuid('id');
 });
 
 // SPA catch-all route. It skips api/ so an unknown or malformed API URL is a

@@ -1,7 +1,8 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { useProviders } from '@/composables/useProviders';
+import type { PricingStatusResponse } from '@/types/api';
 
 // Read-only: prices are checked and written with spectra:pricing-scrape where you
 // develop, then committed and deployed. The dashboard runs in production, so it
@@ -9,7 +10,7 @@ import { useProviders } from '@/composables/useProviders';
 const { formatNumber, apiRequest } = useHelpers();
 const { loadProviders, providerDisplayName } = useProviders();
 
-const status = ref(null);
+const status = ref<PricingStatusResponse | null>(null);
 
 const bundled = computed(() => status.value?.bundled || null);
 const file = computed(() => status.value?.file || null);
@@ -18,13 +19,13 @@ const bundledProviders = computed(() => Object.keys(bundled.value?.providers || 
 
 const load = async () => {
     try {
-        status.value = await apiRequest('get', '/maintenance/pricing');
+        status.value = await apiRequest<PricingStatusResponse>('get', '/maintenance/pricing');
     } catch (error) {
         console.error('Failed to load pricing status:', error);
     }
 };
 
-const formatDateTime = (value) => {
+const formatDateTime = (value: string | null) => {
     if (!value) return '—';
 
     // A plain date has no time to show, and read as UTC it can land on the day before.

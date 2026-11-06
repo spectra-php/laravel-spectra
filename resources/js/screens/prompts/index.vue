@@ -1,8 +1,9 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useLoading } from '@/composables/useLoading';
+import type { PromptsResponse, PromptVersion } from '@/types/api';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import Money from '@/components/Money.vue';
@@ -15,14 +16,14 @@ const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryPara
 const loading = useLoading();
 
 loading.value = true;
-const versions = ref([]);
+const versions = ref<PromptVersion[]>([]);
 const migrated = ref(true);
 
 const prompts = computed(() => {
-    const groups = new Map();
+    const groups = new Map<string, PromptVersion[]>();
     for (const version of versions.value) {
         if (!groups.has(version.prompt_name)) groups.set(version.prompt_name, []);
-        groups.get(version.prompt_name).push(version);
+        groups.get(version.prompt_name)!.push(version);
     }
 
     return [...groups.entries()].map(([name, rows]) => ({ name, rows }));
@@ -31,7 +32,7 @@ const prompts = computed(() => {
 const load = async () => {
     loading.value = true;
     try {
-        const data = await apiRequest('get', '/prompts?' + buildQueryParams().toString());
+        const data = await apiRequest<PromptsResponse>('get', '/prompts?' + buildQueryParams().toString());
         versions.value = data.versions || [];
         migrated.value = data.migrated !== false;
     } catch (error) {
@@ -46,10 +47,10 @@ const onRangeChange = async () => {
     await load();
 };
 
-const errorRate = (rate) => `${(Number(rate || 0) * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
-const errorClass = (rate) => (rate >= 0.05 ? 'text-red-600 dark:text-red-400' : rate >= 0.01 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400');
-const scoreAverage = (score) => (score.type === 'boolean' ? `${Math.round((score.average ?? 0) * 100)}% yes` : Number(score.average ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 }));
-const formatDate = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '');
+const errorRate = (rate: number) => `${(Number(rate || 0) * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
+const errorClass = (rate: number) => (rate >= 0.05 ? 'text-red-600 dark:text-red-400' : rate >= 0.01 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400');
+const scoreAverage = (score: PromptVersion['scores'][number]) => (score.type === 'boolean' ? `${Math.round((score.average ?? 0) * 100)}% yes` : Number(score.average ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 }));
+const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '');
 
 onMounted(async () => {
     applyQueryState();

@@ -435,6 +435,7 @@ class SpectraServiceProvider extends ServiceProvider
         'storage.redaction',
         'tracking.tool_spans',
         'dashboard.maintenance',
+        'dashboard.playground',
         'costs.pricing_path',
         'costs.cache',
     ];

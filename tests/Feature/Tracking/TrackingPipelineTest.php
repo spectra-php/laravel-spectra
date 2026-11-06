@@ -308,9 +308,9 @@ it('records connection failures and still throws them to the app', function () {
     Http::fake(['api.openai.com/*' => fn () => throw new ConnectionException('Connection timed out')]);
 
     expect(fn () => Http::post('https://api.openai.com/v1/chat/completions', ['model' => 'gpt-4o']))
-        ->toThrow(ConnectionException::class);
+        ->toThrow(ConnectionException::class)
 
-    expect(SpectraRequest::query()->sole()->error_message)->toBe('Connection timed out');
+        ->and(SpectraRequest::query()->sole()->error_message)->toBe('Connection timed out');
 });
 
 it('never lets a tracking failure reach the app', function () {

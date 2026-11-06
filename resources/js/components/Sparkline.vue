@@ -1,19 +1,16 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 
 /**
  * A tiny trend line for stat cards. Shape only — no axes; the card's number
  * carries the value.
  */
-const props = defineProps({
-    values: {
-        type: Array,
-        default: () => [],
-    },
-    height: {
-        type: Number,
-        default: 32,
-    },
+const props = withDefaults(defineProps<{
+    values?: number[];
+    height?: number;
+}>(), {
+    values: () => [],
+    height: 32,
 });
 
 const uid = Math.random().toString(36).slice(2, 8);
@@ -50,7 +47,7 @@ const area = computed(() => (line.value ? `${line.value} L100,${props.height} L0
                 <stop offset="1" stop-color="currentColor" stop-opacity="0" />
             </linearGradient>
         </defs>
-        <path :d="area" :fill="`url(#spark-${uid})`" />
+        <path :d="area!" :fill="`url(#spark-${uid})`" />
         <path :d="line" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
     </svg>
 </template>

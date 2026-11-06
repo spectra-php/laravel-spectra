@@ -1,19 +1,24 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import Money from '@/components/Money.vue';
+import type { RequestDetailsResponse } from '@/types/api';
 
 /**
  * Token usage for one request. Input is split into uncached, cache-read and
  * cache-write tokens (the three are billed at different rates); output into
  * answer and reasoning tokens.
  */
-const props = defineProps({
-    request: { type: Object, required: true },
-    expanded: { type: Boolean, default: true },
+const props = withDefaults(defineProps<{
+    request: RequestDetailsResponse;
+    expanded?: boolean;
+}>(), {
+    expanded: true,
 });
 
-const emit = defineEmits(['toggle']);
+const emit = defineEmits<{
+    toggle: [];
+}>();
 
 const { formatNumber } = useHelpers();
 
@@ -47,7 +52,7 @@ const output = computed(() => {
 
 const cacheHitRate = computed(() => (input.value.total > 0 ? (Number(props.request.cached_tokens || 0) / input.value.total) * 100 : 0));
 
-const width = (value, total) => (total > 0 ? (value / total) * 100 : 0) + '%';
+const width = (value: number, total: number) => (total > 0 ? (value / total) * 100 : 0) + '%';
 </script>
 
 <template>
@@ -83,7 +88,7 @@ const width = (value, total) => (total > 0 ? (value / total) * 100 : 0) + '%';
 
                 <div class="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-xs">
                     <div v-for="segment in group.data.segments" :key="segment.key" class="flex items-center gap-1.5" :class="{ 'opacity-50': segment.value === 0 }">
-                        <span class="h-2 w-2 rounded-sm" :class="segment.class" aria-hidden="true"></span>
+                        <span class="h-2 w-2 rounded-xs" :class="segment.class" aria-hidden="true"></span>
                         <span class="text-gray-500 dark:text-gray-400">{{ segment.label }}</span>
                         <span class="tabular-nums font-medium text-gray-900 dark:text-white">{{ formatNumber(segment.value) }}</span>
                     </div>

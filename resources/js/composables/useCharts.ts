@@ -1,4 +1,42 @@
 import Chart from 'chart.js/auto';
+import type { ChartOptions, ScriptableContext, TooltipCallbacks, UpdateMode } from 'chart.js';
+
+interface SeriesData {
+    labels: string[];
+    values: number[];
+}
+
+interface PartsData {
+    // A slice's label can be empty: a row with no provider has no display name.
+    labels: (string | null | undefined)[];
+    values: number[];
+    colors?: string[] | (() => string[]);
+}
+
+interface SeriesChartOptions<Type extends 'line' | 'bar'> {
+    label?: string;
+    yTicks?: Record<string, unknown>;
+    tooltipLabel?: (value: number) => string;
+    chartOptions?: ChartOptions<Type>;
+}
+
+interface BarChartOptions extends SeriesChartOptions<'bar'> {
+    barThickness?: number | 'flex';
+}
+
+interface DoughnutChartOptions {
+    type?: 'doughnut' | 'pie';
+    legend?: boolean;
+    tooltipCallbacks?: Partial<TooltipCallbacks<'doughnut'>>;
+    chartOptions?: ChartOptions<'doughnut'>;
+}
+
+// The parts of a chart re-theming touches, whatever its type.
+export interface ThemedChart {
+    canvas: HTMLCanvasElement | null;
+    update(mode?: UpdateMode): void;
+    destroy(): void;
+}
 
 /*
  * Chart styling for the dashboard.
@@ -56,13 +94,13 @@ const tooltip = () => {
         boxWidth: 8,
         boxHeight: 8,
         usePointStyle: true,
-        titleFont: { size: 12, weight: '600' },
+        titleFont: { size: 12, weight: 600 },
         bodyFont: { size: 12 },
         displayColors: true,
     };
 };
 
-const axes = (yTicks = {}) => {
+const axes = (yTicks: Record<string, unknown> = {}) => {
     const t = theme();
 
     return {
@@ -81,7 +119,7 @@ const axes = (yTicks = {}) => {
 };
 
 // Charts re-theme on dark-mode toggles.
-const liveCharts = new Set();
+const liveCharts = new Set<{ chart: ThemedChart; retheme: () => void }>();
 
 if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined') {
     new MutationObserver(() => {
@@ -96,7 +134,7 @@ if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined') {
     }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 }
 
-const track = (chart, retheme) => {
+const track = <C extends ThemedChart>(chart: C, retheme: () => void): C => {
     const entry = { chart, retheme };
     liveCharts.add(entry);
 
@@ -109,13 +147,13 @@ const track = (chart, retheme) => {
     return chart;
 };
 
-const resolveColors = (colors, count) => {
+const resolveColors = (colors: PartsData['colors'], count: number) => {
     const value = typeof colors === 'function' ? colors() : colors;
 
     return value || theme().fallback.slice(0, count);
 };
 
-const areaFill = (context) => {
+const areaFill = (context: ScriptableContext<'line'>) => {
     const { ctx, chartArea } = context.chart;
     const [top, bottom] = theme().accentFill;
 
@@ -130,12 +168,12 @@ const areaFill = (context) => {
 
 export function useCharts() {
     /** Tooltip callbacks for a chart whose option `tooltipLabel` formats each value. */
-    const labelCallbacks = (tooltipLabel) => (tooltipLabel ? { callbacks: { label: (context) => ' ' + tooltipLabel(context.raw) } } : {});
+    const labelCallbacks = (tooltipLabel?: (value: number) => string) => (tooltipLabel ? { callbacks: { label: (context: { raw: unknown }) => ' ' + tooltipLabel(context.raw as number) } } : {});
 
     /**
      * Line/area chart for one time series.
      */
-    const createLineChart = (canvas, data, options = {}) => {
+    const createLineChart = (canvas: HTMLCanvasElement, data: SeriesData, options: SeriesChartOptions<'line'> = {}) => {
         const chart = new Chart(canvas, {
             type: 'line',
             data: {
@@ -173,17 +211,17 @@ export function useCharts() {
             dataset.borderColor = t.accent;
             dataset.pointHoverBackgroundColor = t.accent;
             dataset.pointHoverBorderColor = t.surface;
-            chart.options.plugins.tooltip = { ...chart.options.plugins.tooltip, ...tooltip() };
-            Object.assign(chart.options.scales.x.ticks, { color: t.text });
-            Object.assign(chart.options.scales.y.ticks, { color: t.text });
-            chart.options.scales.y.grid.color = t.grid;
+            chart.options.plugins!.tooltip = { ...chart.options.plugins!.tooltip, ...tooltip() };
+            Object.assign(chart.options.scales!.x!.ticks!, { color: t.text });
+            Object.assign(chart.options.scales!.y!.ticks!, { color: t.text });
+            chart.options.scales!.y!.grid!.color = t.grid;
         });
     };
 
     /**
      * Bar chart for one series.
      */
-    const createBarChart = (canvas, data, options = {}) => {
+    const createBarChart = (canvas: HTMLCanvasElement, data: SeriesData, options: BarChartOptions = {}) => {
         const chart = new Chart(canvas, {
             type: 'bar',
             data: {
@@ -214,10 +252,10 @@ export function useCharts() {
             const t = theme();
             chart.data.datasets[0].backgroundColor = t.accent;
             chart.data.datasets[0].hoverBackgroundColor = t.accent;
-            chart.options.plugins.tooltip = { ...chart.options.plugins.tooltip, ...tooltip() };
-            Object.assign(chart.options.scales.x.ticks, { color: t.text });
-            Object.assign(chart.options.scales.y.ticks, { color: t.text });
-            chart.options.scales.y.grid.color = t.grid;
+            chart.options.plugins!.tooltip = { ...chart.options.plugins!.tooltip, ...tooltip() };
+            Object.assign(chart.options.scales!.x!.ticks!, { color: t.text });
+            Object.assign(chart.options.scales!.y!.ticks!, { color: t.text });
+            chart.options.scales!.y!.grid!.color = t.grid;
         });
     };
 
@@ -228,9 +266,9 @@ export function useCharts() {
      * `data.colors` may be an array or a function returning one (re-evaluated
      * on theme change).
      */
-    const createDoughnutChart = (canvas, data, options = {}) => {
+    const createDoughnutChart = (canvas: HTMLCanvasElement, data: PartsData, options: DoughnutChartOptions = {}) => {
         const chart = new Chart(canvas, {
-            type: options.type || 'doughnut',
+            type: (options.type || 'doughnut') as 'doughnut',
             data: {
                 labels: data.labels,
                 datasets: [{
@@ -272,8 +310,8 @@ export function useCharts() {
             const dataset = chart.data.datasets[0];
             dataset.backgroundColor = resolveColors(data.colors, dataset.data.length);
             dataset.borderColor = t.surface;
-            chart.options.plugins.legend.labels.color = t.text;
-            chart.options.plugins.tooltip = { ...chart.options.plugins.tooltip, ...tooltip() };
+            chart.options.plugins!.legend!.labels!.color = t.text;
+            chart.options.plugins!.tooltip = { ...chart.options.plugins!.tooltip, ...tooltip() };
         });
     };
 
