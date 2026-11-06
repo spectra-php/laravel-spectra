@@ -11,7 +11,8 @@ import Prompts from './screens/prompts/index.vue';
 import Errors from './screens/errors/index.vue';
 import Evals from './screens/evals/index.vue';
 import EvalRun from './screens/evals/run.vue';
-import Dataset from './screens/evals/dataset.vue';
+import Datasets from './screens/datasets/index.vue';
+import DatasetDetail from './screens/datasets/detail.vue';
 import Playground from './screens/playground/index.vue';
 import PlaygroundCall from './screens/playground/call.vue';
 import Trackables from './screens/trackables/index.vue';
@@ -86,9 +87,14 @@ const routes: RouteRecordRaw[] = [
         component: EvalRun,
     },
     {
-        path: '/evals/datasets/:id',
-        name: 'eval-dataset',
-        component: Dataset,
+        path: '/datasets',
+        name: 'datasets',
+        component: Datasets,
+    },
+    {
+        path: '/datasets/:id',
+        name: 'dataset-detail',
+        component: DatasetDetail,
     },
     {
         path: '/playground',

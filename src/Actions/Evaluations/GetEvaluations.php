@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace Spectra\Actions\Evaluations;
 
 use Illuminate\Support\Facades\Schema;
-use Spectra\Models\SpectraDataset;
 use Spectra\Models\SpectraEvalRun;
-use stdClass;
 
 /**
- * The Evals screen: each evaluation with its latest runs, and every dataset
- * with its number of examples.
+ * The Evals screen: each evaluation with its latest runs.
  */
 class GetEvaluations
 {
@@ -19,13 +16,13 @@ class GetEvaluations
     private const RUNS = 10;
 
     /**
-     * Get the evaluations, newest run first, and the datasets.
+     * Get the evaluations, newest run first.
      *
-     * @return array{evaluations: array<int, array{name: string, dataset: string, runs: array<int, array<string, mixed>>}>, datasets: array<int, array<string, mixed>>}
+     * @return array<int, array{name: string, dataset: string, runs: array<int, array<string, mixed>>}>
      */
     public function __invoke(): array
     {
-        $runs = SpectraEvalRun::query()->latest('started_at')->limit(500)->get()
+        return SpectraEvalRun::query()->latest('started_at')->limit(500)->get()
             ->groupBy('evaluation')
             ->map(fn ($runs, string $name) => [
                 'name' => $name,
@@ -34,24 +31,6 @@ class GetEvaluations
             ])
             ->values()
             ->all();
-
-        $counts = SpectraDataset::query()->toBase()
-            ->leftJoin('spectra_dataset_examples', 'spectra_dataset_examples.dataset_id', '=', 'spectra_datasets.id')
-            ->groupBy('spectra_datasets.id')
-            ->selectRaw('spectra_datasets.id as id, COUNT(spectra_dataset_examples.id) as example_count')
-            ->get()
-            ->mapWithKeys(fn (stdClass $row) => [(string) $row->id => (int) $row->example_count]);
-
-        return [
-            'evaluations' => $runs,
-            'datasets' => SpectraDataset::query()->orderBy('name')->get()->map(fn (SpectraDataset $dataset) => [
-                'id' => $dataset->id,
-                'name' => $dataset->name,
-                'description' => $dataset->description,
-                'example_count' => $counts->get($dataset->id, 0),
-                'updated_at' => $dataset->updated_at?->toIso8601String(),
-            ])->all(),
-        ];
     }
 
     /**

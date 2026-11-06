@@ -49,7 +49,7 @@ The Maintenance screen can prune data and pause recording, so its actions need t
 Gate::define('manageSpectra', fn ($user) => $user->isAdmin());
 ```
 
-Reviewing traces and adding dataset examples from the dashboard need `annotateSpectra`, which allows whoever `viewSpectra` allows unless you define it (see [Who Can Review](/annotations#who-can-review)). Set `dashboard.maintenance` to `false` to keep the maintenance actions on the command line.
+Reviewing traces and creating or changing datasets from the dashboard need `annotateSpectra`, which allows whoever `viewSpectra` allows unless you define it (see [Who Can Review](/annotations#who-can-review)). Set `dashboard.maintenance` to `false` to keep the maintenance actions on the command line.
 
 <a name="v4-request-context"></a>
 ### `RequestContext::$id` Is the Saved Id {#v4-request-context}

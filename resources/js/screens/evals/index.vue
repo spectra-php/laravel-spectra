@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
 import { useEvalFormat } from '@/composables/useEvalFormat';
@@ -7,17 +7,16 @@ import type { Evaluation, EvalsResponse } from '@/types/api';
 import Skeleton from '@/components/Skeleton.vue';
 import DocsLink from '@/components/DocsLink.vue';
 
-// Evaluations and their runs, and the datasets they run over.
+// Evaluations and their runs.
 const { formatNumber, formatDuration, apiRequest } = useHelpers();
 const { summaryText } = useEvalFormat();
 const loading = useLoading();
 
 loading.value = true;
-const data = ref<Pick<EvalsResponse, 'evaluations' | 'datasets' | 'migrated'>>({ evaluations: [], datasets: [], migrated: true });
+const data = ref<EvalsResponse>({ evaluations: [], migrated: true });
 
 const scoreNames = (evaluation: Evaluation) => [...new Set(evaluation.runs.flatMap((run) => Object.keys(run.summary || {})))];
 const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
-const isEmpty = computed(() => !data.value.evaluations.length && !data.value.datasets.length);
 
 onMounted(async () => {
     try {
@@ -46,7 +45,7 @@ onMounted(async () => {
 
         <div v-if="loading" class="card"><Skeleton variant="table-row" :lines="6" /></div>
 
-        <div v-else-if="isEmpty" class="card">
+        <div v-else-if="!data.evaluations.length" class="card">
             <div class="empty-state">
                 <p class="empty-state-title">No evaluations yet</p>
                 <p class="empty-state-description">
@@ -95,29 +94,6 @@ onMounted(async () => {
                         </tbody>
                     </table>
                 </div>
-            </div>
-
-            <div v-if="data.datasets.length" class="card overflow-hidden">
-                <div class="card-header"><h3>Datasets</h3></div>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Dataset</th>
-                            <th class="text-right">Examples</th>
-                            <th class="text-right">Updated</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="dataset in data.datasets" :key="dataset.id">
-                            <td>
-                                <router-link :to="{ name: 'eval-dataset', params: { id: dataset.id } }" class="font-mono font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">{{ dataset.name }}</router-link>
-                                <p v-if="dataset.description" class="text-xs text-gray-500 dark:text-gray-400">{{ dataset.description }}</p>
-                            </td>
-                            <td class="text-right tabular-nums">{{ formatNumber(dataset.example_count) }}</td>
-                            <td class="text-right text-xs text-gray-500 dark:text-gray-400">{{ formatDate(dataset.updated_at) }}</td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
         </div>
     </div>

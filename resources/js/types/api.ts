@@ -691,10 +691,14 @@ export interface DatasetListItem {
 
 export interface EvalsResponse {
     evaluations: Evaluation[];
-    datasets: DatasetListItem[];
     migrated: boolean;
+}
+
+export interface DatasetsResponse {
     can_curate: boolean;
 }
+    datasets: DatasetListItem[];
+    migrated: boolean;
 
 export interface DatasetExample {
     id: string;
@@ -716,6 +720,12 @@ export interface DatasetResponse {
     runs: EvalRun[];
 }
 
+    latest_input: JsonValue;
+    can_curate: boolean;
+}
+
+export interface StoreDatasetResponse {
+    id: string;
 export interface AddDatasetExampleResponse {
     dataset_id: string;
     example_id: string;

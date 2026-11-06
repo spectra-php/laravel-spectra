@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
-import type { AddDatasetExampleResponse, EvalsResponse } from '@/types/api';
+import DocsLink from '@/components/DocsLink.vue';
+import type { AddDatasetExampleResponse, DatasetsResponse } from '@/types/api';
 import type { ApiError } from '@/types/app';
 
 // Save a call as an example of a dataset, to run evaluations over: its last
@@ -22,7 +23,7 @@ const error = ref('');
 
 onMounted(async () => {
     try {
-        const data = await apiRequest<EvalsResponse>('get', '/evals');
+        const data = await apiRequest<DatasetsResponse>('get', '/datasets');
         available.value = data.migrated && data.can_curate;
         datasets.value = data.datasets.map((dataset) => dataset.name);
         name.value = datasets.value[0] || '';
@@ -48,7 +49,12 @@ const add = async () => {
 
 <template>
     <div v-if="available" class="card">
-        <div class="card-header"><h3>Add to dataset</h3></div>
+        <div class="card-header">
+            <div class="-my-0.5 flex items-center gap-2">
+                <h3>Add to dataset</h3>
+                <DocsLink page="datasets" label="What is a dataset? Read the docs" />
+            </div>
+        </div>
         <form class="card-body space-y-3" @submit.prevent="add">
             <div>
                 <label for="dataset-name" class="mb-1 block text-xs text-gray-500 dark:text-gray-400">Dataset, new or existing</label>
@@ -63,7 +69,7 @@ const add = async () => {
             </label>
             <p v-if="error" class="text-xs text-red-600 dark:text-red-400">{{ error }}</p>
             <p v-if="added" class="text-xs text-gray-600 dark:text-gray-300">
-                Added to <router-link :to="{ name: 'eval-dataset', params: { id: added.id } }" class="font-mono text-primary-600 hover:underline dark:text-primary-400">{{ added.name }}</router-link>.
+                Added to <router-link :to="{ name: 'dataset-detail', params: { id: added.id } }" class="font-mono text-primary-600 hover:underline dark:text-primary-400">{{ added.name }}</router-link>.
             </p>
             <button type="submit" class="btn btn-secondary w-full" :disabled="saving || !name.trim()">Add the call</button>
         </form>

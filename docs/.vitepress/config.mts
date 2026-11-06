@@ -52,6 +52,7 @@ export default defineConfig({
           { text: 'Scores', link: '/scores' },
           { text: 'Prompts', link: '/prompts' },
           { text: 'Annotation Queues', link: '/annotations' },
+          { text: 'Datasets', link: '/datasets' },
           { text: 'Evaluations', link: '/evaluations' },
           { text: 'Playground', link: '/playground' }
         ]

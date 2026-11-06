@@ -7,7 +7,7 @@ Say your app has a support bot and you rewrite its prompt to make the answers sh
 
 An evaluation is a test for your AI code. It takes a fixed list of questions you have picked, asks your code every one of them, and grades each answer. Four words come up on this page and on the dashboard:
 
-- A **dataset** is the list of questions. Each entry is an **example**: the input your code gets and, when you know it, the answer you expect.
+- A [dataset](/datasets) is the list of questions. Each entry is an **example**: the input your code gets and, when you know it, the answer you expect.
 - A **scorer** grades one answer. It can be a simple check (does the answer mention a refund?), a comparison with the expected answer, or a call to another model that rates the answer.
 - A **run** is one pass over the whole dataset: every example's answer with its scores. Spectra saves each run, so you can put the run after your change next to the run before it and see what moved, example by example.
 
@@ -18,30 +18,15 @@ Each example runs in a [trace](/usage#traces) of its own, so its AI calls are tr
 <a name="datasets"></a>
 ## Datasets
 
-A dataset is a named list of examples. Each example holds the input your code gets and, optionally, the output you expect for it. Add examples with `Spectra::dataset()`. The dataset is created the first time you add to it, so there is nothing to set up:
+An evaluation needs a [dataset](/datasets) to run over: a named list of examples, each with an input and, optionally, the output you expect. It is created the first time you add to it:
 
 ```php
 use Spectra\Facades\Spectra;
 
-$dataset = Spectra::dataset('refund-questions');
-
-$dataset->add(['question' => 'Can I get a refund on my annual plan?'], expected: 'Yes, within 30 days.');
-$dataset->add(['question' => 'How long does a refund take?'], expected: 'Five to ten business days.');
+Spectra::dataset('refund-questions')->add(['question' => 'How long does a refund take?'], expected: 'Five to ten business days.');
 ```
 
-The input and the expected output can be any value that encodes to JSON: a string, or an array with the fields your code needs. Leave the expected output out when your scorers don't compare against one, for example when a model judges the answer. `add()` also takes `metadata`.
-
-**From real traffic.** The best examples are often real questions your users asked. A call's page in the dashboard has an **Add to dataset** card: it saves the call's last user message as the input (`['prompt' => ...]`), and its reply as the expected output when you tick the box. Tick it when the reply was a good one, so it becomes the answer you want to keep getting.
-
-<img class="screenshot" src="/images/dashboard/request-add-to-dataset.png" alt="The Add to dataset card on a call" />
-
-In code:
-
-```php
-Spectra::dataset('refund-questions')->addRequest($requestId, replyIsExpected: true);
-```
-
-Adding from the dashboard needs the `annotateSpectra` gate (see [Who Can Review](/annotations#who-can-review)).
+You can also save real calls from the dashboard. [Datasets](/datasets) explains what makes a good one and every way to add, change and view examples.
 
 <a name="writing-an-evaluation"></a>
 ## Writing an Evaluation
@@ -139,9 +124,9 @@ $run->summary; // ['exact' => ['type' => 'boolean', 'count' => 8, 'average' => 0
 <a name="comparing-runs"></a>
 ## Comparing Runs
 
-A run on its own tells you how your code does today. Two runs tell you whether a change helped. The dashboard's **Evals** screen lists each evaluation with its latest runs, every scorer's result per run, and the datasets.
+A run on its own tells you how your code does today. Two runs tell you whether a change helped. The dashboard's **Evals** screen lists each evaluation with its latest runs and every scorer's result per run.
 
-<img class="screenshot" src="/images/dashboard/evals.png" alt="An evaluation with two runs, and a dataset" />
+<img class="screenshot" src="/images/dashboard/evals.png" alt="An evaluation with two runs" />
 
 Open a run to see each example's input, expected output, output, scores, latency and cost, with a link to its trace.
 
@@ -156,7 +141,7 @@ Pick an earlier run under **Compare with** to see:
 
 <img class="screenshot" src="/images/dashboard/eval-compare.png" alt="A v3 run compared with the v2 run" />
 
-A dataset's page lists its examples and the runs over it.
+The **Datasets** screen lists your datasets, and a dataset's page lists its examples and the runs over it.
 
 <img class="screenshot" src="/images/dashboard/eval-dataset.png" alt="A dataset with its examples and the runs over it" />
 

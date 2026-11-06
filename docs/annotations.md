@@ -93,7 +93,7 @@ The prompt and reply come from the stored request and response, so a call stored
 <a name="who-can-review"></a>
 ## Who Can Review
 
-Reviewing and adding traces from the dashboard need the `annotateSpectra` gate. Unless you define it, it allows whoever the `viewSpectra` gate allows. To let only some viewers review, define it in a service provider:
+Reviewing and adding traces from the dashboard need the `annotateSpectra` gate, and so do creating and changing [datasets](/datasets). Unless you define it, it allows whoever the `viewSpectra` gate allows. To let only some viewers review, define it in a service provider:
 
 ```php
 use Illuminate\Support\Facades\Gate;

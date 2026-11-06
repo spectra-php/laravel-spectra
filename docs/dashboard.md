@@ -156,9 +156,9 @@ Once the app configures an [annotation queue](/annotations), a clipboard icon in
 <a name="evals"></a>
 ## Evals
 
-<img class="screenshot" src="/images/dashboard/evals.png" alt="The evals screen with an evaluation and a dataset" />
+<img class="screenshot" src="/images/dashboard/evals.png" alt="The evals screen with an evaluation and its runs" />
 
-The Evals screen lists each [evaluation](/evaluations) with its latest runs and every scorer's result per run, and the datasets. Open a run to see each example's input, expected output, output, scores, latency and cost:
+The Evals screen lists each [evaluation](/evaluations) with its latest runs and every scorer's result per run. Open a run to see each example's input, expected output, output, scores, latency and cost:
 
 <img class="screenshot" src="/images/dashboard/eval-run.png" alt="An evaluation run, example by example" />
 
@@ -166,11 +166,16 @@ Pick an earlier run in **Compare with** to see how each score moved, with the ea
 
 <img class="screenshot" src="/images/dashboard/eval-compare.png" alt="A run compared with an earlier one" />
 
-Open a dataset to see its examples and the runs over it:
+<a name="datasets"></a>
+## Datasets
+
+<img class="screenshot" src="/images/dashboard/datasets.png" alt="The datasets screen with a dataset and its number of examples" />
+
+The Datasets screen lists every [dataset](/datasets) with its number of examples, and **New dataset** [creates one](/datasets#adding-examples). Open one to see its examples and the runs over it:
 
 <img class="screenshot" src="/images/dashboard/eval-dataset.png" alt="A dataset with its examples and runs" />
 
-A call's page has an **Add to dataset** card that saves the call as an example:
+On a dataset's page, **Add example** lets you [write an example by hand](/datasets#adding-examples-by-hand), as text or JSON, and each example has **Edit** and **Delete** to [change or remove it](/datasets#changing-a-dataset). **Edit** and **Delete** at the top of the page [rename the dataset, change its description or delete it](/datasets#renaming-or-deleting-a-dataset). A call's page has an **Add to dataset** card that [saves the call as an example](/datasets#adding-examples-from-a-call):
 
 <img class="screenshot" src="/images/dashboard/request-add-to-dataset.png" alt="The Add to dataset card on a call" />
 

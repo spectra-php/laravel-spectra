@@ -4,6 +4,7 @@ import type { Component } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
+import DocsLink from '@/components/DocsLink.vue';
 import JsonViewer from '@/components/JsonViewer.vue';
 import CodeBlock from '@/components/CodeBlock.vue';
 import Skeleton from '@/components/Skeleton.vue';
@@ -353,7 +354,12 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                     <AddToDataset v-if="modelType === 'text' && request.request" :request-id="request.id" />
 
                     <div v-if="request.tags?.length" class="card">
-                        <div class="card-header"><h3>Tags</h3></div>
+                        <div class="card-header">
+                            <div class="-my-0.5 flex items-center gap-2">
+                                <h3>Tags</h3>
+                                <DocsLink page="tags" label="What are tags? Read the docs" />
+                            </div>
+                        </div>
                         <div class="card-body flex flex-wrap gap-1.5">
                             <router-link
                                 v-for="tag in request.tags"

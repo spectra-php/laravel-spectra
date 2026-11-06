@@ -19,7 +19,7 @@ class GetDataset
     /**
      * Get the dataset, its examples and its latest runs.
      *
-     * @return array{dataset: array<string, mixed>, examples: array<int, array<string, mixed>>, runs: array<int, array<string, mixed>>}
+     * @return array{dataset: array<string, mixed>, examples: array<int, array<string, mixed>>, runs: array<int, array<string, mixed>>, latest_input: mixed}
      */
     public function __invoke(SpectraDataset $dataset): array
     {
@@ -42,6 +42,7 @@ class GetDataset
             ])->all(),
             'runs' => SpectraEvalRun::query()->where('dataset', $dataset->name)->latest('started_at')->limit(10)->get()
                 ->map(fn (SpectraEvalRun $run) => GetEvaluations::run($run))->all(),
+            'latest_input' => $dataset->examples()->latest('created_at')->first()?->input,
         ];
     }
 }

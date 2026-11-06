@@ -11,7 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A named set of examples to run AI code on: inputs, and the outputs
- * expected for them. Filled with Spectra::dataset() or from a call's page.
+ * expected for them. Filled with Spectra::dataset(), from a call's page, or
+ * typed on the dataset's page.
  *
  * @property string $id
  * @property string $name

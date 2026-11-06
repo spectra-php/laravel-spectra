@@ -203,7 +203,7 @@ php artisan spectra:group-errors
 <a name="spectra-eval"></a>
 ## `spectra:eval`
 
-Runs an [evaluation](/evaluations) over its dataset and prints each scorer's result. Pass the class, or its name in `App\Evals`:
+Runs an [evaluation](/evaluations) over its [dataset](/datasets) and prints each scorer's result. Pass the class, or its name in `App\Evals`:
 
 ```shell
 php artisan spectra:eval SupportAnswerEval [--limit=10]

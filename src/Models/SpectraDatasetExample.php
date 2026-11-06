@@ -30,6 +30,13 @@ class SpectraDatasetExample extends Model
     protected $guarded = [];
 
     /**
+     * Adding or changing an example counts as updating its dataset.
+     *
+     * @var list<string>
+     */
+    protected $touches = ['dataset'];
+
+    /**
      * Get the attributes that should be cast.
      */
     protected function casts(): array

@@ -17,10 +17,14 @@ readonly class DatasetResponse extends DataTransferObject
      * @param  array<string, mixed>  $dataset
      * @param  array<int, array<string, mixed>>  $examples
      * @param  array<int, array<string, mixed>>  $runs
+     * @param  mixed  $latest_input  The newest example's input, which a new one starts from; null when there are none
+     * @param  bool  $can_curate  Whether the annotateSpectra gate lets the user change examples
      */
     public function __construct(
         public array $dataset,
         public array $examples,
         public array $runs,
+        public mixed $latest_input,
+        public bool $can_curate,
     ) {}
 }
