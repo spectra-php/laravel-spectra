@@ -31,9 +31,12 @@ Spectra ships these migration files:
 | `create_spectra_evaluation_tables` | Creates `spectra_datasets`, `spectra_dataset_examples`, `spectra_eval_runs` and `spectra_eval_results`, for [evaluations](/evaluations) (see [below](#evaluation-migration)) |
 | `change_budgetable_id_to_string_on_spectra_budgets_table` | Stores budget owner ids as strings, so [budgets](/budgets) work for integer and ULID keys on every database (see [below](#budgetable-id-migration)) |
 | `change_trace_id_to_string_on_spectra_requests_table` | Stores trace ids as strings of up to 64 characters, like the spans and scores tables, so `Spectra::withTraceId()` takes any id on every database (see [below](#trace-id-migration)) |
-| `create_spectra_dashboards_table` | Creates `spectra_dashboards`, for [dashboards](/dashboards) (see [below](#dashboards-migration)) |
-| `add_sections_to_spectra_dashboards_table` | Adds `sections` and `show_messages` to `spectra_dashboards`, for a dashboard's [pages](/dashboards#pages) (see [below](#dashboards-migration)) |
-| `drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table` | Makes the Costs page the one switch for a dashboard's costs, and ties every dashboard to one trackable (see [below](#dashboards-migration)) |
+| `create_spectra_dashboards_table` | Creates `spectra_dashboards`, for [shared dashboards](/dashboards) (see [below](#dashboards-migration)) |
+| `add_sections_to_spectra_dashboards_table` | Adds `sections` and `show_messages` to `spectra_dashboards`, for a shared dashboard's [pages](/dashboards#pages) (see [below](#dashboards-migration)) |
+| `drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table` | Makes the Costs page the one switch for a shared dashboard's costs, and ties every shared dashboard to one trackable (see [below](#dashboards-migration)) |
+| `add_stat_key_to_spectra_daily_stats_table` | Gives each daily stat row a unique key, so saving a call is one atomic write per row and the rows of calls without a trackable can't be created twice (see [below](#stat-key-migration)) |
+| `drop_redundant_indexes_from_spectra_requests_table` | Drops the indexes no query needs (see [below](#redundant-indexes-migration)) |
+| `create_spectra_request_payloads_table` | Creates `spectra_request_payloads`, which holds request and response bodies apart from the calls (see [below](#request-payloads-migration)) |
 
 <a name="publishing-schema-migrations"></a>
 ### Publishing Schema Migrations

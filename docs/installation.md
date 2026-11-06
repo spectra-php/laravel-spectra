@@ -118,7 +118,7 @@ The `dashboard.layout` option controls which model types the dashboard shows. Us
 <a name="separate-database"></a>
 ## Separate Database
 
-For high-volume applications, you may want Spectra to use its own database connection. This keeps Spectra's writes out of your application database, so they don't compete with your application queries for connections. To use a separate connection, set the `storage.connection` option:
+For high-volume applications, you may want Spectra to use its own database connection. This keeps Spectra's writes out of your application database, so they don't compete with your application queries for connections. [Running at High Volume](/production) covers this and the rest of the production setup. To use a separate connection, set the `storage.connection` option:
 
 ```php
 // config/spectra.php

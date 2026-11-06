@@ -9,17 +9,17 @@ The requirements are unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Larav
 
 **Quick checklist:**
 
-1. [Run the installer](#v4-migrations) for the seven new migrations, then `spectra:group-errors` (recommended).
+1. [Run the installer](#v4-migrations) for the new migrations, then `spectra:group-errors` (recommended).
 2. If `spectra:install` runs in a deploy script, [run `migrate` after it](#v4-install-scripts).
 3. If others use your dashboard in production, [define the new gates](#v4-gates).
 4. If you kept `RequestContext::$id`, [it is the saved id now](#v4-request-context).
-5. If you report on failed requests or read the daily stats, [recheck the numbers and rebuild the stats](#v4-failed-requests).
+5. If you report on failed requests or read the daily stats, [recheck the numbers and rebuild the stats](#v4-failed-requests). Everyone should rebuild once: [the screens read the stats now](#v4-rollups).
 6. If you extended a pricing class, wrote one for a custom provider, or bill with the scraped prices file, [move the prices to a pricing file](#v4-pricing-file).
 
 <a name="v4-migrations"></a>
 ### Run the Installer (Recommended) {#v4-migrations}
 
-4.0 adds [the scores migration](/migrations#scores-migration), [the prompt columns migration](/migrations#prompt-columns-migration), [the error fingerprint migration](/migrations#error-fingerprint-migration), [the annotation migration](/migrations#annotation-migration), [the evaluation migration](/migrations#evaluation-migration), [the budgetable id migration](/migrations#budgetable-id-migration), [the trace id migration](/migrations#trace-id-migration) and [the dashboards migration](/migrations#dashboards-migration). The installer publishes only the ones your app doesn't have yet, then asks if it should run them:
+4.0 adds [the scores migration](/migrations#scores-migration), [the prompt columns migration](/migrations#prompt-columns-migration), [the error fingerprint migration](/migrations#error-fingerprint-migration), [the annotation migration](/migrations#annotation-migration), [the evaluation migration](/migrations#evaluation-migration), [the budgetable id migration](/migrations#budgetable-id-migration), [the trace id migration](/migrations#trace-id-migration), [the shared dashboards migration](/migrations#dashboards-migration), [the stat key migration](/migrations#stat-key-migration), [the redundant indexes migration](/migrations#redundant-indexes-migration) and [the request payloads migration](/migrations#request-payloads-migration). The installer publishes only the ones your app doesn't have yet, then asks if it should run them:
 
 ```shell
 php artisan spectra:install
@@ -33,7 +33,7 @@ Then group the failures saved before the error fingerprint column existed:
 php artisan spectra:group-errors
 ```
 
-A published `config/spectra.php` doesn't need to be published again. The new keys (`alerts`, `annotations`, `dashboards`, `storage.redaction`, `storage.sampling`, `tracking.tool_spans`, `dashboard.maintenance`, `dashboard.playground`) default to 3.x behaviour, and their `SPECTRA_*` environment variables work under the published config. Publish it again only to set the new options in the file.
+A published `config/spectra.php` doesn't need to be published again. The new keys (`alerts`, `annotations`, `dashboards`, `storage.redaction`, `storage.sampling`, `tracking.tool_spans`, `dashboard.maintenance`, `dashboard.playground`, `dashboard.read_from_rollups`, `dashboard.exact_row_limit`) default to 3.x behaviour, and their `SPECTRA_*` environment variables work under the published config. Publish it again only to set the new options in the file.
 
 <a name="v4-install-scripts"></a>
 ### `spectra:install` in Scripts No Longer Migrates {#v4-install-scripts}

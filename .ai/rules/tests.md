@@ -30,7 +30,7 @@ Fake every HTTP call with `Http::fake([...])` or a Guzzle `MockHandler`. Firecra
 Keep the three parts as blocks separated by blank lines, with no `// Arrange` comments. One part may itself span more than one block. Assert only what this behaviour changes, not a whole `toArray()`.
 
 ## Database setup is the TestCase's job
-`tests/TestCase.php` runs the package migrations on Testbench's in-memory SQLite `testing` connection and creates a `users` table. Add a new migration to its list. Use `SpectraRequest::factory()` and the `Workbench\App\Models\User` model for trackables and budgets; create only the rows the test needs.
+`tests/TestCase.php` runs the package migrations on Testbench's in-memory SQLite `testing` connection and creates a `users` table. Add a new migration to its list. Use `SpectraRequest::factory()` and the `Workbench\App\Models\User` model for trackables and budgets; create only the rows the test needs. A factory row isn't in the daily stats, so `TestCase` turns `dashboard.read_from_rollups` off; a test of the screens on the daily stats turns it on and runs `StatsAggregator::rebuild()` (`RollupParityTest` compares both for every screen).
 
 ## Lock dashboard numbers on purpose
 `tests/Unit/Controllers/DashboardCharacterizationTest` pins the stats and trackable numbers. A change that moves them must be deliberate: update the expected values in the same change and say why.

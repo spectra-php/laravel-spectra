@@ -31,7 +31,7 @@ These settings control what Spectra saves to the database, and how. Use them to 
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `connection` | `string\|null` | `null` | Database connection name. `null` uses the application default. Set to a separate connection for high-volume applications to isolate observability writes. |
+| `connection` | `string\|null` | `null` | Database connection name. `null` uses the application default. Set to a separate connection for high-volume applications to isolate observability writes (see [Running at High Volume](/production)). |
 | `store_requests` | `bool` | `true` | Save request records to the database. When `false`, nothing is saved: requests are still tracked in memory, and still sent to the `RequestTracked` event and to OpenTelemetry. |
 | `store_responses` | `bool` | `true` | Persist response payloads (the JSON returned by the provider). |
 | `store_prompts` | `bool` | `true` | Store user prompt text and chat messages. Disable for privacy compliance (GDPR, CCPA). |
@@ -179,8 +179,8 @@ Choose whether Spectra saves requests synchronously, after the HTTP response is 
 | Mode | Config | Behavior | Best For |
 | --- | --- | --- | --- |
 | **Sync** (default) | Both `false` | Write to database immediately | Development, low-volume applications |
-| **After Response** | `after_response: true` | Write after HTTP response is sent | Production web applications without queues |
-| **Queue** | `enabled: true` | Dispatch `PersistSpectraRequestJob` | High-volume production applications |
+| **After Response** | `after_response: true` | Write after HTTP response is sent. The visitor doesn't wait, but the PHP worker stays busy until the write is done | Production web applications without queues |
+| **Queue** | `enabled: true` | Dispatch `PersistSpectraRequestJob` | High-volume production applications. Use Redis or another queue outside the database (see [Running at High Volume](/production#choose-how-calls-are-saved)) |
 
 > [!WARNING]
 > After-response mode only works during web requests. Console commands, queue workers, and scheduled tasks always persist synchronously unless queue mode is enabled.
@@ -251,6 +251,8 @@ Configure the built-in SPA dashboard.
 | `playground.enabled` | `bool` | `false` | Let the [Playground](/playground) send new requests, and stored calls again with edits, to a provider. Each run uses your API key and costs money. Using it also needs the `manageSpectra` gate. |
 | `playground.timeout` | `int` | `120` | How long a Playground run may wait for the provider, in seconds. |
 | `layout` | `string` | `full` | Which model types the dashboard displays. Options: `full`, `text`, `embedding`, `image`, `video`, `audio`. |
+| `read_from_rollups` | `bool` | `true` | Read screens from the daily stats instead of scanning `spectra_requests`, unless a filter needs individual calls. Turn it off while the daily stats are out of step. Env: `SPECTRA_DASHBOARD_READ_FROM_ROLLUPS`. See [Running at High Volume](/production#what-the-screens-read). |
+| `exact_row_limit` | `int` | `50000` | How many calls a period may hold before the lists stop reading all of them: traces and conversations list the latest ones with estimated totals, and the requests list sorts this many of the latest calls by cost, tokens or latency. Env: `SPECTRA_DASHBOARD_EXACT_ROW_LIMIT`. |
 | `date_format` | `string` | `M j, Y g:i:s A` | PHP date format string for timestamps in the dashboard. |
 
 <a name="dashboards"></a>

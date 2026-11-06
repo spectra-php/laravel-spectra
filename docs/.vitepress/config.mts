@@ -70,6 +70,7 @@ export default defineConfig({
           { text: 'Custom Providers', link: '/custom-providers' },
           { text: 'Artisan Commands', link: '/commands' },
           { text: 'Migrations', link: '/migrations' },
+          { text: 'Running at High Volume', link: '/production' },
           { text: 'Configuration', link: '/configuration' },
           { text: 'Troubleshooting', link: '/troubleshooting' }
         ]

@@ -34,12 +34,27 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Ollama: the legacy `POST /api/embeddings` endpoint is tracked too, as an embedding request at $0 like `/api/embed`. It was skipped altogether
 - Costs: a model that is missing from its provider's pricing catalog is reported instead of silently costing $0. Spectra logs a warning once per process for each such model, and the dashboard's Overview says under the spend total how many successful calls in the period were recorded at $0 for want of a price, and names the models. Providers without a catalog (Ollama) stay quiet, as do costs the provider reports itself (OpenRouter)
 
+- Dashboard: `dashboard.read_from_rollups` (`SPECTRA_DASHBOARD_READ_FROM_ROLLUPS`, on by default) and `dashboard.exact_row_limit` (`SPECTRA_DASHBOARD_EXACT_ROW_LIMIT`, 50000), see [Running at High Volume](https://spectraphp.com/production)
+- Requests list: a `cursor` parameter and `next_cursor` in the answer read the next page without an offset. `total_is_estimate` and `sorted_within_latest` say when a large table changed an answer; the traces and conversations lists have `total_is_estimate` and an `estimated` summary, and `ModelPerformance` has `sampled`
+- `spectra:prune --payload-hours=` deletes request and response bodies sooner than their calls, and `--pause=` waits between chunks
+
 #### Changed
 
 - Dashboard: built with Tailwind CSS 4, so it needs Safari 16.4, Chrome 111 or Firefox 128 or newer. The layout is unchanged; some status and badge colours (green, amber, red) shift slightly with Tailwind's new palette
 - Pricing: the PHP pricing classes (`Spectra\Pricing\OpenAIPricing` and the rest), `ProviderPricing::define()` and `populate()`, the `costs.pricing` config map and the `costs.use_scraped_prices` and `costs.scraped_prices_path` keys are gone; prices come from the bundled catalog and `costs.pricing_path`. `spectra:pricing-scrape` writes to `SPECTRA_PRICING_PATH` (default `resources/spectra/pricing.json`), and written to the bundled catalog itself (`composer pricing-scrape` in the package repository) it rewrites each scraped provider whole, keeping its notes (see the upgrade guide)
 - `RequestContext::$id` is the id the call is saved under (a UUID), so code inside `Spectra::track()` can score the call before it is saved. It used to be a separate ULID that was never stored
 - `spectra:install` without a terminal (`--no-interaction`, a Composer script) publishes the new migrations and no longer runs them, so it can sit in your app's `post-update-cmd` scripts. (see the `spectra:install` docs)
+
+- Dashboard: the Overview, Costs, Trackables, trackable pages and Errors screens read the daily stats instead of scanning `spectra_requests`, unless a filter needs individual calls. Numbers are unchanged, except that days whose requests were pruned stay in the totals. A list without such a filter no longer runs `COUNT(*)` over the period, and every list reads its filter options from the latest calls instead of the whole table
+- Dashboard: past `dashboard.exact_row_limit` calls in a period, the traces and conversations lists show the latest ones with estimated totals, and the requests list sorts the latest calls by cost, tokens or latency. Below it, every number stays exact
+- Performance card: each model's percentiles cover its latest 2,000 successful calls, read in one query, instead of a count and a sorted lookup per percentile over all of them
+- Errors screen: a group's models are counted from its latest 1,000 failures
+- Saving a call takes one commit instead of a commit per statement, and fewer statements: 6 instead of 11 for a call with a trackable
+- Request and response bodies are stored in `spectra_request_payloads`, apart from the calls. `$request->request` and `$request->response` work as before; rows saved before keep their bodies where they are
+- New trace ids are UUIDv7, so saving a call appends to the trace index instead of splitting a random page of it
+- Budgets read spend from the daily stats, so the cost of a check no longer grows with a user's history, a total limit no longer resets when old calls are pruned, and a failed call's cost no longer counts
+- `spectra:rebuild-stats` adds up each day in the database and replaces it in one transaction, at 12,600 rows/s on MySQL and 33,100 on PostgreSQL where it did 150 and 137
+- `spectra:prune` deletes oldest first with one short statement per table
 
 #### Fixed
 
@@ -77,7 +92,18 @@ All notable changes to `laravel-spectra` will be documented in this file.
 - Azure OpenAI: an image generation, speech or transcription call to a deployment is recorded under the deployment's name when the response names no model (`dall-e-3`, `tts-1`), so it is priced; it was recorded as `unknown` at $0. Chat and embedding calls keep taking the model from the response
 - Daily stats: `spectra_daily_stats` adds cost and latency for successful requests only, like every live query. It added every request's cost and latency, failed ones included, so after a prune the retained history over-reported spend and latency where calls failed; `avg_latency_ms` and `getAggregatedStats()` divide by the successful count. Run `spectra:rebuild-stats` once to correct the stored rows (see the upgrade guide)
 
+- Tracking: a call tracked inside your app's database transaction on the same connection no longer writes the daily stats until that transaction commits. Two transactions tracking two models in opposite orders could deadlock on those rows, which rolled back your app's work on MySQL and left your app's next queries failing on PostgreSQL, and a long transaction held up every call of that model. A failed save can no longer abort your transaction either
+- Daily stats: the rows of calls without a trackable could be created twice under load, because a unique index treats NULLs as different. Totals stayed right, but rows piled up. Each row is now one atomic upsert on a key, and a retried job no longer touches a row with float noise
+- Tracking: a queued job that died between saving a call and adding it to the daily stats left the call out for good, since its retry found the row and added nothing. They now commit together
+- Requests list: calls of the same second can no longer move between pages
+- Dashboard: the groups in the Overview's and Costs screen's breakdowns come back in a stable order
+- A model name over 100 characters no longer loses its daily stats on MySQL and PostgreSQL
+
 #### Upgrading
+
+- High volume: `php artisan spectra:install` publishes and runs `add_stat_key_to_spectra_daily_stats_table`, `drop_redundant_indexes_from_spectra_requests_table` and `create_spectra_request_payloads_table`. On PostgreSQL the first one blocks writes to `spectra_daily_stats` while its indexes build, so run it in a quiet moment or after `spectra:pause`. None of them touches the data in `spectra_requests`, and nothing breaks before they run: calls are counted the old way, bodies stay on the row, and the screens read the requests
+- Daily stats: run `php artisan spectra:rebuild-stats` once after that, and after importing or seeding rows yourself, since the screens read the stats now. See [The Screens Read the Daily Stats](https://spectraphp.com/upgrade#v4-rollups)
+- If you read `request` or `response` with raw SQL, read `spectra_request_payloads` for new calls too. If you filter on `batch_id` alone, add that index back yourself
 
 - Playground: nothing to do. It stays off until you set `SPECTRA_PLAYGROUND_ENABLED=true`
 - Pricing: if you extended a pricing class, wrote one for a custom provider or billed with the scraped prices file, move the prices to a pricing file and set `SPECTRA_PRICING_PATH`. A published config that still lists `costs.pricing` logs a warning once per process; with `use_scraped_prices` on, its `scraped_prices_path` is read until you set `SPECTRA_PRICING_PATH`. Set `SPECTRA_PRICING_CACHE=false` to parse the pricing files once per process instead of caching the index

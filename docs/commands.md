@@ -60,6 +60,8 @@ php artisan spectra:prune [--hours=24] [--stats-days=] [--chunk=1000]
 | `--hours=` | `24` | Keep requests from the last N hours. Older requests are deleted. |
 | `--stats-days=` | (not set) | Also delete daily stats older than N days. Without this option, daily stats are kept. |
 | `--chunk=` | `1000` | How many rows to delete per query |
+| `--payload-hours=` | (not set) | Also delete request and response bodies older than N hours, keeping the calls themselves. See [Keep Bodies for Less Time](/production#keep-bodies-for-less-time). |
+| `--pause=` | `0` | Milliseconds to wait between chunks, to leave more room for live writes on a busy database |
 
 The command deletes rows from `spectra_requests` whose `created_at` is older than the cutoff, rows from `spectra_spans` that started before it, and rows from `spectra_scores` created before it. It works in chunks, so a large table is not locked by one huge query. Their tags in `spectra_requests_tags` are removed by cascade delete. Media files stored for these requests (see [Media Persistence](/configuration#media-persistence)) are deleted from the media disk too.
 
@@ -95,7 +97,7 @@ Schedule::command('spectra:prune --hours=168 --stats-days=365')->daily();
 
 Rebuilds the `spectra_daily_stats` table from the raw `spectra_requests` records. Run it after data migrations, manual database edits, or bulk imports, or whenever the dashboard stats look out of sync with the requests. An upgrade from 1.x needs one rebuild; see [Rebuild the Daily Stats](/upgrade#rebuild-daily-stats).
 
-The command deletes the existing daily stats for the date range, then rebuilds them from scratch, grouped by date, provider, model, model type, and trackable entity.
+The command rebuilds one day at a time: the database adds up the day's requests, and those rows replace the day's stats in one transaction, so a screen never shows a day half rebuilt. Stats are grouped by date, provider, model, model type, and trackable entity. A call saved on a day while that day is being rebuilt can be missed, so rebuild finished days, or rebuild today again afterwards.
 
 ::: warning Pruned requests
 The stats are rebuilt only from the requests that still exist. If you pruned requests but kept their daily stats, rebuilding that date range deletes those stats. Use `--from` to rebuild only the days whose requests you still have.

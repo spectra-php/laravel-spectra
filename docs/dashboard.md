@@ -255,7 +255,7 @@ The dashboard follows your system theme. The moon and sun icon in the top bar sw
 <img class="screenshot" src="/images/dashboard/trace-detail-dark.png" alt="A trace timeline in dark mode" />
 
 <a name="demo-data"></a>
-## Trying It With Demo Data
+## Trying It With Demo Data {#demo-data}
 
 To try the dashboard without sending any AI requests, clone the repository and build the workbench. It seeds a month of traffic across 9 providers and 8 users, recorded through the real tracking pipeline:
 
