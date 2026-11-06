@@ -8,6 +8,7 @@ import Breadcrumb from '@/components/Breadcrumb.vue';
 import DocsLink from '@/components/DocsLink.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Skeleton from '@/components/Skeleton.vue';
+import JsonEditor from './JsonEditor.vue';
 import RunResult from './RunResult.vue';
 import { canAddMessages, detectShape, newMessage, readMessages, readSettings, rolesFor, writeMessages, writeSettings } from './body';
 import type { BodyShape, EditorMessage } from './body';
@@ -310,7 +311,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                         <template v-else>
                             <div>
                                 <label for="playground-json" class="mb-1 block text-xs text-gray-500 dark:text-gray-400">Request body, as the provider gets it</label>
-                                <textarea id="playground-json" v-model="jsonText" rows="22" spellcheck="false" class="form-input block !h-auto w-full resize-y font-mono !text-xs leading-relaxed"></textarea>
+                                <JsonEditor id="playground-json" v-model="jsonText" />
                                 <p v-if="jsonError" class="mt-1.5 text-xs text-red-600 dark:text-red-400">{{ jsonError }}</p>
                             </div>
                         </template>
