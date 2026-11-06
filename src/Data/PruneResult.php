@@ -19,5 +19,6 @@ readonly class PruneResult extends DataTransferObject
         public int $daily_stats,
         public int $scores = 0,
         public int $review_items = 0,
+        public int $payloads = 0,
     ) {}
 }

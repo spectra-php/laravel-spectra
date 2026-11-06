@@ -19,6 +19,7 @@ class TestCase extends Orchestra
         'spectra_requests',
         'spectra_tags',
         'spectra_requests_tags',
+        'spectra_request_payloads',
         'spectra_daily_stats',
         'spectra_budgets',
         'spectra_spans',
@@ -107,6 +108,7 @@ class TestCase extends Orchestra
             __DIR__.'/../database/migrations/2026_11_06_000004_drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table.php',
             __DIR__.'/../database/migrations/2026_11_06_000005_add_stat_key_to_spectra_daily_stats_table.php',
             __DIR__.'/../database/migrations/2026_11_06_000006_drop_redundant_indexes_from_spectra_requests_table.php',
+            __DIR__.'/../database/migrations/2026_11_06_000007_create_spectra_request_payloads_table.php',
         ] as $path) {
             $migration = include $path;
             $migration->up();

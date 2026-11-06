@@ -6,13 +6,16 @@ namespace Spectra\Actions\Maintenance;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Sleep;
 use Spectra\Data\PruneResult;
 use Spectra\Models\SpectraAnnotationItem;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraRequestPayload;
 use Spectra\Models\SpectraScore;
 use Spectra\Models\SpectraSpan;
 use Spectra\Support\Maintenance\MaintenanceHistory;
+use Spectra\Support\Tracking\PayloadStore;
 use Throwable;
 
 /**
@@ -26,18 +29,27 @@ use Throwable;
 class PruneEntries
 {
     /**
+     * How long to wait between chunks of this run.
+     */
+    protected int $pauseMs = 0;
+
+    /**
      * Prune, record the run for the dashboard, and return what was deleted.
      *
      * @param  int  $hours  Keep requests and spans from the last N hours
      * @param  int|null  $statsDays  Also delete daily stats older than N days; null keeps them
      * @param  int  $chunk  Rows deleted per query
+     * @param  int|null  $payloadHours  Also delete request and response bodies older than N hours, keeping the calls; null keeps them as long as their calls
+     * @param  int  $pauseMs  Time to wait between chunks, to leave room for live writes
      */
-    public function __invoke(int $hours, ?int $statsDays = null, int $chunk = 1000): PruneResult
+    public function __invoke(int $hours, ?int $statsDays = null, int $chunk = 1000, ?int $payloadHours = null, int $pauseMs = 0): PruneResult
     {
         $cutoff = now()->subHours(max(0, $hours));
         $chunk = max(1, $chunk);
+        $this->pauseMs = max(0, $pauseMs);
 
         [$requests, $mediaFiles] = $this->pruneRequests($cutoff, $chunk);
+        $payloads = $payloadHours === null ? 0 : $this->prunePayloads(now()->subHours(max(0, $payloadHours)), $chunk);
 
         $result = new PruneResult(
             requests: $requests,
@@ -46,12 +58,14 @@ class PruneEntries
             daily_stats: $statsDays === null ? 0 : $this->pruneDailyStats($statsDays),
             scores: static::scoresTableExists() ? $this->pruneScores($cutoff, $chunk) : 0,
             review_items: static::reviewItemsTableExists() ? $this->pruneReviewItems($cutoff, $chunk) : 0,
+            payloads: $payloads,
         );
 
         MaintenanceHistory::record(MaintenanceHistory::PRUNE, [
             ...$result->toArray(),
             'hours' => $hours,
             'stats_days' => $statsDays,
+            'payload_hours' => $payloadHours,
         ]);
 
         return $result;
@@ -93,24 +107,91 @@ class PruneEntries
     {
         $requestCount = 0;
         $fileCount = 0;
+        $connection = (new SpectraRequest)->getConnection();
+        $hasPayloads = app(PayloadStore::class)->isAvailable();
 
-        // Delete in chunks so a large table isn't locked by one huge query.
+        // Oldest first through the created_at index, one short statement per
+        // table, so no lock outlives its own chunk and a live write, which only
+        // touches the newest rows, never waits for this.
         do {
             $requests = SpectraRequest::query()
-                ->where('created_at', '<', $cutoff)
+                ->where('created_at', '<', $cutoff)->oldest()
                 ->limit($chunk)
                 ->get(['id', 'media_storage_path']);
 
+            if ($requests->isEmpty()) {
+                break;
+            }
+
+            $ids = $requests->modelKeys();
             $fileCount += $this->deleteMedia($requests->pluck('media_storage_path')->all());
 
-            $deleted = $requests->isEmpty()
-                ? 0
-                : SpectraRequest::query()->whereKey($requests->modelKeys())->delete();
+            // Removing the links first saves the cascade a lookup per request.
+            $connection->table('spectra_requests_tags')->whereIn('request_id', $ids)->delete();
 
+            if ($hasPayloads) {
+                SpectraRequestPayload::query()->whereKey($ids)->delete();
+            }
+
+            $deleted = SpectraRequest::query()->whereKey($ids)->delete();
             $requestCount += $deleted;
+
+            $this->pause();
         } while ($deleted > 0);
 
         return [$requestCount, $fileCount];
+    }
+
+    /**
+     * Delete the bodies of calls older than the cutoff, keeping the calls, and
+     * return how many calls lost theirs.
+     */
+    protected function prunePayloads(CarbonInterface $cutoff, int $chunk): int
+    {
+        $count = 0;
+
+        if (app(PayloadStore::class)->isAvailable()) {
+            do {
+                $ids = SpectraRequestPayload::query()->where('created_at', '<', $cutoff)->oldest()->limit($chunk)->pluck('request_id');
+                $deleted = $ids->isEmpty() ? 0 : SpectraRequestPayload::query()->whereKey($ids->all())->delete();
+                $count += $deleted;
+
+                $this->pause();
+            } while ($deleted > 0);
+        }
+
+        // Rows from before the payloads table hold their bodies themselves. The
+        // walk moves on with each chunk, so it doesn't reread the emptied rows.
+        $from = null;
+
+        do {
+            $rows = SpectraRequest::query()
+                ->where('created_at', '<', $cutoff)
+                ->when($from !== null, fn ($query) => $query->where('created_at', '>=', $from))
+                ->where(fn ($query) => $query->whereNotNull('request')->orWhereNotNull('response'))->oldest()
+                ->limit($chunk)
+                ->toBase()
+                ->get(['id', 'created_at']);
+
+            if ($rows->isNotEmpty()) {
+                $count += SpectraRequest::query()->whereKey($rows->pluck('id')->all())->update(['request' => null, 'response' => null]);
+                $from = $rows->last()->created_at;
+
+                $this->pause();
+            }
+        } while ($rows->count() === $chunk);
+
+        return $count;
+    }
+
+    /**
+     * Wait between chunks, when asked to.
+     */
+    protected function pause(): void
+    {
+        if ($this->pauseMs > 0) {
+            Sleep::for($this->pauseMs)->milliseconds();
+        }
     }
 
     /**

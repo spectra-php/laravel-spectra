@@ -55,6 +55,7 @@ use Spectra\Support\Redaction\Redactor;
 use Spectra\Support\RequestTransformer;
 use Spectra\Support\Scoring\ScoreRecorder;
 use Spectra\Support\StatsAggregator;
+use Spectra\Support\Tracking\PayloadStore;
 use Spectra\Support\Tracking\RecordingSwitch;
 use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\RequestWriter;
@@ -111,6 +112,7 @@ class SpectraServiceProvider extends ServiceProvider
 
         $this->app->singleton(StatsAggregator::class, fn () => new StatsAggregator);
         $this->app->singleton(RollupSchema::class);
+        $this->app->singleton(PayloadStore::class);
 
         $this->app->singleton(RequestTransformer::class, function () {
             $class = config('spectra.integrations.request_transformer', RequestTransformer::class);

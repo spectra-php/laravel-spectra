@@ -243,11 +243,18 @@ class RequestWriter
      */
     protected function save(array $attributes, bool $mayExist = true): array
     {
+        $store = app(PayloadStore::class);
+        $bodies = $store->isAvailable() ? Arr::only($attributes, PayloadStore::ATTRIBUTES) : [];
+        $columns = Arr::except($attributes, array_keys($bodies));
+
         $existing = $mayExist ? $this->findExisting($attributes) : null;
 
         if ($existing === null) {
             try {
-                return [$this->create($attributes), null];
+                $request = $this->create($columns);
+                $store->save($request, $bodies);
+
+                return [$request, null];
             } catch (UniqueConstraintViolationException $e) {
                 // Another worker saved the same response id or row id first.
                 $existing = $this->findExisting($attributes) ?? throw $e;
@@ -261,7 +268,7 @@ class RequestWriter
         // one from the request that started the job.
         $keep = ['id', 'created_at', 'started_at', 'origin', 'span_id', 'parent_span_id'];
 
-        if (blank($attributes['request'] ?? null) && filled($existing->getAttribute('request'))) {
+        if (blank($attributes['request'] ?? null) && $bodies === [] && filled($existing->getAttribute('request'))) {
             $keep[] = 'request';
         }
 
@@ -270,7 +277,16 @@ class RequestWriter
             $keep[] = 'model';
         }
 
-        $existing->fill(Arr::except($this->withoutMissingColumns($attributes), $keep))->save();
+        // A row from before the payloads table holds its bodies itself, and those
+        // are read first: a newer one must not stay hidden behind them.
+        foreach (array_keys(array_filter($bodies, filled(...))) as $attribute) {
+            if ($existing->getRawOriginal($attribute) !== null) {
+                $columns[$attribute] = null;
+            }
+        }
+
+        $existing->fill(Arr::except($this->withoutMissingColumns($columns), $keep))->save();
+        $store->save($existing, $bodies);
 
         return [$existing, $previous];
     }

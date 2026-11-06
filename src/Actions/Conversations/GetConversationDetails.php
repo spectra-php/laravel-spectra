@@ -15,6 +15,7 @@ use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraTag;
 use Spectra\Support\MessageTextExtractor;
 use Spectra\Support\Query\RequestAggregateQuery;
+use Spectra\Support\Tracking\PayloadStore;
 
 /**
  * A conversation as the transcript screen shows it: its calls grouped into
@@ -36,6 +37,7 @@ class GetConversationDetails
      * Create a new get conversation details action instance.
      */
     public function __construct(
+        private readonly PayloadStore $payloads,
         private readonly MessageTextExtractor $messageTextExtractor,
         private readonly BuildModelBreakdown $buildModelBreakdown,
         private readonly ResolveSoleTrackable $resolveSoleTrackable,
@@ -64,6 +66,8 @@ class GetConversationDetails
             ->orderBy('id')
             ->limit($limit)
             ->get();
+
+        $this->payloads->loadInto($calls);
 
         return new ConversationDetailsResponse(
             conversation_id: $conversationId,
