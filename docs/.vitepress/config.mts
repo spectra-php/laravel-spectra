@@ -26,16 +26,35 @@ export default defineConfig({
         ]
       },
       {
-        text: 'Core Concepts',
+        text: 'Tracking',
         items: [
           { text: 'Usage', link: '/usage' },
           { text: 'Dashboard', link: '/dashboard' },
+          { text: 'Shared Dashboards', link: '/dashboards' },
           { text: 'Models', link: '/models' },
+          { text: 'Tags', link: '/tags' },
+          { text: 'Metadata', link: '/metadata' },
+          { text: 'Tools', link: '/tools' }
+        ]
+      },
+      {
+        text: 'Costs',
+        items: [
           { text: 'Pricing', link: '/pricing' },
           { text: 'Costs', link: '/costs' },
           { text: 'Budgets', link: '/budgets' },
-          { text: 'Tags', link: '/tags' },
-          { text: 'Metadata', link: '/metadata' }
+          { text: 'Alerts', link: '/alerts' }
+        ]
+      },
+      {
+        text: 'Quality',
+        items: [
+          { text: 'Scores', link: '/scores' },
+          { text: 'Prompts', link: '/prompts' },
+          { text: 'Annotation Queues', link: '/annotations' },
+          { text: 'Datasets', link: '/datasets' },
+          { text: 'Evaluations', link: '/evaluations' },
+          { text: 'Playground', link: '/playground' }
         ]
       },
       {
@@ -51,6 +70,7 @@ export default defineConfig({
           { text: 'Custom Providers', link: '/custom-providers' },
           { text: 'Artisan Commands', link: '/commands' },
           { text: 'Migrations', link: '/migrations' },
+          { text: 'Running at High Volume', link: '/production' },
           { text: 'Configuration', link: '/configuration' },
           { text: 'Troubleshooting', link: '/troubleshooting' }
         ]

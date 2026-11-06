@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace Spectra\Testing;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use PHPUnit\Framework\Assert;
 use Spectra\Data\TokenMetrics;
+use Spectra\Enums\ScoreSource;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraScore;
 use Spectra\Spectra;
+use Spectra\Support\Annotations\AnnotationQueues;
+use Spectra\Support\Scoring\ScoreRecorder;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\ResponseProcessor;
 
@@ -28,11 +33,31 @@ class SpectraFake extends Spectra
     protected array $fakeResponses = [];
 
     /**
-     * Spans opened with span(), in the order they ended.
+     * Spans opened with span() and tool(), in the order they ended. A tool's
+     * attributes are its arguments.
      *
-     * @var array<int, array{name: string, attributes: array<string, mixed>, status: string, exception: ?\Throwable}>
+     * @var array<int, array{name: string, kind: string, attributes: array<string, mixed>, id: ?string, result: mixed, status: string, exception: ?\Throwable}>
      */
     protected array $spans = [];
+
+    /**
+     * Shared dashboards kept in memory for dashboard().
+     */
+    protected ?FakeDashboards $dashboards = null;
+
+    /**
+     * Traces queued with queueForReview().
+     *
+     * @var array<int, array{queue: string, trace_id: string}>
+     */
+    protected array $reviewQueue = [];
+
+    /**
+     * Scores recorded with score(), as the columns they would be saved with.
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    protected array $scores = [];
 
     protected bool $enabled = true;
 
@@ -75,7 +100,7 @@ class SpectraFake extends Spectra
     }
 
     /**
-     * Start a request context with the global tags and metadata applied.
+     * Start a request context with the global tags, metadata and conversation applied.
      *
      * @param  array<string, mixed>  $options
      */
@@ -87,6 +112,10 @@ class SpectraFake extends Spectra
             ...$options,
             'tags' => $this->mergedTags($options['tags'] ?? []),
             'metadata' => array_merge($this->globalMetadata, $options['metadata'] ?? []),
+            'prompt_name' => $options['prompt_name'] ?? $this->scopedPrompt['name'] ?? null,
+            'prompt_version' => $options['prompt_version'] ?? $this->scopedPrompt['version'] ?? null,
+            'conversation_id' => $options['conversation_id'] ?? $this->globalConversationId,
+            'conversation_turn' => isset($options['conversation_id']) ? ($options['conversation_turn'] ?? null) : ($options['conversation_turn'] ?? $this->globalConversationTurn),
         ]);
     }
 
@@ -134,23 +163,55 @@ class SpectraFake extends Spectra
             return $callback();
         }
 
+        return $this->runFakeSpan($name, 'span', $callback, $attributes);
+    }
+
+    /**
+     * Run the tool and remember it as a `tool` span instead of storing it.
+     *
+     * @template TResult
+     *
+     * @param  callable(): TResult  $callback
+     * @param  array<string, mixed>  $arguments
+     * @return TResult
+     */
+    public function tool(string $name, callable $callback, array $arguments = [], ?string $id = null): mixed
+    {
+        if (! $this->isEnabled()) {
+            return $callback();
+        }
+
+        return $this->runFakeSpan($name, 'tool', $callback, $arguments, $id);
+    }
+
+    /**
+     * Run the callback and remember the span it made.
+     *
+     * @template TResult
+     *
+     * @param  callable(): TResult  $callback
+     * @param  array<string, mixed>  $attributes
+     * @return TResult
+     */
+    protected function runFakeSpan(string $name, string $kind, callable $callback, array $attributes, ?string $id = null): mixed
+    {
         try {
             $result = $callback();
         } catch (\Throwable $e) {
-            $this->spans[] = ['name' => $name, 'attributes' => $attributes, 'status' => 'error', 'exception' => $e];
+            $this->spans[] = ['name' => $name, 'kind' => $kind, 'attributes' => $attributes, 'id' => $id, 'result' => null, 'status' => 'error', 'exception' => $e];
 
             throw $e;
         }
 
-        $this->spans[] = ['name' => $name, 'attributes' => $attributes, 'status' => 'ok', 'exception' => null];
+        $this->spans[] = ['name' => $name, 'kind' => $kind, 'attributes' => $attributes, 'id' => $id, 'result' => $result, 'status' => 'ok', 'exception' => null];
 
         return $result;
     }
 
     /**
-     * Get the spans recorded with span(), in the order they ended.
+     * Get the spans recorded with span() and tool(), in the order they ended.
      *
-     * @return array<int, array{name: string, attributes: array<string, mixed>, status: string, exception: ?\Throwable}>
+     * @return array<int, array{name: string, kind: string, attributes: array<string, mixed>, id: ?string, result: mixed, status: string, exception: ?\Throwable}>
      */
     public function getSpans(): array
     {
@@ -169,6 +230,139 @@ class SpectraFake extends Spectra
         );
 
         Assert::assertNotEmpty($matching, "Expected a span named [{$name}] to be recorded, but none matched.");
+    }
+
+    /**
+     * Assert the tool ran through Spectra::tool(), and that the callback
+     * (given its arguments and the span) accepts one of its runs when given.
+     */
+    public function assertToolCalled(string $name, ?callable $callback = null): void
+    {
+        $matching = Arr::where(
+            $this->spans,
+            fn (array $span) => $span['kind'] === 'tool' && $span['name'] === $name && ($callback === null || $callback($span['attributes'], $span)),
+        );
+
+        Assert::assertNotEmpty($matching, "Expected the tool [{$name}] to be called, but it was not.");
+    }
+
+    /**
+     * Check the score like Spectra::score() and remember it instead of saving it.
+     *
+     * @param  array<string, mixed>  $metadata
+     */
+    public function score(
+        string $name,
+        int|float|bool|string $value,
+        SpectraRequest|string|null $request = null,
+        ?string $traceId = null,
+        ?string $conversationId = null,
+        ?string $comment = null,
+        ScoreSource|string $source = ScoreSource::Api,
+        ?Model $author = null,
+        array $metadata = [],
+    ): ?SpectraScore {
+        if ($request === null && $traceId === null && $conversationId === null) {
+            $traceId = $this->currentTraceId() ?? 'fake-trace';
+        }
+
+        $attributes = app(ScoreRecorder::class)->attributes(
+            $name, $value, $request, $traceId, $conversationId, $comment, $source, $author, $metadata,
+        );
+
+        if (! $this->isEnabled()) {
+            return null;
+        }
+
+        $this->scores[] = $attributes;
+
+        return new SpectraScore($attributes);
+    }
+
+    /**
+     * Get the scores recorded with score(), as the columns they would be saved with.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getScores(): array
+    {
+        return $this->scores;
+    }
+
+    /**
+     * Assert a score with this name was recorded, and that the callback (given
+     * the score's columns) accepts one of them when given.
+     */
+    public function assertScored(string $name, ?callable $callback = null): void
+    {
+        $matching = Arr::where(
+            $this->scores,
+            fn (array $score) => $score['name'] === $name && ($callback === null || $callback($score)),
+        );
+
+        Assert::assertNotEmpty($matching, "Expected a score named [{$name}] to be recorded, but none matched.");
+    }
+
+    /**
+     * Assert no score was recorded, or none with this name.
+     */
+    public function assertNotScored(?string $name = null): void
+    {
+        $matching = Arr::where($this->scores, fn (array $score) => $name === null || $score['name'] === $name);
+
+        Assert::assertEmpty($matching, $name === null ? 'Expected no scores to be recorded.' : "Expected no score named [{$name}] to be recorded.");
+    }
+
+    /**
+     * Remember the trace as queued for review instead of saving it. The
+     * queue must be configured, as it must for the real call.
+     */
+    public function queueForReview(string $queue, ?string $traceId = null): bool
+    {
+        app(AnnotationQueues::class)->find($queue);
+        $traceId ??= $this->currentTraceId() ?? 'fake-trace';
+
+        $this->reviewQueue[] = ['queue' => $queue, 'trace_id' => $traceId];
+
+        return true;
+    }
+
+    /**
+     * Get the shared dashboards, kept in memory instead of saved.
+     */
+    public function dashboard(): FakeDashboards
+    {
+        return $this->dashboards ??= app(FakeDashboards::class);
+    }
+
+    /**
+     * Assert a dashboard (the named one, or any) exists.
+     */
+    public function assertDashboardCreated(?string $name = null): void
+    {
+        $matching = $this->dashboard()->list()->filter(fn ($dashboard) => $name === null || $dashboard->name === $name);
+
+        Assert::assertNotEmpty($matching, $name === null ? 'Expected a dashboard to be created, but none was.' : "Expected a dashboard named [{$name}] to be created, but none was.");
+    }
+
+    /**
+     * Assert a dashboard (the given one, or any) was deleted.
+     */
+    public function assertDashboardDeleted(?string $id = null): void
+    {
+        $deleted = $this->dashboard()->deleted;
+
+        Assert::assertTrue($id === null ? $deleted !== [] : in_array($id, $deleted, true), $id === null ? 'Expected a dashboard to be deleted, but none was.' : "Expected the dashboard [{$id}] to be deleted, but it wasn't.");
+    }
+
+    /**
+     * Assert a trace (the given one, or any) was queued for review in the queue.
+     */
+    public function assertQueuedForReview(string $queue, ?string $traceId = null): void
+    {
+        $matching = Arr::where($this->reviewQueue, fn (array $item) => $item['queue'] === $queue && ($traceId === null || $item['trace_id'] === $traceId));
+
+        Assert::assertNotEmpty($matching, "Expected a trace to be queued for review in [{$queue}], but none was.");
     }
 
     /**
@@ -241,7 +435,7 @@ class SpectraFake extends Spectra
      */
     public function getSuccessful(): array
     {
-        return Arr::where($this->recorded, fn ($r) => $r['type'] === 'success');
+        return Arr::where($this->recorded, fn ($record) => $record['type'] === 'success');
     }
 
     /**
@@ -251,7 +445,7 @@ class SpectraFake extends Spectra
      */
     public function getFailed(): array
     {
-        return Arr::where($this->recorded, fn ($r) => $r['type'] === 'failure');
+        return Arr::where($this->recorded, fn ($record) => $record['type'] === 'failure');
     }
 
     /**
@@ -284,7 +478,7 @@ class SpectraFake extends Spectra
      */
     public function assertProviderUsed(string $provider): void
     {
-        $this->assertTracked(fn ($r) => $r['context']->provider === $provider);
+        $this->assertTracked(fn ($record) => $record['context']->provider === $provider);
     }
 
     /**
@@ -292,7 +486,7 @@ class SpectraFake extends Spectra
      */
     public function assertModelUsed(string $model): void
     {
-        $this->assertTracked(fn ($r) => $r['context']->model === $model);
+        $this->assertTracked(fn ($record) => $record['context']->model === $model);
     }
 
     /**
@@ -302,9 +496,9 @@ class SpectraFake extends Spectra
      */
     public function assertTrackedWithTags(array $tags): void
     {
-        $this->assertTracked(function ($r) use ($tags) {
+        $this->assertTracked(function ($record) use ($tags) {
             foreach ($tags as $key => $value) {
-                if (! isset($r['context']->tags[$key]) || $r['context']->tags[$key] !== $value) {
+                if (! isset($record['context']->tags[$key]) || $record['context']->tags[$key] !== $value) {
                     return false;
                 }
             }
@@ -320,9 +514,9 @@ class SpectraFake extends Spectra
      */
     public function assertTrackedWithMetadata(array $metadata): void
     {
-        $this->assertTracked(function ($r) use ($metadata) {
+        $this->assertTracked(function ($record) use ($metadata) {
             foreach ($metadata as $key => $value) {
-                if (! array_key_exists($key, $r['context']->metadata) || $r['context']->metadata[$key] !== $value) {
+                if (! array_key_exists($key, $record['context']->metadata) || $record['context']->metadata[$key] !== $value) {
                     return false;
                 }
             }
@@ -370,7 +564,7 @@ class SpectraFake extends Spectra
     public function assertTotalTokens(int $expectedTokens): void
     {
         $actualTokens = collect($this->recorded)
-            ->sum(fn ($r) => $r['context']->promptTokens + $r['context']->completionTokens);
+            ->sum(fn ($record) => $record['context']->promptTokens + $record['context']->completionTokens);
 
         Assert::assertEquals(
             $expectedTokens,
@@ -380,12 +574,13 @@ class SpectraFake extends Spectra
     }
 
     /**
-     * Forget the recorded requests and spans.
+     * Forget the recorded requests, spans and scores.
      */
     public function reset(): self
     {
         $this->recorded = [];
         $this->spans = [];
+        $this->scores = [];
 
         return $this;
     }

@@ -19,7 +19,7 @@ class GetOverviewStats
      */
     public function __invoke(DateRange $dateRange, string $layout): OverviewStatsResponse
     {
-        $stats = RequestAggregateQuery::make($dateRange)
+        $stats = RequestAggregateQuery::fromRollups($dateRange)
             ->forLayout($layout)
             ->countAs('total_requests')
             ->tokenSum()

@@ -19,5 +19,6 @@ readonly class ConversationsSummary extends DataTransferObject
         public float $total_cost_in_cents,
         public float $avg_cost_in_cents,
         public float $avg_turn_count,
+        public bool $estimated = false,
     ) {}
 }

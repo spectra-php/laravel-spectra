@@ -22,7 +22,7 @@ class GetTrackableRequestsByDate
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {
         return RequestByDate::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->forTrackable($type, $id)
                 ->byDate()
                 ->countAs()

@@ -1,6 +1,6 @@
 # Costs
 
-Spectra calculates the cost of every tracked AI request. It uses the [pricing catalog](/pricing) (or your [scraped prices](/pricing#scraped-prices), when you turn them on) and the metrics extracted from each response: tokens, image count, audio duration, page count, or character count, depending on the model type.
+Spectra calculates the cost of every tracked AI request. It uses the [pricing catalog](/pricing) (and [your own pricing file](/pricing#your-own-prices), when you have one) and the metrics extracted from each response: tokens, image count, audio duration, page count, or character count, depending on the model type.
 
 The dashboard's **Costs** screen shows where the money goes: daily spend, the share of each provider, cost per model and the users who spend the most (see [Dashboard](/dashboard#costs)).
 
@@ -39,7 +39,7 @@ Each model in the pricing catalog has a `pricing_unit` that decides how its cost
 | `request` | Models with a flat price per call | Per successful request |
 
 <a name="token-model"></a>
-## How Tokens Are Counted
+## How Tokens Are Counted {#token-model}
 
 Every provider reports usage in its own way. Spectra turns it into one shape for all providers:
 
@@ -57,6 +57,10 @@ The other fields are a breakdown of these two totals, so nothing is counted twic
 | Reasoning tokens | Completion tokens | `reasoning_tokens` |
 | Audio output tokens | Completion tokens | Used for cost only |
 | Image output tokens | Completion tokens | Used for cost only |
+
+A call's page shows this breakdown, with what each part cost:
+
+<img class="screenshot" src="/images/dashboard/request-token-usage.png" alt="Input split into uncached tokens and cache reads, output into the answer and reasoning" />
 
 <a name="token-based-cost-formula"></a>
 ## Token-Based Cost Formula
@@ -155,7 +159,7 @@ If you report in another currency, add a rate for `USD` too. It is used for the 
 <a name="pricing-tiers"></a>
 ## Pricing Tiers
 
-Some providers offer several pricing tiers with different prices for the same model. Spectra supports per-tier pricing, so costs are right no matter how you call the API.
+A pricing tier is a different price list for the same model: pay less to wait longer (batch), or more to be served first (priority). Some providers offer several, and Spectra prices each call at the tier it was served on, so costs are right no matter how you call the API.
 
 | Tier | Description | Built-in catalogs |
 | --- | --- | --- |
@@ -170,7 +174,7 @@ Some providers offer several pricing tiers with different prices for the same mo
 A model that does not list the requested tier is billed at its `standard` price.
 
 <a name="tier-order"></a>
-### Which Tier Is Used
+### Which Tier Is Used {#tier-order}
 
 Spectra picks the tier in this order:
 
@@ -183,7 +187,7 @@ Spectra picks the tier in this order:
 The tier in the response wins over the tier in the request. A `priority` request that the provider served at `standard` is priced at `standard`.
 
 <a name="configuring-tiers"></a>
-### Configuring the Default Tier
+### Configuring the Default Tier {#configuring-tiers}
 
 Configure the default tier per provider in `config/spectra.php`. It is used when you did not set a tier and neither the request nor the response says which tier was used:
 
@@ -203,7 +207,7 @@ Configure the default tier per provider in `config/spectra.php`. It is used when
 You can list any provider slug here.
 
 <a name="per-request-tier"></a>
-### Per-Request Tier Override
+### Per-Request Tier Override {#per-request-tier}
 
 Override the tier for one request with `withAITracking`:
 
@@ -256,9 +260,9 @@ $expensive = SpectraRequest::orderByDesc('total_cost_in_cents')
     ->get();
 ```
 
-A request is **successful** when its status code is 2xx and **failed** otherwise, including a 3xx or a missing status code, so the two always add up to every request. `SpectraRequest::successful()` / `failed()`, `isSuccessful()` / `isFailed()` and the `is_failed` field sent to integrations all use this rule.
+A request is **successful** when its status code is 2xx and no error was recorded, and **failed** otherwise: a 3xx, a 4xx or 5xx, a missing status code, or an error on a 2xx answer (a stream that broke off, or an async job the provider reports as failed inside an HTTP 200, such as a Replicate prediction or an OpenAI background response). The two always add up to every request. `SpectraRequest::successful()` / `failed()`, `isSuccessful()` / `isFailed()`, the `is_failed` field sent to integrations, the dashboard, the alerts and the daily stats all use this one rule; `SpectraRequest::SUCCESSFUL_SQL` and `FAILED_SQL` hold it as SQL for your own raw queries.
 
-Spectra's own reports follow one convention: request counts (and token totals) include failed requests, while cost and latency cover successful requests only, so a failed call never adds spend or skews latency. This applies to the dashboard, to `Spectra::usage()` (`stats()`, `byProvider()`, `byModel()`, `dailyUsage()`, `totalCostCents()`, `averageLatency()`) and to the `HasAiUsage` methods (`getAiUsageForPeriod()`, `getAiUsageByProvider()`, `getAiUsageByModel()`). `Spectra::costs()` starts from successful requests only, so the request counts it returns are counts of successful requests. The raw-model queries above sum every row; add `->successful()` to match the reports.
+Spectra's own reports follow one convention: request counts (and token totals) include failed requests, while cost and latency cover successful requests only, so a failed call never adds spend or skews latency. This applies to the dashboard, to the daily stats (`spectra_daily_stats`), to `Spectra::usage()` (`stats()`, `byProvider()`, `byModel()`, `dailyUsage()`, `totalCostCents()`, `averageLatency()`) and to the `HasAiUsage` methods (`getAiUsageForPeriod()`, `getAiUsageByProvider()`, `getAiUsageByModel()`). `Spectra::costs()` starts from successful requests only, so the request counts it returns are counts of successful requests. The raw-model queries above sum every row; add `->successful()` to match the reports.
 
 A date-only end bound (`'2026-01-31'`) passed to `between()` or `getAiUsageForPeriod()` includes that whole day.
 
@@ -316,4 +320,6 @@ A request costs zero when:
 - The model is priced per request and the request failed
 - An OpenAI Chat Completions stream was sent without `stream_options.include_usage` (see [Streaming](/usage#streaming))
 
-To add pricing for a missing model, create a [custom pricing class](/pricing#customizing-pricing).
+A model that is missing from its provider's catalog is not silent: Spectra logs a warning once per process for each such model (`no price for the openai model 'ft:gpt-4o-mini:acme'`), and the dashboard's Overview says under the spend total how many successful calls in the period were recorded at $0 for want of a price, and for which models. Providers without a catalog (Ollama, a custom provider) are tracked at $0 on purpose and are left out of both.
+
+To add pricing for a missing model, add it to [your pricing file](/pricing#your-own-prices), by hand or with [`spectra:pricing-scrape`](/pricing#scraping-prices).

@@ -1,25 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
 
-const props = defineProps({
-    content: {
-        type: String,
-        default: ''
-    },
-    maxHeight: {
-        type: String,
-        default: '24rem'
-    },
-    variant: {
-        type: String,
-        default: 'default',
-        validator: (value) => ['default', 'error'].includes(value)
-    }
+const props = withDefaults(defineProps<{
+    content?: string;
+    maxHeight?: string;
+    variant?: 'default' | 'error';
+}>(), {
+    content: '',
+    maxHeight: '24rem',
+    variant: 'default',
 });
 
 const copied = ref(false);
 
-const copy = async (text) => {
+const copy = async (text: string) => {
     try {
         await navigator.clipboard.writeText(text);
     } catch {
@@ -61,6 +55,8 @@ const copy = async (text) => {
 </template>
 
 <style scoped>
+@reference "../../css/app.css";
+
 .code-block {
     @apply overflow-hidden border border-gray-200 dark:border-gray-800;
 }

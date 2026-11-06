@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Factories\Sequence;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\StatsAggregator;
+use Spectra\Support\Tracking\ProviderErrorException;
 use Workbench\App\Models\User;
 
 /**
  * StatsAggregator writes each request into the global and per-trackable
- * daily stats, and SpectraDailyStat reads them back aggregated by period,
- * day, provider and model type.
+ * daily stats, counting failed requests but adding cost and latency for
+ * successful ones only, and SpectraDailyStat reads them back aggregated by
+ * period, day, provider and model type.
  */
 it('records counts, tokens and cost on the global daily stat for a request', function () {
     $aggregator = app(StatsAggregator::class);
@@ -87,6 +89,66 @@ it('counts a 500 response as failed and halves the success rate', function () {
         ->and($stat->successful_count)->toBe(1)
         ->and($stat->failed_count)->toBe(1)
         ->and($stat->successRate)->toBe(50.0);
+});
+
+it('counts a failed request without adding its cost or latency to the day', function () {
+    $aggregator = app(StatsAggregator::class);
+
+    SpectraRequest::factory()
+        ->count(3)
+        ->state(new Sequence(
+            ['status_code' => 200, 'total_cost_in_cents' => 100, 'latency_ms' => 100],
+            ['status_code' => 500, 'total_cost_in_cents' => 999, 'latency_ms' => 30000],
+            ['status_code' => 200, 'error_type' => ProviderErrorException::class, 'total_cost_in_cents' => 777, 'latency_ms' => 20000],
+        ))
+        ->create(['model' => 'gpt-4-outcome-test'])
+        ->each(fn ($request) => $aggregator->recordRequest($request));
+
+    $stat = SpectraDailyStat::query()->where('model', 'gpt-4-outcome-test')->whereNull('trackable_type')->sole();
+    $aggregated = SpectraDailyStat::getAggregatedStats(today(), now()->endOfDay(), 'openai', 'gpt-4-outcome-test');
+
+    expect($stat->request_count)->toBe(3)
+        ->and($stat->successful_count)->toBe(1)
+        ->and($stat->failed_count)->toBe(2)
+        ->and($stat->total_cost_in_cents)->toBe(100.0)
+        ->and($stat->total_latency_ms)->toBe(100)
+        ->and($stat->min_latency_ms)->toBe(100)
+        ->and($stat->max_latency_ms)->toBe(100)
+        ->and($stat->avgLatencyMs)->toBe(100.0)
+        ->and($aggregated['total_cost_in_cents'])->toBe(100.0)
+        ->and($aggregated['avg_latency_ms'])->toBe(100.0)
+        ->and($aggregated['failed_requests'])->toBe(2);
+});
+
+it('moves a request\'s cost and latency out of the day when a later poll reports it failed', function () {
+    $aggregator = app(StatsAggregator::class);
+    $running = SpectraRequest::factory()->create(['model' => 'gpt-4-flip-test', 'status_code' => 200, 'total_cost_in_cents' => 50, 'latency_ms' => 400]);
+    $aggregator->recordRequest($running);
+    $previous = clone $running;
+
+    $running->forceFill(['error_type' => ProviderErrorException::class, 'error_message' => 'Prediction failed', 'total_cost_in_cents' => 0])->save();
+    $aggregator->recordChange($running, $previous);
+
+    $stat = SpectraDailyStat::query()->where('model', 'gpt-4-flip-test')->whereNull('trackable_type')->sole();
+
+    expect($stat->request_count)->toBe(1)
+        ->and($stat->successful_count)->toBe(0)
+        ->and($stat->failed_count)->toBe(1)
+        ->and($stat->total_cost_in_cents)->toBe(0.0)
+        ->and($stat->total_latency_ms)->toBe(0)
+        ->and($stat->avgLatencyMs)->toBeNull();
+});
+
+it('leaves a failed request\'s cost and latency out of record() too', function () {
+    SpectraDailyStat::record(today()->toDateString(), 'openai', 'gpt-4-record-test', null, null, false, 10, 5, 250.0, 9000);
+
+    $stat = SpectraDailyStat::query()->where('model', 'gpt-4-record-test')->sole();
+
+    expect($stat->failed_count)->toBe(1)
+        ->and($stat->total_tokens)->toBe(15)
+        ->and($stat->total_cost_in_cents)->toBe(0.0)
+        ->and($stat->total_latency_ms)->toBe(0)
+        ->and($stat->max_latency_ms)->toBeNull();
 });
 
 it('writes both a global and a per-user daily stat for a tracked request', function () {
@@ -183,7 +245,7 @@ it('filters aggregated stats by model type', function () {
             ['model' => 'gpt-4o', 'model_type' => 'text', 'prompt_tokens' => 100, 'completion_tokens' => 50, 'total_cost_in_cents' => 200],
             ['model' => 'dall-e-3', 'model_type' => 'image', 'image_count' => 1, 'total_cost_in_cents' => 400],
         ))
-        ->create(['response' => json_encode([])])
+        ->create(['response' => json_encode([], JSON_THROW_ON_ERROR)])
         ->each(fn ($request) => $aggregator->recordRequest($request));
 
     $textStats = SpectraDailyStat::getAggregatedStats(

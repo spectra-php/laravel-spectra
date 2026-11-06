@@ -6,7 +6,7 @@ namespace Spectra\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Date;
-use Spectra\Support\StatsAggregator;
+use Spectra\Actions\Maintenance\RebuildStats;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
@@ -28,11 +28,12 @@ class RebuildStatsCommand extends Command
     /**
      * Rebuild the daily stats for yesterday, a date range or all stored requests.
      */
-    public function handle(StatsAggregator $aggregator): int
+    public function handle(RebuildStats $rebuild): int
     {
         if ($this->option('yesterday')) {
             $this->info('Rebuilding stats for yesterday...');
-            $count = $aggregator->rebuildYesterday();
+            $yesterday = now()->subDay();
+            $count = $rebuild($yesterday->copy()->startOfDay(), $yesterday->copy()->endOfDay());
             $this->info("Processed {$count} requests.");
 
             return self::SUCCESS;
@@ -65,7 +66,7 @@ class RebuildStatsCommand extends Command
             $this->info('Rebuilding all stats...');
         }
 
-        $count = $aggregator->rebuild($from, $to);
+        $count = $rebuild($from, $to);
 
         $this->info("Successfully processed {$count} requests.");
 

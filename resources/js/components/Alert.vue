@@ -1,13 +1,9 @@
-<script setup>
-defineProps({
-    type: {
-        type: String,
-        default: 'info',
-    },
-    message: {
-        type: String,
-        required: true,
-    },
+<script setup lang="ts">
+withDefaults(defineProps<{
+    type?: 'success' | 'danger' | 'warning' | 'info';
+    message: string;
+}>(), {
+    type: 'info',
 });
 
 const typeClasses = {

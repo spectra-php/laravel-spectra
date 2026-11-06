@@ -87,7 +87,7 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
     {
         $parts = [];
 
-        foreach ($this->outputItems($response) as $outputItem) {
+        foreach ($this->getOutputItems($response) as $outputItem) {
             if (($outputItem['type'] ?? null) === 'image_generation_call') {
                 $parts[] = blank($outputItem['result'] ?? null) && filled($outputItem['revised_prompt'] ?? null)
                     ? $outputItem['revised_prompt']
@@ -128,15 +128,15 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
         $stored = [];
         $index = 0;
 
-        foreach ($this->outputItems($responseData) as $outputItem) {
+        foreach ($this->getOutputItems($responseData) as $outputItem) {
             if (($outputItem['type'] ?? null) !== 'image_generation_call') {
                 continue;
             }
 
-            $b64 = $outputItem['result'] ?? null;
+            $encodedImage = $outputItem['result'] ?? null;
 
-            if (filled($b64)) {
-                $content = base64_decode($b64, true);
+            if (filled($encodedImage)) {
+                $content = base64_decode($encodedImage, true);
 
                 if ($content === false || blank($content)) {
                     continue;
@@ -167,7 +167,7 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
      */
     private function countImageGenerationCalls(array $data): int
     {
-        return collect($this->outputItems($data))
+        return collect($this->getOutputItems($data))
             ->filter(fn (array $item) => ($item['type'] ?? null) === 'image_generation_call')
             ->count();
     }
@@ -178,7 +178,7 @@ class ResponsesImageHandler implements ExtractsModelFromResponse, Handler, HasFi
      * @param  array<string, mixed>  $data
      * @return array<int, array<mixed>>
      */
-    private function outputItems(array $data): array
+    private function getOutputItems(array $data): array
     {
         $output = $data['output'] ?? null;
 

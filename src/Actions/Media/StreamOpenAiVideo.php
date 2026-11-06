@@ -39,7 +39,7 @@ class StreamOpenAiVideo
             ->withToken($apiKey)
             ->throw()
             ->withOptions(['stream' => true])
-            ->get("{$this->baseUrl()}/videos/{$videoId}/content");
+            ->get("{$this->resolveBaseUrl()}/videos/{$videoId}/content");
 
         $body = $response->toPsrResponse()->getBody();
 
@@ -55,10 +55,11 @@ class StreamOpenAiVideo
     }
 
     /**
-     * The configured OpenAI base URL ("api.openai.com/v1" in openai-php's
-     * config has no scheme), without a trailing slash.
+     * Resolve the configured OpenAI base URL, without a trailing slash.
+     *
+     * "api.openai.com/v1" in openai-php's config has no scheme, so one is added.
      */
-    private function baseUrl(): string
+    private function resolveBaseUrl(): string
     {
         $baseUrl = $this->apiKeyResolver->resolveBaseUrl('openai') ?? self::DEFAULT_BASE_URL;
 

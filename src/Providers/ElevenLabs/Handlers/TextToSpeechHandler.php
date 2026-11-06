@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\ElevenLabs\Handlers;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsModelFromRequest;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasMedia;
@@ -47,7 +48,7 @@ class TextToSpeechHandler implements ExtractsModelFromRequest, Handler, HasMedia
      */
     public function matchesEndpoint(string $endpoint): bool
     {
-        return (bool) preg_match('#^/v1/text-to-speech/[^/]+(/stream)?$#', $endpoint);
+        return Str::isMatch('#^/v1/text-to-speech/[^/]+(/stream)?$#', $endpoint);
     }
 
     /**
@@ -60,7 +61,7 @@ class TextToSpeechHandler implements ExtractsModelFromRequest, Handler, HasMedia
     {
         return new Metrics(
             audio: new AudioMetrics(
-                inputCharacters: is_string($requestData['text'] ?? null) ? mb_strlen($requestData['text']) : null,
+                inputCharacters: is_string($requestData['text'] ?? null) ? Str::length($requestData['text']) : null,
             ),
         );
     }
@@ -101,7 +102,7 @@ class TextToSpeechHandler implements ExtractsModelFromRequest, Handler, HasMedia
 
         $persister = app(MediaPersister::class);
         $format = $responseData['_request_data']['output_format'] ?? 'mp3_44100_128';
-        $extension = str_contains($format, 'pcm') ? 'pcm' : 'mp3';
+        $extension = Str::contains($format, 'pcm') ? 'pcm' : 'mp3';
 
         return [
             $persister->store($requestId, 0, $rawBody, $extension),

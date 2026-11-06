@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\Replicate\Handlers;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsModelFromRequest;
 use Spectra\Contracts\ExtractsModelFromResponse;
 use Spectra\Contracts\Handler;
@@ -19,6 +20,7 @@ use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\Replicate\Concerns\HandlesPredictions;
 use Spectra\Support\MediaPersister;
+use Spectra\Support\Payload;
 
 /**
  * Replicate predictions that produce images.
@@ -54,7 +56,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
 
         return new Metrics(
             image: new ImageMetrics(
-                count: is_numeric($reported) ? (int) $reported : count($this->imageUrls($responseData)),
+                count: is_numeric($reported) ? Payload::int($reported) : count($this->imageUrls($responseData)),
             ),
         );
     }
@@ -68,7 +70,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     {
         $urls = $this->outputUrls($response);
 
-        return $urls !== [] ? implode("\n", $urls) : null;
+        return filled($urls) ? implode("\n", $urls) : null;
     }
 
     /**
@@ -92,9 +94,9 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         $persister = app(MediaPersister::class);
         $stored = [];
 
-        foreach ($this->imageUrls($responseData) as $i => $url) {
+        foreach ($this->imageUrls($responseData) as $index => $url) {
             // One image that fails to download or store must not lose the others.
-            $path = rescue(function () use ($persister, $requestId, $i, $url) {
+            $path = rescue(function () use ($persister, $requestId, $index, $url) {
                 $response = Http::withoutAITracking()->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)->get($url);
 
                 if (! $response->successful()) {
@@ -103,7 +105,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
 
                 $extension = $this->resolveExtensionFromContentType($response->header('Content-Type'));
 
-                return $persister->store($requestId, $i, $response->body(), $extension);
+                return $persister->store($requestId, $index, $response->body(), $extension);
             });
 
             if ($path !== null) {
@@ -115,7 +117,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     }
 
     /**
-     * Output URLs that are not clearly another kind of file (audio, video).
+     * Get the output URLs that are not clearly another kind of file (audio, video).
      *
      * @param  array<string, mixed>  $data
      * @return array<int, string>
@@ -134,7 +136,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     private function resolveExtensionFromContentType(?string $contentType): string
     {
         if (filled($contentType)) {
-            $mime = strtolower(trim(explode(';', $contentType, 2)[0]));
+            $mime = Str::lower(trim(Str::before($contentType, ';')));
 
             return match ($mime) {
                 'image/jpeg' => 'jpg',

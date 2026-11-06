@@ -197,14 +197,15 @@ class MyProvider extends Provider
 ```
 
 > [!NOTE]
-> When each handler targets its own endpoints, order does not matter. Spectra checks all handlers and picks the one whose endpoint matches. When several handlers share an endpoint (for example, OpenAI's `/v1/responses` serves both text and image generation), implement the `MatchesResponseShape` interface on the specialized handlers so Spectra can tell them apart by the response body.
+> When each handler targets its own endpoints, order does not matter. Spectra checks all handlers and picks the one whose endpoint matches. When several handlers share an endpoint (for example, OpenAI's `/v1/responses` serves both text and image generation), implement the `MatchesResponseShape` interface on the specialized handlers so Spectra can tell them apart by the response body. List each specialized handler after the generic handler it specializes: Spectra checks later handlers first and falls back to the first matching handler.
 
 <a name="optional-handler-interfaces"></a>
 ## Optional Handler Interfaces
 
 Handlers can implement these extra interfaces to extract more metrics or change how a request is handled.
 
-### `HasFinishReason`
+<a name="has-finish-reason"></a>
+### `HasFinishReason` {#has-finish-reason}
 
 Each response says why text generation stopped. OpenAI uses `finish_reason` (`stop`, `length`, `tool_calls`), while Anthropic uses `stop_reason` (`end_turn`, `max_tokens`, `stop_sequence`). Implement `HasFinishReason` to read this value, so it shows in the dashboard and you can filter by it:
 
@@ -224,7 +225,8 @@ class MyChatHandler implements Handler, HasFinishReason
 }
 ```
 
-### `MatchesResponseShape`
+<a name="matches-response-shape"></a>
+### `MatchesResponseShape` {#matches-response-shape}
 
 Some providers use the same endpoint for different kinds of output. For example, OpenAI's `/v1/responses` endpoint can return both text completions and generated images. When several handlers match the same endpoint, Spectra calls `matchesResponse()` on each one to decide which should process the response. The handler that recognizes the response structure wins:
 
@@ -268,7 +270,8 @@ class MyTextHandler implements Handler, MatchesResponseShape
 }
 ```
 
-### `ExtractsModelFromResponse`
+<a name="extracts-model-from-response"></a>
+### `ExtractsModelFromResponse` {#extracts-model-from-response}
 
 Most AI providers include the model name in the JSON response body. Implement `ExtractsModelFromResponse` so Spectra can read the model identifier for pricing lookup and dashboard display. This is the most common way to get the model, so implement it on any handler whose response body has a model field:
 
@@ -287,7 +290,8 @@ class MyChatHandler implements Handler, ExtractsModelFromResponse
 > [!NOTE]
 > `extractModelFromResponse()` is not part of the base `Handler` interface. You opt in by implementing `ExtractsModelFromResponse`. If your handler does not implement this interface, Spectra falls back to `ExtractsModelFromRequest` (below) or the `model` field in the request body.
 
-### `ExtractsModelFromRequest`
+<a name="extracts-model-from-request"></a>
+### `ExtractsModelFromRequest` {#extracts-model-from-request}
 
 Some providers put the model name in the URL path instead of the response body (for example, Google's `/v1/models/{model}:generateContent` or fal.ai's `/fal-ai/flux/dev`). Implement `ExtractsModelFromRequest` to read the model from the request data or the endpoint path. Handlers that implement this interface usually don't implement `ExtractsModelFromResponse`, but you can combine both when the model appears in the request URL and in the response body:
 
@@ -310,7 +314,8 @@ class MyHandler implements Handler, ExtractsModelFromRequest
 }
 ```
 
-### `SkipsResponse`
+<a name="skips-response"></a>
+### `SkipsResponse` {#skips-response}
 
 Some APIs make you poll for a result that isn't ready yet. Video generation, for example, returns an unfinished job (`queued`, `in_progress`) until processing finishes. Implement `SkipsResponse` and return `true` for these unfinished states, so Spectra does not record the polls. Only the finished response is tracked:
 
@@ -329,7 +334,8 @@ class MyVideoHandler implements Handler, SkipsResponse
 
 If the finished job is fetched more than once, Spectra does not count it twice. Writes with the same provider response id update the existing row, and only the change is added to the daily stats and budgets. Make sure your handler's response id is the job id.
 
-### `HasProviderLatency`
+<a name="has-provider-latency"></a>
+### `HasProviderLatency` {#has-provider-latency}
 
 For an async job, the HTTP call that fetched the result only measures a status poll. Implement `HasProviderLatency` on the handler to return the real generation time the provider reports, in milliseconds. Spectra stores it as the request's latency. Return `null` when the response doesn't say:
 
@@ -348,7 +354,8 @@ class MyVideoHandler implements Handler, HasProviderLatency
 }
 ```
 
-### `HasExpiration`
+<a name="has-expiration"></a>
+### `HasExpiration` {#has-expiration}
 
 Generated media URLs (images, videos) are often temporary and expire after a set period. Implement `HasExpiration` so Spectra records when the generated content stops being available:
 
@@ -367,7 +374,8 @@ class MyHandler implements Handler, HasExpiration
 }
 ```
 
-### `ReturnsBinaryResponse`
+<a name="returns-binary-response"></a>
+### `ReturnsBinaryResponse` {#returns-binary-response}
 
 Some endpoints return binary data instead of JSON (for example, text-to-speech endpoints return raw audio bytes). Implement this marker interface so Spectra knows not to JSON-decode the response body. A binary response can't contain a model name, so these handlers usually implement `ExtractsModelFromRequest` instead of `ExtractsModelFromResponse`:
 
@@ -391,7 +399,8 @@ class MySpeechHandler implements Handler, ExtractsModelFromRequest, ReturnsBinar
 }
 ```
 
-### `StreamsResponse`
+<a name="streams-response"></a>
+### `StreamsResponse` {#streams-response}
 
 Implement `StreamsResponse` to provide a custom `StreamHandler` for streamed responses. Spectra parses the stream (server-sent events, newline-delimited JSON, or a JSON array) and passes each decoded event to the `StreamHandler`, which extracts text content, token usage, finish reasons, and the model:
 
@@ -466,11 +475,12 @@ You may also return these extra keys. Spectra applies them to the request:
 | Key | Type | Meaning |
 | --- | --- | --- |
 | `reported_cost_in_cents` | `float` | The cost the provider reported, in US cents. It replaces the catalog price. |
-| `tool_calls` | `array<string, int>` | Billable server-tool usage, keyed like the provider's [`toolCallPricing()`](/pricing#tool-call-pricing) |
+| `tool_calls` | `array<string, int>` | Billable server-tool usage, keyed like the provider's [`tool_calls`](/pricing#tool-call-pricing) |
 | `pricing_tier` | `string` | The tier the provider says it served. Ignored when a tier was set explicitly. |
 | `cost_multiplier` | `float` | A price multiplier, for example `1.1` for US-only inference |
 
-### `HasMedia`
+<a name="has-media"></a>
+### `HasMedia` {#has-media}
 
 AI providers often return generated images and videos as temporary URLs that expire after a set period. Implement `HasMedia` to download these files and save them to a Laravel filesystem disk before the URLs expire. `$rawBody` holds the raw response body for binary responses (for example, TTS audio). The following example shows how OpenAI's image handler stores generated images:
 
@@ -506,7 +516,8 @@ class MyImageHandler implements Handler, HasMedia
 }
 ```
 
-### `ExtractsPricingTierFromRequest` / `ExtractsPricingTierFromResponse`
+<a name="extracts-pricing-tier"></a>
+### `ExtractsPricingTierFromRequest` / `ExtractsPricingTierFromResponse` {#extracts-pricing-tier}
 
 Implement these on the **provider class** (not the handler) when the provider offers several pricing tiers. They let Spectra detect the active tier from the request or the response. Implement one or both, depending on where the tier shows up. Return a Spectra tier name (`standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, `hd`) or `null`:
 
@@ -541,7 +552,7 @@ Spectra reads the default pricing tier from config (`spectra.costs.provider_sett
 ```
 
 <a name="extracts-cost-multiplier"></a>
-### `ExtractsCostMultiplier`
+### `ExtractsCostMultiplier` {#extracts-cost-multiplier}
 
 Also implemented on the **provider class**. Use it when the provider charges a surcharge that the response shows, such as Anthropic's 1.1x price for US-only inference (`usage.inference_geo`). Return the multiplier, or `null` for none. Spectra multiplies the model cost by it (tool call fees are not multiplied):
 
@@ -558,7 +569,7 @@ class MyProvider extends Provider implements ExtractsCostMultiplier
 ```
 
 <a name="extracts-cost-multiplier-for-model"></a>
-### `ExtractsCostMultiplierForModel`
+### `ExtractsCostMultiplierForModel` {#extracts-cost-multiplier-for-model}
 
 The same, with the model id. Use it when the surcharge depends on the model, such as fal.ai video models, which cost more or less than their catalog price at another resolution or without audio, by a different amount for each model:
 
@@ -622,7 +633,7 @@ new Metrics(document: new DocumentMetrics(pages: 12));
 ```
 
 <a name="token-metrics"></a>
-### `TokenMetrics`
+### `TokenMetrics` {#token-metrics}
 
 `promptTokens` must be the **full** prompt and `completionTokens` the **full** output. Every other field is a part of one of these two totals, so nothing is counted twice. If your provider reports a part outside its totals (for example, Anthropic leaves cache tokens out of `input_tokens`), add it to the total yourself.
 
@@ -642,7 +653,7 @@ new Metrics(document: new DocumentMetrics(pages: 12));
 `TokenMetrics::fromArray()` builds the object from a snake_case usage array (`prompt_tokens`, `cached_tokens`, `cache_write_tokens`, ...), and `toUsageArray()` turns it back into one.
 
 <a name="metrics-fields"></a>
-### `Metrics`
+### `Metrics` {#metrics-fields}
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -652,7 +663,7 @@ new Metrics(document: new DocumentMetrics(pages: 12));
 | `video` | `?VideoMetrics` | Video count and duration |
 | `search` | `?SearchMetrics` | Billed search units |
 | `document` | `?DocumentMetrics` | Pages, for models billed per page |
-| `toolCalls` | `array<string, int>` | Billable server-tool usage, keyed like the provider's [`toolCallPricing()`](/pricing#tool-call-pricing) (for example, `['web_search_requests' => 3]`) |
+| `toolCalls` | `array<string, int>` | Billable server-tool usage, keyed like the provider's [`tool_calls`](/pricing#tool-call-pricing) (for example, `['web_search_requests' => 3]`) |
 | `reportedCostInCents` | `?float` | The cost the provider reported for this request, in US cents. When set, it replaces the catalog price. |
 
 ```php
@@ -725,47 +736,32 @@ class AcmeChatHandler extends OpenAiCompatibleChatHandler
 <a name="adding-pricing"></a>
 ## Adding Pricing
 
-To track costs, create a pricing class for your custom provider. Extend `ProviderPricing` and define the models in its `define()` method:
+To track costs, add your provider to [your pricing file](/pricing#your-own-prices) and point `SPECTRA_PRICING_PATH` at it. A provider the bundled catalog doesn't have is added as is, with its models keyed by the id used in API requests:
 
-```php
-<?php
-
-namespace App\Pricing;
-
-use Spectra\Pricing\ProviderPricing;
-
-class MistralPricing extends ProviderPricing
+```json
 {
-    public function provider(): string
-    {
-        return 'mistral';
-    }
-
-    protected function define(): void
-    {
-        $this->model('mistral-large-latest', fn ($m) => $m
-            ->displayName('Mistral Large')
-            ->canGenerateText()
-            ->tier('standard', inputPrice: 200, outputPrice: 600));
-
-        $this->model('mistral-small-latest', fn ($m) => $m
-            ->displayName('Mistral Small')
-            ->canGenerateText()
-            ->tier('standard', inputPrice: 10, outputPrice: 30));
+    "providers": {
+        "mistral": {
+            "currency": "USD",
+            "sources": ["https://docs.mistral.ai/inference/pricing"],
+            "models": {
+                "mistral-large-latest": {
+                    "display_name": "Mistral Large",
+                    "capabilities": ["text"],
+                    "tiers": [{ "tier": "standard", "input_price": 200, "output_price": 600 }]
+                },
+                "mistral-small-latest": {
+                    "display_name": "Mistral Small",
+                    "capabilities": ["text"],
+                    "tiers": [{ "tier": "standard", "input_price": 10, "output_price": 30 }]
+                }
+            }
+        }
     }
 }
 ```
 
-Then register it in `config/spectra.php`:
-
-```php
-'costs' => [
-    'pricing' => [
-        'mistral' => \App\Pricing\MistralPricing::class,
-        // ...existing providers...
-    ],
-],
-```
+With `sources`, [`spectra:pricing-scrape`](/pricing#scraping-prices) keeps the provider's prices current from its pricing page. See [The Pricing File](/pricing#the-pricing-file) for every field.
 
 > [!TIP]
 > All prices in the pricing catalog are stored in **cents**. For token-based models, prices are in cents per million tokens (for example, `200` means $2.00 per million tokens). For unit-based models (images, audio, video), prices are in cents per unit.

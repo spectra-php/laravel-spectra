@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\ShowRequestController;
 use Spectra\Http\Controllers\Api\ShowTraceController;
 use Spectra\Http\Controllers\Api\TracesController;
@@ -89,6 +93,19 @@ it('keeps every call of a trace in its totals when a filter matches one call', f
         ->and($json['data'][0]['total_cost_in_cents'])->toEqualWithDelta(41.0, 0.0001);
 });
 
+it('keeps only the traces with a call attributed to the trackable type asked for', function () {
+    checkoutCall(0, ['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    checkoutCall(100, ['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['trace_id' => SEARCH_TRACE, 'trackable_type' => 'App\\Models\\Team', 'trackable_id' => '1']);
+
+    $json = callTraces(['trackable_type' => 'App\\Models\\User']);
+
+    expect($json['total'])->toBe(1)
+        ->and($json['data'][0]['trace_id'])->toBe(CHECKOUT_TRACE)
+        ->and($json['data'][0]['request_count'])->toBe(2)
+        ->and($json['available_trackable_types'])->toBe(['App\\Models\\Team', 'App\\Models\\User']);
+});
+
 it('keeps only traces with a failed call when filtering by errors', function () {
     checkoutCall(0, ['status_code' => 200]);
     checkoutCall(100, ['status_code' => 429]);
@@ -172,6 +189,27 @@ it('marks the current call and its place in the trace on the request screen', fu
 
     expect($trace['position'])->toBe(2)
         ->and(collect($trace['requests'])->pluck('is_current')->all())->toBe([false, true]);
+});
+
+it('lists nothing and says the trace migrations are missing until they run', function () {
+    Schema::table('spectra_requests', function (Blueprint $table) {
+        $table->dropIndex('spectra_requests_trace_id_started_at_index');
+        $table->dropColumn(['started_at', 'origin', 'span_id']);
+    });
+    Log::spy();
+    Spectra::withTraceId(CHECKOUT_TRACE);
+    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Hi']]]]);
+
+    $list = callTraces();
+    $trace = callTrace(CHECKOUT_TRACE);
+
+    expect(SpectraRequest::query()->count())->toBe(1)
+        ->and($list['migrated'])->toBeFalse()
+        ->and($list['data'])->toBe([])
+        ->and($list['summary']['trace_count'])->toBe(0)
+        ->and($trace['migrated'])->toBeFalse()
+        ->and($trace['request_count'])->toBe(0)
+        ->and($trace['requests'])->toBe([]);
 });
 
 it('answers 404 for a trace with no calls', function () {

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\ElevenLabs\Handlers;
 
+use Spectra\Support\Payload;
+
 /**
  * ElevenLabs sound effects, `POST /v1/sound-generation`. The request may set
  * `duration_seconds`; without it the model picks the length.
@@ -33,8 +35,8 @@ class SoundEffectsHandler extends GeneratedAudioHandler
      */
     protected function requestedSeconds(array $requestData): ?float
     {
-        $seconds = $requestData['duration_seconds'] ?? null;
+        $seconds = Payload::float($requestData['duration_seconds'] ?? null);
 
-        return is_numeric($seconds) && (float) $seconds > 0 ? (float) $seconds : null;
+        return $seconds > 0 ? $seconds : null;
     }
 }

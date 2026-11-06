@@ -16,6 +16,7 @@ use Spectra\Data\VideoMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\XAi\XAiUsage;
 use Spectra\Support\MediaPersister;
+use Spectra\Support\Payload;
 
 /**
  * xAI video generation, editing and extension (Grok Imagine Video).
@@ -82,7 +83,7 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasMedia, Skip
             tokens: XAiUsage::mediaTokens($usage),
             video: new VideoMetrics(
                 count: 1,
-                durationSeconds: is_numeric($duration) ? (float) $duration : null,
+                durationSeconds: is_numeric($duration) ? Payload::float($duration) : null,
             ),
             reportedCostInCents: XAiUsage::costInCents($usage),
         );

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\Mistral\Handlers;
 
+use Illuminate\Support\Str;
 use Spectra\Concerns\ExtractsModelField;
 use Spectra\Concerns\MatchesEndpoints;
 use Spectra\Contracts\ExtractsModelFromResponse;
@@ -52,7 +53,7 @@ class SpeechHandler implements ExtractsModelFromResponse, Handler, HasMedia
     {
         return new Metrics(
             audio: new AudioMetrics(
-                inputCharacters: isset($requestData['input']) ? mb_strlen((string) $requestData['input']) : null,
+                inputCharacters: isset($requestData['input']) ? Str::length((string) $requestData['input']) : null,
             ),
         );
     }
@@ -68,6 +69,8 @@ class SpeechHandler implements ExtractsModelFromResponse, Handler, HasMedia
     }
 
     /**
+     * Decode the response's base64 `audio_data` and store it in the requested format.
+     *
      * Unlike OpenAI's binary TTS endpoint, Mistral returns JSON with the audio
      * as a base64 audio_data field.
      *

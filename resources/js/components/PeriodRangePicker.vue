@@ -1,39 +1,31 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
+import type { PeriodRangeChange } from '@/types/app';
 
-const props = defineProps({
-    period: {
-        type: String,
-        default: 'month',
-    },
-    startDate: {
-        type: String,
-        default: null,
-    },
-    endDate: {
-        type: String,
-        default: null,
-    },
-    loading: {
-        type: Boolean,
-        default: false,
-    },
-    label: {
-        type: String,
-        default: '',
-    },
+const props = withDefaults(defineProps<{
+    period?: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    loading?: boolean;
+    label?: string;
+}>(), {
+    period: 'month',
+    startDate: null,
+    endDate: null,
+    loading: false,
+    label: '',
 });
 
-const emit = defineEmits([
-    'update:period',
-    'update:startDate',
-    'update:endDate',
-    'change',
-]);
+const emit = defineEmits<{
+    'update:period': [value: string];
+    'update:startDate': [value: string | null];
+    'update:endDate': [value: string | null];
+    change: [payload: PeriodRangeChange];
+}>();
 
-const rangeModel = ref(null);
+const rangeModel = ref<Date[] | null>(null);
 
 const periodModel = computed({
     get: () => props.period,
@@ -48,13 +40,13 @@ const selectedRangeLabel = computed(() => {
     return 'Select date range';
 });
 
-const parseDate = (value) => {
+const parseDate = (value: string | null) => {
     if (!value) return null;
     const parsed = new Date(`${value}T00:00:00`);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const formatDate = (date) => {
+const formatDate = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -72,7 +64,7 @@ watch(
     { immediate: true },
 );
 
-const emitChange = (payload) => {
+const emitChange = (payload: PeriodRangeChange) => {
     emit('change', payload);
 };
 
@@ -87,7 +79,7 @@ const onPeriodChange = () => {
     });
 };
 
-const onRangeChange = (range) => {
+const onRangeChange = (range: Date[] | null) => {
     rangeModel.value = range;
 
     if (!Array.isArray(range) || !range[0] || !range[1]) return;
@@ -126,17 +118,17 @@ const onRangeChange = (range) => {
             </select>
         </div>
 
-        <div class="w-full sm:w-48">
+        <div class="w-full sm:w-56">
             <VueDatePicker
                 v-model="rangeModel"
                 auto-apply
-                :enable-time-picker="false"
+                :time-config="{ enableTimePicker: false }"
                 :range="{ partialRange: false }"
-                format="yyyy-MM-dd"
+                :formats="{ input: 'yyyy-MM-dd' }"
                 :teleport="true"
                 :placeholder="selectedRangeLabel"
                 :disabled="loading"
-                :clearable="false"
+                :input-attrs="{ clearable: false }"
                 @update:model-value="onRangeChange"
             >
                 <template #dp-input="{ value, openMenu }">

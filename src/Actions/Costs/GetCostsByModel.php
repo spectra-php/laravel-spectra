@@ -32,13 +32,15 @@ class GetCostsByModel
      */
     public function __invoke(DateRange $dateRange, int $limit = 10): Collection
     {
-        return RequestAggregateQuery::make($dateRange)
+        return RequestAggregateQuery::fromRollups($dateRange)
             ->groupByColumns('model', 'provider', 'model_type')
             ->countAs('requests')
             ->tokenSum()
             ->usageSums()
             ->successfulCost()
             ->orderByDesc('cost')
+            ->orderBy('model')
+            ->orderBy('provider')
             ->limit($limit)
             ->get()
             ->map(fn (SpectraRequest $item) => new CostByModel(

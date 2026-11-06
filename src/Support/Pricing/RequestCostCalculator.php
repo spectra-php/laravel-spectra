@@ -37,8 +37,9 @@ class RequestCostCalculator
      */
     public function forContext(RequestContext $context, string|PricingTier|null $pricingTier = null): array
     {
+        $lookup = app(PricingLookup::class);
         $tier = $pricingTier ?? $context->pricingTier;
-        $model = $this->pricedModel($context);
+        $model = $this->getPricedModel($context);
         $at = $context->getStartedAt();
         $provider = $context->provider;
         // A unit string the enum doesn't know (a custom CostCalculator) bills as tokens.
@@ -54,7 +55,7 @@ class RequestCostCalculator
             PricingUnit::Video => $this->costCalculator->calculateByVideos($provider, $model, $context->videoCount ?? 0, $tier, $at),
             PricingUnit::Search => $this->costCalculator->calculateBySearches($provider, $model, $context->searchCount ?? 0, $tier, $at),
             PricingUnit::Page => $this->costCalculator->calculateByPages($provider, $model, $context->pageCount ?? 0, $tier, $at),
-            PricingUnit::Request => $this->costCalculator->calculateByRequests($provider, $model, $this->succeeded($context) ? 1 : 0, $tier, $at),
+            PricingUnit::Request => $this->costCalculator->calculateByRequests($provider, $model, $this->hasSucceeded($context) ? 1 : 0, $tier, $at),
         };
 
         // Regional surcharges (e.g. 1.1x for US-only inference) apply to the
@@ -63,7 +64,6 @@ class RequestCostCalculator
             $cost = array_map(fn (float $value) => $value * $context->costMultiplier, $cost);
         }
 
-        // Add tool call surcharges (e.g. web_search_call, code_interpreter_call).
         $toolCallSurcharge = $this->calculateToolCallCost($context);
         if ($toolCallSurcharge > 0) {
             $cost['total_cost_in_cents'] += $toolCallSurcharge;
@@ -71,17 +71,20 @@ class RequestCostCalculator
 
         if ($context->reportedCostInCents !== null) {
             $cost = $this->applyReportedCost($cost, $this->costCalculator->convertFromUsd($context->reportedCostInCents));
+        } elseif ($lookup->isUnpriced($provider, $model)) {
+            // A $0 that is a missing price, not a free call, must not stay silent.
+            $lookup->reportUnpricedModel($provider, $model);
         }
 
         return $cost;
     }
 
     /**
-     * The model id to price: the snapshot the provider served when the
+     * Get the model id to price: the snapshot the provider served when the
      * catalog knows it (it may differ from the request — routing, aliases,
      * retired models that redirect), otherwise the requested model.
      */
-    protected function pricedModel(RequestContext $context): string
+    protected function getPricedModel(RequestContext $context): string
     {
         $lookup = app(PricingLookup::class);
 
@@ -95,7 +98,7 @@ class RequestCostCalculator
     /**
      * Determine if the request succeeded, so a per-request model bills it.
      */
-    protected function succeeded(RequestContext $context): bool
+    protected function hasSucceeded(RequestContext $context): bool
     {
         return $context->errorType === null && ($context->httpStatus ?? 200) < 400;
     }

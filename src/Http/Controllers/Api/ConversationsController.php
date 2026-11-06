@@ -11,6 +11,7 @@ use Spectra\Actions\Conversations\GetFilteredConversations;
 use Spectra\Actions\Requests\GetAvailableFilters;
 use Spectra\Data\Responses\ConversationsResponse;
 use Spectra\Support\DateRange;
+use Spectra\Support\Query\TraceSchema;
 
 /**
  * GET /api/conversations: the conversations screen, one filtered and sorted
@@ -27,10 +28,17 @@ class ConversationsController extends BaseApiController
         GetConversationsSummary $getConversationsSummary,
         GetAvailableFilters $getAvailableFilters,
         FormatConversationsList $formatConversationsList,
+        TraceSchema $traceSchema,
     ): ConversationsResponse {
-        $dateRange = DateRange::fromRequest($request);
-        $paginated = $getFilteredConversations($request, $dateRange);
         $filters = $getAvailableFilters();
+
+        if (! $traceSchema->hasTraceColumns()) {
+            return ConversationsResponse::unmigrated($filters);
+        }
+
+        $dateRange = DateRange::fromRequest($request);
+        $page = $getFilteredConversations($request, $dateRange);
+        $paginated = $page->paginator;
 
         return new ConversationsResponse(
             data: $formatConversationsList($paginated),
@@ -41,6 +49,8 @@ class ConversationsController extends BaseApiController
             available_tags: $filters->tags,
             available_finish_reasons: $filters->finish_reasons,
             available_reasoning_efforts: $filters->reasoning_efforts,
+            available_trackable_types: $filters->trackable_types,
+            total_is_estimate: $page->totalIsEstimate,
         );
     }
 }

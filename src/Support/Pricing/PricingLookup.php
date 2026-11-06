@@ -7,15 +7,18 @@ namespace Spectra\Support\Pricing;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Spectra\Enums\PricingTier;
 use Spectra\Pricing\ProviderPricing;
 
 /**
- * In-memory index over every configured pricing catalog.
+ * In-memory index over every active pricing catalog.
  *
  * Resolves a provider/model pair (including aliases, dated snapshots and
  * routing suffixes) to its catalog entry, and picks the price row for a tier,
- * prompt size and request date.
+ * prompt size and request date. The index is plain arrays, and the lookup
+ * serializes to it, so PricingCatalog can keep it in the cache instead of
+ * parsing the pricing files on every request.
  *
  * @phpstan-type Price array{
  *     input: int|float,
@@ -40,7 +43,16 @@ use Spectra\Pricing\ProviderPricing;
  *     can_generate_video: bool,
  *     can_generate_audio: bool,
  *     retired_on: ?string,
+ *     variants: array<string, mixed>,
  *     tiers: array<string, list<Price>>,
+ * }
+ * @phpstan-type Index array{
+ *     models: array<string, ModelData>,
+ *     aliases: array<string, string>,
+ *     currencies: array<string, string>,
+ *     model_currencies: array<string, string>,
+ *     tool_call_currencies: array<string, string>,
+ *     tool_call_pricing: array<string, array<string, float>>,
  * }
  */
 class PricingLookup
@@ -74,6 +86,9 @@ class PricingLookup
     /** @var array<string, true> "provider|tier" values already warned about (once per process). */
     protected array $warnedTiers = [];
 
+    /** @var array<string, true> "provider|model" pairs already reported as unpriced (once per process). */
+    protected array $reportedUnpriced = [];
+
     /** @var array<string, array<string, float>> Provider slug => tool call type => cost in cents */
     protected array $toolCallPricing = [];
 
@@ -82,11 +97,48 @@ class PricingLookup
     /**
      * Create a new pricing lookup over the given provider catalogs.
      *
-     * @param  ProviderPricing[]  $pricingClasses
+     * @param  ProviderPricing[]  $catalogs
      */
     public function __construct(
-        protected array $pricingClasses = []
+        protected array $catalogs = []
     ) {}
+
+    /**
+     * Serialize the index only (not the catalogs it was built from), so the
+     * cache holds plain arrays.
+     *
+     * @return Index
+     */
+    public function __serialize(): array
+    {
+        $this->resolve();
+
+        return [
+            'models' => $this->models,
+            'aliases' => $this->aliases,
+            'currencies' => $this->currencies,
+            'model_currencies' => $this->modelCurrencies,
+            'tool_call_currencies' => $this->toolCallCurrencies,
+            'tool_call_pricing' => $this->toolCallPricing,
+        ];
+    }
+
+    /**
+     * Restore the index from the cache. Warnings start over: they are per process.
+     *
+     * @param  Index  $data
+     */
+    public function __unserialize(array $data): void
+    {
+        $this->models = $data['models'];
+        $this->aliases = $data['aliases'];
+        $this->currencies = $data['currencies'];
+        $this->modelCurrencies = $data['model_currencies'];
+        $this->toolCallCurrencies = $data['tool_call_currencies'];
+        $this->toolCallPricing = $data['tool_call_pricing'];
+        $this->catalogs = [];
+        $this->resolved = true;
+    }
 
     /**
      * Get the price row for a model.
@@ -131,7 +183,7 @@ class PricingLookup
     }
 
     /**
-     * Whether the model is in the catalog at all (by id, alias or snapshot).
+     * Determine if the model is in the catalog at all (by id, alias or snapshot).
      */
     public function knows(string $provider, string $model): bool
     {
@@ -139,13 +191,51 @@ class PricingLookup
     }
 
     /**
-     * The catalog id a model resolves to (e.g. an alias resolves to its model).
+     * Determine if any catalog prices the provider. A provider without one
+     * (Ollama, a custom provider) is tracked at $0 on purpose, so its models
+     * are never reported as unpriced.
+     */
+    public function hasCatalog(string $provider): bool
+    {
+        $this->resolve();
+
+        return isset($this->currencies[$provider]);
+    }
+
+    /**
+     * Determine if a priced provider's model is missing from its catalog, so
+     * its requests are recorded at $0 without that being a price.
+     */
+    public function isUnpriced(string $provider, string $model): bool
+    {
+        return $this->hasCatalog($provider) && ! $this->knows($provider, $model);
+    }
+
+    /**
+     * Log, once per process for each model, that a priced provider's model
+     * has no price and its requests are recorded at $0.
+     */
+    public function reportUnpricedModel(string $provider, string $model): void
+    {
+        $key = $this->buildKey($provider, $model);
+
+        if (isset($this->reportedUnpriced[$key])) {
+            return;
+        }
+
+        $this->reportedUnpriced[$key] = true;
+
+        Log::warning("Spectra: no price for the {$provider} model '{$model}'; its requests are recorded at \$0. Add it to your pricing file (see the costs docs).");
+    }
+
+    /**
+     * Get the catalog id a model resolves to (e.g. an alias resolves to its model).
      */
     public function canonicalModel(string $provider, string $model): ?string
     {
         $key = $this->resolveKey($provider, $model);
 
-        return $key !== null ? explode('|', $key, 2)[1] : null;
+        return $key !== null ? Str::after($key, '|') : null;
     }
 
     /**
@@ -179,7 +269,7 @@ class PricingLookup
     }
 
     /**
-     * The date the provider shut the model down, if it has.
+     * Get the date the provider shut the model down, if it has.
      */
     public function getRetiredOn(string $provider, string $model): ?string
     {
@@ -211,6 +301,19 @@ class PricingLookup
     }
 
     /**
+     * Get the prices of a model's options (a fal.ai video model's resolutions
+     * with and without audio), for the provider's cost multiplier.
+     *
+     * @return array<string, mixed>
+     */
+    public function getVariants(string $provider, string $model): array
+    {
+        $key = $this->resolveKey($provider, $model);
+
+        return $key !== null ? $this->models[$key]['variants'] : [];
+    }
+
+    /**
      * Get all model data for a specific provider + model pair.
      *
      * @return ModelData|null
@@ -223,9 +326,10 @@ class PricingLookup
     }
 
     /**
-     * The currency a provider's catalog is written in (ISO 4217). When two
-     * catalogs share the slug, this is the later one's; price a model with
-     * modelCurrency() instead.
+     * Get the currency a provider's catalog is written in (ISO 4217).
+     *
+     * When two catalogs share the slug, this is the later one's; price a model
+     * with modelCurrency() instead.
      */
     public function currency(string $provider): string
     {
@@ -235,7 +339,7 @@ class PricingLookup
     }
 
     /**
-     * The currency of the catalog that defines a model (ISO 4217), falling
+     * Get the currency of the catalog that defines a model (ISO 4217), falling
      * back to the provider's currency for a model no catalog knows.
      */
     public function modelCurrency(string $provider, string $model): string
@@ -246,7 +350,7 @@ class PricingLookup
     }
 
     /**
-     * The currency of the provider's tool call prices (ISO 4217).
+     * Get the currency of the provider's tool call prices (ISO 4217).
      */
     public function toolCallCurrency(string $provider): string
     {
@@ -256,8 +360,8 @@ class PricingLookup
     }
 
     /**
-     * The tier a provider's requests bill at when neither the request nor the
-     * response names one (`spectra.costs.provider_settings.{provider}.default_tier`).
+     * Get the tier a provider's requests bill at when neither the request nor
+     * the response names one (`spectra.costs.provider_settings.{provider}.default_tier`).
      *
      * A value that isn't a PricingTier (a typo in SPECTRA_OPENAI_PRICING_TIER)
      * bills at standard, so cost and the stored tier agree; it is logged once.
@@ -305,13 +409,35 @@ class PricingLookup
     }
 
     /**
+     * Get the ids of one provider's text models that are still running, sorted.
+     *
+     * @return list<string>
+     */
+    public function textModels(string $provider): array
+    {
+        $this->resolve();
+
+        $modelIds = [];
+
+        foreach ($this->models as $key => $modelData) {
+            if (Str::startsWith($key, "{$provider}|") && $modelData['can_generate_text'] && $modelData['retired_on'] === null) {
+                $modelIds[] = Str::after($key, '|');
+            }
+        }
+
+        sort($modelIds);
+
+        return $modelIds;
+    }
+
+    /**
      * Get all internal model names that can generate text.
      *
      * @return string[]
      */
     public function canGenerateText(): array
     {
-        return $this->modelsWithCapability('can_generate_text');
+        return $this->getModelsWithCapability('can_generate_text');
     }
 
     /**
@@ -321,7 +447,7 @@ class PricingLookup
      */
     public function canGenerateImages(): array
     {
-        return $this->modelsWithCapability('can_generate_images');
+        return $this->getModelsWithCapability('can_generate_images');
     }
 
     /**
@@ -331,7 +457,7 @@ class PricingLookup
      */
     public function canGenerateVideo(): array
     {
-        return $this->modelsWithCapability('can_generate_video');
+        return $this->getModelsWithCapability('can_generate_video');
     }
 
     /**
@@ -341,7 +467,7 @@ class PricingLookup
      */
     public function canGenerateAudio(): array
     {
-        return $this->modelsWithCapability('can_generate_audio');
+        return $this->getModelsWithCapability('can_generate_audio');
     }
 
     /**
@@ -349,19 +475,18 @@ class PricingLookup
      *
      * @return string[]
      */
-    protected function modelsWithCapability(string $field): array
+    protected function getModelsWithCapability(string $field): array
     {
         $this->resolve();
 
-        $result = [];
-        foreach ($this->models as $key => $data) {
-            if ($data[$field]) {
-                // Key is "provider|model", we want just the model part
-                $result[] = explode('|', $key, 2)[1];
+        $modelIds = [];
+        foreach ($this->models as $key => $modelData) {
+            if ($modelData[$field]) {
+                $modelIds[] = Str::after($key, '|');
             }
         }
 
-        return collect($result)->uniqueStrict()->values()->all();
+        return collect($modelIds)->uniqueStrict()->values()->all();
     }
 
     /**
@@ -387,7 +512,7 @@ class PricingLookup
     }
 
     /**
-     * Build all model definitions from pricing classes. Called once on first access.
+     * Index every catalog's models. Called once on first access.
      */
     protected function resolve(): void
     {
@@ -395,9 +520,9 @@ class PricingLookup
             return;
         }
 
-        foreach ($this->pricingClasses as $pricing) {
+        foreach ($this->catalogs as $pricing) {
             $provider = $pricing->provider();
-            $currency = strtoupper($pricing->currency());
+            $currency = Str::upper($pricing->currency());
             $this->currencies[$provider] = $currency;
 
             $toolPricing = $pricing->toolCallPricing();
@@ -438,6 +563,7 @@ class PricingLookup
                     'can_generate_video' => $modelArray['can_generate_video'],
                     'can_generate_audio' => $modelArray['can_generate_audio'],
                     'retired_on' => $modelArray['retired_on'],
+                    'variants' => $modelArray['variants'],
                     'tiers' => $tiers,
                 ];
 
@@ -497,7 +623,7 @@ class PricingLookup
     {
         $this->resolve();
 
-        foreach ($this->candidateIds($model) as $candidate) {
+        foreach ($this->getCandidateIds($model) as $candidate) {
             $key = $this->buildKey($provider, $candidate);
 
             if (isset($this->models[$key])) {
@@ -517,18 +643,18 @@ class PricingLookup
      *
      * @return list<string>
      */
-    protected function candidateIds(string $model): array
+    protected function getCandidateIds(string $model): array
     {
         $candidates = [$model];
 
         foreach (self::ROUTING_SUFFIXES as $suffix) {
-            if (str_ends_with($model, $suffix)) {
-                $candidates[] = substr($model, 0, -strlen($suffix));
+            if (Str::endsWith($model, $suffix)) {
+                $candidates[] = Str::replaceEnd($suffix, '', $model);
             }
         }
 
         foreach ($candidates as $candidate) {
-            $base = preg_replace('/-(\d{8}|\d{4}-\d{2}-\d{2})$/', '', $candidate);
+            $base = Str::replaceMatches('/-(\d{8}|\d{4}-\d{2}-\d{2})$/', '', $candidate);
 
             if (is_string($base) && $base !== $candidate) {
                 $candidates[] = $base;

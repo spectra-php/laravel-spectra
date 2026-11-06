@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\ShowConversationController;
 use Spectra\Models\SpectraRequest;
@@ -94,6 +98,19 @@ it('keeps every call of a conversation in its totals when a filter matches one c
         ->and($json['data'][0]['total_cost_in_cents'])->toEqualWithDelta(7.0, 0.0001);
 });
 
+it('keeps only the conversations with a call attributed to the trackable type asked for', function () {
+    supportCall(0, 1, ['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    supportCall(10, 2, ['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['conversation_id' => 'sales-7', 'trackable_type' => 'App\\Models\\Team', 'trackable_id' => '1']);
+
+    $json = callConversations(['trackable_type' => 'App\\Models\\User']);
+
+    expect($json['total'])->toBe(1)
+        ->and($json['data'][0]['conversation_id'])->toBe('support-42')
+        ->and($json['data'][0]['request_count'])->toBe(2)
+        ->and($json['available_trackable_types'])->toBe(['App\\Models\\Team', 'App\\Models\\User']);
+});
+
 it('finds a conversation by part of its id and sorts by last activity', function () {
     supportCall(0, 1);
     SpectraRequest::factory()->create(['conversation_id' => 'sales-7', 'created_at' => Date::parse('2026-11-04 09:00:00')]);
@@ -138,11 +155,62 @@ it('shows a conversation as turns with the prompt, the reply and the cost so far
         ->and($turns[2])->toMatchArray(['turn' => 3, 'prompt' => null, 'reply' => null, 'failed_count' => 1, 'running_cost_in_cents' => 13.0]);
 });
 
+it('takes the text from the streamed reply, not from the guardrails and rewriter around it', function () {
+    $verdict = '{"toxic":false}';
+    // An input guardrail, a query rewriter, the streamed agent reply, and an output guardrail.
+    supportCall(0, 1, ['request' => [...chatRequest("<conversation>\nVisitor: Hello\n</conversation>\n<text>\nAre you okay?\n</text>"), 'response_format' => ['type' => 'json_schema']], 'response' => chatReply($verdict)]);
+    supportCall(0, 1, ['request' => chatRequest("Chat:\nVisitor: Hello\n\nLast message: Are you okay?"), 'response' => chatReply('are you okay')]);
+    supportCall(1, 1, ['request' => [...chatRequest('Are you okay?'), 'stream' => true], 'response' => ['streaming' => true, 'content' => "I'm doing well, thanks!"]]);
+    supportCall(2, 1, ['request' => [...chatRequest("<text>\nI'm doing well, thanks!\n</text>"), 'response_format' => ['type' => 'json_schema']], 'response' => chatReply($verdict)]);
+
+    expect(callConversation('support-42')['turns'][0])->toMatchArray(['prompt' => 'Are you okay?', 'reply' => "I'm doing well, thanks!", 'request_count' => 4]);
+});
+
+it('passes over structured-output calls when the turn has a plain one', function (array $structured) {
+    supportCall(0, 1, ['request' => [...chatRequest('<text>Hi</text>'), ...$structured], 'response' => chatReply('{"ok":true}')]);
+    supportCall(1, 1, ['request' => chatRequest('Hi'), 'response' => chatReply('Hello!')]);
+    supportCall(2, 1, ['request' => [...chatRequest('<text>Hello!</text>'), ...$structured], 'response' => chatReply('{"ok":true}')]);
+
+    expect(callConversation('support-42')['turns'][0])->toMatchArray(['prompt' => 'Hi', 'reply' => 'Hello!']);
+})->with([
+    'OpenAI chat' => [['response_format' => ['type' => 'json_object']]],
+    'OpenAI Responses' => [['text' => ['format' => ['type' => 'json_schema']]]],
+    'Anthropic' => [['output_config' => ['format' => ['type' => 'json_schema']]]],
+    'Gemini' => [['generationConfig' => ['responseMimeType' => 'application/json']]],
+    'Ollama' => [['format' => 'json']],
+]);
+
+it('still shows a turn made only of structured-output calls', function () {
+    supportCall(0, 1, ['request' => [...chatRequest('Rate this answer'), 'response_format' => ['type' => 'json_schema']], 'response' => chatReply('{"score":4}')]);
+
+    expect(callConversation('support-42')['turns'][0])->toMatchArray(['prompt' => 'Rate this answer', 'reply' => '{"score":4}']);
+});
+
 it('makes each call without a turn number a turn of its own', function () {
     supportCall(0, null);
     supportCall(5, null);
 
     expect(callConversation('support-42')['turns'])->toHaveCount(2);
+});
+
+it('lists nothing and says the trace migrations are missing until they run', function () {
+    Schema::table('spectra_requests', function (Blueprint $table) {
+        $table->dropIndex('spectra_requests_trace_id_started_at_index');
+        $table->dropColumn(['started_at', 'origin', 'span_id']);
+    });
+    Log::spy();
+    Spectra::forConversation('chat-1', turn: 1);
+    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Hi']]]]);
+
+    $list = callConversations();
+    $conversation = callConversation('chat-1');
+
+    expect(SpectraRequest::query()->count())->toBe(1)
+        ->and($list['migrated'])->toBeFalse()
+        ->and($list['data'])->toBe([])
+        ->and($list['summary']['conversation_count'])->toBe(0)
+        ->and($conversation['migrated'])->toBeFalse()
+        ->and($conversation['turns'])->toBe([]);
 });
 
 it('answers 404 for a conversation with no calls', function () {

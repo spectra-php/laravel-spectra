@@ -475,6 +475,47 @@ it('records nothing for an empty stream', function () {
     Spectra::assertRequestCount(0);
 });
 
+it('records the stream as failed with fail(), keeping the usage read before', function () {
+    $tracker = Spectra::stream('openai', 'gpt-4o');
+    foreach ($tracker->track([
+        ['choices' => [['delta' => ['content' => 'Hel']]], 'usage' => ['prompt_tokens' => 12, 'completion_tokens' => 1]],
+    ]) as $text) {
+        //
+    }
+
+    $row = $tracker->fail(new RuntimeException('connection reset'));
+
+    expect($row->error_type)->toBe(RuntimeException::class)
+        ->and($row->error_message)->toBe('connection reset')
+        ->and($row->prompt_tokens)->toBe(12)
+        ->and($tracker->isFinished())->toBeTrue()
+        ->and($tracker->finish())->toBe($row);
+    Spectra::assertFailed();
+});
+
+it('records a stream whose loop threw when the tracker is released without finish()', function () {
+    $stream = (function () {
+        yield ['choices' => [['delta' => ['content' => 'Hi']]]];
+
+        throw new RuntimeException('connection reset');
+    })();
+
+    $consume = function () use ($stream) {
+        $tracker = Spectra::stream('openai', 'gpt-4o');
+
+        foreach ($tracker->track($stream) as $text) {
+            //
+        }
+    };
+
+    expect($consume)->toThrow(RuntimeException::class);
+    unset($consume, $stream);
+    gc_collect_cycles();
+
+    Spectra::assertRequestCount(1);
+    Spectra::assertFailed();
+});
+
 it('does not leak a pending stream context to the next tracker when a stream dies early', function () {
     $manager = app(SpectraManager::class);
     $pendingContext = $manager->startRequest('openai', 'gpt-4o', [

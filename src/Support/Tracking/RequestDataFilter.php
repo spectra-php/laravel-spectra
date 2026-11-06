@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Spectra\Support\Tracking;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 
 /**
  * Removes system prompts and tool definitions from a raw request body before
- * it is stored, for the `store_system_prompts` and `store_tools` switches.
+ * it is stored, for the `store_system_prompts` and `store_tools` switches,
+ * and the inline files (`data:` URIs) a request carries, which are
+ * megabytes that say nothing about the call.
  *
  * The raw body is the only place Spectra stores either, so this is where the
  * switches take effect. Each provider puts them somewhere else; unknown keys
@@ -28,6 +31,30 @@ class RequestDataFilter
 
     /** Tool definitions: `tools` everywhere, `functions` in the legacy OpenAI API. */
     protected const TOOL_KEYS = ['tools', 'functions'];
+
+    /** What an inline file is stored as, like binary data in responses. */
+    public const STRIPPED = '[stripped]';
+
+    /**
+     * Replace every inline file (a `data:` URI, such as a base64 image in a
+     * vision prompt) anywhere in a request body with a placeholder, so a
+     * stored request stays kilobytes however many images it sent.
+     *
+     * @param  array<mixed>  $data
+     * @return array<mixed>
+     */
+    public function withoutInlineFiles(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = $this->withoutInlineFiles($value);
+            } elseif (is_string($value) && Str::startsWith($value, 'data:') && Str::contains($value, ';base64,')) {
+                $data[$key] = self::STRIPPED;
+            }
+        }
+
+        return $data;
+    }
 
     /**
      * Remove system prompts from a request body, at the top level and in its messages or input.

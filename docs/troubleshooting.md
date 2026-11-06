@@ -2,6 +2,7 @@
 
 Common problems with Spectra, and how to fix them.
 
+<a name="no-requests-are-being-tracked"></a>
 ## No Requests Are Being Tracked
 
 **Symptoms:** The dashboard shows no data and the `spectra_requests` table is empty.
@@ -33,17 +34,18 @@ Common problems with Spectra, and how to fix them.
 
 8. **Saving failed.** Spectra never throws saving errors into your app. They go to your exception handler, so check your error log. A common cause is a missing column after an upgrade (see [Migrations](/migrations#v2-migration)).
 
+<a name="requests-tracked-but-cost-is-zero"></a>
 ## Requests Tracked But Cost Is Zero
 
 **Symptoms:** Requests appear in the dashboard but `total_cost_in_cents` shows `0.000000`.
 
 **Checklist:**
 
-1. **A pricing class exists.** The pricing catalog needs an entry for each model you use. Prices live in `ProviderPricing` classes, registered in `config/spectra.php` under `costs.pricing`. See [Pricing](/pricing).
+1. **The model is in the catalog.** The pricing catalog needs an entry for each model you use. Prices live in the catalog bundled with Spectra and in [your own pricing file](/pricing#your-own-prices). See [Pricing](/pricing).
 
-2. **The model name matches.** The model id must match a catalog entry: by its exact id, an alias, or the id without a snapshot date or routing suffix. See [How Spectra Finds a Model](/pricing#model-lookup). Compare the `snapshot` and `model` values in your request records with the pricing class definitions.
+2. **The model name matches.** The model id must match a catalog entry: by its exact id, an alias, or the id without a snapshot date or routing suffix. See [How Spectra Finds a Model](/pricing#model-lookup). Compare the `snapshot` and `model` values in your request records with the ids in the catalog.
 
-3. **The pricing tier exists.** If you use a non-standard tier (such as `batch` or `flex`), the provider's pricing class needs an entry for that tier.
+3. **The pricing tier exists.** If you use a non-standard tier (such as `batch` or `flex`), the model needs a row for that tier; without one it bills at `standard`.
 
 4. **The pricing unit matches the metrics.** The `pricingUnit` on the model definition must match the metrics in the response. For example, a model with `pricingUnit('tokens')` requires non-null `prompt_tokens` and `completion_tokens` values.
 
@@ -56,6 +58,7 @@ Common problems with Spectra, and how to fix them.
 
 6. **Streamed OpenAI Chat Completions.** OpenAI only sends usage in a Chat Completions stream when the request has `'stream_options' => ['include_usage' => true]`. Without it, the request is recorded with zero tokens and zero cost. See [Streaming](/usage#streaming).
 
+<a name="dashboard-shows-empty-data"></a>
 ## Dashboard Shows Empty Data
 
 **Symptoms:** The dashboard loads but displays no requests or statistics.
@@ -83,6 +86,7 @@ Common problems with Spectra, and how to fix them.
 
 5. **The middleware is correct.** If you added `auth` to the dashboard middleware, make sure you are logged in when you open the dashboard.
 
+<a name="queue-persistence-not-working"></a>
 ## Queue Persistence Not Working
 
 **Symptoms:** Requests are tracked but never appear in the database when using queue mode.
@@ -110,6 +114,7 @@ Common problems with Spectra, and how to fix them.
 
 4. **Queue takes priority over after-response.** You can only use one of these modes. When `queue.enabled` is `true`, the `after_response` setting is ignored.
 
+<a name="after-response-mode-not-working"></a>
 ## After-Response Mode Not Working
 
 **Symptoms:** `after_response` is enabled but requests appear to persist synchronously.
@@ -119,6 +124,7 @@ This is expected in two cases:
 - **Non-HTTP context.** After-response only works during web requests. Console commands, queue jobs, and scheduled tasks always save synchronously, because there is no HTTP response to wait for.
 - **Queue is enabled.** When `queue.enabled` is `true`, it takes priority and `after_response` is ignored.
 
+<a name="budget-middleware-not-enforcing"></a>
 ## Budget Middleware Not Enforcing
 
 **Symptoms:** Requests proceed even when the user's budget is exceeded.
@@ -143,6 +149,7 @@ This is expected in two cases:
 
 4. **The hard limit is enabled.** With `hard_limit = false`, requests go through and Spectra only fires events. Set `hard_limit = true` on the budget to block requests once it is exceeded.
 
+<a name="opentelemetry-export-not-appearing"></a>
 ## OpenTelemetry Export Not Appearing
 
 **Symptoms:** OTEL is enabled but no traces appear in your observability backend.
@@ -168,6 +175,7 @@ This is expected in two cases:
    SPECTRA_OTEL_TIMEOUT=30
    ```
 
+<a name="stats-look-wrong-after-data-changes"></a>
 ## Stats Look Wrong After Data Changes
 
 **Symptoms:** Dashboard charts or cost totals don't match the raw request data.
@@ -185,6 +193,7 @@ php artisan spectra:rebuild-stats --from=2026-01-01 --to=2026-01-31
 
 The stats are rebuilt only from requests that still exist. If you pruned old requests but kept their daily stats, rebuild only the days you still have requests for (see [`spectra:rebuild-stats`](/commands#spectra-rebuild-stats)).
 
+<a name="media-files-not-being-saved"></a>
 ## Media Files Not Being Saved
 
 **Symptoms:** Image or video generation requests are tracked but no media files are downloaded to disk.
@@ -202,6 +211,7 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
 
 4. **The URLs haven't expired.** Provider media URLs don't last long. If saving is delayed (for example, by a queue with a long delay), the URLs may expire before the download finishes.
 
+<a name="macro-not-available"></a>
 ## Macro Not Available
 
 **Symptoms:** `Http::withAITracking()` or `Http::withoutAITracking()` throws a "Method not found" error.
@@ -216,13 +226,11 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
    ],
    ```
 
-2. **Spectra is enabled.** Macros are registered when Spectra boots:
-   ```bash
-   SPECTRA_ENABLED=true
-   ```
+2. **Check for conflicts.** Another package may have registered a macro with the same name. Laravel macros are global, and the last registration wins.
 
-3. **Check for conflicts.** Another package may have registered a macro with the same name. Laravel macros are global, and the last registration wins.
+The macros are registered whether Spectra is enabled or not: with `SPECTRA_ENABLED=false`, `Http::withAITracking()` works and records nothing. They are also available on a pending request, after `withHeaders()`, `withToken()` and the like.
 
+<a name="high-memory-usage"></a>
 ## High Memory Usage
 
 **Symptoms:** Application memory spikes when making many AI requests in a single process.
@@ -246,6 +254,7 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
   php artisan spectra:prune --hours=168
   ```
 
+<a name="duplicate-requests-being-tracked"></a>
 ## Duplicate Requests Being Tracked
 
 **Symptoms:** The same AI request appears multiple times in the dashboard.
@@ -261,7 +270,7 @@ Spectra tracks each request once. Every route into a provider (the HTTP client, 
 **Solution:** Use only one tracking mechanism per request path.
 
 <a name="costs-changed-after-upgrade"></a>
-## Costs Look Higher or Lower After Upgrading
+## Costs Look Higher or Lower After Upgrading {#costs-changed-after-upgrade}
 
 **Symptoms:** After upgrading to Spectra 2.0, new requests cost more (or less) than the same requests did before.
 
@@ -276,7 +285,7 @@ This is expected. Spectra 2.0 prices requests more accurately:
 Older rows keep their old values. Nothing is rewritten. See the [Upgrade Guide](/upgrade#what-changes-in-the-numbers) for details. To fix daily stats that 1.x counted more than once for polled jobs, run `php artisan spectra:rebuild-stats` once.
 
 <a name="exchange-rate-warning"></a>
-## "No Exchange Rate" Warning in the Log
+## "No Exchange Rate" Warning in the Log {#exchange-rate-warning}
 
 **Symptoms:** The log shows a warning like `Spectra: no exchange rate from EUR to USD`.
 
@@ -294,15 +303,25 @@ A pricing catalog uses a different currency from your reporting currency (the bu
 The warning is logged once per process. See [Currency Conversion](/costs#currency-conversion).
 
 <a name="budgets-after-upgrade"></a>
-## Budgets or Per-User Usage Show Nothing for Old Requests
+## Budgets or Per-User Usage Show Nothing for Old Requests {#budgets-after-upgrade}
 
 **Symptoms:** In an app with a morph map, budgets and per-user usage ignore requests recorded before the upgrade.
 
 Spectra 2.0 stores the trackable type as the morph alias (`$model->getMorphClass()`). Spectra 1.x stored the class name. Update the old rows once, as shown in the [Upgrade Guide](/upgrade#trackables-use-morph-aliases).
 
 <a name="budget-alert-once"></a>
-## Budget Alert Fired Only Once
+## Budget Alert Fired Only Once {#budget-alert-once}
 
 **Symptoms:** A `BudgetThresholdReached` event fired once, and not again on later requests.
 
 This is expected. Warning, critical, and exceeded alerts fire once per budget, limit, and period. See [Alerts Fire Once per Period](/budgets#alerts-fire-once).
+
+<a name="playground-wont-run"></a>
+## The Playground Won't Open or Run a Call {#playground-wont-run}
+
+- **The screen says the Playground is off.** Set `SPECTRA_PLAYGROUND_ENABLED=true`. If you cache your config, run `php artisan config:cache` again.
+- **The screen says you can't use it.** Define the `manageSpectra` gate for your user. See [Who Can Use It](/playground#who-can-use-it).
+- **A request has no Open in Playground button.** The Playground is off, or you don't have the `manageSpectra` gate.
+- **A call opens but Run is turned off.** The screen says why: it isn't a text call to a chat endpoint, its request body wasn't stored, or it went to a custom provider. See [What Can Be Opened](/playground#what-can-be-opened).
+- **It says no API key was found.** Set `spectra.api_keys.{provider}` in `config/spectra.php`. See [API Keys and Base URLs](/playground#api-keys-and-base-urls).
+- **The provider rejects a run that worked in your app.** The stored body may have lost something, or the call may need a header Spectra doesn't store. See [When a Run Differs From the Original](/playground#when-a-run-differs-from-the-original).

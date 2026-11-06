@@ -97,7 +97,7 @@ You can filter by tag in the dashboard's request explorer, to narrow the list do
 
 Tags are stored in a normalized many-to-many structure, so they are fast to query:
 
-- **`spectra_tags`**: a lookup table of unique tag names (for example, `chat`, `production`). Each tag name is stored once.
+- **`spectra_tags`**: a lookup table of unique tag names (for example, `chat`, `production`). Each tag name is stored once, and cut to 255 characters.
 - **`spectra_requests_tags`**: a pivot table that links requests to tags. Deleting a request also deletes its pivot rows.
 
 This way the same tag name isn't stored again on millions of request rows, and queries and totals by tag stay fast.

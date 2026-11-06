@@ -67,7 +67,7 @@ class TextHandler implements ExtractsModelFromRequest, ExtractsModelFromResponse
         }
 
         // Language models stream their answer as a list of text pieces.
-        if (is_array($output) && $output !== [] && is_string($output[0] ?? null)) {
+        if (is_array($output) && filled($output) && is_string($output[0] ?? null)) {
             return collect($output)->filter(fn (mixed $piece) => is_string($piece))->implode('');
         }
 

@@ -12,6 +12,7 @@ use Spectra\Contracts\MatchesResponseShape;
 use Spectra\Data\DocumentMetrics;
 use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
+use Spectra\Support\Payload;
 
 /**
  * Mistral Document AI OCR (`POST /v1/ocr`), billed per page.
@@ -53,7 +54,7 @@ class OcrHandler implements ExtractsModelFromResponse, Handler, MatchesResponseS
             ?? (is_array($responseData['pages'] ?? null) ? count($responseData['pages']) : 0);
 
         return new Metrics(
-            document: new DocumentMetrics(pages: (int) $pages),
+            document: new DocumentMetrics(pages: Payload::int($pages)),
         );
     }
 
@@ -68,12 +69,12 @@ class OcrHandler implements ExtractsModelFromResponse, Handler, MatchesResponseS
             return null;
         }
 
-        $markdown = collect($response['pages'])
+        $markdownPages = collect($response['pages'])
             ->map(fn (mixed $page) => is_array($page) && is_string($page['markdown'] ?? null) ? $page['markdown'] : null)
             ->filter()
             ->all();
 
-        return $markdown !== [] ? implode("\n\n", $markdown) : null;
+        return $markdownPages !== [] ? implode("\n\n", $markdownPages) : null;
     }
 
     /**

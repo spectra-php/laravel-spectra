@@ -54,6 +54,7 @@ it('parses a streamed JSON array, braces inside strings included', function () {
 
 it('sniffs the format when the content type is unspecific', function () {
     $parser = new StreamEventParser;
+
     $events = parseInChunks($parser, "data: {\"x\":1}\n\n", 2);
 
     expect($events)->toBe([['x' => 1]])

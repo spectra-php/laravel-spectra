@@ -22,7 +22,7 @@ class GetCostsByDate
     public function __invoke(DateRange $dateRange): Collection
     {
         return CostByDate::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->successfulOnly()
                 ->byDate()
                 ->successfulCost()

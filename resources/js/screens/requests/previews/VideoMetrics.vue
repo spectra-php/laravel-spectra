@@ -1,20 +1,31 @@
-<script setup>
-import { ref } from 'vue';
+<script setup lang="ts">
+import { ref, watch } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import ExpiryCountdown from '@/components/ExpiryCountdown.vue';
+import Money from '@/components/Money.vue';
+import type { RequestDetailsResponse } from '@/types/api';
 
-const props = defineProps({
-    request: { type: Object, required: true },
-    expanded: { type: Boolean, default: true },
+const props = withDefaults(defineProps<{
+    request: RequestDetailsResponse;
+    expanded?: boolean;
+}>(), {
+    expanded: true,
 });
 
-const emit = defineEmits(['toggle']);
+const emit = defineEmits<{
+    toggle: [];
+}>();
 
-const { spectra, formatNumber, formatCurrency } = useHelpers();
+const { spectra, formatNumber } = useHelpers();
 
-const hasExpired = ref(
-    props.request.expires_at && new Date(props.request.expires_at) < new Date()
-);
+const isPastExpiry = () => Boolean(props.request.expires_at && new Date(props.request.expires_at) < new Date());
+
+const hasExpired = ref(isPastExpiry());
+
+// Moving between calls of a trace reuses this card.
+watch(() => props.request.expires_at, () => {
+    hasExpired.value = isPastExpiry();
+});
 
 const onExpired = () => {
     hasExpired.value = true;
@@ -43,13 +54,13 @@ const onExpired = () => {
         </div>
         <div v-if="expanded" class="card-body">
             <div class="grid grid-cols-3 gap-6">
-                <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                     <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Videos Generated</div>
                     <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                         {{ formatNumber(request.video_count || 0) }}
                     </div>
                 </div>
-                <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                     <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Duration</div>
                     <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                         {{ (request.duration_seconds || 0).toFixed(1) }}s
@@ -58,7 +69,7 @@ const onExpired = () => {
                 <div class="text-center p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20">
                     <div class="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1">Cost</div>
                     <div class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">
-                        {{ formatCurrency(request.total_cost_in_cents) }}
+                        <Money :cents="request.total_cost_in_cents" />
                     </div>
                 </div>
             </div>

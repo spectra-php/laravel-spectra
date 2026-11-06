@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
 
@@ -11,7 +12,9 @@ use Spectra\Models\SpectraRequest;
  */
 function mistralSse(array ...$events): string
 {
-    return implode('', array_map(fn (array $event) => 'data: '.json_encode($event)."\n\n", $events))."data: [DONE]\n\n";
+    return collect($events)
+        ->map(fn (array $event) => 'data: '.json_encode($event, JSON_THROW_ON_ERROR)."\n\n")
+        ->implode('')."data: [DONE]\n\n";
 }
 
 it('bills a reasoning response with its cache hits and thinking inside the output', function () {
@@ -54,7 +57,7 @@ it('records the tier Mistral says it served and bills it at standard without a p
 });
 
 it('records a streamed reasoning response with its answer text and cost', function () {
-    $chunk = fn (mixed $content, ?string $finish = null, ?array $usage = null) => array_filter([
+    $chunk = fn (mixed $content, ?string $finish = null, ?array $usage = null) => Arr::where([
         'id' => 'cmpl-mistral-stream', 'object' => 'chat.completion.chunk', 'created' => 1773842038, 'model' => 'mistral-medium-3-5',
         'choices' => [['index' => 0, 'delta' => ['role' => 'assistant', 'content' => $content], 'finish_reason' => $finish]],
         'usage' => $usage,

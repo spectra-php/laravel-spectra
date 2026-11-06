@@ -8,11 +8,10 @@ use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
 /**
- * One row of the costs screen's "top spenders": a trackable (any morph type,
- * not only users) with its request count and the cost of its successful
- * requests. `user_id` is the trackable id, a string because apps key models
- * by UUID or ULID too; `trackable_type` tells apart equal ids of different
- * types.
+ * One row of the costs screen's "top users": a user with their request count
+ * and the cost of their successful requests. `user_id` is the trackable id, a
+ * string because apps key models by UUID or ULID too; `trackable_type` tells
+ * apart equal ids of different user models.
  */
 readonly class CostByUser extends DataTransferObject
 {
@@ -28,7 +27,7 @@ readonly class CostByUser extends DataTransferObject
     ) {}
 
     /**
-     * Build one row per trackable from the aggregate rows, adding each trackable's name.
+     * Build one row per user from the aggregate rows, adding each user's name.
      *
      * @param  Collection<int, SpectraRequest>  $items
      * @param  array<string, array<string, mixed>>  $metadata  "{trackable_type}:{trackable_id}" => ['name' => ..., 'email' => ...]
@@ -37,13 +36,13 @@ readonly class CostByUser extends DataTransferObject
     public static function fromCollection(Collection $items, array $metadata = []): Collection
     {
         return $items->map(function (SpectraRequest $item) use ($metadata) {
-            $meta = $metadata["{$item->trackable_type}:{$item->trackable_id}"] ?? [];
+            $trackableMetadata = $metadata["{$item->trackable_type}:{$item->trackable_id}"] ?? [];
 
             return new self(
                 user_id: (string) $item->trackable_id,
                 requests: $item->requests,
                 cost: $item->cost,
-                user_name: $meta['name'] ?? null,
+                user_name: $trackableMetadata['name'] ?? null,
                 trackable_type: $item->trackable_type,
             );
         });

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Illuminate\Support\Str;
 use Psr\Http\Message\ResponseInterface;
 use Spectra\Contracts\ReturnsBinaryResponse;
 use Spectra\Support\ProviderRegistry;
@@ -38,25 +39,23 @@ class StreamDetector
         $contentType = $response->getHeaderLine('Content-Type');
 
         // Server-sent events, or newline-delimited JSON (Ollama streams by default).
-        if (str_contains($contentType, 'text/event-stream')
-            || str_contains($contentType, 'ndjson')
-            || str_contains($contentType, 'jsonl')) {
+        if (Str::contains($contentType, ['text/event-stream', 'ndjson', 'jsonl'])) {
             return true;
         }
 
         // Gemini streams via the endpoint name; without `alt=sse` the body is a
         // streamed JSON array served as application/json.
-        if ($endpoint !== null && str_ends_with($endpoint, ':streamGenerateContent')) {
+        if ($endpoint !== null && Str::endsWith($endpoint, ':streamGenerateContent')) {
             return true;
         }
 
         // A plain JSON document is never a stream, even when the request asked
         // for one (some APIs ignore or deprecated their `stream` flag).
-        if (str_contains($contentType, 'application/json')) {
+        if (Str::contains($contentType, 'application/json')) {
             return false;
         }
 
-        // The request explicitly asked for streaming.
+        // Past the JSON check, a body the request asked to stream is a stream.
         if ($requestData['stream'] ?? false) {
             return true;
         }
@@ -64,6 +63,6 @@ class StreamDetector
         // Chunked without content-length and not JSON indicates streaming.
         $transferEncoding = $response->getHeaderLine('Transfer-Encoding');
 
-        return str_contains($transferEncoding, 'chunked') && ! $response->hasHeader('Content-Length');
+        return Str::contains($transferEncoding, 'chunked') && ! $response->hasHeader('Content-Length');
     }
 }

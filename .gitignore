@@ -14,3 +14,6 @@ build/
 /.claude
 /workbench/database/database.sqlite
 .env
+
+# The shared page reuses app.css; this is what the second build emits beside it.
+dist/viewer.css

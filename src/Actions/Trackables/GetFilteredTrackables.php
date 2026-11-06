@@ -33,7 +33,7 @@ class GetFilteredTrackables
         $sortDirection = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
         $perPage = min(max($request->integer('per_page', 25), 1), 100);
 
-        return RequestAggregateQuery::make($dateRange)
+        return RequestAggregateQuery::forTrackableFilters($dateRange, $request)
             ->withTrackable()
             ->filteredBy($request)
             ->groupByColumns('trackable_type', 'trackable_id')

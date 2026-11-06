@@ -14,7 +14,7 @@ use Spectra\Enums\ModelType;
  *
  * Providers list their handlers; everything endpoint-specific lives here so
  * a provider class stays a list of hosts and handlers. Payloads change
- * without notice, so implementations type-check what they read and never
+ * without notice, so implementations never assume a key exists and never
  * throw: an unknown shape must still be recorded.
  */
 interface Handler

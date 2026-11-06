@@ -9,8 +9,8 @@ use Spectra\Http\Controllers\Api\StatsController;
 use Spectra\Models\SpectraRequest;
 
 /**
- * The stats dashboard endpoint: latency by model type and the date range
- * filters.
+ * The stats dashboard endpoint: latency by model type, the calls recorded at
+ * $0 for want of a price, and the date range filters.
  */
 it('averages latency and sums cost per model type', function () {
     config()->set('spectra.dashboard.layout', 'full');
@@ -35,6 +35,31 @@ it('averages latency and sums cost per model type', function () {
         ->and((float) $json['cost_by_model_type']['text'])->toEqualWithDelta(200.0, 0.0001)
         ->and((float) $json['cost_by_model_type']['tts'])->toEqualWithDelta(210.0, 0.0001)
         ->and((float) $json['cost_by_model_type']['image'])->toEqualWithDelta(0.0, 0.0001);
+});
+
+it('counts the successful calls of models without a price and names the models', function () {
+    config()->set('spectra.dashboard.layout', 'full');
+
+    SpectraRequest::factory()
+        ->count(6)
+        ->state(new Sequence(
+            // Two calls to a fine-tune the catalog doesn't know, recorded at $0
+            ['provider' => 'openai', 'model' => 'ft:gpt-4o-mini:acme', 'total_cost_in_cents' => 0],
+            ['provider' => 'openai', 'model' => 'ft:gpt-4o-mini:acme', 'total_cost_in_cents' => 0],
+            // A community model without a price, failed: not spend that went missing
+            ['provider' => 'replicate', 'model' => 'someone/some-model', 'total_cost_in_cents' => 0, 'status_code' => 500],
+            // A known model at $0 (nothing billed) and a priced call
+            ['provider' => 'openai', 'model' => 'gpt-4o', 'total_cost_in_cents' => 0],
+            ['provider' => 'openai', 'model' => 'gpt-4o', 'total_cost_in_cents' => 125],
+            // Ollama has no catalog on purpose
+            ['provider' => 'ollama', 'model' => 'llama3', 'total_cost_in_cents' => 0],
+        ))
+        ->create();
+
+    $json = app()->call([app(StatsController::class), '__invoke'], ['request' => new Request(['period' => 'month'])])->toArray();
+
+    expect($json['unpriced']['request_count'])->toBe(2)
+        ->and($json['unpriced']['models'])->toBe(['ft:gpt-4o-mini:acme']);
 });
 
 it('counts only the requests inside a custom date range', function () {

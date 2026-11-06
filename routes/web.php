@@ -3,12 +3,47 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Spectra\Http\Controllers\Api\AlertsController;
+use Spectra\Http\Controllers\Api\Annotations\AnnotationQueuesController;
+use Spectra\Http\Controllers\Api\Annotations\NextAnnotationItemController;
+use Spectra\Http\Controllers\Api\Annotations\QueueTraceForReviewController;
+use Spectra\Http\Controllers\Api\Annotations\ReviewAnnotationItemController;
 use Spectra\Http\Controllers\Api\ConfigController;
 use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\CostsController;
+use Spectra\Http\Controllers\Api\Dashboards\DashboardsController;
+use Spectra\Http\Controllers\Api\Dashboards\DeleteDashboardController;
+use Spectra\Http\Controllers\Api\Dashboards\PreviewDashboardController;
+use Spectra\Http\Controllers\Api\Dashboards\StoreDashboardController;
+use Spectra\Http\Controllers\Api\Dashboards\UpdateDashboardController;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
+use Spectra\Http\Controllers\Api\ErrorsController;
+use Spectra\Http\Controllers\Api\Evaluations\AddDatasetExampleController;
+use Spectra\Http\Controllers\Api\Evaluations\DatasetsController;
+use Spectra\Http\Controllers\Api\Evaluations\DeleteDatasetController;
+use Spectra\Http\Controllers\Api\Evaluations\DeleteDatasetExampleController;
+use Spectra\Http\Controllers\Api\Evaluations\EvalsController;
+use Spectra\Http\Controllers\Api\Evaluations\ShowDatasetController;
+use Spectra\Http\Controllers\Api\Evaluations\ShowEvalRunController;
+use Spectra\Http\Controllers\Api\Evaluations\StoreDatasetController;
+use Spectra\Http\Controllers\Api\Evaluations\StoreDatasetExampleController;
+use Spectra\Http\Controllers\Api\Evaluations\UpdateDatasetController;
+use Spectra\Http\Controllers\Api\Evaluations\UpdateDatasetExampleController;
+use Spectra\Http\Controllers\Api\Maintenance\MaintenanceStatusController;
+use Spectra\Http\Controllers\Api\Maintenance\PricingStatusController;
+use Spectra\Http\Controllers\Api\Maintenance\PruneController;
+use Spectra\Http\Controllers\Api\Maintenance\RebuildStatsController;
+use Spectra\Http\Controllers\Api\Maintenance\RecordingController;
+use Spectra\Http\Controllers\Api\PerformanceController;
+use Spectra\Http\Controllers\Api\Playground\NewPlaygroundPromptController;
+use Spectra\Http\Controllers\Api\Playground\PlaygroundController;
+use Spectra\Http\Controllers\Api\Playground\RunNewPlaygroundPromptController;
+use Spectra\Http\Controllers\Api\Playground\RunPlaygroundCallController;
+use Spectra\Http\Controllers\Api\Playground\ShowPlaygroundCallController;
+use Spectra\Http\Controllers\Api\PromptsController;
 use Spectra\Http\Controllers\Api\ProvidersController;
 use Spectra\Http\Controllers\Api\RequestsController;
+use Spectra\Http\Controllers\Api\ScoresController;
 use Spectra\Http\Controllers\Api\ServeAudioController;
 use Spectra\Http\Controllers\Api\ServeImageController;
 use Spectra\Http\Controllers\Api\ShowConversationController;
@@ -26,6 +61,8 @@ use Spectra\Http\Controllers\DashboardController;
 Route::prefix('api')->group(function () {
     Route::get('/config', ConfigController::class);
     Route::get('/stats', StatsController::class);
+    Route::get('/performance', PerformanceController::class);
+    Route::get('/alerts', AlertsController::class);
     Route::get('/requests', RequestsController::class);
     // Request ids are UUIDs; anything else is a 404 rather than a query
     // PostgreSQL's uuid column rejects with an error.
@@ -38,11 +75,53 @@ Route::prefix('api')->group(function () {
     Route::get('/conversations', ConversationsController::class);
     Route::get('/conversations/{conversationId}', ShowConversationController::class)->where('conversationId', '.*');
     Route::get('/costs', CostsController::class);
+    Route::get('/scores', ScoresController::class);
+    Route::get('/prompts', PromptsController::class);
+    Route::get('/errors', ErrorsController::class);
+    Route::get('/annotations', AnnotationQueuesController::class);
+    Route::get('/annotations/{queue}/next', NextAnnotationItemController::class)->where('queue', '[A-Za-z0-9._\-]+');
+    Route::post('/annotations/{queue}/items', QueueTraceForReviewController::class)->where('queue', '[A-Za-z0-9._\-]+');
+    Route::post('/annotations/items/{id}', ReviewAnnotationItemController::class)->whereUuid('id');
+    Route::get('/evals', EvalsController::class);
+    Route::get('/evals/runs/{id}', ShowEvalRunController::class)->whereUuid('id');
+    Route::get('/datasets', DatasetsController::class);
+    Route::post('/datasets', StoreDatasetController::class);
+    Route::get('/datasets/{id}', ShowDatasetController::class)->whereUuid('id');
+    Route::put('/datasets/{id}', UpdateDatasetController::class)->whereUuid('id');
+    Route::delete('/datasets/{id}', DeleteDatasetController::class)->whereUuid('id');
+    Route::post('/datasets/examples', AddDatasetExampleController::class);
+    Route::post('/datasets/{id}/examples', StoreDatasetExampleController::class)->whereUuid('id');
+    Route::put('/datasets/{id}/examples/{example}', UpdateDatasetExampleController::class)->whereUuid(['id', 'example']);
+    Route::delete('/datasets/{id}/examples/{example}', DeleteDatasetExampleController::class)->whereUuid(['id', 'example']);
     Route::get('/tags', TagsController::class);
     Route::get('/trackables', TrackablesController::class);
     Route::get('/trackables/view/{id}', ShowTrackableController::class);
     Route::get('/trackables/view/{id}/requests-by-date', TrackableRequestsByDateController::class);
     Route::get('/providers', ProvidersController::class);
+
+    // Maintenance: anyone who may view the dashboard sees the status; the
+    // actions also need the manageSpectra gate.
+    Route::get('/maintenance', MaintenanceStatusController::class);
+    Route::post('/maintenance/prune', PruneController::class);
+    Route::post('/maintenance/rebuild-stats', RebuildStatsController::class);
+    Route::post('/maintenance/recording', RecordingController::class);
+    Route::get('/maintenance/pricing', PricingStatusController::class);
+
+    // Playground: anyone who may view the dashboard sees whether it is on; the
+    // calls and running them also need the option and the manageSpectra gate.
+    Route::get('/playground', PlaygroundController::class);
+    Route::get('/playground/new', NewPlaygroundPromptController::class);
+    Route::post('/playground/run', RunNewPlaygroundPromptController::class);
+    Route::get('/playground/{id}', ShowPlaygroundCallController::class)->whereUuid('id');
+    Route::post('/playground/{id}/run', RunPlaygroundCallController::class)->whereUuid('id');
+
+    // Shared dashboards: anyone who may view the dashboard sees whether they are
+    // on; the dashboards themselves also need the option and the manageSpectra gate.
+    Route::get('/dashboards', DashboardsController::class);
+    Route::post('/dashboards', StoreDashboardController::class);
+    Route::put('/dashboards/{id}', UpdateDashboardController::class)->whereUuid('id');
+    Route::delete('/dashboards/{id}', DeleteDashboardController::class)->whereUuid('id');
+    Route::get('/dashboards/{id}/preview', PreviewDashboardController::class)->whereUuid('id');
 });
 
 // SPA catch-all route. It skips api/ so an unknown or malformed API URL is a

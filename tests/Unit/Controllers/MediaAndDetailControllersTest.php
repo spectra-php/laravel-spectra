@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
 use Spectra\Http\Controllers\Api\RequestsController;
 use Spectra\Http\Controllers\Api\ServeAudioController;
@@ -143,6 +147,51 @@ it('leaves failed calls out of a trace total cost', function () {
     expect($json['trace']['request_count'])->toBe(2)
         ->and($json['trace']['total_cost_in_cents'])->toEqualWithDelta(40.0, 0.0001);
 });
+
+it('shows a request without its trace card and says the trace migrations are missing until they run', function () {
+    Schema::table('spectra_requests', function (Blueprint $table) {
+        $table->dropIndex('spectra_requests_trace_id_started_at_index');
+        $table->dropColumn(['started_at', 'origin', 'span_id']);
+    });
+    Log::spy();
+    Spectra::withTraceId('0b6f3a52-6d47-4a5e-9a51-2a7c1f0e9d11');
+    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Hi']]]]);
+    Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Again']]]]);
+    $current = SpectraRequest::query()->firstOrFail();
+
+    $json = app()->call([app(ShowRequestController::class), '__invoke'], ['id' => $current->id])->toArray();
+
+    expect($json['trace_migrated'])->toBeFalse()
+        ->and($json['trace'])->toBeNull()
+        ->and($json['model'])->toBe('GPT-4o');
+});
+
+it('shows a Replicate image request by its output URL', function () {
+    $prediction = $this->loadMockResponse('replicate/prediction-flux-1.1-pro.json');
+    $request = SpectraRequest::factory()->create(['model_type' => 'image', 'response' => $prediction]);
+
+    $json = app()->call([app(ShowRequestController::class), '__invoke'], ['id' => $request->id])->toArray();
+
+    expect($json['image_urls'])->toBe([$prediction['output']]);
+});
+
+it('shows every image of a Replicate request whose output is a list', function () {
+    $urls = ['https://replicate.delivery/a.webp', 'https://replicate.delivery/b.webp'];
+    $request = SpectraRequest::factory()->create(['model_type' => 'image', 'response' => ['output' => $urls]]);
+
+    $json = app()->call([app(ShowRequestController::class), '__invoke'], ['id' => $request->id])->toArray();
+
+    expect($json['image_urls'])->toBe($urls);
+});
+
+it('answers 404 for a stored image index when the output is only a URL', function () {
+    $request = SpectraRequest::factory()->create([
+        'model_type' => 'image',
+        'response' => $this->loadMockResponse('replicate/prediction-flux-1.1-pro.json'),
+    ]);
+
+    app()->call([app(ServeImageController::class), '__invoke'], ['id' => $request->id, 'index' => 0]);
+})->throws(NotFoundHttpException::class);
 
 it('returns tag ids as their UUIDs', function () {
     $tag = SpectraTag::findOrCreateByName('feature:search');

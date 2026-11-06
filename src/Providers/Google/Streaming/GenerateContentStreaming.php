@@ -38,7 +38,7 @@ class GenerateContentStreaming extends StreamHandler
 
         foreach ($parts as $part) {
             if (is_array($part) && is_string($part['text'] ?? null) && ! ($part['thought'] ?? false)) {
-                $text = ($text ?? '').$part['text'];
+                $text = "{$text}{$part['text']}";
             }
         }
 
@@ -46,6 +46,8 @@ class GenerateContentStreaming extends StreamHandler
     }
 
     /**
+     * Merge the cumulative usage, service tier and grounding calls of a Gemini chunk into the usage.
+     *
      * {"usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 20, "thoughtsTokenCount": 5, "serviceTier": "flex"}}
      *
      * Returns the normalised TokenMetrics keys, plus `pricing_tier` when the

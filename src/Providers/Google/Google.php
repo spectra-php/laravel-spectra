@@ -46,6 +46,8 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
     }
 
     /**
+     * Get the Gemini handlers, with the response-shape specialists after the generic handler.
+     *
      * Order matters: when multiple handlers match the same endpoint,
      * specialists (MatchesResponseShape) are checked in reverse order.
      * GenerateContentHandler is the default fallback for shared endpoints.
@@ -99,27 +101,29 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
      */
     public function extractResponseId(mixed $response, string $endpoint = ''): ?string
     {
-        $data = $this->toArray($response);
+        $responseData = $this->toArray($response);
 
         // A Veo job is identified by its operation name, from the submit
         // response (running, no `done` yet) to the poll that finishes it, so
         // the submit's request is remembered for that poll and repeated polls
         // of the same job update one row.
-        $operation = $data['name'] ?? null;
+        $operation = $responseData['name'] ?? null;
 
         if (filled($operation) && Str::contains($operation, '/operations/')) {
             return $operation;
         }
 
-        return filled($data['responseId'] ?? null)
-            ? $data['responseId']
+        return filled($responseData['responseId'] ?? null)
+            ? $responseData['responseId']
             : parent::extractResponseId($response, $endpoint);
     }
 
     /**
-     * `serviceTier` on the request body (`service_tier` is accepted too, as
-     * the API takes both spellings). For Veo, a 1080p video is the `hd` tier
-     * where the model prices it differently.
+     * Get the pricing tier from the request body's `serviceTier` or video resolution.
+     *
+     * `service_tier` is accepted too, as the API takes both spellings. For
+     * Veo, a 1080p video is the `hd` tier where the model prices it
+     * differently.
      *
      * @param  array<string, mixed>  $requestData
      */
@@ -136,7 +140,7 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
             ?? null;
 
         // 4K has no tier of its own yet; it is left at the base price.
-        return is_string($resolution) && strtolower($resolution) === '1080p' ? PricingTier::Hd->value : null;
+        return is_string($resolution) && Str::lower($resolution) === '1080p' ? PricingTier::Hd->value : null;
     }
 
     /**
@@ -146,9 +150,9 @@ class Google extends Provider implements ExtractsPricingTierFromRequest, Extract
      */
     public function extractPricingTierFromResponse(array $responseData): ?string
     {
-        $data = $this->normalise($responseData);
+        $response = $this->normalise($responseData);
 
-        return GeminiUsage::pricingTier($data['usageMetadata']['serviceTier'] ?? $data['serviceTier'] ?? null);
+        return GeminiUsage::pricingTier($response['usageMetadata']['serviceTier'] ?? $response['serviceTier'] ?? null);
     }
 
     /**

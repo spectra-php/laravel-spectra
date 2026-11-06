@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\RequestPersister;
@@ -72,9 +73,9 @@ it('names a call by the innermost job and returns to the outer one after it', fu
 });
 
 it('forgets a job that threw', function () {
-    expect(fn () => dispatch(new RecordsOriginJob(OriginJobMode::Fail)))->toThrow(RuntimeException::class);
+    expect(fn () => dispatch(new RecordsOriginJob(OriginJobMode::Fail)))->toThrow(RuntimeException::class)
 
-    expect(RecordsOriginJob::$origins)->toBe([RecordsOriginJob::class])
+        ->and(RecordsOriginJob::$origins)->toBe([RecordsOriginJob::class])
         ->and(app(TraceOrigin::class)->current())->toBeNull();
 });
 
@@ -128,9 +129,9 @@ it('captures no origin when capture_origin is off', function () {
 });
 
 it('caps the origin at the column length', function () {
-    app(TraceOrigin::class)->startCommand(str_repeat('a', 400));
+    app(TraceOrigin::class)->startCommand(Str::repeat('a', 400));
 
-    expect(mb_strlen((string) app(TraceOrigin::class)->current()))->toBe(255);
+    expect(Str::length((string) app(TraceOrigin::class)->current()))->toBe(255);
 });
 
 it('stores the start time to the millisecond and the origin', function () {
@@ -198,7 +199,7 @@ it('keeps recording calls before the app runs the trace columns migration', func
 
     expect(SpectraRequest::query()->count())->toBe(2);
 
-    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => str_contains($message, 'spectra:install'));
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => Str::contains($message, 'spectra:install'));
 
     // Migrating again (as spectra:install would) brings the columns back.
     $migration->up();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Spectra\Data\TokenMetrics;
 use Spectra\Enums\PricingTier;
 use Spectra\Pricing\ProviderPricing;
@@ -19,43 +20,30 @@ use Spectra\Support\Tracking\RequestContext;
  */
 function acmePricing(string $currency = 'USD'): ProviderPricing
 {
-    return new class($currency) extends ProviderPricing
-    {
-        public function __construct(protected string $catalogCurrency) {}
-
-        public function provider(): string
-        {
-            return 'acme';
-        }
-
-        public function currency(): string
-        {
-            return $this->catalogCurrency;
-        }
-
-        protected function define(): void
-        {
-            $this->model('acme-1', fn ($m) => $m
-                ->displayName('Acme 1')
-                ->aliases('acme-1-latest', 'acme/acme-1')
-                ->canGenerateText()
-                ->tier('standard', inputPrice: 100, outputPrice: 400, cachedInputPrice: 10, cacheWrite5mPrice: 125, cacheWrite1hPrice: 200,
-                    audioInputPrice: 300, imageInputPrice: 200, audioOutputPrice: 800, imageOutputPrice: 1000)
-                ->tier('standard', inputPrice: 200, outputPrice: 600, cachedInputPrice: 20, aboveInputTokens: 200_000)
-                ->tier('standard', inputPrice: 150, outputPrice: 500, since: '2027-01-01')
-                ->tier('batch', inputPrice: 50, outputPrice: 200));
-
-            $this->model('acme-1-2026-01-01', fn ($m) => $m
-                ->displayName('Acme 1 (2026-01-01)')
-                ->canGenerateText()
-                ->cost(inputPrice: 999, outputPrice: 999));
-
-            $this->model('acme-ocr', fn ($m) => $m
-                ->displayName('Acme OCR')
-                ->pricingUnit('page')
-                ->cost(pricePerUnit: 0.4));
-        }
-    };
+    return new ProviderPricing('acme', [
+        'acme-1' => [
+            'display_name' => 'Acme 1',
+            'aliases' => ['acme-1-latest', 'acme/acme-1'],
+            'capabilities' => ['text'],
+            'tiers' => [
+                ['tier' => 'standard', 'input_price' => 100, 'output_price' => 400, 'cached_input_price' => 10, 'cache_write_5m_price' => 125, 'cache_write_1h_price' => 200,
+                    'audio_input_price' => 300, 'image_input_price' => 200, 'audio_output_price' => 800, 'image_output_price' => 1000],
+                ['tier' => 'standard', 'input_price' => 200, 'output_price' => 600, 'cached_input_price' => 20, 'above_input_tokens' => 200_000],
+                ['tier' => 'standard', 'input_price' => 150, 'output_price' => 500, 'since' => '2027-01-01'],
+                ['tier' => 'batch', 'input_price' => 50, 'output_price' => 200],
+            ],
+        ],
+        'acme-1-2026-01-01' => [
+            'display_name' => 'Acme 1 (2026-01-01)',
+            'capabilities' => ['text'],
+            'tiers' => [['tier' => 'standard', 'input_price' => 999, 'output_price' => 999]],
+        ],
+        'acme-ocr' => [
+            'display_name' => 'Acme OCR',
+            'pricing_unit' => 'page',
+            'tiers' => [['tier' => 'standard', 'price_per_unit' => 0.4]],
+        ],
+    ], $currency);
 }
 
 function useAcmePricing(string $currency = 'USD'): void
@@ -182,18 +170,9 @@ it('counts a missing exchange rate as 1:1 and warns once', function () {
 });
 
 it('converts each model at the currency of the catalog that defines it', function () {
-    $extraModels = new class extends ProviderPricing
-    {
-        public function provider(): string
-        {
-            return 'acme';
-        }
-
-        protected function define(): void
-        {
-            $this->model('acme-extra', fn ($m) => $m->canGenerateText()->cost(inputPrice: 100, outputPrice: 400));
-        }
-    };
+    $extraModels = new ProviderPricing('acme', [
+        'acme-extra' => ['capabilities' => ['text'], 'tiers' => [['tier' => 'standard', 'input_price' => 100, 'output_price' => 400]]],
+    ]);
     app()->instance(PricingLookup::class, new PricingLookup([acmePricing('EUR'), $extraModels]));
     config(['spectra.costs.currency' => 'USD', 'spectra.costs.exchange_rates' => ['EUR' => 1.5]]);
 
@@ -206,23 +185,7 @@ it('converts each model at the currency of the catalog that defines it', functio
 });
 
 it('converts tool calls at the currency of the catalog that prices them', function () {
-    $toolCatalog = new class extends ProviderPricing
-    {
-        public function provider(): string
-        {
-            return 'acme';
-        }
-
-        public function currency(): string
-        {
-            return 'EUR';
-        }
-
-        public function toolCallPricing(): array
-        {
-            return ['web_search_call' => 1.0];
-        }
-    };
+    $toolCatalog = new ProviderPricing('acme', [], 'EUR', toolCalls: ['web_search_call' => 1.0]);
     app()->instance(PricingLookup::class, new PricingLookup([$toolCatalog, acmePricing('USD')]));
     config(['spectra.costs.currency' => 'USD', 'spectra.costs.exchange_rates' => ['EUR' => 1.5]]);
 
@@ -246,7 +209,7 @@ it('bills an unknown default tier at standard and warns once', function () {
     // 100K × 100 (standard input) / 1M
     expect($first['prompt_cost'])->toEqualWithDelta(10.0, 1e-9)
         ->and(app(PricingLookup::class)->defaultTier('acme'))->toBe(PricingTier::Standard);
-    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => str_contains($message, "'turbo'"));
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => Str::contains($message, "'turbo'"));
 });
 
 it('bills a valid default tier from config', function () {

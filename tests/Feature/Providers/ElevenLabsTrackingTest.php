@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 
 /**
@@ -14,7 +15,7 @@ it('bills text to speech per character of the request text', function () {
     Http::fake(['api.elevenlabs.io/*' => Http::response("\xFF\xFB\x90\x00fake-mp3-bytes", 200, ['Content-Type' => 'audio/mpeg'])]);
 
     Http::post('https://api.elevenlabs.io/v1/text-to-speech/JBFqnCBsd6RMkjVDRZzb?output_format=mp3_44100_128', [
-        'text' => str_repeat('a', 2500),
+        'text' => Str::repeat('a', 2500),
         'model_id' => 'eleven_flash_v2_5',
     ]);
 
@@ -31,7 +32,7 @@ it('bills text to speech per character of the request text', function () {
 it('uses eleven_multilingual_v2 when the request names no model', function () {
     Http::fake(['api.elevenlabs.io/*' => Http::response('fake-mp3-bytes', 200, ['Content-Type' => 'audio/mpeg'])]);
 
-    Http::post('https://api.elevenlabs.io/v1/text-to-speech/JBFqnCBsd6RMkjVDRZzb/stream', ['text' => str_repeat('b', 1000)]);
+    Http::post('https://api.elevenlabs.io/v1/text-to-speech/JBFqnCBsd6RMkjVDRZzb/stream', ['text' => Str::repeat('b', 1000)]);
 
     // eleven_multilingual_v2: $0.08 per 1,000 characters → 8 cents
     expect(SpectraRequest::query()->sole()->model)->toBe('Eleven Multilingual v2')
@@ -52,7 +53,7 @@ it('bills text to speech with timestamps without storing the base64 audio', func
     expect($record->model)->toBe('Eleven v3')
         ->and($record->input_characters)->toBe(5)
         ->and($record->total_cost_in_cents)->toEqualWithDelta(0.04, 0.000001)
-        ->and(json_encode($record->response))->not->toContain('SUQzBAAAAAAAI1RTU0');
+        ->and(json_encode($record->response, JSON_THROW_ON_ERROR))->not->toContain('SUQzBAAAAAAAI1RTU0');
 });
 
 it('bills speech to text per minute of audio', function () {

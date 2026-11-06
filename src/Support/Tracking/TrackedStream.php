@@ -16,7 +16,10 @@ use Throwable;
  * decorator. Every chunk the application reads is passed to `$onRead`, and
  * `$onEnd` runs once when the body is fully read, closed, or garbage
  * collected — so a stream is tracked even when the application stops early.
- * Bytes that are read again after a rewind are not passed on twice.
+ * When the body itself fails to read (the connection drops mid-stream),
+ * `$onError` runs once with the exception instead, and the exception still
+ * reaches the application. Bytes that are read again after a rewind are not
+ * passed on twice.
  *
  * Tracking callbacks never throw into the application.
  */
@@ -35,11 +38,13 @@ class TrackedStream implements StreamInterface
      *
      * @param  Closure(string): void  $onRead
      * @param  Closure(): void  $onEnd
+     * @param  Closure(Throwable): void|null  $onError  Runs instead of $onEnd when a read throws; without it the body just ends.
      */
     public function __construct(
         protected StreamInterface $stream,
         protected Closure $onRead,
         protected Closure $onEnd,
+        protected ?Closure $onError = null,
     ) {
         try {
             $this->position = $this->fed = $stream->tell();
@@ -49,11 +54,19 @@ class TrackedStream implements StreamInterface
     }
 
     /**
-     * Read bytes from the stream, feeding them to the tracker and finishing it at the end.
+     * Read bytes from the stream, feeding them to the tracker and finishing
+     * it at the end, or failing it when the body can't be read.
      */
     public function read(int $length): string
     {
-        $bytes = $this->stream->read($length);
+        try {
+            $bytes = $this->stream->read($length);
+        } catch (Throwable $e) {
+            $this->fail($e);
+
+            throw $e;
+        }
+
         $this->observe($bytes);
 
         if ($this->stream->eof()) {
@@ -73,6 +86,7 @@ class TrackedStream implements StreamInterface
         while (! $this->stream->eof()) {
             $chunk = $this->read(8192);
 
+            // Raw bytes: only an empty read ends the loop; whitespace is still body.
             if ($chunk === '') {
                 break;
             }
@@ -222,6 +236,7 @@ class TrackedStream implements StreamInterface
         $start = $this->position;
         $this->position += strlen($bytes);
 
+        // Raw bytes: a whitespace-only chunk is still part of the body.
         if ($bytes === '' || $this->position <= $this->fed) {
             return;
         }
@@ -247,6 +262,27 @@ class TrackedStream implements StreamInterface
     }
 
     /**
+     * Run the error callback once when a read threw, so the body is recorded
+     * as a failure and not, when it is released later, as a complete success.
+     */
+    protected function fail(Throwable $exception): void
+    {
+        if ($this->ended) {
+            return;
+        }
+
+        $this->ended = true;
+
+        if ($this->onError === null) {
+            $this->safely($this->onEnd);
+
+            return;
+        }
+
+        $this->safely($this->onError, $exception);
+    }
+
+    /**
      * Run a tracking callback, reporting its failure instead of throwing into the app.
      */
     protected function safely(Closure $callback, mixed ...$arguments): void
@@ -254,11 +290,8 @@ class TrackedStream implements StreamInterface
         try {
             $callback(...$arguments);
         } catch (Throwable $e) {
-            try {
-                report($e);
-            } catch (Throwable) {
-                // The application may be shutting down; tracking is best effort.
-            }
+            // The application may be shutting down; tracking is best effort.
+            rescue(fn () => report($e), report: false);
         }
     }
 }

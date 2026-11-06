@@ -127,6 +127,35 @@ it('counts trackables by type and id together', function () {
     expect(callTrackables([])['summary']['total_trackables'])->toBe(2);
 });
 
+it('limits the list, summary and type filter to users when asked', function () {
+    Relation::morphMap(['member' => User::class, 'conversation' => SpectraRequest::class]);
+
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 10, 'trackable_type' => 'member', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 20, 'trackable_type' => 'conversation', 'trackable_id' => '01a1b04c-d820-7140-bea1-3e85e8d94cfb']);
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 40, 'trackable_type' => 'App\\Models\\Gone', 'trackable_id' => '3']);
+
+    $users = app()->call([app(TrackablesController::class), '__invoke'], ['request' => new Request(['period' => 'all', 'users_only' => '1'])])->toArray();
+    $all = app()->call([app(TrackablesController::class), '__invoke'], ['request' => new Request(['period' => 'all'])])->toArray();
+
+    expect(collect($users['data'])->map(fn ($row) => "{$row['trackable_type']}#{$row['trackable_id']}")->all())->toBe(['member#1'])
+        ->and($users['total'])->toBe(1)
+        ->and($users['summary']['total_trackables'])->toBe(1)
+        ->and((float) $users['summary']['total_cost'])->toEqualWithDelta(10.0, 0.0001)
+        ->and($users['available_trackable_types'])->toBe(['member'])
+        ->and($all['total'])->toBe(3)
+        ->and($all['available_trackable_types'])->toHaveCount(3);
+})->after(fn () => Relation::morphMap([], false));
+
+it('lists nobody as a user when no call was attributed to one', function () {
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 20, 'trackable_type' => 'conversation', 'trackable_id' => '48']);
+
+    $json = app()->call([app(TrackablesController::class), '__invoke'], ['request' => new Request(['period' => 'all', 'users_only' => '1'])])->toArray();
+
+    expect($json['data'])->toHaveCount(0)
+        ->and($json['summary']['total_trackables'])->toBe(0)
+        ->and($json['available_trackable_types'])->toBe([]);
+});
+
 it('resolves trackable names through the morph map', function () {
     Relation::morphMap(['member' => User::class]);
     $user = User::query()->create(['name' => 'Ada', 'email' => 'ada@example.com', 'password' => 'secret']);
@@ -152,4 +181,32 @@ it('never instantiates a trackable type that is not an Eloquent model', function
 
     expect(callTrackables([])['data'][0]['trackable_name'])->toBeNull()
         ->and($details['trackable'])->not->toHaveKey('name');
+});
+
+it('lists only the trackables of the type asked for and offers every stored type', function () {
+    SpectraRequest::factory()->create(['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['trackable_type' => 'App\\Models\\Team', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create();
+
+    $json = callTrackables(['trackable_type' => 'App\\Models\\Team']);
+
+    expect($json['total'])->toBe(1)
+        ->and($json['data'][0]['trackable_type'])->toBe('App\\Models\\Team')
+        ->and($json['summary']['total_trackables'])->toBe(1)
+        ->and($json['available_trackable_types'])->toBe(['App\\Models\\Team', 'App\\Models\\User']);
+});
+
+it('reports a trackable model per provider so the same model on two providers stays apart', function () {
+    $rows = ['trackable_type' => 'App\\Models\\User', 'trackable_id' => '1', 'model' => 'gpt-4o', 'status_code' => 200, 'total_cost_in_cents' => 10, 'created_at' => now()];
+    SpectraRequest::factory()->count(2)->create($rows + ['provider' => 'openai']);
+    SpectraRequest::factory()->create($rows + ['provider' => 'openrouter']);
+
+    $details = app()->call([app(ShowTrackableController::class), '__invoke'], [
+        'request' => new Request(['period' => 'all', 'type' => 'App\\Models\\User']),
+        'id' => '1',
+    ])->toArray();
+
+    $requestsByProvider = collect($details['trackable']['usage_by_model'])->pluck('requests', 'provider')->all();
+
+    expect($requestsByProvider)->toBe(['openai' => 2, 'openrouter' => 1]);
 });

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Pricing\Scraping;
 
-use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 
 /**
  * The scraped pages as text, to check extracted prices against.
@@ -37,13 +37,13 @@ final class PageText
      */
     public function __construct(string $markdown)
     {
-        foreach (preg_split('/\R/', $markdown) ?: [] as $line) {
+        foreach (Str::of($markdown)->split('/\R/') as $line) {
             $this->lines[] = strlen($line) > self::MAX_LINE_LENGTH ? '' : strtolower(trim($line));
         }
     }
 
     /**
-     * Whether the page prints this amount next to one of the model's names.
+     * Determine if the page prints this amount next to one of the model's names.
      *
      * @param  list<string>  $names  Model ids and display names.
      * @param  float  $amount  As printed on the page.
@@ -54,24 +54,24 @@ final class PageText
     }
 
     /**
-     * The quantity a line says its prices are for, from markers like "/ MTok",
+     * Get the quantity a line says its prices are for, from markers like "/ MTok",
      * "per 1K characters" or "$13 /M Chars": 1000000, 1000, or null when the
      * line doesn't say (or says both).
      */
     public static function quantityOn(string $line): ?int
     {
-        $perMillion = preg_match('/(per\s*1\s*m\b|\/\s*1?\s*m\b|\b1m\b|\bmtok\b|\bm\s*(tokens|chars|characters)\b|million)/i', $line) === 1;
-        $perThousand = preg_match('/(per\s*1\s*k\b|\/\s*1?\s*k\b|\bktok\b|\bk\s*(tokens|chars|characters)\b|thousand|per\s*1,000\b)/i', $line) === 1;
+        $isPerMillion = Str::isMatch('/(per\s*1\s*m\b|\/\s*1?\s*m\b|\b1m\b|\bmtok\b|\bm\s*(tokens|chars|characters)\b|million)/i', $line);
+        $isPerThousand = Str::isMatch('/(per\s*1\s*k\b|\/\s*1?\s*k\b|\bktok\b|\bk\s*(tokens|chars|characters)\b|thousand|per\s*1,000\b)/i', $line);
 
         return match (true) {
-            $perMillion && ! $perThousand => 1_000_000,
-            $perThousand && ! $perMillion => 1000,
+            $isPerMillion && ! $isPerThousand => 1_000_000,
+            $isPerThousand && ! $isPerMillion => 1000,
             default => null,
         };
     }
 
     /**
-     * The line that prints this amount next to one of the model's names.
+     * Find the line that prints this amount next to one of the model's names.
      *
      * @param  list<string>  $names  Model ids and display names.
      * @param  float  $amount  As printed on the page.
@@ -81,7 +81,8 @@ final class PageText
         $patterns = [];
         foreach (collect($names)->map(fn (string $name) => strtolower(trim($name)))->filter()->uniqueStrict() as $name) {
             if (strlen($name) >= 2) {
-                $patterns[] = '/(?<![\w.\/-])'.preg_quote($name, '/').'(?![\w-]|\.\d)/';
+                $quotedName = preg_quote($name, '/');
+                $patterns[] = "/(?<![\w.\/-]){$quotedName}(?![\w-]|\.\d)/";
             }
         }
 
@@ -90,16 +91,16 @@ final class PageText
         }
 
         foreach ($this->lines as $index => $line) {
-            $rest = preg_replace($patterns, ' ', $line);
+            $rest = Str::replaceMatches($patterns, ' ', $line);
 
             if ($rest === null || $rest === $line) {
                 continue;
             }
 
-            $own = $this->numbers($rest);
+            $ownNumbers = $this->extractNumbers($rest);
 
-            if ($this->isTableRow($line) && $own !== []) {
-                if ($this->contains($own, $amount)) {
+            if ($this->isTableRow($line) && $ownNumbers !== []) {
+                if ($this->contains($ownNumbers, $amount)) {
                     return $line;
                 }
 
@@ -112,12 +113,12 @@ final class PageText
                 continue;
             }
 
-            if ($this->contains($own, $amount)) {
+            if ($this->contains($ownNumbers, $amount)) {
                 return $line;
             }
 
             for ($i = $index + 1; $i <= $index + self::WINDOW && $i < count($this->lines); $i++) {
-                if ($this->contains($this->numbers($this->lines[$i]), $amount)) {
+                if ($this->contains($this->extractNumbers($this->lines[$i]), $amount)) {
                     return $this->lines[$i];
                 }
             }
@@ -127,19 +128,20 @@ final class PageText
     }
 
     /**
-     * Table rows right below a model's row that continue it: their first
-     * cell is a label ("Text", "Audio"), not another model id.
+     * Find the continuation row that prints the amount: a table row right
+     * below a model's row whose first cell is a label ("Text", "Audio"), not
+     * another model id.
      */
     protected function continuationContaining(int $index, float $amount): ?string
     {
         for ($i = $index + 1; $i < count($this->lines) && $this->isTableRow($this->lines[$i]); $i++) {
-            $firstCell = trim(explode('|', trim($this->lines[$i], '| '))[0]);
+            $firstCell = trim(Str::before(trim($this->lines[$i], '| '), '|'));
 
-            if (blank($firstCell) || preg_match('/^[a-z ]+$/', $firstCell) !== 1) {
+            if (blank($firstCell) || ! Str::isMatch('/^[a-z ]+$/', $firstCell)) {
                 return null;
             }
 
-            if ($this->contains($this->numbers($this->lines[$i]), $amount)) {
+            if ($this->contains($this->extractNumbers($this->lines[$i]), $amount)) {
                 return $this->lines[$i];
             }
         }
@@ -152,7 +154,7 @@ final class PageText
      */
     protected function isTableRow(string $line): bool
     {
-        return str_starts_with($line, '|') && ! preg_match('/^\|[\s:|-]+\|?$/', $line);
+        return Str::startsWith($line, '|') && ! Str::isMatch('/^\|[\s:|-]+\|?$/', $line);
     }
 
     /**
@@ -160,11 +162,11 @@ final class PageText
      *
      * @return array<int, float>
      */
-    protected function numbers(string $line): array
+    protected function extractNumbers(string $line): array
     {
-        preg_match_all('/(?<![\w.])\d[\d,]*(?:\.\d+)?/', $line, $matches);
-
-        return Arr::map($matches[0], fn (string $number) => (float) str_replace(',', '', $number));
+        return Str::matchAll('/(?<![\w.])\d[\d,]*(?:\.\d+)?/', $line)
+            ->map(fn (string $number) => (float) Str::replace(',', '', $number))
+            ->all();
     }
 
     /**

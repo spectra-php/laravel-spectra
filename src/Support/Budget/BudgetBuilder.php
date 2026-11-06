@@ -145,7 +145,7 @@ class BudgetBuilder
     }
 
     /**
-     * Only report reaching a limit, without blocking requests.
+     * Make the budget only report reaching a limit, without blocking requests.
      */
     public function softLimit(): static
     {

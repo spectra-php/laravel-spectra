@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Macros;
 
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Spectra\Support\Tracking\GuzzleMiddleware;
@@ -14,13 +15,27 @@ use Spectra\Support\Tracking\GuzzleMiddleware;
 class WithoutTrackingMacro
 {
     /**
-     * Register the Http::withoutAITracking() macro that keeps a request out of tracking.
+     * Register the withoutAITracking() macro that keeps a request out of
+     * tracking, on the Http facade and on a pending request.
      */
     public static function register(): void
     {
         Http::macro('withoutAITracking', function () {
-            /** @var PendingRequest $this */
-            return $this->withOptions([GuzzleMiddleware::OPTION_DISABLED => true]);
+            /** @var Factory $this */
+            return WithoutTrackingMacro::apply($this);
         });
+
+        PendingRequest::macro('withoutAITracking', function () {
+            /** @var PendingRequest $this */
+            return WithoutTrackingMacro::apply($this);
+        });
+    }
+
+    /**
+     * Mark the request as one the tracking middleware leaves alone.
+     */
+    public static function apply(Factory|PendingRequest $request): PendingRequest
+    {
+        return $request->withOptions([GuzzleMiddleware::OPTION_DISABLED => true]);
     }
 }

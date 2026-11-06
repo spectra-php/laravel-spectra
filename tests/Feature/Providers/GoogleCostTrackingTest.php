@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Spectra\Models\SpectraRequest;
 
@@ -18,7 +19,7 @@ beforeEach(function () {
 
 function geminiStream(string $name): string
 {
-    return (string) file_get_contents(__DIR__.'/../../responses/google/streams/'.$name);
+    return File::get(__DIR__.'/../../responses/google/streams/'.$name);
 }
 
 function postGemini(string $model, array $body = [], string $action = 'generateContent', string $query = ''): Response
@@ -74,7 +75,7 @@ it('adds tool-use prompt tokens to the input and counts search grounding without
     expect($row->prompt_tokens)->toBe(6500)
         ->and($row->cached_tokens)->toBe(2000)
         ->and($row->completion_tokens)->toBe(1000)
-        ->and($row->tool_call_counts)->toBe(['google_search' => 2])
+        ->and($row->tool_call_counts)->toEqual(['google_search' => 2])
         ->and($row->total_cost_in_cents)->toEqualWithDelta(0.391, 0.000001);
 });
 
@@ -217,6 +218,8 @@ it('records a streamed JSON array (streamGenerateContent without alt=sse)', func
 
     $row = SpectraRequest::query()->sole();
 
+    // Same usage as the server-sent-events stream, Gemini 3.8 Flash flex:
+    // (800×37.5 + (200 + 500)×187.5) / 1M = 0.16125¢
     expect($row->model)->toBe('Gemini 3.8 Flash')
         ->and($row->response_id)->toBe('s9_vaMHeB4yR7M8Pq-i3wQo')
         ->and($row->prompt_tokens)->toBe(800)

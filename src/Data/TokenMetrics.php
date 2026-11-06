@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Data;
 
+use Spectra\Support\Payload;
+
 /**
  * Token usage for one request, normalised across providers.
  *
@@ -51,26 +53,26 @@ readonly class TokenMetrics extends DataTransferObject
      */
     public static function fromArray(array $usage): self
     {
-        $int = static fn (string ...$keys): int => (int) (collect($keys)
+        $firstTokenCount = static fn (string ...$keys): int => Payload::int(collect($keys)
             ->map(fn (string $key) => $usage[$key] ?? null)
-            ->first(fn ($value) => is_numeric($value)) ?? 0);
+            ->first(fn ($value) => is_numeric($value)));
 
         return new self(
-            promptTokens: $int('prompt_tokens', 'input_tokens'),
-            completionTokens: $int('completion_tokens', 'output_tokens'),
-            cachedTokens: $int('cached_tokens', 'cache_read_tokens'),
-            reasoningTokens: $int('reasoning_tokens'),
-            cacheWriteTokens: $int('cache_write_tokens'),
-            cacheWrite1hTokens: $int('cache_write_1h_tokens'),
-            audioInputTokens: $int('audio_input_tokens'),
-            imageInputTokens: $int('image_input_tokens'),
-            audioOutputTokens: $int('audio_output_tokens'),
-            imageOutputTokens: $int('image_output_tokens'),
+            promptTokens: $firstTokenCount('prompt_tokens', 'input_tokens'),
+            completionTokens: $firstTokenCount('completion_tokens', 'output_tokens'),
+            cachedTokens: $firstTokenCount('cached_tokens', 'cache_read_tokens'),
+            reasoningTokens: $firstTokenCount('reasoning_tokens'),
+            cacheWriteTokens: $firstTokenCount('cache_write_tokens'),
+            cacheWrite1hTokens: $firstTokenCount('cache_write_1h_tokens'),
+            audioInputTokens: $firstTokenCount('audio_input_tokens'),
+            imageInputTokens: $firstTokenCount('image_input_tokens'),
+            audioOutputTokens: $firstTokenCount('audio_output_tokens'),
+            imageOutputTokens: $firstTokenCount('image_output_tokens'),
         );
     }
 
     /**
-     * The snake_case usage array understood by fromArray().
+     * Get the token usage as the snake_case array fromArray() reads.
      *
      * @return array<string, int>
      */

@@ -6,6 +6,7 @@ namespace Spectra\Providers\Google;
 
 use Illuminate\Support\Facades\Http;
 use Spectra\Support\ApiKeyResolver;
+use Spectra\Support\Payload;
 
 /**
  * Asks the Gemini countTokens API how many tokens a request had, for
@@ -21,26 +22,26 @@ class GoogleTokenCounter
     ) {}
 
     /**
-     * Call Google's countTokens API to get the exact token count.
+     * Call Google's countTokens API to get the exact token count, or return null when the call fails.
      *
-     * @param  string  $model  Model name (e.g. "gemini-embedding-001")
      * @param  array<string, mixed>  $content  The content object from the embedding request (parts array)
-     * @return int|null Token count, or null if the API call fails
      */
     public function count(string $model, array $content): ?int
     {
         $apiKey = $this->apiKeyResolver->resolve('google');
 
-        if (! $apiKey) {
+        if (blank($apiKey)) {
             return null;
         }
 
         $baseUrl = $this->apiKeyResolver->resolveBaseUrl('google')
             ?? 'https://generativelanguage.googleapis.com';
 
-        $url = rtrim($baseUrl, '/')."/v1beta/models/{$model}:countTokens";
+        $baseUrl = rtrim($baseUrl, '/');
+        $url = "{$baseUrl}/v1beta/models/{$model}:countTokens";
 
-        try {
+        // Token counting is best-effort: a failed call leaves the count unknown.
+        return rescue(function () use ($url, $apiKey, $content): ?int {
             $response = Http::withoutAITracking()
                 ->timeout(5)
                 ->withQueryParameters(['key' => $apiKey])
@@ -50,22 +51,14 @@ class GoogleTokenCounter
                     ],
                 ]);
 
-            if ($response->successful()) {
-                return (int) ($response->json('totalTokens') ?? 0);
-            }
-        } catch (\Throwable) {
-            // Silently fail — token counting is best-effort
-        }
-
-        return null;
+            return $response->successful() ? Payload::int($response->json('totalTokens')) : null;
+        }, null, false);
     }
 
     /**
-     * Count tokens for a batch of content arrays.
+     * Count the tokens of a batch of content arrays, or return null when any count fails.
      *
-     * @param  string  $model  Model name
      * @param  array<int, array<string, mixed>>  $contentParts  Array of parts arrays, one per batch request
-     * @return int|null Total token count across all batch items, or null on failure
      */
     public function countBatch(string $model, array $contentParts): ?int
     {

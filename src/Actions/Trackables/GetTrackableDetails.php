@@ -6,7 +6,6 @@ namespace Spectra\Actions\Trackables;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Http\Request;
 use Spectra\Data\ModelTypeLatency;
 use Spectra\Data\Responses\TrackableDetailsResponse;
 use Spectra\Models\SpectraRequest;
@@ -33,14 +32,8 @@ class GetTrackableDetails
     /**
      * Get the trackable's stats, breakdowns, name and latest requests.
      */
-    public function __invoke(Request $request, string $id): TrackableDetailsResponse
+    public function __invoke(string $type, string $id, DateRange $dateRange): TrackableDetailsResponse
     {
-        $type = $request->input('type');
-
-        abort_unless((bool) $type, 400, 'Missing type parameter.');
-
-        $dateRange = DateRange::fromRequest($request);
-
         $stats = ($this->getStats)($type, $id, $dateRange);
 
         $trackableData = [
@@ -65,7 +58,7 @@ class GetTrackableDetails
                 'id', 'provider', 'model', 'model_type',
                 'prompt_tokens', 'completion_tokens',
                 'image_count', 'video_count', 'input_characters', 'duration_seconds',
-                'total_cost_in_cents', 'latency_ms', 'status_code', 'created_at',
+                'total_cost_in_cents', 'latency_ms', 'status_code', 'error_type', 'created_at',
             ])
             ->where('trackable_type', $type)
             ->where('trackable_id', $id)
@@ -81,8 +74,8 @@ class GetTrackableDetails
     }
 
     /**
-     * The trackable model itself. The stored type is the morph class, which
-     * is an alias when the app uses a morph map; anything that doesn't
+     * Find the trackable model itself. The stored type is the morph class,
+     * which is an alias when the app uses a morph map; anything that doesn't
      * resolve to an Eloquent model is never instantiated.
      */
     private function findTrackable(string $type, string $id): ?Model

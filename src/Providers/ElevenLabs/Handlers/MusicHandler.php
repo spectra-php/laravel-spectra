@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\ElevenLabs\Handlers;
 
+use Spectra\Support\Payload;
+
 /**
  * ElevenLabs music, `POST /v1/music` and `/v1/music/stream`. The request
  * may set `music_length_ms`; without it the model picks the length.
@@ -36,8 +38,8 @@ class MusicHandler extends GeneratedAudioHandler
      */
     protected function requestedSeconds(array $requestData): ?float
     {
-        $milliseconds = $requestData['music_length_ms'] ?? null;
+        $milliseconds = Payload::float($requestData['music_length_ms'] ?? null);
 
-        return is_numeric($milliseconds) && (float) $milliseconds > 0 ? (float) $milliseconds / 1000 : null;
+        return $milliseconds > 0 ? $milliseconds / 1000 : null;
     }
 }

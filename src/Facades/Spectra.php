@@ -7,7 +7,11 @@ namespace Spectra\Facades;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Facade;
 use Spectra\Data\TokenMetrics;
+use Spectra\Enums\ScoreSource;
 use Spectra\Models\SpectraRequest;
+use Spectra\Models\SpectraScore;
+use Spectra\Support\Dashboards\Dashboards;
+use Spectra\Support\Evaluations\Dataset;
 use Spectra\Support\Query\CostQueryBuilder;
 use Spectra\Support\Query\UsageQueryBuilder;
 use Spectra\Support\Tracking\RequestContext;
@@ -25,8 +29,15 @@ use Spectra\Testing\SpectraFake;
  * @method static SpectraRequest recordFailure(RequestContext $context, \Throwable $exception, ?int $httpStatus = null)
  * @method static mixed track(string $provider, string $model, callable $callback, array<string, mixed> $options = [])
  * @method static mixed span(string $name, callable $callback, array<string, mixed> $attributes = [])
+ * @method static mixed tool(string $name, callable $callback, array<string, mixed> $arguments = [], ?string $id = null)
+ * @method static SpectraScore|null score(string $name, int|float|bool|string $value, SpectraRequest|string|null $request = null, ?string $traceId = null, ?string $conversationId = null, ?string $comment = null, ScoreSource|string $source = ScoreSource::Api, ?Model $author = null, array<string, mixed> $metadata = [])
+ * @method static \Spectra\Spectra redactUsing(\Closure $callback)
+ * @method static bool queueForReview(string $queue, ?string $traceId = null)
+ * @method static Dataset dataset(string $name)
+ * @method static Dashboards dashboard()
  * @method static StreamingTracker stream(?string $provider = null, ?string $model = null, array<string, mixed> $options = [])
  * @method static \Spectra\Spectra addGlobalTags(array<int, string> $tags)
+ * @method static mixed withPrompt(string $name, ?string $version, callable $callback)
  * @method static mixed withTags(array<int, string> $tags, callable $callback)
  * @method static array<int, string> currentTags()
  * @method static array<string, string> propagationHeaders()
@@ -37,6 +48,7 @@ use Spectra\Testing\SpectraFake;
  * @method static \Spectra\Spectra withMetadata(array<string, mixed> $metadata)
  * @method static \Spectra\Spectra clearGlobals()
  * @method static \Spectra\Spectra forTrackable(Model $trackable)
+ * @method static \Spectra\Spectra forConversation(Model|string|int $conversation, ?int $turn = null)
  * @method static \Spectra\Spectra forUser(Model|int $user)
  * @method static RequestContext|null getCurrentContext()
  * @method static UsageQueryBuilder usage()
@@ -55,7 +67,14 @@ use Spectra\Testing\SpectraFake;
  * @method static void assertFailed()
  * @method static void assertTotalTokens(int $expectedTokens)
  * @method static void assertSpanRecorded(string $name, ?callable $callback = null)
+ * @method static void assertToolCalled(string $name, ?callable $callback = null)
+ * @method static void assertQueuedForReview(string $queue, ?string $traceId = null)
+ * @method static void assertDashboardCreated(?string $name = null)
+ * @method static void assertDashboardDeleted(?string $id = null)
  * @method static array<int, array<string, mixed>> getSpans()
+ * @method static void assertScored(string $name, ?callable $callback = null)
+ * @method static void assertNotScored(?string $name = null)
+ * @method static array<int, array<string, mixed>> getScores()
  * @method static array<int, array<string, mixed>> getRecorded()
  * @method static array<int, array<string, mixed>> getSuccessful()
  * @method static array<int, array<string, mixed>> getFailed()

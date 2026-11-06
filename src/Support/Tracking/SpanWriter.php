@@ -7,10 +7,12 @@ namespace Spectra\Support\Tracking;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExportsSpans;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Jobs\PersistSpectraSpanJob;
 use Spectra\Models\SpectraSpan;
+use Spectra\Support\Redaction\Redactor;
 use Throwable;
 
 /**
@@ -19,7 +21,7 @@ use Throwable;
  * the exporter can take spans.
  *
  * A span is written once per span id, so a retried queue job changes
- * nothing. Until the app runs the migration that adds the spans table,
+ * nothing; only a stand-in a dispatched job saved for it gives way. Until the app runs the migration that adds the spans table,
  * spans are skipped with one warning; a failure never reaches the app.
  */
 class SpanWriter
@@ -43,11 +45,16 @@ class SpanWriter
      */
     public function record(array $attributes, bool $deferrable = true): void
     {
-        if (! config('spectra.enabled', true)) {
+        if (! config('spectra.enabled', true) || RecordingSwitch::isPaused()) {
             return;
         }
 
         rescue(function () use ($attributes, $deferrable): void {
+            // Masked before it is queued, so personal data never reaches the queue either.
+            $redactor = app(Redactor::class);
+            $attributes['attributes'] = $redactor->redact($attributes['attributes'] ?? null);
+            $attributes['error_message'] = $redactor->redact($redactor->scrubSecrets($attributes['error_message'] ?? null));
+
             if (config('spectra.queue.enabled')) {
                 $this->dispatch(new PersistSpectraSpanJob($attributes));
 
@@ -71,12 +78,17 @@ class SpanWriter
      */
     public function save(array $attributes): void
     {
+        $inferred = $this->isInferred($attributes['attributes'] ?? null);
+
         if (config('spectra.storage.store_requests', true)) {
             try {
                 SpectraSpan::query()->create($attributes);
             } catch (UniqueConstraintViolationException) {
-                // An earlier attempt saved this span already.
-                return;
+                // An earlier attempt saved this span already, or a job it
+                // dispatched saved a stand-in for it, which the span replaces.
+                if ($inferred || ! $this->replaceInferred($attributes)) {
+                    return;
+                }
             } catch (QueryException $e) {
                 throw_unless($this->isMissingTable($e), $e);
 
@@ -86,13 +98,41 @@ class SpanWriter
             }
         }
 
-        if (config('spectra.integrations.opentelemetry.enabled') && $this->exporter instanceof ExportsSpans) {
+        // A stand-in stays out of OpenTelemetry: the span may still arrive itself.
+        if (! $inferred && config('spectra.integrations.opentelemetry.enabled') && $this->exporter instanceof ExportsSpans) {
             rescue(fn () => $this->exporter->exportSpan($this->exportData(new SpectraSpan($attributes))));
         }
     }
 
     /**
-     * The span's columns with dates as dates and enums as their values.
+     * Overwrite the stand-in a dispatched job saved for this span, if that is
+     * what holds its id.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function replaceInferred(array $attributes): bool
+    {
+        $existing = SpectraSpan::query()->where('span_id', $attributes['span_id'] ?? null)->first();
+
+        if ($existing === null || ! $this->isInferred($existing->attributes)) {
+            return false;
+        }
+
+        $existing->fill($attributes)->save();
+
+        return true;
+    }
+
+    /**
+     * Determine if the span is a stand-in a job saved for the unit that dispatched it.
+     */
+    protected function isInferred(mixed $attributes): bool
+    {
+        return is_array($attributes) && ($attributes[SpanStack::INFERRED_ATTRIBUTE] ?? false) === true;
+    }
+
+    /**
+     * Get the span's columns with dates as dates and enums as their values.
      *
      * @return array<string, mixed>
      */
@@ -136,6 +176,8 @@ class SpanWriter
     }
 
     /**
+     * Determine if the query failed because the spans table doesn't exist.
+     *
      * Checked by error code, not message: Postgres quotes the failed SQL.
      */
     protected function isMissingTable(Throwable $e): bool
@@ -144,7 +186,7 @@ class SpanWriter
 
         // MySQL, MariaDB and SQL Server use 42S02, Postgres 42P01; SQLite only says so in words.
         return in_array($code, ['42S02', '42P01'], true)
-            || ($e instanceof QueryException && str_contains((string) ($e->errorInfo[2] ?? ''), 'no such table'));
+            || ($e instanceof QueryException && Str::contains((string) ($e->errorInfo[2] ?? ''), 'no such table'));
     }
 
     /**

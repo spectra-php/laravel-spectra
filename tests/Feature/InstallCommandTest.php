@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 /**
  * spectra:install publishes only migrations the app doesn't have yet, so it is
@@ -37,17 +38,41 @@ it('publishes only the missing migrations when run again', function () {
         ->assertSuccessful();
 
     $names = collect(File::files($this->databasePath.'/migrations'))
-        ->map(fn ($file) => preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', $file->getFilename()))
+        ->map(fn ($file) => Str::replaceMatches('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', $file->getFilename()))
         ->sort()->values()->all();
 
     expect($names)->toBe([
+        'add_error_fingerprint_to_spectra_requests_table.php',
+        'add_prompt_columns_to_spectra_requests_table.php',
+        'add_sections_to_spectra_dashboards_table.php',
         'add_spans_to_spectra_tables.php',
+        'add_stat_key_to_spectra_daily_stats_table.php',
         'add_trace_timing_columns_to_spectra_tables.php',
         'add_v2_tracking_columns_to_spectra_tables.php',
+        'change_budgetable_id_to_string_on_spectra_budgets_table.php',
+        'change_trace_id_to_string_on_spectra_requests_table.php',
         'change_trackable_id_to_string_on_spectra_tables.php',
+        'create_spectra_annotation_items_table.php',
+        'create_spectra_dashboards_table.php',
         'create_spectra_entries.php',
+        'create_spectra_evaluation_tables.php',
+        'create_spectra_request_payloads_table.php',
+        'create_spectra_scores_table.php',
+        'drop_redundant_indexes_from_spectra_requests_table.php',
+        'drop_show_costs_and_require_trackable_id_on_spectra_dashboards_table.php',
     ]);
 
     // Nothing left to publish the third time.
     $this->artisan('spectra:install')->expectsOutputToContain('already published')->assertSuccessful();
+});
+
+it('publishes without running the migrations when not interactive, as from a Composer script', function () {
+    $this->artisan('spectra:install', ['--no-interaction' => true])
+        ->doesntExpectOutputToContain('Running Migrations')
+        ->expectsOutputToContain('php artisan migrate')
+        ->assertSuccessful();
+
+    $packaged = count(File::files(__DIR__.'/../../database/migrations'));
+
+    expect(File::files($this->databasePath.'/migrations'))->toHaveCount($packaged);
 });

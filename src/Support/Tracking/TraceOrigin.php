@@ -6,6 +6,7 @@ namespace Spectra\Support\Tracking;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -74,7 +75,7 @@ class TraceOrigin
     }
 
     /**
-     * The origin of a call made right now, or null when it can't be named.
+     * Get the origin of a call made right now, or null when it can't be named.
      */
     public function current(): ?string
     {
@@ -84,7 +85,7 @@ class TraceOrigin
             ? $this->command
             : $this->fromRequest();
 
-        return $origin === null ? null : mb_substr($origin, 0, self::MAX_LENGTH);
+        return $origin === null ? null : Str::substr($origin, 0, self::MAX_LENGTH);
     }
 
     /**

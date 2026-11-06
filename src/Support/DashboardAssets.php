@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Spectra\Support;
 
 use Composer\InstalledVersions;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Js;
+use Spectra\Models\SpectraDashboard;
 
 /**
  * Inlines the dashboard's built CSS, JavaScript and favicons into its Blade
@@ -42,17 +44,17 @@ class DashboardAssets
         $tags = [];
 
         foreach ($icons as $icon) {
-            $filePath = $distPath.'/'.$icon['file'];
+            $filePath = "{$distPath}/{$icon['file']}";
 
             if (! File::exists($filePath)) {
                 continue;
             }
 
-            $content = File::get($filePath);
+            $encodedContent = base64_encode(File::get($filePath));
 
-            $href = 'data:'.$icon['type'].';base64,'.base64_encode($content);
-            $sizes = $icon['sizes'] ? ' sizes="'.$icon['sizes'].'"' : '';
-            $tags[] = '<link rel="'.$icon['rel'].'" type="'.$icon['type'].'"'.$sizes.' href="'.$href.'">';
+            $href = "data:{$icon['type']};base64,{$encodedContent}";
+            $sizes = filled($icon['sizes']) ? " sizes=\"{$icon['sizes']}\"" : '';
+            $tags[] = "<link rel=\"{$icon['rel']}\" type=\"{$icon['type']}\"{$sizes} href=\"{$href}\">";
         }
 
         return new HtmlString(implode("\n", $tags));
@@ -103,6 +105,61 @@ class DashboardAssets
     }
 
     /**
+     * Get a shared dashboard's compiled JavaScript as an inline module script,
+     * with its config. It is a build of its own, so a viewer's page holds none
+     * of the admin screens.
+     */
+    public static function viewerJs(SpectraDashboard $dashboard, Model $trackable): HtmlString
+    {
+        $jsPath = __DIR__.'/../../dist/viewer.js';
+
+        if (File::exists($jsPath)) {
+            $js = File::get($jsPath);
+            $config = Js::from(static::viewerScriptVariables());
+            $shared = Js::from([
+                'baseUrl' => route('spectra.dashboards.show', ['id' => $dashboard->id], false),
+                'dataUrl' => route('spectra.dashboards.data', ['id' => $dashboard->id], false),
+                'period' => $dashboard->default_period,
+                'name' => $dashboard->name,
+                'trackableName' => isset($trackable->name) && is_string($trackable->name) ? $trackable->name : null,
+                'sections' => $dashboard->enabledSections(),
+                'showCosts' => $dashboard->showsCosts(),
+                'showMessages' => $dashboard->show_messages,
+            ]);
+
+            return new HtmlString(<<<HTML
+                <script type="module">
+                    window.Spectra = {$config};
+                    window.SpectraViewer = {$shared};
+                    {$js}
+                </script>
+            HTML);
+        }
+
+        Log::warning("Spectra shared dashboard JavaScript not found at {$jsPath} — the page will not load. Run `npm run build` in the package to generate the dist assets.");
+
+        return new HtmlString('');
+    }
+
+    /**
+     * Get the config a shared dashboard's JavaScript reads from window.Spectra:
+     * what formats numbers and dates, and nothing about the installation.
+     *
+     * @return array<string, mixed>
+     */
+    public static function viewerScriptVariables(): array
+    {
+        return [
+            'path' => '',
+            'timezone' => config('app.timezone', 'UTC'),
+            'currency' => config('spectra.costs.currency', 'USD'),
+            'currencySymbol' => config('spectra.costs.currency_symbol', '$'),
+            'version' => '',
+            'csrfToken' => null,
+        ];
+    }
+
+    /**
      * Get the config the dashboard's JavaScript reads from window.Spectra.
      *
      * @return array<string, mixed>
@@ -115,6 +172,8 @@ class DashboardAssets
             'currency' => config('spectra.costs.currency', 'USD'),
             'currencySymbol' => config('spectra.costs.currency_symbol', '$'),
             'version' => static::version(),
+            // The maintenance actions are POSTs behind the web middleware's CSRF check.
+            'csrfToken' => rescue(fn () => csrf_token(), null, report: false),
         ];
     }
 

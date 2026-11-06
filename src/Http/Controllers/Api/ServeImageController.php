@@ -16,9 +16,9 @@ class ServeImageController extends BaseApiController
     /**
      * Serve one generated image of the request, cached privately by the browser.
      */
-    public function __invoke(string $id, int $index, ResolveImage $action): Response
+    public function __invoke(string $id, int $index, ResolveImage $resolveImage): Response
     {
-        $media = $action($id, $index);
+        $media = $resolveImage($id, $index);
 
         return response($media->content, 200, [
             'Content-Type' => $media->mime_type,

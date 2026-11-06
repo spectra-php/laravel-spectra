@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraRequest;
 
 /**
@@ -12,7 +14,7 @@ use Spectra\Models\SpectraRequest;
  */
 function openAiStreamFixture(string $name): string
 {
-    return (string) file_get_contents(__DIR__.'/../../responses/openai/'.$name);
+    return File::get(__DIR__.'/../../responses/openai/'.$name);
 }
 
 function fakeOpenAiStream(string $fixture, string $host = 'api.openai.com'): string
@@ -48,7 +50,7 @@ it('records a completed responses stream with cached tokens and the served tier'
 });
 
 it('bills the 12h cache writes of a responses stream at the 12h rate', function () {
-    $body = str_replace(
+    $body = Str::replace(
         ['gpt-5.4-2026-03-05', '"service_tier":"priority"', '"input_tokens_details":{"cached_tokens":4000}'],
         ['gpt-5.6-sol', '"service_tier":"default"', '"input_tokens_details":{"cached_tokens":1000,"cache_write_tokens":3000,"cache_write_tokens_details":{"ttl_30m_tokens":1000,"ttl_12h_tokens":2000}}'],
         openAiStreamFixture('responses_stream_completed.sse'),

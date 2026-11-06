@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Providers\Anthropic\Anthropic;
@@ -16,7 +18,7 @@ use Spectra\Providers\Anthropic\Anthropic;
  */
 function anthropicStream(string $name): string
 {
-    return (string) file_get_contents(__DIR__.'/../../responses/claude/streams/'.$name);
+    return File::get(__DIR__.'/../../responses/claude/streams/'.$name);
 }
 
 function fakeAnthropic(array|string $body, array $headers = []): void
@@ -82,7 +84,7 @@ it('bills web searches per search and web fetches for free', function () {
     // plus 2 searches × 1¢ ($10 per 1,000); the fetch is free.
     expect($row->model)->toBe('Claude Sonnet 5.5')
         ->and($row->has_tool_calls)->toBeTrue()
-        ->and($row->tool_call_counts)->toBe(['web_search_requests' => 2, 'web_fetch_requests' => 1])
+        ->and($row->tool_call_counts)->toEqual(['web_search_requests' => 2, 'web_fetch_requests' => 1])
         ->and($row->total_cost_in_cents)->toEqualWithDelta(6.46, 0.000001);
 });
 
@@ -145,6 +147,7 @@ it('ignores the configured default tier when the response says standard', functi
 
     postAnthropic(['model' => 'claude-opus-4-8']);
 
+    // Opus 4.8 standard, as in the prompt-caching test: 2.564¢
     expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('standard')
         ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(2.564, 0.000001);
 });
@@ -178,8 +181,8 @@ it('bills standard speed when fast mode was requested but not served', function 
 
 it('lets an explicitly chosen tier win over the response', function () {
     fakeAnthropic($this->loadMockResponse('claude/message-prompt-caching.json'));
-
     Spectra::withPricingTier('batch');
+
     postAnthropic(['model' => 'claude-opus-4-8']);
 
     // Opus 4.8 batch: (2048×250 + 1800×25 + 148×312.5 + 100×500 + 503×1250) / 1M = 1.282¢
@@ -226,7 +229,7 @@ it('takes the cumulative usage of message_delta over message_start in a stream',
         ->and($row->response_id)->toBe('msg_01StrmWebSrch7Lq2Vx9Kd3Ma')
         ->and($row->prompt_tokens)->toBe(10682)
         ->and($row->completion_tokens)->toBe(510)
-        ->and($row->tool_call_counts)->toBe(['web_search_requests' => 1])
+        ->and($row->tool_call_counts)->toEqual(['web_search_requests' => 1])
         ->and($row->pricing_tier)->toBe('standard')
         ->and($row->finish_reason)->toBe('end_turn')
         ->and($row->total_cost_in_cents)->toEqualWithDelta(7.616, 0.000001);
@@ -250,11 +253,12 @@ it('reads fast mode, US-only inference and cache usage from a stream', function 
 });
 
 it('uses the requested tier for a stream that does not report one', function () {
-    $stream = str_replace([',"service_tier":"standard"', ',"speed":"fast"', ',"inference_geo":"us"'], '', anthropicStream('fast-mode-us.txt'));
+    $stream = Str::replace([',"service_tier":"standard"', ',"speed":"fast"', ',"inference_geo":"us"'], '', anthropicStream('fast-mode-us.txt'));
     fakeAnthropic($stream, ['Content-Type' => 'text/event-stream']);
 
     postAnthropic(['model' => 'claude-opus-5-5', 'stream' => true, 'speed' => 'fast'])->body();
 
+    // Same tokens as the fast-mode test without the US surcharge: 6.16¢
     expect(SpectraRequest::query()->sole()->pricing_tier)->toBe('fast')
         ->and(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(6.16, 0.000001);
 });

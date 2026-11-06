@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""
+Build docs/public/images/readme/tour.gif, the README's tour of the
+dashboard, from the full-size screenshots in docs/public/images/dashboard/:
+one frame per screen with its caption, 3 seconds each.
+
+Run it after retaking the screenshots: bin/readme-images. Needs Pillow and
+ffmpeg (brew install ffmpeg).
+"""
+
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+from PIL import Image, ImageDraw, ImageFont
+
+ROOT = Path(__file__).resolve().parent.parent
+SHOTS = ROOT / 'docs/public/images/dashboard'
+OUT = ROOT / 'docs/public/images/readme'
+
+# The first screen of every screenshot is its top 2880x1800 (a 1440x900 viewport at 2x).
+SCREEN = (2880, 1800)
+FRAME = (1200, 750)
+CAPTION_HEIGHT = 90
+SECONDS_PER_FRAME = 3
+
+TOUR = [
+    ('overview', 'Overview', 'Requests, spend, tokens, latency and alerts'),
+    ('requests', 'Requests', 'Usage, cost and latency per call'),
+    ('request-detail', 'Request details', 'Trace, tokens, cache hits and payload'),
+    ('traces', 'Traces', 'AI calls grouped by request or job'),
+    ('trace-detail', 'Trace timeline', 'Calls, spans and tools in order'),
+    ('conversations', 'Conversations', 'Multi-turn chats and their cost'),
+    ('conversation-detail', 'Conversation transcript', 'Each turn and its running cost'),
+    ('errors', 'Errors', 'Failed calls grouped by cause'),
+    ('prompts', 'Prompts', 'Cost, latency and scores per version'),
+    ('eval-dataset', 'Datasets', 'The test cases your evals run over'),
+    ('eval-run', 'Evals', 'Score each run and compare them'),
+    ('playground-call', 'Playground', 'Change a real call and run it again'),
+    ('review-queue', 'Review', 'Label traces by hand'),
+    ('costs', 'Costs', 'Spend by provider, model and user'),
+    ('trackables', 'Trackables', 'Spend per user or team'),
+    ('trackable-detail', 'Trackable details', "One user's spend and requests"),
+    ('dashboard-view', 'Shared dashboards', 'Read-only usage pages for your customers'),
+    ('overview-dark', 'Dark mode', 'Follows your system theme'),
+]
+
+
+def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
+    candidates = [
+        '/System/Library/Fonts/Supplemental/Arial Bold.ttf' if bold else '/System/Library/Fonts/Supplemental/Arial.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf' if bold else '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return ImageFont.truetype(path, size)
+    return ImageFont.load_default(size)
+
+
+def frame(index: int, name: str, title: str, description: str) -> Image.Image:
+    shot = Image.open(SHOTS / f'{name}.png').convert('RGB').crop((0, 0, *SCREEN)).resize(FRAME, Image.LANCZOS)
+
+    canvas = Image.new('RGB', (FRAME[0], FRAME[1] + CAPTION_HEIGHT), (15, 23, 42))
+    canvas.paste(shot, (0, 0))
+
+    draw = ImageDraw.Draw(canvas)
+    draw.line([(0, FRAME[1]), (FRAME[0], FRAME[1])], fill=(30, 41, 59), width=1)
+
+    bold, regular, small = font(28, bold=True), font(24), font(20)
+    baseline = FRAME[1] + CAPTION_HEIGHT // 2
+    x = 36
+    draw.text((x, baseline), title, font=bold, fill=(255, 255, 255), anchor='lm')
+    x += draw.textlength(title, font=bold) + 18
+    draw.text((x, baseline + 1), description, font=regular, fill=(148, 163, 184), anchor='lm')
+    draw.text((FRAME[0] - 36, baseline + 1), f'{index} / {len(TOUR)}', font=small, fill=(100, 116, 139), anchor='rm')
+
+    return canvas
+
+
+def tour() -> None:
+    with tempfile.TemporaryDirectory() as frames:
+        for index, (name, title, description) in enumerate(TOUR, start=1):
+            frame(index, name, title, description).save(f'{frames}/frame_{index:02d}.png')
+
+        subprocess.run([
+            'ffmpeg', '-y', '-loglevel', 'error',
+            '-framerate', f'1/{SECONDS_PER_FRAME}',
+            '-i', f'{frames}/frame_%02d.png',
+            '-vf', 'split[a][b];[a]palettegen=stats_mode=single:max_colors=256[p];[b][p]paletteuse=new=1:dither=bayer:bayer_scale=5',
+            '-loop', '0',
+            str(OUT / 'tour.gif'),
+        ], check=True)
+
+
+def main() -> int:
+    OUT.mkdir(parents=True, exist_ok=True)
+    tour()
+
+    for path in sorted(OUT.iterdir()):
+        with Image.open(path) as image:
+            frames = getattr(image, 'n_frames', 1)
+        print(f'{path.relative_to(ROOT)}: {image.size[0]}x{image.size[1]}, {frames} frame(s), {path.stat().st_size // 1024} KB')
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

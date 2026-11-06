@@ -6,6 +6,8 @@ namespace Spectra\Support\Tracking;
 
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use JsonException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Spectra\Concerns\ParsesRequestData;
@@ -82,7 +84,7 @@ class GuzzleMiddleware
     }
 
     /**
-     * Middleware that detects the provider from the request host.
+     * Create the middleware that detects the provider from the request host.
      */
     public static function auto(): callable
     {
@@ -147,8 +149,8 @@ class GuzzleMiddleware
         }
 
         $providerInstance = $registry->provider($provider);
-        $path = $request->getUri()->getPath();
-        $path = $providerInstance?->normalizeEndpoint($path) ?? $path;
+        $requestPath = $request->getUri()->getPath();
+        $path = $providerInstance?->normalizeEndpoint($requestPath) ?? $requestPath;
 
         if (! $this->manual && ! $registry->isTrackableEndpoint($provider, $path)) {
             return null;
@@ -167,6 +169,7 @@ class GuzzleMiddleware
 
         $context->requestData = $requestData;
         $context->endpoint = $path;
+        $context->deployment = $providerInstance?->extractDeployment($requestPath);
 
         if ($providerInstance instanceof ExtractsPricingTierFromRequest) {
             $context->requestedPricingTier = $providerInstance->extractPricingTierFromRequest($requestData);
@@ -183,14 +186,14 @@ class GuzzleMiddleware
         $context->httpStatus = $response->getStatusCode();
 
         if ($response->getStatusCode() >= 400) {
-            return $this->withBody($response, fn (string $body) => $this->recordHttpError($context, $response->getStatusCode(), $body));
+            return $this->withBody($context, $response, fn (string $body) => $this->recordHttpError($context, $response->getStatusCode(), $body));
         }
 
         if (StreamDetector::isStreamingResponse($response, $context->provider, $context->endpoint, $context->requestData)) {
             return $this->trackStream($context, $response);
         }
 
-        return $this->withBody($response, fn (string $body) => $this->recordBody($context, $body));
+        return $this->withBody($context, $response, fn (string $body) => $this->recordBody($context, $body));
     }
 
     /**
@@ -209,11 +212,12 @@ class GuzzleMiddleware
 
     /**
      * Read the body now when it can be rewound; otherwise let the application
-     * read it first and receive the bytes as it does.
+     * read it first and receive the bytes as it does. A body the application
+     * can't read to the end is recorded as a failure, not as a complete answer.
      *
      * @param  callable(string): void  $record
      */
-    protected function withBody(ResponseInterface $response, callable $record): ResponseInterface
+    protected function withBody(RequestContext $context, ResponseInterface $response, callable $record): ResponseInterface
     {
         $body = $response->getBody();
 
@@ -235,25 +239,32 @@ class GuzzleMiddleware
             function () use (&$buffer, $record) {
                 $record($buffer);
             },
+            function (Throwable $exception) use ($context) {
+                app(Spectra::class)->recordFailure($context, $exception);
+            },
         ));
     }
 
     /**
-     * Wrap a streamed response body so each chunk feeds the streaming tracker as the app reads it.
+     * Wrap a streamed response body so each chunk feeds the streaming tracker
+     * as the app reads it, and a body that breaks off is recorded as a failure.
      */
     protected function trackStream(RequestContext $context, ResponseInterface $response): ResponseInterface
     {
-        $manager = app(Spectra::class);
         $tracker = StreamingTracker::forContext($context);
         $parser = new StreamEventParser($response->getHeaderLine('Content-Type'));
-
-        // A manual Spectra::stream() wrapped around the same response claims
-        // this context and records it instead.
-        $manager->setPendingStreamContext($context);
 
         return $response->withBody(new TrackedStream(
             $response->getBody(),
             function (string $bytes) use ($parser, $tracker, $context) {
+                // A manual Spectra::stream() wrapped around this response gets
+                // its first chunk from these bytes and claims the context then.
+                // Offering it only while the body is being read keeps an
+                // unread stream from being claimed by an unrelated tracker.
+                if (! $context->streamClaimed) {
+                    app(Spectra::class)->setPendingStreamContext($context);
+                }
+
                 foreach ($parser->push($bytes) as $event) {
                     if (! $context->streamClaimed) {
                         $tracker->ingest($event);
@@ -273,6 +284,15 @@ class GuzzleMiddleware
                     $tracker->finish();
                 }
             },
+            function (Throwable $exception) use ($tracker, $context) {
+                app(Spectra::class)->clearPendingStreamContext($context);
+
+                // A manual tracker that claimed the context sees the same
+                // exception from its own loop and records it itself.
+                if (! $context->streamClaimed) {
+                    $tracker->fail($exception);
+                }
+            },
         ));
     }
 
@@ -288,7 +308,12 @@ class GuzzleMiddleware
             $context->rawResponseBody = $rawBody;
             $body = [];
         } else {
-            $decoded = json_decode($rawBody, true);
+            try {
+                $decoded = json_decode($rawBody, true, 512, JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                $decoded = null;
+            }
+
             $body = is_array($decoded) ? $decoded : [];
         }
 
@@ -306,7 +331,11 @@ class GuzzleMiddleware
             return;
         }
 
-        $this->restoreJob($context, $providerInstance, $jobId);
+        // Only a poll needs the job restored: it carries no body (a GET) or
+        // names no model. An ordinary call has both, and skips the cache read.
+        if ($context->requestData === [] || $context->model === 'unknown') {
+            $this->restoreJob($context, $providerInstance, $jobId);
+        }
 
         app(Spectra::class)->recordSuccess($context, $body);
     }
@@ -323,15 +352,16 @@ class GuzzleMiddleware
             return;
         }
 
-        try {
+        // Without a cache the poll keeps whatever it can see.
+        rescue(function () use ($context, $jobId): void {
             $job = $this->rememberedJob($context->provider, $jobId);
             $model = $context->model;
 
-            if (filled($model) && $model !== 'unknown' && ! str_starts_with($job['model'] ?? '', rtrim($model, '/').'/')) {
+            if (filled($model) && $model !== 'unknown' && ! Str::startsWith($job['model'] ?? '', rtrim($model, '/').'/')) {
                 $job['model'] = $model;
             }
 
-            $request = $this->withoutInlineFiles($context->requestData);
+            $request = app(RequestDataFilter::class)->withoutInlineFiles($context->requestData);
 
             if ($request !== []) {
                 $job['request'] = $request;
@@ -340,9 +370,7 @@ class GuzzleMiddleware
             if ($job !== []) {
                 Cache::put($this->jobModelKey($context->provider, $jobId), $job, now()->addDay());
             }
-        } catch (Throwable) {
-            // Without a cache the poll keeps whatever it can see.
-        }
+        }, report: false);
     }
 
     /**
@@ -357,16 +385,13 @@ class GuzzleMiddleware
             return;
         }
 
-        try {
-            $job = $this->rememberedJob($context->provider, $jobId);
-        } catch (Throwable) {
-            return;
-        }
+        // Without a cache the poll keeps whatever it can see.
+        $job = rescue(fn () => $this->rememberedJob($context->provider, $jobId), [], report: false);
 
         $remembered = $job['model'] ?? null;
 
         if ($remembered !== null && $remembered !== $context->model
-            && ($context->model === 'unknown' || blank($context->model) || str_starts_with($remembered, rtrim($context->model, '/').'/'))) {
+            && ($context->model === 'unknown' || blank($context->model) || Str::startsWith($remembered, rtrim($context->model, '/').'/'))) {
             $context->model = $remembered;
         }
 
@@ -380,7 +405,9 @@ class GuzzleMiddleware
     }
 
     /**
-     * Earlier versions cached only the model, as a string.
+     * Get the model and request body remembered for an async job.
+     *
+     * Entries cached by earlier versions hold only the model, as a string.
      *
      * @return array{model?: string, request?: array<string, mixed>}
      */
@@ -396,31 +423,11 @@ class GuzzleMiddleware
     }
 
     /**
-     * The request body without inline files (data URIs), which can be
-     * megabytes and say nothing about the price.
-     *
-     * @param  array<mixed>  $data
-     * @return array<mixed>
-     */
-    protected function withoutInlineFiles(array $data): array
-    {
-        foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $data[$key] = $this->withoutInlineFiles($value);
-            } elseif (is_string($value) && str_starts_with($value, 'data:')) {
-                unset($data[$key]);
-            }
-        }
-
-        return $data;
-    }
-
-    /**
      * Get the cache key that remembers an async job's model and request between submit and poll.
      */
     protected function jobModelKey(string $provider, string $jobId): string
     {
-        return 'spectra:job-model:'.$provider.':'.sha1($jobId);
+        return "spectra:job-model:{$provider}:".sha1($jobId);
     }
 
     /**
@@ -432,7 +439,7 @@ class GuzzleMiddleware
     }
 
     /**
-     * The provider's error message from an error body, falling back to the raw body.
+     * Get the provider's error message from an error body, falling back to the raw body.
      */
     public static function errorMessage(string $body, int $status): string
     {
@@ -444,16 +451,22 @@ class GuzzleMiddleware
 
         $body = trim($body);
 
-        return filled($body) ? mb_substr($body, 0, 2000) : "HTTP {$status}";
+        return filled($body) ? Str::substr($body, 0, 2000) : "HTTP {$status}";
     }
 
     /**
-     * The message field of a JSON error body. A message of another type fails
-     * the return type, and errorMessage() falls back to the raw body.
+     * Get the message field of a JSON error body.
+     *
+     * A message of another type fails the return type, and errorMessage()
+     * falls back to the raw body.
      */
     protected static function providerErrorMessage(string $body): ?string
     {
-        $decoded = json_decode($body, true);
+        try {
+            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
 
         if (! is_array($decoded)) {
             return null;

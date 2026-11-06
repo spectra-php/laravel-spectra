@@ -112,13 +112,15 @@ class OtlpExporter implements ExportsSpans, RequestExporter
 
             return true;
         } catch (\Throwable $e) {
-            Log::warning('OTLP export error: '.$e->getMessage());
+            Log::warning("OTLP export error: {$e->getMessage()}");
 
             return false;
         }
     }
 
     /**
+     * Get the export timeout in seconds, or 10 when the config value is not a positive number.
+     *
      * Published configs read SPECTRA_OTEL_TIMEOUT without a cast, so the
      * value can arrive as a string, which Http::timeout() rejects.
      */
@@ -166,7 +168,7 @@ class OtlpExporter implements ExportsSpans, RequestExporter
      */
     public function withBearerToken(string $token): self
     {
-        $this->headers['Authorization'] = 'Bearer '.$token;
+        $this->headers['Authorization'] = "Bearer {$token}";
 
         return $this;
     }

@@ -1,33 +1,38 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import type { LocationQueryValue } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useLoading } from '@/composables/useLoading';
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 import Skeleton from '@/components/Skeleton.vue';
 import StatusCode from '@/components/StatusCode.vue';
 import RequestFilters from '@/components/RequestFilters.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
+import Money from '@/components/Money.vue';
+import type { DashboardConfigResponse, ModelTypeOption, RequestListItem, RequestsResponse } from '@/types/api';
+import type { RequestFilterKey, RequestFilterValues } from '@/types/app';
 
 const router = useRouter();
 const route = useRoute();
-const { formatNumber, formatCurrency, formatDuration, providerClass, apiRequest } = useHelpers();
+const { formatNumber, formatDuration, providerClass, apiRequest } = useHelpers();
 const { providers, loadProviders } = useProviders();
 const loading = useLoading();
 
-const requests = ref([]);
+const requests = ref<RequestListItem[]>([]);
 loading.value = true;
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
-const availableTags = ref([]);
-const availableFinishReasons = ref([]);
-const availableReasoningEfforts = ref([]);
-const modelTypes = ref([]);
+const availableTags = ref<string[]>([]);
+const availableFinishReasons = ref<string[]>([]);
+const availableReasoningEfforts = ref<string[]>([]);
+const availableTrackableTypes = ref<string[]>([]);
+const modelTypes = ref<ModelTypeOption[]>([]);
 const isBootstrapping = ref(true);
 
-const filterKeys = ['search', 'provider', 'model', 'status', 'tag', 'model_type', 'finish_reason', 'has_tool_calls', 'is_reasoning', 'reasoning_effort', 'trace_id', 'conversation_id', 'trackable_type', 'trackable_id', 'sort_by', 'sort_dir'];
+const filterKeys: RequestFilterKey[] = ['search', 'provider', 'model', 'status', 'tag', 'model_type', 'finish_reason', 'has_tool_calls', 'is_reasoning', 'reasoning_effort', 'trace_id', 'conversation_id', 'trackable_type', 'trackable_id', 'prompt_name', 'prompt_version', 'error_fingerprint', 'sort_by', 'sort_dir'];
 const clearableFilterKeys = filterKeys.filter((key) => !['sort_by', 'sort_dir'].includes(key));
 const requestSortOptions = [
     { value: 'created_at', label: 'Sort by Time' },
@@ -38,8 +43,8 @@ const requestSortOptions = [
 
 const filtersFromQuery = () => {
     const q = route.query;
-    const f = {};
-    const qs = (value) => Array.isArray(value) ? value[0] : value;
+    const f: RequestFilterValues = {};
+    const qs = (value: LocationQueryValue | LocationQueryValue[] | undefined) => Array.isArray(value) ? value[0] : value;
     for (const key of filterKeys) {
         const value = qs(q[key]);
         f[key] = typeof value === 'string' ? value : '';
@@ -49,7 +54,7 @@ const filtersFromQuery = () => {
     return f;
 };
 
-const filters = ref(filtersFromQuery());
+const filters = ref<RequestFilterValues>(filtersFromQuery());
 
 const { period, startDate, endDate, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery({
     filterKeys,
@@ -60,7 +65,7 @@ const loadRequests = async (page = 1) => {
     loading.value = true;
     try {
         const params = buildQueryParams(page);
-        const data = await apiRequest('get', '/requests?' + params.toString());
+        const data = await apiRequest<RequestsResponse>('get', '/requests?' + params.toString());
         requests.value = data.data;
         pagination.value = {
             current_page: data.current_page,
@@ -75,6 +80,9 @@ const loadRequests = async (page = 1) => {
         }
         if (data.available_reasoning_efforts) {
             availableReasoningEfforts.value = data.available_reasoning_efforts;
+        }
+        if (data.available_trackable_types) {
+            availableTrackableTypes.value = data.available_trackable_types;
         }
     } catch (error) {
         console.error('Failed to load requests:', error);
@@ -98,14 +106,21 @@ const onRangeChange = async () => {
 
 const loadConfig = async () => {
     try {
-        const data = await apiRequest('get', '/config');
+        const data = await apiRequest<DashboardConfigResponse>('get', '/config');
         modelTypes.value = data.model_types || [];
     } catch (error) {
         // ignore
     }
 };
 
-const goToRequest = (id) => {
+// The request a Playground run started from; a new request's runs have none.
+const playgroundSource = (request: RequestListItem): string => {
+    const source = request.metadata?.playground_source;
+
+    return typeof source === 'string' ? source : '';
+};
+
+const goToRequest = (id: string) => {
     router.push({ name: 'request-preview', params: { id } });
 };
 
@@ -126,7 +141,7 @@ const nextPage = async () => {
 };
 
 const clearFilters = () => {
-    const f = {};
+    const f: RequestFilterValues = {};
     for (const key of filterKeys) f[key] = '';
     f.sort_by = 'created_at';
     f.sort_dir = 'desc';
@@ -137,7 +152,7 @@ const hasActiveFilters = () => {
     return filterKeys.filter(k => k !== 'sort_by' && k !== 'sort_dir').some(k => filters.value[k] !== '');
 };
 
-const toggleSort = (field) => {
+const toggleSort = (field: string) => {
     if (filters.value.sort_by === field) {
         filters.value.sort_dir = filters.value.sort_dir === 'desc' ? 'asc' : 'desc';
     } else {
@@ -146,12 +161,12 @@ const toggleSort = (field) => {
     }
 };
 
-const sortIcon = (field) => {
+const sortIcon = (field: string) => {
     if (filters.value.sort_by !== field) return null;
     return filters.value.sort_dir === 'desc' ? 'down' : 'up';
 };
 
-const formatUsage = (request) => {
+const formatUsage = (request: RequestListItem) => {
     const type = request.model_type;
     if (type === 'image') {
         const tokens = (request.prompt_tokens || 0) + (request.completion_tokens || 0);
@@ -188,7 +203,7 @@ const usageLabel = computed(() => 'Usage');
 onMounted(async () => {
     applyQueryState();
     filters.value = filtersFromQuery();
-    const initialPage = parseInt(route.query.page) || 1;
+    const initialPage = parseInt(route.query.page as string) || 1;
     await syncQueryToRouter(initialPage, true);
     await Promise.all([
         loadConfig(),
@@ -226,6 +241,7 @@ onUnmounted(() => {
                     :available-tags="availableTags"
                     :available-finish-reasons="availableFinishReasons"
                     :available-reasoning-efforts="availableReasoningEfforts"
+                    :available-trackable-types="availableTrackableTypes"
                     :sort-options="requestSortOptions"
                     :active-filter-keys="clearableFilterKeys"
                     search-placeholder="Search by model or ID..."
@@ -276,13 +292,13 @@ onUnmounted(() => {
                     <tbody>
                         <template v-if="loading">
                             <tr v-for="i in 10" :key="i" class="border-b border-gray-100 dark:border-gray-800">
-                                <td class="px-5 py-4"><div class="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse"></div></td>
                                 <td class="px-5 py-4"><div class="flex gap-1"><div class="h-5 w-16 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse"></div></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-12 bg-gray-200 dark:bg-gray-800 rounded animate-pulse ml-auto"></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded animate-pulse ml-auto"></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-14 bg-gray-200 dark:bg-gray-800 rounded animate-pulse ml-auto"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-12 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse ml-auto"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse ml-auto"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-14 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse ml-auto"></div></td>
                                 <td class="px-5 py-4"><div class="h-6 w-20 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse"></div></td>
-                                <td class="px-5 py-4"><div class="h-4 w-20 bg-gray-200 dark:bg-gray-800 rounded animate-pulse ml-auto"></div></td>
+                                <td class="px-5 py-4"><div class="h-4 w-20 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse ml-auto"></div></td>
                             </tr>
                         </template>
                         <template v-else>
@@ -296,10 +312,18 @@ onUnmounted(() => {
                                     <div class="flex items-center gap-2 min-w-0">
                                         <ProviderLogo
                                             :provider="request.provider"
-                                            :title="request.provider_display_name || request.provider"
+                                            v-tooltip="request.provider_display_name || request.provider"
                                             class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                         />
                                         <span class="font-medium text-gray-900 dark:text-white">{{ request.model }}</span>
+                                        <router-link
+                                            v-if="request.tags?.includes('playground') && playgroundSource(request)"
+                                            :to="{ name: 'request-preview', params: { id: playgroundSource(request) } }"
+                                            class="badge badge-purple shrink-0"
+                                            v-tooltip="'A Playground run. Opens the request it started from.'"
+                                            @click.stop
+                                        >Run</router-link>
+                                        <span v-else-if="request.tags?.includes('playground')" class="badge badge-purple shrink-0" v-tooltip="'A Playground run of a new request'">Run</span>
                                         <span
                                             v-if="request.model_type"
                                             class="badge badge-secondary shrink-0"
@@ -307,7 +331,7 @@ onUnmounted(() => {
                                         <span
                                             v-if="request.is_streaming"
                                             class="inline-flex items-center text-primary-500 dark:text-primary-400 shrink-0"
-                                            title="Streaming"
+                                            v-tooltip="'Streaming'"
                                         >
                                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M6.26,19.089A9.625,9.625,0,0,1,6.234,4.911C6.709,4.475,6,3.769,5.527,4.2A10.516,10.516,0,0,0,5.553,19.8c.475.433,1.184-.273.707-.707Z"/>
@@ -320,7 +344,7 @@ onUnmounted(() => {
                                         <span
                                             v-if="request.is_reasoning"
                                             class="inline-flex items-center text-amber-500 dark:text-amber-400 shrink-0"
-                                            :title="'Reasoning' + (request.reasoning_effort ? ` (${request.reasoning_effort})` : '')"
+                                            v-tooltip="'Reasoning' + (request.reasoning_effort ? ` (${request.reasoning_effort})` : '')"
                                         >
                                             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M16,4c-4.963,0-9,4.038-9,9c0,3.186,1.781,5.278,3.212,6.959C11.172,21.085,12,22.059,12,23v5h3v1h2v-1h3v-5c0-0.941,0.828-1.915,1.788-3.041C23.219,18.278,25,16.186,25,13C25,8.038,20.963,4,16,4z M18,26h-4v-2h4V26z M20.265,18.662c-0.923,1.084-1.805,2.12-2.132,3.338h-4.266c-0.327-1.218-1.209-2.254-2.132-3.338C10.391,17.083,9,15.45,9,13c0-3.86,3.141-7,7-7s7,3.14,7,7C23,15.45,21.609,17.083,20.265,18.662z M16,7v2c-2.206,0-4,1.794-4,4h-2C10,9.691,12.691,7,16,7z"/>
@@ -348,10 +372,10 @@ onUnmounted(() => {
                                     {{ formatUsage(request).value }}
                                     <span class="text-[11px] text-gray-400 dark:text-gray-500 ml-0.5">{{ formatUsage(request).label }}</span>
                                 </td>
-                                <td class="text-right tabular-nums font-medium">{{ formatCurrency(request.total_cost_in_cents) }}</td>
+                                <td class="text-right tabular-nums font-medium"><Money :cents="request.total_cost_in_cents" /></td>
                                 <td class="text-right tabular-nums">{{ formatDuration(request.latency_ms) }}</td>
                                 <td>
-                                    <StatusCode :code="request.status_code" />
+                                    <StatusCode :code="request.status_code" :error="request.error_type" />
                                 </td>
                                 <td class="text-right whitespace-nowrap">
                                     <span class="group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
@@ -385,7 +409,7 @@ onUnmounted(() => {
             <div class="card-body border-t border-gray-100 dark:border-gray-800">
                 <div class="flex items-center justify-between">
                     <div class="text-sm text-gray-500 dark:text-gray-400">
-                        <span v-if="loading" class="inline-block w-48 h-4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></span>
+                        <span v-if="loading" class="inline-block w-48 h-4 bg-gray-200 dark:bg-gray-800 rounded-sm animate-pulse"></span>
                         <span v-else>
                             Showing page <span class="font-medium text-gray-700 dark:text-gray-300">{{ pagination.current_page }}</span>
                             of <span class="font-medium text-gray-700 dark:text-gray-300">{{ pagination.last_page }}</span>

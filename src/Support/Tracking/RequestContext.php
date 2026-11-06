@@ -22,6 +22,9 @@ use Spectra\Support\Pricing\RequestCostCalculator;
  */
 class RequestContext implements Arrayable
 {
+    /** The most `spectra_requests.tokens_per_second`, a decimal(8, 2), can hold. */
+    protected const MAX_TOKENS_PER_SECOND = 999999.99;
+
     /**
      * List properties: empty when unset, and stored as NULL while empty.
      *
@@ -189,6 +192,13 @@ class RequestContext implements Arrayable
 
     public ?int $httpStatus = null;
 
+    /**
+     * The provider deployment the request went to (an Azure OpenAI deployment
+     * name), used as the model when neither the response nor the request
+     * names one.
+     */
+    public ?string $deployment = null;
+
     public int $retryCount = 0;
 
     public bool $isReasoning = false;
@@ -229,6 +239,11 @@ class RequestContext implements Arrayable
 
     public ?int $conversationTurn = null;
 
+    /** The prompt template the call used, to compare its versions. */
+    public ?string $promptName = null;
+
+    public ?string $promptVersion = null;
+
     protected CarbonInterface $startedAt;
 
     protected ?CarbonInterface $completedAt = null;
@@ -240,8 +255,12 @@ class RequestContext implements Arrayable
      */
     public function __construct(array $attributes = [])
     {
-        $this->id = $attributes['id'] ?? (string) Str::ulid();
-        $this->traceId = $attributes['trace_id'] ?? (string) Str::uuid();
+        // The id the request is stored under, so code inside Spectra::track()
+        // can point a score at the call before it is saved.
+        $this->id = $attributes['id'] ?? (string) Str::uuid7();
+        // Time-ordered like every other id, so saving a call appends to the trace
+        // index instead of splitting a random page of it.
+        $this->traceId = $attributes['trace_id'] ?? (string) Str::uuid7();
         $this->spanId = $attributes['span_id'] ?? bin2hex(random_bytes(8));
         $this->startedAt = $attributes['started_at'] ?? now();
 
@@ -251,7 +270,7 @@ class RequestContext implements Arrayable
                 continue;
             }
 
-            // A list passed as null (the type before these became arrays) is empty.
+            // A list passed as null is left empty, as callers may still pass null for one.
             if ($value === null && in_array($property, self::LIST_PROPERTIES, true)) {
                 continue;
             }
@@ -270,8 +289,11 @@ class RequestContext implements Arrayable
         if (config('spectra.tracking.capture_request_id') && app()->has('request')) {
             $headerValue = request()->header('X-Request-ID');
             $serverValue = request()->server('REQUEST_ID');
-            $this->laravelRequestId = is_string($headerValue) ? $headerValue
-                : (is_string($serverValue) ? $serverValue : (string) Str::uuid());
+            $this->laravelRequestId = match (true) {
+                is_string($headerValue) => $headerValue,
+                is_string($serverValue) => $serverValue,
+                default => (string) Str::uuid(),
+            };
         }
 
         // In queued jobs and commands the bound request is a placeholder
@@ -327,7 +349,9 @@ class RequestContext implements Arrayable
     }
 
     /**
-     * Mark the request as failed with the exception and HTTP status.
+     * Mark the request as failed with the exception and HTTP status. Without
+     * a status the response's own stays (a stream that broke off after a
+     * 200), and a request that never got one stays without.
      */
     public function fail(\Throwable $exception, ?int $httpStatus = null): self
     {
@@ -336,7 +360,7 @@ class RequestContext implements Arrayable
         $this->latencyMs = (int) $this->startedAt->diffInMilliseconds($this->completedAt);
         $this->errorType = $exception::class;
         $this->errorMessage = $exception->getMessage();
-        $this->httpStatus = $httpStatus;
+        $this->httpStatus = $httpStatus ?? $this->httpStatus;
 
         return $this;
     }
@@ -368,7 +392,12 @@ class RequestContext implements Arrayable
         // tokens/s is only meaningful for streaming where we have TTFT
         if ($this->isStreaming && $this->timeToFirstTokenMs !== null && $this->latencyMs && $this->completionTokens > 0) {
             $generationMs = max(1, $this->latencyMs - $this->timeToFirstTokenMs);
-            $this->tokensPerSecond = round(($this->completionTokens / $generationMs) * 1000, 2);
+            $tokensPerSecond = round(($this->completionTokens / $generationMs) * 1000, 2);
+
+            // A stream that arrives all at once (a buffering proxy) has no real
+            // generation time, and a rate this high would overflow the column
+            // on PostgreSQL and strict MySQL, which loses the whole call.
+            $this->tokensPerSecond = $tokensPerSecond <= self::MAX_TOKENS_PER_SECOND ? $tokensPerSecond : null;
         }
 
         return $this;
@@ -449,8 +478,10 @@ class RequestContext implements Arrayable
     }
 
     /**
-     * Type and id to store for a trackable. Eloquent models use their morph
-     * alias, so apps with a morph map can still query their requests.
+     * Get the type and id to store for a trackable.
+     *
+     * Eloquent models use their morph alias, so apps with a morph map can
+     * still query their requests.
      *
      * @return array{0: string, 1: mixed}
      */
@@ -465,7 +496,7 @@ class RequestContext implements Arrayable
     }
 
     /**
-     * The usage recorded so far, in the normalised TokenMetrics shape.
+     * Get the usage recorded so far, in the normalised TokenMetrics shape.
      */
     public function tokens(): TokenMetrics
     {
@@ -490,6 +521,17 @@ class RequestContext implements Arrayable
     {
         $this->conversationId = $conversationId;
         $this->conversationTurn = $turn;
+
+        return $this;
+    }
+
+    /**
+     * Name the prompt template, and its version, the request used.
+     */
+    public function usingPrompt(string $name, ?string $version = null): self
+    {
+        $this->promptName = $name;
+        $this->promptVersion = $version;
 
         return $this;
     }
@@ -529,7 +571,7 @@ class RequestContext implements Arrayable
      */
     public function toArray(): array
     {
-        $data = [
+        $columns = [
             'id' => $this->id,
             'trace_id' => $this->traceId,
             'span_id' => $this->spanId,
@@ -583,42 +625,48 @@ class RequestContext implements Arrayable
             'tags' => $this->tags,
             'metadata' => $this->metadata,
             'conversation_id' => $this->conversationId,
+            'prompt_name' => $this->promptName,
+            'prompt_version' => $this->promptVersion,
             'conversation_turn' => $this->conversationTurn,
             'created_at' => $this->startedAt,
             'updated_at' => $this->completedAt ?? now(),
         ];
 
         if (config('spectra.storage.store_prompts', true)) {
-            $data['prompt'] = $this->prompt;
-            $data['messages'] = $this->messages ?: null;
+            $columns['prompt'] = $this->prompt;
+            $columns['messages'] = $this->messages ?: null;
         }
 
         if (config('spectra.storage.store_system_prompts', true)) {
-            $data['system_prompt'] = $this->systemPrompt;
+            $columns['system_prompt'] = $this->systemPrompt;
         }
 
         if (config('spectra.storage.store_responses', true)) {
-            $data['response'] = $this->response;
-            $data['tool_calls'] = $this->toolCalls ?: null;
+            $columns['response'] = $this->response;
+            $columns['tool_calls'] = $this->toolCalls ?: null;
         }
 
         if (config('spectra.storage.store_tools', true)) {
-            $data['tools'] = $this->tools ?: null;
+            $columns['tools'] = $this->tools ?: null;
         }
 
         // Raw request parameters are broader than prompt content, so they get
         // their own switch; it falls back to store_prompts for installs that
         // disabled prompt storage before this key existed.
         if (config('spectra.storage.store_request_data') ?? config('spectra.storage.store_prompts', true)) {
-            $data['request_data'] = $this->filteredRequestData();
+            $columns['request_data'] = $this->filteredRequestData();
         }
 
-        return $data;
+        return $columns;
     }
 
     /**
+     * Get the raw request body with the system prompt and tool storage
+     * switches applied and its inline files replaced by a placeholder.
+     *
      * The raw body is where system prompts and tools are stored, so their
-     * switches are applied to it.
+     * switches are applied to it. Inline files (base64 images and audio sent
+     * as `data:` URIs) are always stripped, like binary data in responses.
      *
      * @return array<string, mixed>|null
      */
@@ -628,17 +676,17 @@ class RequestContext implements Arrayable
             return null;
         }
 
-        $filter = new RequestDataFilter;
-        $data = $this->requestData;
+        $filter = app(RequestDataFilter::class);
+        $requestData = $filter->withoutInlineFiles($this->requestData);
 
         if (! config('spectra.storage.store_system_prompts', true)) {
-            $data = $filter->withoutSystemPrompts($data);
+            $requestData = $filter->withoutSystemPrompts($requestData);
         }
 
         if (! config('spectra.storage.store_tools', true)) {
-            $data = $filter->withoutTools($data);
+            $requestData = $filter->withoutTools($requestData);
         }
 
-        return $data;
+        return $requestData;
     }
 }

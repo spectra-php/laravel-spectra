@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenRouter\Handlers;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\HasMedia;
 use Spectra\Data\ImageMetrics;
 use Spectra\Data\Metrics;
@@ -103,9 +104,11 @@ class ImageHandler extends ChatHandler implements HasMedia
                     continue;
                 }
 
-                // Parse data URL: data:image/png;base64,iVBOR...
+                // Only inline base64 data URLs (`data:image/png;base64,...`) carry
+                // the image bytes; any other URL is skipped.
                 if (preg_match('#^data:image/([a-z]+);base64,(.+)$#i', $dataUrl, $matches)) {
-                    $extension = strtolower($matches[1]) === 'jpeg' ? 'jpg' : strtolower($matches[1]);
+                    $imageType = Str::lower($matches[1]);
+                    $extension = $imageType === 'jpeg' ? 'jpg' : $imageType;
                     $content = base64_decode($matches[2], true);
 
                     if ($content === false) {

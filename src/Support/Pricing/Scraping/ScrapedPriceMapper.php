@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Spectra\Support\Pricing\Scraping;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Spectra\Enums\PricingTier;
 use Spectra\Enums\PricingUnit;
 use Spectra\Pricing\ProviderPricing;
-use Spectra\Pricing\ScrapedPricing;
 use Spectra\Support\Pricing\ModelDefinition;
 use Spectra\Support\Pricing\PricingLookup;
 
@@ -28,7 +28,7 @@ use Spectra\Support\Pricing\PricingLookup;
  *
  * @phpstan-import-type TierEntry from ModelDefinition
  *
- * @phpstan-type ScrapedRow array{tier: string, above: int|null, prices: array<string, float>, scales: array<string, float>}
+ * @phpstan-type ScrapedRow array{tier: string, above: int|null, prices: array<string, float>, scales: array<string, float>, lines: array<string, string>}
  * @phpstan-type ScrapedModel array{display_name: string|null, unit: string|null, names: list<string>, rows: array<string, ScrapedRow>}
  */
 class ScrapedPriceMapper
@@ -37,6 +37,9 @@ class ScrapedPriceMapper
     public const OUTLIER_RATIO = 10;
 
     protected const MODEL_ID_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._:\/@+-]{0,199}$/';
+
+    /** Characters of a confirming page line kept for the review. */
+    public const MAX_PAGE_LINE_LENGTH = 300;
 
     /** @var array<string, list<PriceChange>> */
     protected array $changes = [];
@@ -72,7 +75,7 @@ class ScrapedPriceMapper
                 $matched++;
                 $entry = $this->applyToKnownModel($id, $definitions[$id], $scraped, $today);
             } else {
-                $entry = $this->newModel($id, $scraped);
+                $entry = $this->buildNewModel($id, $scraped);
 
                 if ($entry !== null) {
                     $newModels[] = $id;
@@ -121,9 +124,9 @@ class ScrapedPriceMapper
                 ?? $lookup->canonicalModel($pricing->provider(), strtolower($rawId))
                 ?? $byDisplayName[strtolower($rawId)]
                 ?? ($displayName !== null ? $byDisplayName[strtolower($displayName)] ?? null : null)
-                ?: ($byWords[$this->words($rawId)] ?? null)
-                ?: ($displayName !== null ? $byWords[$this->words($displayName)] ?? null : null)
-                ?: (preg_match(self::MODEL_ID_PATTERN, $rawId) === 1 ? $rawId : null);
+                ?: ($byWords[$this->reduceToWords($rawId)] ?? null)
+                ?: ($displayName !== null ? $byWords[$this->reduceToWords($displayName)] ?? null : null)
+                ?: (Str::isMatch(self::MODEL_ID_PATTERN, $rawId) ? $rawId : null);
 
             if ($id === null) {
                 $this->skipped[] = "'{$rawId}' is not a model id.";
@@ -131,10 +134,11 @@ class ScrapedPriceMapper
                 continue;
             }
 
-            $tier = PricingTier::tryFrom(strtolower((string) (is_scalar($row['tier'] ?? null) ? $row['tier'] : 'standard')));
+            $tier = PricingTier::tryFrom(Str::lower((string) (is_scalar($row['tier'] ?? null) ? $row['tier'] : 'standard')));
 
             if ($tier === null) {
-                $this->skipped[] = "{$id}: unknown tier '".(is_scalar($row['tier']) ? $row['tier'] : '')."'.";
+                $tierLabel = is_scalar($row['tier']) ? $row['tier'] : '';
+                $this->skipped[] = "{$id}: unknown tier '{$tierLabel}'.";
 
                 continue;
             }
@@ -155,14 +159,15 @@ class ScrapedPriceMapper
             $unit = is_string($row['unit'] ?? null) ? PricingUnit::tryFrom($row['unit'])?->value : null;
             $catalogUnit = isset($definitions[$id]) ? $definitions[$id]->toModelArray()['pricing_unit'] : null;
             $pricedPer = is_numeric($row['priced_per'] ?? null) && $row['priced_per'] > 0 ? (float) $row['priced_per'] : null;
-            [$prices, $scales, $unconfirmed, $ignored] = $this->rowPrices($row, $id, $shape, $page, $names, $catalogUnit ?? $unit, $pricedPer);
+            [$prices, $scales, $unconfirmed, $ignored, $lines] = $this->extractRowPrices($row, $id, $shape, $page, $names, $catalogUnit ?? $unit, $pricedPer);
 
             foreach ($ignored as $field) {
                 $ignoredFields[$field] = ($ignoredFields[$field] ?? 0) + 1;
             }
 
             if ($unconfirmed !== []) {
-                $this->skipped[] = "{$id}: {$this->describeRow($catalogTier, $above)} ".implode(', ', $unconfirmed).' not found next to the model on the page, ignored.';
+                $unconfirmedPrices = implode(', ', $unconfirmed);
+                $this->skipped[] = "{$id}: {$this->describeRow($catalogTier, $above)} {$unconfirmedPrices} not found next to the model on the page, ignored.";
             }
 
             if ($prices === []) {
@@ -173,8 +178,10 @@ class ScrapedPriceMapper
             $grouped[$id]['unit'] ??= $unit;
             $grouped[$id]['names'] = array_values(collect([...$grouped[$id]['names'], ...$names])->uniqueStrict()->all());
 
-            $key = $catalogTier.'|'.$above;
-            $grouped[$id]['rows'][$key] ??= ['tier' => $catalogTier, 'above' => $above, 'prices' => [], 'scales' => []];
+            $key = "{$catalogTier}|{$above}";
+            $grouped[$id]['rows'][$key] ??= ['tier' => $catalogTier, 'above' => $above, 'prices' => [], 'scales' => [], 'lines' => []];
+            // A price and its page line come from the same row: the first that gives the price wins both.
+            $grouped[$id]['rows'][$key]['lines'] += array_diff_key($lines, $grouped[$id]['rows'][$key]['prices']);
             $grouped[$id]['rows'][$key]['prices'] += $prices;
             $grouped[$id]['rows'][$key]['scales'] += $scales;
         }
@@ -205,12 +212,12 @@ class ScrapedPriceMapper
 
         foreach ($definitions as $id => $definition) {
             $name = $definition->toModelArray()['display_name'];
-            $words = [$this->words($id)];
+            $words = [$this->reduceToWords($id)];
 
             if (is_string($name)) {
                 $displayNames[$id] = $name;
                 $byDisplayName[strtolower($name)] ??= $id;
-                $words[] = $this->words($name);
+                $words[] = $this->reduceToWords($name);
             }
 
             foreach (array_unique($words) as $key) {
@@ -223,20 +230,22 @@ class ScrapedPriceMapper
     }
 
     /**
-     * The row's prices in catalog cents, with the scale each was converted
-     * by. A price the page doesn't show next to the model is unconfirmed; a
-     * field the catalog doesn't use is ignored.
+     * Get the row's prices in catalog cents, with the scale each was converted
+     * by and the page line that confirms it. A price the page doesn't show
+     * next to the model is unconfirmed; a field the catalog doesn't use is
+     * ignored.
      *
      * @param  array<string, mixed>  $row
      * @param  list<string>  $names
-     * @return array{0: array<string, float>, 1: array<string, float>, 2: list<string>, 3: list<string>}
+     * @return array{0: array<string, float>, 1: array<string, float>, 2: list<string>, 3: list<string>, 4: array<string, string>}
      */
-    protected function rowPrices(array $row, string $id, CatalogShape $shape, ?PageText $page, array $names, ?string $unit, ?float $pricedPer): array
+    protected function extractRowPrices(array $row, string $id, CatalogShape $shape, ?PageText $page, array $names, ?string $unit, ?float $pricedPer): array
     {
         $prices = [];
         $scales = [];
         $unconfirmed = [];
         $ignored = [];
+        $lines = [];
 
         foreach (CatalogShape::FIELDS as $source => $field) {
             $value = $row[$source] ?? null;
@@ -260,32 +269,56 @@ class ScrapedPriceMapper
             $line = $page?->find($names, (float) $value);
 
             if ($page !== null && $line === null) {
-                $unconfirmed[] = $this->label($field).' '.$value;
+                $unconfirmed[] = "{$this->label($field)} {$value}";
 
                 continue;
             }
 
-            $perQuantity = $field !== 'price_per_unit' || $unit === PricingUnit::Characters->value;
+            $isPerQuantity = $field !== 'price_per_unit' || $unit === PricingUnit::Characters->value;
 
-            if ($line !== null && $perQuantity && ! $this->quantityMatches($pricedPer, PageText::quantityOn($line))) {
-                $this->skipped[] = "{$id}: {$this->label($field)} {$value} is priced per ".number_format($pricedPer ?? 1_000_000).', but the page line says otherwise, ignored.';
+            if ($line !== null && $isPerQuantity && ! $this->quantityMatches($pricedPer, PageText::quantityOn($line))) {
+                $statedQuantity = number_format($pricedPer ?? 1_000_000);
+                $this->skipped[] = "{$id}: {$this->label($field)} {$value} is priced per {$statedQuantity}, but the page line says otherwise, ignored.";
 
                 continue;
             }
 
-            $scales[$field] = $this->scale($field, $unit, $pricedPer);
+            $scales[$field] = $this->getScale($field, $unit, $pricedPer);
             $prices[$field] = round((float) $value * $scales[$field] * 100, 6);
+
+            if ($line !== null) {
+                $lines[$field] = $this->formatPageLine($line);
+            }
         }
 
-        return [$prices, $scales, $unconfirmed, $ignored];
+        return [$prices, $scales, $unconfirmed, $ignored, $lines];
     }
 
     /**
-     * What turns a printed price into the catalog's basis: per 1M tokens or
-     * characters, or per single unit. Without `priced_per`, token prices are
-     * taken as per 1M and unit prices as per unit.
+     * Format a confirming page line as the review shows it: one line of
+     * single spaces, cut to MAX_PAGE_LINE_LENGTH characters.
      */
-    protected function scale(string $field, ?string $unit, ?float $pricedPer): float
+    protected function formatPageLine(string $line): string
+    {
+        $line = trim((string) Str::replaceMatches('/\s+/u', ' ', $line));
+
+        if (Str::length($line) <= self::MAX_PAGE_LINE_LENGTH) {
+            return $line;
+        }
+
+        $cut = Str::substr($line, 0, self::MAX_PAGE_LINE_LENGTH);
+
+        return "{$cut}…";
+    }
+
+    /**
+     * Get the factor that turns a printed price into the catalog's basis: per
+     * 1M tokens or characters, or per single unit.
+     *
+     * Without `priced_per`, token prices are taken as per 1M and unit prices
+     * as per unit.
+     */
+    protected function getScale(string $field, ?string $unit, ?float $pricedPer): float
     {
         if ($field !== 'price_per_unit' || $unit === PricingUnit::Characters->value) {
             return 1_000_000 / ($pricedPer ?? 1_000_000);
@@ -295,6 +328,8 @@ class ScrapedPriceMapper
     }
 
     /**
+     * Determine if a row's `priced_per` agrees with the quantity its page line states.
+     *
      * Without `priced_per`, prices are taken as per 1M: fine unless the line
      * says per 1K. A stated quantity must match what the line says, when it
      * says anything.
@@ -305,16 +340,17 @@ class ScrapedPriceMapper
     }
 
     /**
-     * A model name as a sorted set of words, so "Claude Haiku 3.5",
+     * Reduce a model name to a sorted set of words, so "Claude Haiku 3.5",
      * `claude-haiku-3-5` and `claude-3-5-haiku` are the same key (and
      * `embed-5.0` matches `embed-v5.0`).
      */
-    protected function words(string $name): string
+    protected function reduceToWords(string $name): string
     {
-        $words = preg_split('/[^a-z0-9]+/', (string) preg_replace('/\bv(?=\d)/', '', strtolower($name)), flags: PREG_SPLIT_NO_EMPTY) ?: [];
-        sort($words);
-
-        return implode(' ', $words);
+        return Str::of(strtolower($name))
+            ->replaceMatches('/\bv(?=\d)/', '')
+            ->split('/[^a-z0-9]+/', -1, PREG_SPLIT_NO_EMPTY)
+            ->sort()
+            ->implode(' ');
     }
 
     /**
@@ -322,7 +358,7 @@ class ScrapedPriceMapper
      */
     public function label(string $field): string
     {
-        return $field === 'price_per_unit' ? 'per unit' : str_replace('_', ' ', substr($field, 0, -strlen('_price')));
+        return $field === 'price_per_unit' ? 'per unit' : Str::replace('_', ' ', Str::substr($field, 0, -Str::length('_price')));
     }
 
     /**
@@ -336,7 +372,7 @@ class ScrapedPriceMapper
         $unit = $definition->toModelArray()['pricing_unit'];
         /** @var list<array<string, mixed>> $tiers */
         $tiers = $definition->toTiersArray();
-        $changed = false;
+        $hasChanged = false;
 
         if ($unit !== PricingUnit::Tokens->value && $scraped['unit'] !== null && $scraped['unit'] !== $unit) {
             $this->skipped[] = "{$id}: the page prices it per {$scraped['unit']}, the catalog per {$unit}.";
@@ -345,32 +381,33 @@ class ScrapedPriceMapper
         }
 
         foreach ($scraped['rows'] as $row) {
-            $prices = $this->pricesForUnit($row['prices'], $unit);
+            $prices = $this->filterPricesForUnit($row['prices'], $unit);
 
             if ($prices === []) {
-                $this->skipped[] = "{$id}: the page has no ".($unit === PricingUnit::Tokens->value ? 'token prices' : "per-{$unit} price")." for {$this->describeRow($row['tier'], $row['above'])}.";
+                $expectedPrices = $unit === PricingUnit::Tokens->value ? 'token prices' : "per-{$unit} price";
+                $this->skipped[] = "{$id}: the page has no {$expectedPrices} for {$this->describeRow($row['tier'], $row['above'])}.";
 
                 continue;
             }
 
-            $index = $this->rowInEffect($tiers, $row['tier'], $row['above'], $today);
+            $index = $this->findRowInEffect($tiers, $row['tier'], $row['above'], $today);
 
             if ($index === null) {
-                $newRow = $this->newTierRow($id, $row, $prices, $unit);
-                $problem = $newRow !== null ? $this->implausible($newRow, $tiers, $today) : null;
+                $newRow = $this->buildNewTierRow($id, $row, $prices, $unit);
+                $problem = $newRow !== null ? $this->findImplausibility($newRow, $tiers, $today) : null;
 
                 if ($problem !== null) {
                     $this->skipped[] = "{$id}: {$this->describeRow($row['tier'], $row['above'])} {$problem}, not added.";
                 } elseif ($newRow !== null) {
                     $tiers[] = $newRow;
                     $this->recordNewRow($id, $row, $prices, $unit);
-                    $changed = true;
+                    $hasChanged = true;
                 }
 
                 continue;
             }
 
-            $mixUp = $this->columnMixUp($tiers[$index], $prices);
+            $mixUp = $this->describeColumnMixUp($tiers[$index], $prices);
 
             if ($mixUp !== null) {
                 $this->skipped[] = "{$id}: {$this->describeRow($row['tier'], $row['above'])} prices look like they come from other columns ({$mixUp}), kept ours.";
@@ -395,20 +432,21 @@ class ScrapedPriceMapper
                 }
 
                 if ($old !== null && $this->page?->confirms($scraped['names'], round($old / 100 / ($row['scales'][$field] ?? 1), 6))) {
-                    $this->skipped[] = "{$id}: the page still shows our {$this->label($field)} price for {$this->describeRow($row['tier'], $row['above'])} next to the model, kept ours (".($new / 100).' is likely another column or tier).';
+                    $scrapedAmount = $new / 100;
+                    $this->skipped[] = "{$id}: the page still shows our {$this->label($field)} price for {$this->describeRow($row['tier'], $row['above'])} next to the model, kept ours ({$scrapedAmount} is likely another column or tier).";
 
                     continue;
                 }
 
                 $updated[$field] = $new;
-                $pending[] = new PriceChange($id, $row['tier'], $row['above'], $field, $old, $new, $unit);
+                $pending[] = new PriceChange($id, $row['tier'], $row['above'], $field, $old, $new, $unit, $row['lines'][$field] ?? null);
             }
 
             if ($pending === []) {
                 continue;
             }
 
-            $problem = $this->implausible($updated, $tiers, $today);
+            $problem = $this->findImplausibility($updated, $tiers, $today);
 
             if ($problem !== null) {
                 $this->skipped[] = "{$id}: {$this->describeRow($row['tier'], $row['above'])} {$problem}, kept ours.";
@@ -418,15 +456,15 @@ class ScrapedPriceMapper
 
             $tiers[$index] = $updated;
             $this->changes[$id] = [...($this->changes[$id] ?? []), ...$pending];
-            $changed = true;
+            $hasChanged = true;
         }
 
-        if (! $changed) {
+        if (! $hasChanged) {
             return null;
         }
 
-        $entry = ScrapedPricing::definitionToArray($definition);
-        $entry['tiers'] = Arr::map($tiers, ScrapedPricing::tierToArray(...));
+        $entry = ProviderPricing::definitionToArray($definition);
+        $entry['tiers'] = Arr::map($tiers, ProviderPricing::tierToArray(...));
 
         return $entry;
     }
@@ -437,13 +475,13 @@ class ScrapedPriceMapper
      * @param  ScrapedModel  $scraped
      * @return array<string, mixed>|null
      */
-    protected function newModel(string $id, array $scraped): ?array
+    protected function buildNewModel(string $id, array $scraped): ?array
     {
         $unit = $scraped['unit'] ?? PricingUnit::Tokens->value;
         $rows = [];
 
         foreach ($scraped['rows'] as $key => $row) {
-            $tierRow = $this->newTierRow($id, $row, $this->pricesForUnit($row['prices'], $unit), $unit);
+            $tierRow = $this->buildNewTierRow($id, $row, $this->filterPricesForUnit($row['prices'], $unit), $unit);
 
             if ($tierRow !== null) {
                 $rows[$key] = $tierRow;
@@ -452,7 +490,7 @@ class ScrapedPriceMapper
 
         $tiers = [];
         foreach ($rows as $key => $tierRow) {
-            $problem = $this->implausible($tierRow, array_values($rows), '9999-12-31');
+            $problem = $this->findImplausibility($tierRow, array_values($rows), '9999-12-31');
 
             if ($problem !== null) {
                 $this->skipped[] = "{$id}: {$this->describeRow($tierRow['tier'], $tierRow['above_input_tokens'])} {$problem}, not added.";
@@ -471,10 +509,10 @@ class ScrapedPriceMapper
 
         foreach ($tiers as $key => $tierRow) {
             $scrapedRow = $scraped['rows'][$key];
-            $this->recordNewRow($id, $scrapedRow, $this->pricesForUnit($scrapedRow['prices'], $unit), $unit);
+            $this->recordNewRow($id, $scrapedRow, $this->filterPricesForUnit($scrapedRow['prices'], $unit), $unit);
         }
 
-        $tiers = collect($tiers)->values()->map(ScrapedPricing::tierToArray(...))->all();
+        $tiers = collect($tiers)->values()->map(ProviderPricing::tierToArray(...))->all();
 
         [$type, $capabilities] = match (PricingUnit::tryFrom($unit) ?? PricingUnit::Tokens) {
             PricingUnit::Tokens => ['text', ['text']],
@@ -495,19 +533,22 @@ class ScrapedPriceMapper
     }
 
     /**
-     * A tier row the catalog doesn't have yet. It needs every price billing
-     * relies on: input and output for token models, the unit price otherwise.
+     * Build a tier row the catalog doesn't have yet.
+     *
+     * It needs every price billing relies on: input and output for token
+     * models, the unit price otherwise.
      *
      * @param  ScrapedRow  $row
      * @param  array<string, float>  $prices
      * @return TierEntry|null
      */
-    protected function newTierRow(string $id, array $row, array $prices, string $unit): ?array
+    protected function buildNewTierRow(string $id, array $row, array $prices, string $unit): ?array
     {
         $required = $unit === PricingUnit::Tokens->value ? ['input_price', 'output_price'] : ['price_per_unit'];
 
         if (! Arr::has($prices, $required)) {
-            $this->skipped[] = "{$id}: {$this->describeRow($row['tier'], $row['above'])} is missing ".implode(' or ', $required).', not added.';
+            $missingFields = implode(' or ', $required);
+            $this->skipped[] = "{$id}: {$this->describeRow($row['tier'], $row['above'])} is missing {$missingFields}, not added.";
 
             return null;
         }
@@ -517,7 +558,7 @@ class ScrapedPriceMapper
             'input_price' => $prices['input_price'] ?? 0.0,
             'output_price' => $prices['output_price'] ?? 0.0,
         ];
-        foreach (array_slice(ScrapedPricing::PRICE_FIELDS, 2) as $field) {
+        foreach (array_slice(ProviderPricing::PRICE_FIELDS, 2) as $field) {
             $tierRow[$field] = $prices[$field] ?? null;
         }
         $tierRow['above_input_tokens'] = $row['above'];
@@ -535,20 +576,22 @@ class ScrapedPriceMapper
     protected function recordNewRow(string $id, array $row, array $prices, string $unit): void
     {
         foreach ($prices as $field => $price) {
-            $this->changes[$id][] = new PriceChange($id, $row['tier'], $row['above'], $field, null, $price, $unit);
+            $this->changes[$id][] = new PriceChange($id, $row['tier'], $row['above'], $field, null, $price, $unit, $row['lines'][$field] ?? null);
         }
     }
 
     /**
-     * Prices no provider charges: cached input above input, output below
-     * input, or long-context prices below the regular ones. None of the
-     * built-in catalog's rows do this, so a scraped row that does was read
-     * from the wrong columns.
+     * Get why a row's prices are ones no provider charges, or null when they are plausible.
+     *
+     * Implausible prices are cached input above input, output below input, or
+     * long-context prices below the regular ones. None of the built-in
+     * catalog's rows do this, so a scraped row that does was read from the
+     * wrong columns.
      *
      * @param  array<string, mixed>  $row
      * @param  list<array<string, mixed>>  $tiers  The model's rows, for the long-context comparison.
      */
-    protected function implausible(array $row, array $tiers, string $today): ?string
+    protected function findImplausibility(array $row, array $tiers, string $today): ?string
     {
         $input = (float) $row['input_price'];
         $output = (float) $row['output_price'];
@@ -563,7 +606,7 @@ class ScrapedPriceMapper
         }
 
         if ($row['above_input_tokens'] !== null) {
-            $base = $this->rowInEffect($tiers, (string) $row['tier'], null, $today);
+            $base = $this->findRowInEffect($tiers, (string) $row['tier'], null, $today);
 
             if ($base !== null && ($input < (float) $tiers[$base]['input_price'] || $output < (float) $tiers[$base]['output_price'])) {
                 return 'is cheaper than the regular prices';
@@ -574,14 +617,16 @@ class ScrapedPriceMapper
     }
 
     /**
+     * Describe the first scraped price that was read from the wrong column, or return null.
+     *
      * A scraped price that differs from ours but equals another price of the
      * same row was read from the wrong column (an Audio row's price taken as
-     * the text input price, say). Returns a description of the first one.
+     * the text input price, say).
      *
      * @param  array<string, mixed>  $row  The catalog row in effect.
      * @param  array<string, float>  $prices
      */
-    protected function columnMixUp(array $row, array $prices): ?string
+    protected function describeColumnMixUp(array $row, array $prices): ?string
     {
         foreach ($prices as $field => $new) {
             $old = $row[$field] ?? null;
@@ -590,7 +635,7 @@ class ScrapedPriceMapper
                 continue;
             }
 
-            foreach (ScrapedPricing::PRICE_FIELDS as $other) {
+            foreach (ProviderPricing::PRICE_FIELDS as $other) {
                 $value = $row[$other] ?? null;
 
                 if ($other !== $field && is_numeric($value) && abs((float) $value - $new) < 0.000001) {
@@ -603,24 +648,24 @@ class ScrapedPriceMapper
     }
 
     /**
-     * Token models take token prices, per-unit models take the unit price.
+     * Keep the prices a model's unit bills with: token prices for token models, the unit price for per-unit models.
      *
      * @param  array<string, float>  $prices
      * @return array<string, float>
      */
-    protected function pricesForUnit(array $prices, string $unit): array
+    protected function filterPricesForUnit(array $prices, string $unit): array
     {
-        $perUnit = $unit !== PricingUnit::Tokens->value;
+        $isPerUnit = $unit !== PricingUnit::Tokens->value;
 
-        return Arr::where($prices, fn (float $price, string $field) => ($field === 'price_per_unit') === $perUnit);
+        return Arr::where($prices, fn (float $price, string $field) => ($field === 'price_per_unit') === $isPerUnit);
     }
 
     /**
-     * The index of the catalog row in effect today for a tier and threshold.
+     * Get the index of the catalog row in effect today for a tier and threshold.
      *
      * @param  list<array<string, mixed>>  $tiers
      */
-    protected function rowInEffect(array $tiers, string $tier, ?int $above, string $today): ?int
+    protected function findRowInEffect(array $tiers, string $tier, ?int $above, string $today): ?int
     {
         $match = null;
 
@@ -646,6 +691,12 @@ class ScrapedPriceMapper
      */
     protected function describeRow(string $tier, ?int $above): string
     {
-        return $above !== null ? "{$tier} (> ".number_format($above).' tokens)' : $tier;
+        if ($above === null) {
+            return $tier;
+        }
+
+        $threshold = number_format($above);
+
+        return "{$tier} (> {$threshold} tokens)";
     }
 }

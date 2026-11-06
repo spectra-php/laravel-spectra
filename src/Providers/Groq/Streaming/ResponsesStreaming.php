@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\Groq\Streaming;
 
+use Illuminate\Support\Arr;
 use Spectra\Providers\Groq\Handlers\ResponsesHandler;
 use Spectra\Support\Tracking\StreamHandler;
 
@@ -78,10 +79,10 @@ class ResponsesStreaming extends StreamHandler
     {
         $response = is_array($data['response'] ?? null) ? $data['response'] : [];
 
-        $result = array_filter([
+        $result = Arr::where([
             'model' => is_string($response['model'] ?? null) ? $response['model'] : null,
             'id' => is_string($response['id'] ?? null) ? $response['id'] : null,
-        ]);
+        ], fn (?string $value) => (bool) $value);
 
         return $result !== [] ? $result : null;
     }

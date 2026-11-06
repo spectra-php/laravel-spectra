@@ -6,10 +6,10 @@ namespace Spectra\Support;
 
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
-use Spectra\Models\SpectraRequest;
 
 /**
  * The period a dashboard screen asks for, read from the request's `period`,
@@ -40,42 +40,26 @@ readonly class DateRange
             return new self(null, null);
         }
 
-        if ($period === 'custom' && $request->filled('start_date') && $request->filled('end_date')) {
-            try {
-                $start = Date::parse((string) $request->input('start_date'))->startOfDay();
-                $end = Date::parse((string) $request->input('end_date'))->endOfDay();
-
-                if ($end->lt($start)) {
-                    [$start, $end] = [
-                        $end->copy()->startOfDay(),
-                        $start->copy()->endOfDay(),
-                    ];
-                }
-
-                return new self($start, $end);
-            } catch (\Throwable) {
-                // Fallback to preset period handling.
-            }
-        }
-
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            try {
-                $start = Date::parse((string) $request->input('start_date'))->startOfDay();
-                $end = Date::parse((string) $request->input('end_date'))->endOfDay();
+            // Dates that don't parse fall back to the preset period below.
+            $range = rescue(
+                fn () => self::fromDates((string) $request->input('start_date'), (string) $request->input('end_date')),
+                report: false,
+            );
 
-                if ($end->lt($start)) {
-                    [$start, $end] = [
-                        $end->copy()->startOfDay(),
-                        $start->copy()->endOfDay(),
-                    ];
-                }
-
-                return new self($start, $end);
-            } catch (\Throwable) {
-                // Fallback to preset period handling.
+            if ($range !== null) {
+                return $range;
             }
         }
 
+        return self::forPeriod(is_string($period) ? $period : 'month');
+    }
+
+    /**
+     * Create a date range from a preset period up to now; anything else is this month.
+     */
+    public static function forPeriod(string $period): self
+    {
         $start = match ($period) {
             'today' => today(),
             'week' => now()->startOfWeek(),
@@ -87,9 +71,30 @@ readonly class DateRange
     }
 
     /**
+     * Create a date range covering the whole days from start to end, swapping
+     * the two when they are given backwards.
+     */
+    private static function fromDates(string $startDate, string $endDate): self
+    {
+        $start = Date::parse($startDate)->startOfDay();
+        $end = Date::parse($endDate)->endOfDay();
+
+        if ($end->lt($start)) {
+            [$start, $end] = [
+                $end->copy()->startOfDay(),
+                $start->copy()->endOfDay(),
+            ];
+        }
+
+        return new self($start, $end);
+    }
+
+    /**
      * Limit the query to rows whose date column falls in the range.
      *
-     * @param  Builder<SpectraRequest>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function apply(Builder $query, string $column = 'created_at'): void
     {
@@ -107,7 +112,7 @@ readonly class DateRange
     }
 
     /**
-     * The end bound as a moment in time: a date-only string ("2026-01-31")
+     * Get the end bound as a moment in time: a date-only string ("2026-01-31")
      * means the end of that day, since a plain parse would stop at midnight
      * and drop the whole last day.
      */

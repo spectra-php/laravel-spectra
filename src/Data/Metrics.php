@@ -38,7 +38,7 @@ readonly class Metrics extends DataTransferObject
     {
         return collect(parent::toArray())
             ->map(fn (mixed $value) => $value instanceof DataTransferObject ? $value->toArray() : $value)
-            ->filter(fn (mixed $value) => $value !== null && $value !== [])
+            ->filter(fn (mixed $value) => filled($value))
             ->all();
     }
 }

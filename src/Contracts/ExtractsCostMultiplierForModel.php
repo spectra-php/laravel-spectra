@@ -14,7 +14,7 @@ namespace Spectra\Contracts;
 interface ExtractsCostMultiplierForModel
 {
     /**
-     * Multiplier applied to the model's catalog price, or null for none.
+     * Get the multiplier applied to the model's catalog price, or null for none.
      *
      * @param  array<string, mixed>  $responseData
      * @param  array<string, mixed>  $requestData

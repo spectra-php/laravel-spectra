@@ -1,10 +1,11 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useCharts } from '@/composables/useCharts';
+import type { ThemedChart } from '@/composables/useCharts';
 import { useLoading } from '@/composables/useLoading';
 import Skeleton from '@/components/Skeleton.vue';
 import StatCard from '@/components/StatCard.vue';
@@ -12,10 +13,12 @@ import StatusCode from '@/components/StatusCode.vue';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
+import Money from '@/components/Money.vue';
+import type { DashboardConfigResponse, RequestByDate, TrackableDetail, TrackableDetailsResponse, TrackableRequest } from '@/types/api';
 
 const route = useRoute();
 const router = useRouter();
-const { formatNumber, formatCompact, formatShortDate, formatCurrency, currencySymbol, formatDuration, formatDurationSeconds, truncate, providerChartColor, apiRequest } = useHelpers();
+const { formatNumber, formatCompact, formatShortDate, formatCurrency, formatDuration, formatDurationSeconds, truncate, providerChartColor, apiRequest } = useHelpers();
 // `type` tells the API which model the id belongs to, so it stays in the URL with the period.
 const { period, startDate, endDate, periodLabel, applyQueryState, syncQueryToRouter } = usePeriodQuery({
     filterKeys: ['type'],
@@ -25,19 +28,19 @@ const { providers, loadProviders, providerDisplayName } = useProviders();
 const { createBarChart, createLineChart, createDoughnutChart } = useCharts();
 const loading = useLoading();
 
-const trackable = ref(null);
-const requests = ref([]);
+const trackable = ref<TrackableDetail | null>(null);
+const requests = ref<TrackableRequest[]>([]);
 loading.value = true;
 
-const costChartRef = ref(null);
-const requestsChartRef = ref(null);
-const providerChartRef = ref(null);
-let costChart = null;
-let requestsChart = null;
-let providerChart = null;
+const costChartRef = ref<HTMLCanvasElement | null>(null);
+const requestsChartRef = ref<HTMLCanvasElement | null>(null);
+const providerChartRef = ref<HTMLCanvasElement | null>(null);
+let costChart: ThemedChart | null = null;
+let requestsChart: ThemedChart | null = null;
+let providerChart: ThemedChart | null = null;
 
 const trendTab = ref('cost');
-const requestsByDate = ref(null);
+const requestsByDate = ref<RequestByDate[] | null>(null);
 const loadingRequestsByDate = ref(false);
 
 const showLatencyBreakdownModal = ref(false);
@@ -106,12 +109,12 @@ const buildQueryParams = () => {
     params.set('period', hasCustomRange ? 'custom' : period.value);
 
     if (hasCustomRange) {
-        params.set('start_date', startDate.value);
-        params.set('end_date', endDate.value);
+        params.set('start_date', startDate.value as string);
+        params.set('end_date', endDate.value as string);
     }
 
     const type = route.query.type;
-    if (type) params.set('type', type);
+    if (type) params.set('type', type as string);
 
     return params;
 };
@@ -122,7 +125,7 @@ const loadTrackable = async () => {
     trendTab.value = 'cost';
     try {
         const id = route.params.id;
-        const data = await apiRequest('get', `/trackables/view/${id}?${buildQueryParams().toString()}`);
+        const data = await apiRequest<TrackableDetailsResponse>('get', `/trackables/view/${id}?${buildQueryParams().toString()}`);
         trackable.value = data.trackable;
         requests.value = data.requests || [];
         loading.value = false;
@@ -155,8 +158,9 @@ const renderCostChart = () => {
     }, {
         label: 'Cost',
         yTicks: {
-            callback: (value) => currencySymbol + value.toFixed(2),
+            callback: (value: string | number) => formatCurrency(Number(value) * 100),
         },
+        tooltipLabel: (dollars) => formatCurrency(dollars * 100),
     });
 };
 
@@ -204,14 +208,14 @@ const providerRows = computed(() => {
     }));
 });
 
-const switchTrendTab = async (tab) => {
+const switchTrendTab = async (tab: string) => {
     trendTab.value = tab;
 
     if (tab === 'requests' && !requestsByDate.value) {
         loadingRequestsByDate.value = true;
         try {
             const id = route.params.id;
-            const data = await apiRequest('get', `/trackables/view/${id}/requests-by-date?${buildQueryParams().toString()}`);
+            const data = await apiRequest<RequestByDate[]>('get', `/trackables/view/${id}/requests-by-date?${buildQueryParams().toString()}`);
             requestsByDate.value = data;
             await nextTick();
             renderRequestsChart();
@@ -229,7 +233,7 @@ const switchTrendTab = async (tab) => {
     }
 };
 
-const goToRequest = (id) => {
+const goToRequest = (id: string) => {
     router.push({ name: 'request-preview', params: { id } });
 };
 
@@ -242,7 +246,7 @@ const showStt = computed(() => ['full', 'audio'].includes(layout.value));
 
 // Media usage shown only when the period has that kind of traffic.
 const mediaCards = computed(() => {
-    const t = trackable.value || {};
+    const t = (trackable.value || {}) as TrackableDetail;
 
     return [
         { key: 'images', show: showImages.value && t.total_images > 0, label: 'Images', value: formatNumber(t.total_images), unit: t.total_images === 1 ? 'image' : 'images' },
@@ -254,14 +258,14 @@ const mediaCards = computed(() => {
 
 const loadConfig = async () => {
     try {
-        const data = await apiRequest('get', '/config');
+        const data = await apiRequest<DashboardConfigResponse>('get', '/config');
         layout.value = data.layout || 'full';
     } catch (error) {
         // fallback to full
     }
 };
 
-const formatUsage = (request) => {
+const formatUsage = (request: TrackableRequest) => {
     const type = request.model_type;
     if (type === 'image') {
         const count = request.image_count || 0;
@@ -303,8 +307,10 @@ const headerTitle = computed(() => {
 });
 
 const breadcrumbs = computed(() => [
-    { label: 'Trackables', to: { name: 'trackables' } },
-    { label: trackable.value ? getDisplayName() : `Trackable #${route.params.id}` },
+    route.name === 'user-detail'
+        ? { label: 'Users', to: { name: 'users' } }
+        : { label: 'Trackables', to: { name: 'trackables' } },
+    { label: trackable.value ? getDisplayName() : `${route.name === 'user-detail' ? 'User' : 'Trackable'} #${route.params.id}` },
 ]);
 
 // Watch for dark mode changes
@@ -338,7 +344,14 @@ onUnmounted(() => {
 <template>
     <div class="">
         <!-- Breadcrumb -->
-        <Breadcrumb :items="breadcrumbs" />
+        <div class="flex items-start justify-between gap-4">
+            <Breadcrumb :items="breadcrumbs" />
+            <router-link
+                v-if="trackable"
+                :to="{ name: 'dashboards-create', query: { type: trackable.type, id: trackable.id } }"
+                class="shrink-0 text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
+            >Share a dashboard</router-link>
+        </div>
 
         <!-- Header -->
         <PageRangeHeader
@@ -356,13 +369,13 @@ onUnmounted(() => {
                 <div class="stat-value">{{ formatNumber(trackable?.total_requests ?? 0) }}</div>
             </StatCard>
             <StatCard label="Spend" :loading="loading" skeleton-width="70%">
-                <div class="stat-value">{{ formatCurrency(trackable?.total_cost) }}</div>
+                <div class="stat-value"><Money :cents="trackable?.total_cost" /></div>
                 <template #footer>
-                    <div v-if="trackable?.total_requests" class="mt-3 text-xs text-gray-500 dark:text-gray-400">{{ formatCurrency((trackable.total_cost || 0) / trackable.total_requests) }} per request on average</div>
+                    <div v-if="trackable?.total_requests" class="mt-3 text-xs text-gray-500 dark:text-gray-400"><Money :cents="(trackable.total_cost || 0) / trackable.total_requests" /> per request on average</div>
                 </template>
             </StatCard>
             <StatCard v-if="showTokens" label="Tokens" :loading="loading" skeleton-width="50%">
-                <div class="stat-value" :title="formatNumber(trackable?.total_tokens || 0) + ' tokens'">{{ formatCompact(trackable?.total_tokens || 0) }}</div>
+                <div class="stat-value" v-tooltip="formatNumber(trackable?.total_tokens || 0) + ' tokens'">{{ formatCompact(trackable?.total_tokens || 0) }}</div>
             </StatCard>
             <StatCard label="Average latency" :loading="loading" skeleton-width="40%">
                 <template #action>
@@ -408,7 +421,7 @@ onUnmounted(() => {
                             :class="[
                                 'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                                 trendTab === 'cost'
-                                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+                                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
                                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
                             ]"
                         >
@@ -419,7 +432,7 @@ onUnmounted(() => {
                             :class="[
                                 'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                                 trendTab === 'requests'
-                                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+                                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
                                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
                             ]"
                         >
@@ -461,8 +474,8 @@ onUnmounted(() => {
                         <canvas ref="providerChartRef"></canvas>
                     </div>
                     <ul v-if="!loading" class="space-y-2 text-sm">
-                        <li v-for="row in providerRows" :key="row.provider" class="flex items-center gap-2.5">
-                            <span class="h-2.5 w-2.5 shrink-0 rounded-sm" :style="{ backgroundColor: row.color }" aria-hidden="true"></span>
+                        <li v-for="row in providerRows" :key="row.provider as string" class="flex items-center gap-2.5">
+                            <span class="h-2.5 w-2.5 shrink-0 rounded-xs" :style="{ backgroundColor: row.color }" aria-hidden="true"></span>
                             <ProviderLogo
                                 :provider="row.provider"
                                 class="inline-flex h-3.5 w-3.5 shrink-0 items-center text-gray-500 dark:text-gray-400 [&>svg]:h-full [&>svg]:w-full"
@@ -508,22 +521,22 @@ onUnmounted(() => {
                                 <Skeleton variant="table-row" :lines="5" />
                             </template>
                             <template v-else>
-                                <tr v-for="model in allModels.slice(0, 10)" :key="model.model">
+                                <tr v-for="model in allModels.slice(0, 10)" :key="`${model.provider}|${model.model}`">
                                     <td>
                                         <div class="flex items-center gap-2 min-w-0">
                                             <ProviderLogo
                                                 :provider="model.provider"
-                                                :title="providerDisplayName(model.provider)"
+                                                v-tooltip="providerDisplayName(model.provider)"
                                                 class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                                 aria-hidden="true"
                                             />
-                                            <span class="max-w-[14rem] truncate font-medium text-gray-900 dark:text-white" :title="model.model">
+                                            <span class="max-w-56 truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">
                                                 {{ model.model }}
                                             </span>
                                         </div>
                                     </td>
                                     <td class="text-right tabular-nums font-medium">{{ formatNumber(model.requests) }}</td>
-                                    <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white">{{ formatCurrency(model.cost) }}</td>
+                                    <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white"><Money :cents="model.cost" /></td>
                                 </tr>
                                 <tr v-if="!allModels.length">
                                     <td colspan="3" class="text-center py-8 text-gray-500">
@@ -587,13 +600,13 @@ onUnmounted(() => {
                                         <div class="flex items-center gap-2 min-w-0">
                                             <ProviderLogo
                                                 :provider="request.provider"
-                                                :title="providerDisplayName(request.provider)"
+                                                v-tooltip="providerDisplayName(request.provider)"
                                                 class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                                 aria-hidden="true"
                                             />
                                             <span
                                                 class="truncate font-medium text-gray-900 dark:text-white"
-                                                :title="request.model || ''"
+                                                v-tooltip.truncated="request.model || ''"
                                             >
                                                 {{ truncate(request.model, 32) }}
                                             </span>
@@ -601,7 +614,7 @@ onUnmounted(() => {
                                     </td>
                                     <td class="text-right tabular-nums text-sm">{{ formatUsage(request) }}</td>
                                     <td>
-                                        <StatusCode :code="request.status_code" />
+                                        <StatusCode :code="request.status_code" :error="request.error_type" />
                                     </td>
                                     <td class="text-right whitespace-nowrap">
                                         <span class="group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
@@ -726,22 +739,22 @@ onUnmounted(() => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="model in pagedModels" :key="model.model">
+                            <tr v-for="model in pagedModels" :key="`${model.provider}|${model.model}`">
                                 <td>
                                     <div class="flex items-center gap-2 min-w-0">
                                         <ProviderLogo
                                             :provider="model.provider"
-                                            :title="providerDisplayName(model.provider)"
+                                            v-tooltip="providerDisplayName(model.provider)"
                                             class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                             aria-hidden="true"
                                         />
-                                        <span class="max-w-[14rem] truncate font-medium text-gray-900 dark:text-white" :title="model.model">
+                                        <span class="max-w-56 truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">
                                             {{ model.model }}
                                         </span>
                                     </div>
                                 </td>
                                 <td class="text-right tabular-nums font-medium">{{ formatNumber(model.requests) }}</td>
-                                <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white">{{ formatCurrency(model.cost) }}</td>
+                                <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white"><Money :cents="model.cost" /></td>
                             </tr>
                             <tr v-if="!filteredModels.length">
                                 <td colspan="3" class="text-center py-8 text-gray-500 dark:text-gray-400">

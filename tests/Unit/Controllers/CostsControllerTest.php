@@ -3,10 +3,13 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Factories\Sequence;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Foundation\Auth\User as FoundationUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Spectra\Http\Controllers\Api\CostsController;
 use Spectra\Models\SpectraRequest;
+use Workbench\App\Models\User;
 
 /**
  * The costs dashboard endpoint: overview totals, usage by model type, date
@@ -119,12 +122,37 @@ it('counts costs of every date when the period is all', function () {
         ->and($json['costs_by_date'])->toHaveCount(2);
 });
 
-it('keeps equal trackable ids of different types apart in the top spenders', function () {
-    SpectraRequest::factory()->create(['total_cost_in_cents' => 10, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
-    SpectraRequest::factory()->create(['total_cost_in_cents' => 20, 'trackable_type' => 'App\\Models\\Team', 'trackable_id' => '1']);
+it('keeps equal ids of different user models apart in the top users', function () {
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 10, 'trackable_type' => User::class, 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 20, 'trackable_type' => FoundationUser::class, 'trackable_id' => '1']);
 
     $rows = collect(app()->call([app(CostsController::class), '__invoke'], ['request' => new Request(['period' => 'all'])])->toArray()['costs_by_user']);
 
     expect($rows->map(fn ($row) => "{$row['trackable_type']}#{$row['user_id']}")->all())
-        ->toBe(['App\\Models\\Team#1', 'App\\Models\\User#1']);
+        ->toBe([FoundationUser::class.'#1', User::class.'#1']);
+});
+
+it('ranks only users in the top users, leaving other trackables out', function () {
+    Relation::morphMap(['member' => User::class, 'conversation' => SpectraRequest::class]);
+
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 10, 'trackable_type' => User::class, 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 15, 'trackable_type' => 'member', 'trackable_id' => '2']);
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 20, 'trackable_type' => 'conversation', 'trackable_id' => '48']);
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 30, 'trackable_type' => 'App\\Models\\Gone', 'trackable_id' => '3']);
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 40]);
+
+    $json = app()->call([app(CostsController::class), '__invoke'], ['request' => new Request(['period' => 'all'])])->toArray();
+
+    expect(collect($json['costs_by_user'])->map(fn ($row) => "{$row['trackable_type']}#{$row['user_id']}")->all())
+        ->toBe(['member#2', User::class.'#1'])
+        // Only the top users are narrowed; the period's total covers every call.
+        ->and((float) $json['total_cost_in_cents'])->toEqualWithDelta(115.0, 0.0001);
+})->after(fn () => Relation::morphMap([], false));
+
+it('has no top users when no call was attributed to a user', function () {
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 20, 'trackable_type' => 'conversation', 'trackable_id' => '48']);
+
+    $json = app()->call([app(CostsController::class), '__invoke'], ['request' => new Request(['period' => 'all'])])->toArray();
+
+    expect($json['costs_by_user'])->toHaveCount(0);
 });

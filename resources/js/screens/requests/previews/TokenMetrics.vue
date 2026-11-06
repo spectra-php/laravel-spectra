@@ -1,20 +1,26 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
+import Money from '@/components/Money.vue';
+import type { RequestDetailsResponse } from '@/types/api';
 
 /**
  * Token usage for one request. Input is split into uncached, cache-read and
  * cache-write tokens (the three are billed at different rates); output into
  * answer and reasoning tokens.
  */
-const props = defineProps({
-    request: { type: Object, required: true },
-    expanded: { type: Boolean, default: true },
+const props = withDefaults(defineProps<{
+    request: RequestDetailsResponse;
+    expanded?: boolean;
+}>(), {
+    expanded: true,
 });
 
-const emit = defineEmits(['toggle']);
+const emit = defineEmits<{
+    toggle: [];
+}>();
 
-const { formatNumber, formatCurrency } = useHelpers();
+const { formatNumber } = useHelpers();
 
 const input = computed(() => {
     const total = Number(props.request.prompt_tokens || 0);
@@ -46,7 +52,7 @@ const output = computed(() => {
 
 const cacheHitRate = computed(() => (input.value.total > 0 ? (Number(props.request.cached_tokens || 0) / input.value.total) * 100 : 0));
 
-const width = (value, total) => (total > 0 ? (value / total) * 100 : 0) + '%';
+const width = (value: number, total: number) => (total > 0 ? (value / total) * 100 : 0) + '%';
 </script>
 
 <template>
@@ -66,7 +72,7 @@ const width = (value, total) => (total > 0 ? (value / total) * 100 : 0) + '%';
                         <span class="text-sm font-medium text-gray-900 dark:text-white">{{ group.title }}</span>
                         <span class="text-sm tabular-nums text-gray-500 dark:text-gray-400">{{ formatNumber(group.data.total) }} tokens</span>
                     </div>
-                    <span v-if="group.cost" class="text-sm tabular-nums text-gray-500 dark:text-gray-400">{{ formatCurrency(group.cost) }}</span>
+                    <span v-if="group.cost" class="text-sm tabular-nums text-gray-500 dark:text-gray-400"><Money :cents="group.cost" /></span>
                 </div>
 
                 <div class="flex h-2 gap-0.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
@@ -76,13 +82,13 @@ const width = (value, total) => (total > 0 ? (value / total) * 100 : 0) + '%';
                         :class="segment.class"
                         class="h-full first:rounded-l-full last:rounded-r-full"
                         :style="{ width: width(segment.value, group.data.total) }"
-                        :title="`${segment.label}: ${formatNumber(segment.value)}`"
+                        v-tooltip="`${segment.label}: ${formatNumber(segment.value)}`"
                     ></div>
                 </div>
 
                 <div class="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-xs">
                     <div v-for="segment in group.data.segments" :key="segment.key" class="flex items-center gap-1.5" :class="{ 'opacity-50': segment.value === 0 }">
-                        <span class="h-2 w-2 rounded-sm" :class="segment.class" aria-hidden="true"></span>
+                        <span class="h-2 w-2 rounded-xs" :class="segment.class" aria-hidden="true"></span>
                         <span class="text-gray-500 dark:text-gray-400">{{ segment.label }}</span>
                         <span class="tabular-nums font-medium text-gray-900 dark:text-white">{{ formatNumber(segment.value) }}</span>
                     </div>

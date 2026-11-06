@@ -21,10 +21,16 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
+use Spectra\Console\Commands\CheckAlertsCommand;
+use Spectra\Console\Commands\EvalCommand;
+use Spectra\Console\Commands\GroupErrorsCommand;
 use Spectra\Console\Commands\InstallCommand;
+use Spectra\Console\Commands\PauseCommand;
 use Spectra\Console\Commands\PruneCommand;
 use Spectra\Console\Commands\RebuildStatsCommand;
+use Spectra\Console\Commands\ResumeCommand;
 use Spectra\Console\Commands\ScrapePricingCommand;
+use Spectra\Contracts\DashboardTrackableResolver;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Contracts\SpanBuilder;
 use Spectra\Contracts\Watcher;
@@ -34,20 +40,28 @@ use Spectra\Http\Middleware\EnforceBudgetLimit;
 use Spectra\Integrations\OpenTelemetry\DefaultSpanBuilder;
 use Spectra\Integrations\OpenTelemetry\OtlpExporter;
 use Spectra\Integrations\OpenTelemetry\SpanExporter;
+use Spectra\Support\Annotations\AnnotationQueues;
 use Spectra\Support\ApiKeyResolver;
 use Spectra\Support\Budget\BudgetEnforcer;
+use Spectra\Support\Dashboards\ViewerAsTrackable;
 use Spectra\Support\HttpMacros;
 use Spectra\Support\Pricing\CostCalculator;
 use Spectra\Support\Pricing\PricingCatalog;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Pricing\RequestCostCalculator;
 use Spectra\Support\ProviderRegistry;
+use Spectra\Support\Query\RollupSchema;
+use Spectra\Support\Redaction\Redactor;
 use Spectra\Support\RequestTransformer;
+use Spectra\Support\Scoring\ScoreRecorder;
 use Spectra\Support\StatsAggregator;
+use Spectra\Support\Tracking\PayloadStore;
+use Spectra\Support\Tracking\RecordingSwitch;
 use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\RequestWriter;
 use Spectra\Support\Tracking\SpanStack;
 use Spectra\Support\Tracking\SpanWriter;
+use Spectra\Support\Tracking\ToolSpanRecorder;
 use Spectra\Support\Tracking\TraceContext;
 use Spectra\Support\Tracking\TraceOrigin;
 
@@ -83,7 +97,12 @@ class SpectraServiceProvider extends ServiceProvider
         // Scoped too: queue workers and Octane reset them before each job and request.
         $this->app->scoped(TraceOrigin::class);
         $this->app->scoped(SpanStack::class);
+        $this->app->scoped(ToolSpanRecorder::class);
+        $this->app->scoped(RecordingSwitch::class);
         $this->app->singleton(SpanWriter::class);
+        $this->app->singleton(ScoreRecorder::class);
+        $this->app->singleton(AnnotationQueues::class);
+        $this->app->singleton(Redactor::class);
 
         $this->app->alias(Spectra::class, 'spectra');
 
@@ -92,6 +111,8 @@ class SpectraServiceProvider extends ServiceProvider
         $this->app->singleton(BudgetEnforcer::class, fn ($app) => new BudgetEnforcer($app['events']));
 
         $this->app->singleton(StatsAggregator::class, fn () => new StatsAggregator);
+        $this->app->singleton(RollupSchema::class);
+        $this->app->singleton(PayloadStore::class);
 
         $this->app->singleton(RequestTransformer::class, function () {
             $class = config('spectra.integrations.request_transformer', RequestTransformer::class);
@@ -116,7 +137,7 @@ class SpectraServiceProvider extends ServiceProvider
             $app->make(RequestTransformer::class)
         ));
 
-        $this->app->singleton(PricingLookup::class, fn () => new PricingLookup(PricingCatalog::active()));
+        $this->app->singleton(PricingLookup::class, fn () => PricingCatalog::lookup());
 
         $this->app->alias(PricingLookup::class, 'spectra.pricing');
 
@@ -147,6 +168,8 @@ class SpectraServiceProvider extends ServiceProvider
 
         $this->app->singleton(ApiKeyResolver::class, fn () => new ApiKeyResolver);
 
+        $this->app->bind(DashboardTrackableResolver::class, ViewerAsTrackable::class);
+
         $this->registerProviders();
     }
 
@@ -158,6 +181,9 @@ class SpectraServiceProvider extends ServiceProvider
         $this->registerCommands();
         $this->registerPublishing();
         $this->registerMiddleware();
+        // The macros are public API that call sites keep using with Spectra
+        // off: they must exist, and then record nothing.
+        $this->registerHttpMacros();
 
         if (! $this->app->make('config')->get('spectra.enabled')) {
             return;
@@ -166,20 +192,29 @@ class SpectraServiceProvider extends ServiceProvider
         $this->registerAuthorization();
         $this->registerRoutes();
         $this->registerResources();
-        $this->registerHttpMacros();
         $this->registerWatchers();
         $this->registerTracePropagation();
         $this->registerOriginTracking();
     }
 
     /**
-     * Define the viewSpectra gate as local-only, unless the app defined its own.
+     * Define the viewSpectra and manageSpectra gates as local-only, unless the
+     * app defined its own. manageSpectra runs the dashboard's maintenance
+     * actions, so allowing viewSpectra in production does not allow it.
+     * annotateSpectra (reviewing traces in the annotation queues) follows
+     * viewSpectra unless the app defines it.
      */
     protected function registerAuthorization(): void
     {
         $this->callAfterResolving(Gate::class, function (Gate $gate, Application $app) {
-            if (! $gate->has('viewSpectra')) {
-                $gate->define('viewSpectra', fn ($user = null) => $app->environment('local'));
+            foreach (['viewSpectra', 'manageSpectra'] as $ability) {
+                if (! $gate->has($ability)) {
+                    $gate->define($ability, fn ($user = null) => $app->environment('local'));
+                }
+            }
+
+            if (! $gate->has('annotateSpectra')) {
+                $gate->define('annotateSpectra', fn ($user = null) => $gate->forUser($user)->allows('viewSpectra'));
             }
         });
     }
@@ -254,6 +289,16 @@ class SpectraServiceProvider extends ServiceProvider
 
             if ($parentSpanId !== null) {
                 $context->addHidden(TraceContext::PARENT_SPAN_ID, $parentSpanId);
+            }
+
+            // That span, and the ones before it, when nothing saves them: the
+            // job saves them with its own, so it never hangs off a missing span.
+            $pending = rescue(fn () => $this->app->make(SpanStack::class)->pendingForDispatch(TraceContext::traceId()), []);
+
+            if ($pending === []) {
+                $context->forgetHidden(TraceContext::PENDING_SPANS);
+            } else {
+                $context->addHidden(TraceContext::PENDING_SPANS, $pending);
             }
         });
     }
@@ -335,6 +380,16 @@ class SpectraServiceProvider extends ServiceProvider
             }
 
             $router->middlewareGroup('spectra', $app->make('config')->get('spectra.dashboard.middleware', ['web']));
+            $router->middlewareGroup('spectra.dashboards', $app->make('config')->get('spectra.dashboards.middleware', ['web', 'auth', 'throttle:60,1']));
+
+            // Before the dashboard's routes, whose SPA catch-all would swallow these.
+            $router->group([
+                'domain' => $app->make('config')->get('spectra.dashboards.domain'),
+                'prefix' => $app->make('config')->get('spectra.dashboard.path').'/dashboards',
+                'middleware' => 'spectra.dashboards',
+            ], function () {
+                $this->loadRoutesFrom(__DIR__.'/../routes/dashboards.php');
+            });
 
             $router->group([
                 'domain' => $app->make('config')->get('spectra.dashboard.domain'),
@@ -382,22 +437,37 @@ class SpectraServiceProvider extends ServiceProvider
      * would silently do nothing.
      */
     protected const NESTED_CONFIG_DEFAULTS = [
+        // 2.0
+        'storage.store_request_data',
+        'tracking.trace_per_request',
+        'tracking.use_traceparent',
+        'costs.exchange_rates',
+        // 2.x
+        'tracking.propagate_tags',
+        'costs.firecrawl',
+        // 3.0
         'tracking.capture_origin',
         'tracking.root_spans',
-        'costs.use_scraped_prices',
-        'costs.scraped_prices_path',
-        'costs.firecrawl',
+        // 4.0
+        'dashboard.read_from_rollups',
+        'dashboard.exact_row_limit',
+        'storage.sampling',
+        'storage.redaction',
+        'tracking.tool_spans',
+        'dashboard.maintenance',
+        'dashboard.playground',
+        'costs.pricing_path',
+        'costs.cache',
     ];
 
     /**
      * Maps whose built-in entries stay active under the user's published
-     * config: a published config lists the providers and pricing classes of
-     * its day, and would otherwise hide every one added later. The user's
-     * entries win; `false` turns a built-in off.
+     * config: a published config lists the providers of its day, and would
+     * otherwise hide every one added later. The user's entries win; `false`
+     * turns a built-in off.
      */
     protected const BUILT_IN_MAPS = [
         'providers',
-        'costs.pricing',
     ];
 
     /**
@@ -424,7 +494,7 @@ class SpectraServiceProvider extends ServiceProvider
     }
 
     /**
-     * Keep the built-in providers and pricing classes under the user's published entries.
+     * Keep the built-in providers under the user's published entries.
      */
     protected function mergeBuiltInMaps(): void
     {
@@ -446,7 +516,7 @@ class SpectraServiceProvider extends ServiceProvider
     }
 
     /**
-     * The package's own config file, read once per boot.
+     * Get the package's own config file, read once per boot.
      *
      * @return array<string, mixed>
      */
@@ -456,6 +526,8 @@ class SpectraServiceProvider extends ServiceProvider
     }
 
     /**
+     * Determine if the app's config is cached.
+     *
      * A cached config was merged when it was cached, so it is used as is.
      */
     protected function configurationIsCached(): bool
@@ -470,9 +542,14 @@ class SpectraServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
+                CheckAlertsCommand::class,
+                EvalCommand::class,
+                GroupErrorsCommand::class,
                 InstallCommand::class,
+                PauseCommand::class,
                 PruneCommand::class,
                 RebuildStatsCommand::class,
+                ResumeCommand::class,
                 ScrapePricingCommand::class,
             ]);
 

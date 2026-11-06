@@ -19,9 +19,10 @@ use Spectra\Support\DateRange;
  * model, trackable and period, then read totals or breakdowns in cents and
  * dollars.
  *
- * It starts from successful (2xx) requests only, because a failed call is
- * not billed; every count it returns is therefore a count of successful
- * requests. Its method names and result keys are public API.
+ * It starts from successful requests only (a 2xx status and no recorded
+ * error), because a failed call is not billed; every count it returns is
+ * therefore a count of successful requests. Its method names and result keys
+ * are public API.
  */
 class CostQueryBuilder
 {
@@ -29,15 +30,15 @@ class CostQueryBuilder
     protected Builder $query;
 
     /**
-     * Create a new cost query over successful (2xx) requests.
+     * Create a new cost query over successful requests.
      */
     public function __construct()
     {
-        $this->query = SpectraRequest::query()->whereBetween('status_code', [200, 299]);
+        $this->query = SpectraRequest::query()->successful();
     }
 
     /**
-     * Only include requests to the given provider.
+     * Limit the query to requests to the given provider.
      */
     public function provider(string $provider): self
     {
@@ -47,7 +48,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests for the given model.
+     * Limit the query to requests for the given model.
      */
     public function model(string $model): self
     {
@@ -57,18 +58,18 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests tracked for the given model (a user, team…).
+     * Limit the query to requests tracked for the given model (a user, team…).
      */
     public function forTrackable(Model $trackable): self
     {
         $this->query->where('trackable_type', $trackable->getMorphClass())
-            ->where('trackable_id', $trackable->getKey());
+            ->where('trackable_id', (string) $trackable->getKey());
 
         return $this;
     }
 
     /**
-     * Only include requests made between the two dates, the end date inclusive.
+     * Limit the query to requests made between the two dates, the end date inclusive.
      */
     public function between(CarbonInterface|string $start, CarbonInterface|string $end): self
     {
@@ -80,7 +81,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests made since the start of today.
+     * Limit the query to requests made since the start of today.
      */
     public function today(): self
     {
@@ -88,7 +89,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests made since the start of this week.
+     * Limit the query to requests made since the start of this week.
      */
     public function thisWeek(): self
     {
@@ -96,7 +97,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests made since the start of this month.
+     * Limit the query to requests made since the start of this month.
      */
     public function thisMonth(): self
     {
@@ -104,7 +105,7 @@ class CostQueryBuilder
     }
 
     /**
-     * Only include requests made in the last given number of days.
+     * Limit the query to requests made in the last given number of days.
      */
     public function lastDays(int $days): self
     {

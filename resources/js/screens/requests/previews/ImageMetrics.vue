@@ -1,15 +1,26 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
+import Money from '@/components/Money.vue';
+import type { RequestDetailsResponse } from '@/types/api';
 
-const props = defineProps({
-    request: { type: Object, required: true },
-    expanded: { type: Boolean, default: true },
+// An entry of an image provider's `data` list; the stored payload is arbitrary JSON.
+interface GeneratedImage {
+    url?: string;
+}
+
+const props = withDefaults(defineProps<{
+    request: RequestDetailsResponse;
+    expanded?: boolean;
+}>(), {
+    expanded: true,
 });
 
-const emit = defineEmits(['toggle']);
+const emit = defineEmits<{
+    toggle: [];
+}>();
 
-const { formatNumber, formatCurrency } = useHelpers();
+const { formatNumber } = useHelpers();
 
 const hasTokens = computed(() => (props.request.prompt_tokens || 0) + (props.request.completion_tokens || 0) > 0);
 
@@ -17,8 +28,8 @@ const imageUrls = computed(() => {
     if (props.request.image_urls?.length) {
         return props.request.image_urls;
     }
-    const data = props.request.response?.data || [];
-    return data.filter(item => item.url).map(item => item.url);
+    const data = (props.request.response?.data || []) as GeneratedImage[];
+    return data.filter(item => item.url).map(item => item.url as string);
 });
 
 const costPerImage = computed(() => {
@@ -53,19 +64,19 @@ const imagesExpanded = ref(false);
             <div v-if="expanded" class="card-body">
                 <!-- Token-based models (gpt-image-1, gpt-image-1.5) -->
                 <div v-if="hasTokens" class="grid grid-cols-4 gap-6">
-                    <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                    <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                         <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Input Tokens</div>
                         <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                             {{ formatNumber(request.prompt_tokens || 0) }}
                         </div>
                     </div>
-                    <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                    <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                         <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Output Tokens</div>
                         <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                             {{ formatNumber(request.completion_tokens || 0) }}
                         </div>
                     </div>
-                    <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                    <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                         <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Images Generated</div>
                         <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                             {{ formatNumber(request.image_count || 0) }}
@@ -74,14 +85,14 @@ const imagesExpanded = ref(false);
                     <div class="text-center p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20">
                         <div class="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1">Cost</div>
                         <div class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">
-                            {{ formatCurrency(request.total_cost_in_cents) }}
+                            <Money :cents="request.total_cost_in_cents" />
                         </div>
                     </div>
                 </div>
 
                 <!-- Per-image models (DALL-E, legacy endpoints) -->
                 <div v-else class="grid grid-cols-2 gap-6">
-                    <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                    <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                         <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Images Generated</div>
                         <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                             {{ formatNumber(request.image_count || 0) }}
@@ -90,7 +101,7 @@ const imagesExpanded = ref(false);
                     <div class="text-center p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20">
                         <div class="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1">Cost Per Image</div>
                         <div class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">
-                            {{ formatCurrency(costPerImage) }}
+                            <Money :cents="costPerImage" />
                         </div>
                     </div>
                 </div>

@@ -54,6 +54,9 @@ class ModelDefinition
 
     protected ?string $retiredOn = null;
 
+    /** @var array<string, mixed> */
+    protected array $variants = [];
+
     /** @var list<TierEntry> */
     protected array $tiers = [];
 
@@ -99,7 +102,7 @@ class ModelDefinition
     }
 
     /**
-     * Other model ids that bill exactly like this one (`-latest` aliases,
+     * Add other model ids that bill exactly like this one (`-latest` aliases,
      * dated snapshots, provider-prefixed ids, retired ids that now redirect).
      */
     public function aliases(string ...$aliases): static
@@ -116,6 +119,20 @@ class ModelDefinition
     public function retiredOn(string $date): static
     {
         $this->retiredOn = $this->normalizeDate($date);
+
+        return $this;
+    }
+
+    /**
+     * Set the prices of the model's options, for the provider's cost
+     * multiplier to read: a fal.ai video model lists, per resolution, its
+     * price per second with and without audio.
+     *
+     * @param  array<string, mixed>  $variants
+     */
+    public function variants(array $variants): static
+    {
+        $this->variants = $variants;
 
         return $this;
     }
@@ -256,7 +273,17 @@ class ModelDefinition
     }
 
     /**
-     * Get the model's name, type, unit, capabilities, aliases and retirement date as an array.
+     * Get the prices of the model's options (see variants()).
+     *
+     * @return array<string, mixed>
+     */
+    public function getVariants(): array
+    {
+        return $this->variants;
+    }
+
+    /**
+     * Get the model's name, type, unit, capabilities, aliases, retirement date and variants as an array.
      *
      * @return array<string, mixed>
      */
@@ -273,6 +300,7 @@ class ModelDefinition
             'can_generate_audio' => $this->canGenerateAudio,
             'aliases' => $this->aliases,
             'retired_on' => $this->retiredOn,
+            'variants' => $this->variants,
         ];
     }
 

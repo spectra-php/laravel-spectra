@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Spectra\Enums\PricingUnit;
@@ -17,29 +18,14 @@ use Workbench\App\Pricing\ModelsDevDrift;
  * with models.dev and reports what differs, minus what the baseline accepts.
  */
 beforeEach(function () {
-    $this->app->instance(PricingLookup::class, new PricingLookup([new class extends ProviderPricing
-    {
-        public function provider(): string
-        {
-            return 'openai';
-        }
-
-        protected function define(): void
-        {
-            $this->model('gpt-x', fn ($m) => $m
-                ->canGenerateText()
-                ->tier('standard', inputPrice: 100, outputPrice: 400, cachedInputPrice: 10)
-                ->tier('standard', inputPrice: 200, outputPrice: 600, aboveInputTokens: 200_000));
-
-            $this->model('gpt-x-image', fn ($m) => $m
-                ->canGenerateImages()
-                ->cost(inputPrice: 50, outputPrice: 300, imageOutputPrice: 3000));
-
-            $this->model('gpt-x-tts', fn ($m) => $m
-                ->pricingUnit(PricingUnit::Characters)
-                ->cost(pricePerUnit: 1500));
-        }
-    }]));
+    $this->app->instance(PricingLookup::class, new PricingLookup([new ProviderPricing('openai', [
+        'gpt-x' => ['capabilities' => ['text'], 'tiers' => [
+            ['tier' => 'standard', 'input_price' => 100, 'output_price' => 400, 'cached_input_price' => 10],
+            ['tier' => 'standard', 'input_price' => 200, 'output_price' => 600, 'above_input_tokens' => 200_000],
+        ]],
+        'gpt-x-image' => ['capabilities' => ['images'], 'tiers' => [['tier' => 'standard', 'input_price' => 50, 'output_price' => 300, 'image_output_price' => 3000]]],
+        'gpt-x-tts' => ['pricing_unit' => PricingUnit::Characters->value, 'tiers' => [['tier' => 'standard', 'price_per_unit' => 1500]]],
+    ])]));
 
     $this->catalog = [
         'openai' => ['models' => [
@@ -63,7 +49,7 @@ beforeEach(function () {
     $this->source = tempnam(sys_get_temp_dir(), 'models-dev');
     $this->baseline = tempnam(sys_get_temp_dir(), 'drift-baseline');
     File::delete($this->baseline);
-    file_put_contents($this->source, json_encode($this->catalog));
+    File::put($this->source, json_encode($this->catalog, JSON_THROW_ON_ERROR));
 
     $this->app->make(Kernel::class)->registerCommand($this->app->make(PricingDriftCommand::class));
 });
@@ -74,8 +60,8 @@ afterEach(function () {
 });
 
 it('reports differing prices and missing models, as Spectra bills them', function () {
-    $findings = array_map(fn (DriftFinding $f) => [$f->kind, $f->model, $f->field, $f->spectra, $f->modelsDev],
-        app(ModelsDevDrift::class)->compare($this->catalog));
+    $findings = Arr::map(app(ModelsDevDrift::class)->compare($this->catalog),
+        fn (DriftFinding $f) => [$f->kind, $f->model, $f->field, $f->spectra, $f->modelsDev]);
 
     expect($findings)->toBe([
         ['price', 'gpt-x', 'output', 400.0, 450.0],
@@ -95,7 +81,7 @@ it('fails with new findings and passes once they are in the baseline', function 
 
     $this->artisan('spectra:pricing-drift', [...$options, '--update-baseline' => true])->assertSuccessful();
 
-    expect(json_decode((string) file_get_contents($this->baseline), true))->toBe([
+    expect(json_decode(File::get($this->baseline), true, 512, JSON_THROW_ON_ERROR))->toBe([
         'openai|gpt-new|model' => null,
         'openai|gpt-x|cached_input above 200000' => 30.0,
         'openai|gpt-x|input above 200000' => 300.0,
@@ -108,9 +94,9 @@ it('fails with new findings and passes once they are in the baseline', function 
 });
 
 it('reports a baselined price again when models.dev changes it', function () {
-    file_put_contents($this->baseline, json_encode(['openai|gpt-x|output' => 450.0, 'openai|gone|model' => null]));
+    File::put($this->baseline, json_encode(['openai|gpt-x|output' => 450.0, 'openai|gone|model' => null], JSON_THROW_ON_ERROR));
     $this->catalog['openai']['models']['gpt-x']['cost']['output'] = 5;
-    file_put_contents($this->source, json_encode($this->catalog));
+    File::put($this->source, json_encode($this->catalog, JSON_THROW_ON_ERROR));
 
     $this->artisan('spectra:pricing-drift', ['--source' => $this->source, '--baseline' => $this->baseline])
         ->expectsOutputToContain('4 new findings')
@@ -124,7 +110,7 @@ it('writes a markdown report and downloads models.dev by default', function () {
 
     $this->artisan('spectra:pricing-drift', ['--baseline' => $this->baseline, '--markdown' => $markdown])->assertFailed();
 
-    expect(file_get_contents($markdown))
+    expect(File::get($markdown))
         ->toContain('| openai | `gpt-x` | output | 400 | 450 |')
         ->toContain('| openai | `gpt-new` | 200 | 800 |');
 

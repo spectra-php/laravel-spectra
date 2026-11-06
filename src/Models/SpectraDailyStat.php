@@ -13,12 +13,17 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use RuntimeException;
+use Spectra\Support\Query\DailyStatUpsert;
+use Spectra\Support\Query\RollupSchema;
 
 /**
  * One day's pre-aggregated usage for a provider, model and model type,
  * globally (no trackable) or for one trackable. StatsAggregator keeps these
  * rows in step with spectra_requests so long-range reports don't scan the
  * raw requests table.
+ *
+ * Counts include failed requests; total_cost_in_cents and the latency
+ * columns cover successful requests only, the package-wide convention.
  *
  * @property string $id
  * @property CarbonInterface $date
@@ -45,6 +50,8 @@ use RuntimeException;
  * @property int $total_latency_ms
  * @property int|null $min_latency_ms
  * @property int|null $max_latency_ms
+ * @property string|null $stat_key
+ * @property int|null $latency_samples
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read float|null $avg_latency_ms
@@ -64,8 +71,6 @@ use RuntimeException;
 class SpectraDailyStat extends Model
 {
     use HasUuids;
-
-    protected $table = 'spectra_daily_stats';
 
     protected $guarded = [];
 
@@ -94,6 +99,7 @@ class SpectraDailyStat extends Model
             'total_latency_ms' => 'integer',
             'min_latency_ms' => 'integer',
             'max_latency_ms' => 'integer',
+            'latency_samples' => 'integer',
         ];
     }
 
@@ -116,15 +122,15 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * Get the day's average latency per request, or null when there were none.
+     * Get the day's average latency per successful request, or null when none succeeded.
      */
     public function getAvgLatencyMsAttribute(): ?float
     {
-        if ($this->request_count === 0) {
+        if ($this->successful_count === 0) {
             return null;
         }
 
-        return round($this->total_latency_ms / $this->request_count, 2);
+        return round($this->total_latency_ms / $this->successful_count, 2);
     }
 
     /**
@@ -140,8 +146,7 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * Get total cost in dollars.
-     * Note: total_cost_in_cents is stored in cents.
+     * Get the day's total cost in dollars, from the stored cents.
      */
     public function getTotalCostInDollarsAttribute(): float
     {
@@ -193,8 +198,9 @@ class SpectraDailyStat extends Model
      */
     public function scopeForTrackable(Builder $query, Model $trackable): Builder
     {
+        // Bound as a string, so MySQL can use the index on the string column.
         return $query->where('trackable_type', $trackable->getMorphClass())
-            ->where('trackable_id', $trackable->getKey());
+            ->where('trackable_id', (string) $trackable->getKey());
     }
 
     /**
@@ -220,9 +226,10 @@ class SpectraDailyStat extends Model
     }
 
     /**
-     * Add one request to the day's stats.
+     * Add one request to the day's stats. A failed request counts, but its
+     * cost and latency are left out, as everywhere in Spectra.
      *
-     * Kept for backwards compatibility; StatsAggregator now calls accumulate().
+     * Kept for backwards compatibility; StatsAggregator calls accumulate() directly.
      */
     public static function record(
         string $date,
@@ -267,17 +274,20 @@ class SpectraDailyStat extends Model
                 'total_duration_seconds' => $durationSeconds,
                 'total_input_characters' => $inputCharacters,
                 'total_reasoning_tokens' => $reasoningTokens,
-                'total_cost_in_cents' => $cost,
-                'total_latency_ms' => $latencyMs ?? 0,
+                'total_cost_in_cents' => $successful ? $cost : 0,
+                'total_latency_ms' => $successful ? ($latencyMs ?? 0) : 0,
+                'latency_samples' => $successful && $latencyMs !== null ? 1 : 0,
             ],
-            latencyMs: $latencyMs,
+            latencyMs: $successful ? $latencyMs : null,
         );
     }
 
     /**
      * Add the given amounts to one day/provider/model/trackable row, creating
-     * it first when needed. Amounts may be negative to move a request between
-     * the successful and failed counts.
+     * it first when needed.
+     *
+     * Amounts may be negative to move a request between the successful and
+     * failed counts.
      *
      * @param  array<string, int|float>  $increments
      */
@@ -291,13 +301,34 @@ class SpectraDailyStat extends Model
         array $increments,
         ?int $latencyMs = null,
     ): void {
-        $increments = Arr::where($increments, fn (int|float $value) => $value != 0);
+        // Rounded to the column's precision first: a retried or repeated write
+        // has nothing to add, and float noise must not lock the row for that.
+        $increments = Arr::where(
+            Arr::map($increments, fn (int|float $value) => is_float($value) ? round($value, 6) : $value),
+            fn (int|float $value) => $value != 0,
+        );
 
         if ($increments === [] && $latencyMs === null) {
             return;
         }
 
-        $trackableIdStr = $trackableId !== null ? (string) $trackableId : null;
+        $trackableIdString = $trackableId !== null ? (string) $trackableId : null;
+        $latencyMs = $latencyMs !== null ? max(0, $latencyMs) : null;
+
+        $hasKey = app(RollupSchema::class)->hasStatKey();
+        $upsert = app(DailyStatUpsert::class);
+
+        if (! $hasKey) {
+            unset($increments['latency_samples']);
+        } elseif ($upsert->supports($increments)) {
+            $upsert->run($date, $provider, $model, $modelType, $trackableType, $trackableIdString, $increments, $latencyMs);
+
+            return;
+        }
+
+        if ($increments === [] && $latencyMs === null) {
+            return;
+        }
 
         $find = fn () => static::query()
             ->whereDate('date', $date)
@@ -311,7 +342,7 @@ class SpectraDailyStat extends Model
             ->when(
                 $trackableType === null,
                 fn ($query) => $query->whereNull('trackable_type')->whereNull('trackable_id'),
-                fn ($query) => $query->where('trackable_type', $trackableType)->where('trackable_id', $trackableIdStr)
+                fn ($query) => $query->where('trackable_type', $trackableType)->where('trackable_id', $trackableIdString)
             )
             ->first();
 
@@ -325,7 +356,8 @@ class SpectraDailyStat extends Model
                     'model' => $model,
                     'model_type' => $modelType,
                     'trackable_type' => $trackableType,
-                    'trackable_id' => $trackableIdStr,
+                    'trackable_id' => $trackableIdString,
+                    ...($hasKey ? ['stat_key' => DailyStatUpsert::key($date, $provider, $model, $modelType, $trackableType, $trackableIdString)] : []),
                 ]);
             } catch (UniqueConstraintViolationException) {
                 // Another worker created the row between our read and insert.
@@ -340,16 +372,14 @@ class SpectraDailyStat extends Model
         }
 
         if ($latencyMs !== null) {
-            $latencyMs = max(0, $latencyMs);
-
             static::query()
                 ->whereKey($key)
-                ->where(fn (Builder $q) => $q->whereNull('min_latency_ms')->orWhere('min_latency_ms', '>', $latencyMs))
+                ->where(fn (Builder $latencyQuery) => $latencyQuery->whereNull('min_latency_ms')->orWhere('min_latency_ms', '>', $latencyMs))
                 ->update(['min_latency_ms' => $latencyMs]);
 
             static::query()
                 ->whereKey($key)
-                ->where(fn (Builder $q) => $q->whereNull('max_latency_ms')->orWhere('max_latency_ms', '<', $latencyMs))
+                ->where(fn (Builder $latencyQuery) => $latencyQuery->whereNull('max_latency_ms')->orWhere('max_latency_ms', '<', $latencyMs))
                 ->update(['max_latency_ms' => $latencyMs]);
         }
     }
@@ -431,8 +461,8 @@ class SpectraDailyStat extends Model
             'total_pages' => $stats->total_pages ?? 0,
             'total_cost_in_cents' => (float) ($stats->total_cost_in_cents ?? 0),
             'total_cost' => (float) ($stats->total_cost_in_cents ?? 0) / 100,
-            'avg_latency_ms' => $totalRequests > 0
-                ? round($totalLatencyMs / $totalRequests, 2)
+            'avg_latency_ms' => $successfulRequests > 0
+                ? round($totalLatencyMs / $successfulRequests, 2)
                 : null,
             'min_latency_ms' => $stats->min_latency_ms,
             'max_latency_ms' => $stats->max_latency_ms,

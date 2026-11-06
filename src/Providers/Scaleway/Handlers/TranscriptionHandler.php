@@ -55,21 +55,35 @@ class TranscriptionHandler implements ExtractsModelFromResponse, Handler
         $promptTokens = Payload::int($usage['prompt_tokens'] ?? $usage['input_tokens'] ?? null);
         $completionTokens = Payload::int($usage['completion_tokens'] ?? $usage['output_tokens'] ?? null);
 
-        $duration = isset($responseData['duration'])
-            ? (float) $responseData['duration']
-            : (isset($usage['type'], $usage['seconds']) && $usage['type'] === 'duration'
-                ? (float) $usage['seconds']
-                : null);
-
         return new Metrics(
             tokens: new TokenMetrics(
                 promptTokens: $promptTokens,
                 completionTokens: $completionTokens,
             ),
             audio: new AudioMetrics(
-                durationSeconds: $duration,
+                durationSeconds: $this->resolveAudioSeconds($responseData),
             ),
         );
+    }
+
+    /**
+     * Get the audio length: `duration` (verbose JSON) or a duration-type `usage.seconds`.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
+    private function resolveAudioSeconds(array $responseData): ?float
+    {
+        if (isset($responseData['duration'])) {
+            return Payload::float($responseData['duration']);
+        }
+
+        $usage = $responseData['usage'] ?? [];
+
+        if (isset($usage['type'], $usage['seconds']) && $usage['type'] === 'duration') {
+            return Payload::float($usage['seconds']);
+        }
+
+        return null;
     }
 
     /**

@@ -39,9 +39,11 @@ enum ModelType: string
     }
 
     /**
-     * The model type for a catalog `type`. Null for `audio`, which the caller
-     * splits into TTS or STT, and for any other value: `ModelDefinition::type()`
-     * takes free text, so a custom catalog may use a type Spectra doesn't know.
+     * Get the model type for a catalog `type`.
+     *
+     * Null for `audio`, which the caller splits into TTS or STT, and for any
+     * other value: `ModelDefinition::type()` takes free text, so a custom
+     * catalog may use a type Spectra doesn't know.
      */
     public static function fromPricingType(?string $type): ?self
     {

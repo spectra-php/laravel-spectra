@@ -6,6 +6,7 @@ namespace Spectra\Support\Budget;
 
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Cache;
@@ -17,6 +18,7 @@ use Spectra\Events\BudgetThresholdReached;
 use Spectra\Exceptions\BudgetExceededException;
 use Spectra\Models\SpectraBudget;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Query\RollupSchema;
 
 /**
  * Checks budgets before a request (blocking when a hard limit is reached)
@@ -80,23 +82,23 @@ class BudgetEnforcer
         $usage = $this->getUsage($budgetable);
         $limits = $this->getLimits($budget);
 
-        $providerAllowed = $budget->isProviderAllowed($provider);
-        $modelAllowed = $budget->isModelAllowed($model);
+        $isProviderAllowed = $budget->isProviderAllowed($provider);
+        $isModelAllowed = $budget->isModelAllowed($model);
 
         $maxPercentage = $this->calculateMaxPercentage($usage, $limits);
 
-        $allowed = $providerAllowed
-            && $modelAllowed
+        $isAllowed = $isProviderAllowed
+            && $isModelAllowed
             && ($maxPercentage < 100 || ! $budget->hard_limit);
 
         return new BudgetStatus(
-            allowed: $allowed,
+            allowed: $isAllowed,
             budget: $budget,
             usage: $usage,
             limits: $limits,
             percentage: $maxPercentage,
-            providerAllowed: $providerAllowed,
-            modelAllowed: $modelAllowed,
+            providerAllowed: $isProviderAllowed,
+            modelAllowed: $isModelAllowed,
         );
     }
 
@@ -125,15 +127,14 @@ class BudgetEnforcer
      */
     public function getBudget(Model $budgetable): ?SpectraBudget
     {
-        return SpectraBudget::query()
-            ->where('budgetable_type', $budgetable->getMorphClass())
-            ->where('budgetable_id', $budgetable->getKey())
-            ->active()
-            ->first();
+        return $this->findBudget($budgetable->getMorphClass(), (string) $budgetable->getKey());
     }
 
     /**
      * Fire the threshold and exceeded events for the model's recorded spend.
+     *
+     * The spend is read from the saved rows, so the cost and tokens of the
+     * request that was just recorded are not needed.
      */
     public function recordUsage(Model $budgetable, int $cost, int $tokens): void
     {
@@ -143,16 +144,20 @@ class BudgetEnforcer
             return;
         }
 
-        $usage = $this->getUsage($budgetable);
-        $this->checkThresholds($budgetable, $budget, $usage);
-        $this->reportExceededLimits($budgetable, $budget, $usage);
+        $this->reportSpend($budgetable, $budget);
     }
 
     /**
-     * Post-persist pass for a tracked request. Pre-flight enforcement can only
-     * see spend from previous requests, so the request that actually crosses a
-     * limit is detected here and announced via BudgetExceeded — without ever
-     * blocking the already-completed request.
+     * Announce the thresholds and cost limits a recorded request has crossed.
+     *
+     * Pre-flight enforcement can only see spend from previous requests, so
+     * the request that actually crosses a limit is detected here and
+     * announced via BudgetExceeded — without ever blocking the
+     * already-completed request.
+     *
+     * This runs for every saved request, so it costs one query for the
+     * budget (most trackables have none) and then one per cost limit the
+     * budget sets.
      */
     public function reportRecordedRequest(SpectraRequest $request): void
     {
@@ -163,15 +168,9 @@ class BudgetEnforcer
             return;
         }
 
-        // Cheap existence check first — most requests have no budget, and
-        // resolving the trackable model costs an extra query.
-        $hasBudget = SpectraBudget::query()
-            ->where('budgetable_type', $type)
-            ->where('budgetable_id', $id)
-            ->active()
-            ->exists();
+        $budget = $this->findBudget($type, $id);
 
-        if (! $hasBudget) {
+        if ($budget === null) {
             return;
         }
 
@@ -181,11 +180,36 @@ class BudgetEnforcer
             return;
         }
 
-        $this->recordUsage(
-            $budgetable,
-            $this->toWholeCents($request->total_cost_in_cents),
-            ($request->prompt_tokens ?? 0) + ($request->completion_tokens ?? 0)
+        $this->reportSpend($budgetable, $budget);
+    }
+
+    /**
+     * Find the active budget saved under a morph type and id.
+     */
+    protected function findBudget(string $morphType, string $id): ?SpectraBudget
+    {
+        return SpectraBudget::query()
+            ->where('budgetable_type', $morphType)
+            ->where('budgetable_id', $id)
+            ->active()
+            ->first();
+    }
+
+    /**
+     * Fire the threshold and exceeded events for the cost limits the budget
+     * sets, reading only the spend those limits compare against.
+     */
+    protected function reportSpend(Model $budgetable, SpectraBudget $budget): void
+    {
+        $usage = new BudgetUsage(
+            dailyCost: $budget->daily_limit > 0 ? $this->getCostForPeriod($budgetable, 'day') : 0,
+            weeklyCost: $budget->weekly_limit > 0 ? $this->getCostForPeriod($budgetable, 'week') : 0,
+            monthlyCost: $budget->monthly_limit > 0 ? $this->getCostForPeriod($budgetable, 'month') : 0,
+            totalCostInCents: $budget->total_limit > 0 ? $this->getTotalCost($budgetable) : 0,
         );
+
+        $this->checkThresholds($budgetable, $budget, $usage);
+        $this->reportExceededLimits($budgetable, $budget, $usage);
     }
 
     /**
@@ -326,7 +350,9 @@ class BudgetEnforcer
     }
 
     /**
-     * Fire the warning or critical event once per period when usage crosses its threshold.
+     * Fire the warning or critical event once per period when usage crosses
+     * its threshold. A threshold of 0 is off: it never fires, and the
+     * warning then runs up to the limit.
      */
     protected function checkAndDispatchThreshold(
         Model $budgetable,
@@ -340,8 +366,9 @@ class BudgetEnforcer
         }
 
         $percentage = ($current / $limit) * 100;
+        $warningCeiling = $budget->critical_threshold > 0 ? $budget->critical_threshold : 100;
 
-        if ($percentage >= $budget->warning_threshold && $percentage < $budget->critical_threshold) {
+        if ($budget->warning_threshold > 0 && $percentage >= $budget->warning_threshold && $percentage < $warningCeiling) {
             if ($this->fireOnce($budget, $limitType, 'warning', $limit)) {
                 $this->events->dispatch(new BudgetThresholdReached(
                     $budgetable,
@@ -355,7 +382,7 @@ class BudgetEnforcer
             }
         }
 
-        if ($percentage >= $budget->critical_threshold && $percentage < 100) {
+        if ($budget->critical_threshold > 0 && $percentage >= $budget->critical_threshold && $percentage < 100) {
             if ($this->fireOnce($budget, $limitType, 'critical', $limit)) {
                 $this->events->dispatch(new BudgetThresholdReached(
                     $budgetable,
@@ -442,20 +469,7 @@ class BudgetEnforcer
      */
     protected function getCostForPeriod(Model $budgetable, string $period): int
     {
-        $start = match ($period) {
-            'day' => today(),
-            'week' => now()->startOfWeek(),
-            'month' => now()->startOfMonth(),
-            default => today(),
-        };
-
-        $cost = (float) SpectraRequest::query()
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', $budgetable->getKey())
-            ->where('created_at', '>=', $start)
-            ->sum('total_cost_in_cents');
-
-        return $this->toWholeCents($cost);
+        return $this->toWholeCents((float) $this->usageRows($budgetable, $this->periodStart($period))->sum('total_cost_in_cents'));
     }
 
     /**
@@ -463,12 +477,7 @@ class BudgetEnforcer
      */
     protected function getTotalCost(Model $budgetable): int
     {
-        $cost = (float) SpectraRequest::query()
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', $budgetable->getKey())
-            ->sum('total_cost_in_cents');
-
-        return $this->toWholeCents($cost);
+        return $this->toWholeCents((float) $this->usageRows($budgetable)->sum('total_cost_in_cents'));
     }
 
     /**
@@ -476,19 +485,7 @@ class BudgetEnforcer
      */
     protected function getTokensForPeriod(Model $budgetable, string $period): int
     {
-        $start = match ($period) {
-            'day' => today(),
-            'week' => now()->startOfWeek(),
-            'month' => now()->startOfMonth(),
-            default => today(),
-        };
-
-        return (int) SpectraRequest::query()
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', $budgetable->getKey())
-            ->where('created_at', '>=', $start)
-            ->selectRaw('SUM(prompt_tokens + completion_tokens) as total')
-            ->value('total');
+        return $this->sumTokens($this->usageRows($budgetable, $this->periodStart($period)));
     }
 
     /**
@@ -496,11 +493,7 @@ class BudgetEnforcer
      */
     protected function getTotalTokens(Model $budgetable): int
     {
-        return (int) SpectraRequest::query()
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', $budgetable->getKey())
-            ->selectRaw('SUM(prompt_tokens + completion_tokens) as total')
-            ->value('total');
+        return $this->sumTokens($this->usageRows($budgetable));
     }
 
     /**
@@ -508,18 +501,63 @@ class BudgetEnforcer
      */
     protected function getRequestsForPeriod(Model $budgetable, string $period): int
     {
-        $start = match ($period) {
-            'day' => today(),
+        $rows = $this->usageRows($budgetable, $this->periodStart($period));
+
+        return $this->usesDailyStats() ? (int) $rows->sum('request_count') : $rows->count();
+    }
+
+    /**
+     * Add up the tokens of the usage rows.
+     *
+     * @param  Builder<SpectraRequest>  $rows
+     */
+    protected function sumTokens(Builder $rows): int
+    {
+        return (int) $rows
+            ->selectRaw($this->usesDailyStats() ? 'SUM(total_tokens) as total' : 'SUM(prompt_tokens + completion_tokens) as total')
+            ->value('total');
+    }
+
+    /**
+     * Get the rows that hold the model's usage, since a moment when given: its
+     * daily stats, which every budget period starts on a day of, or else its
+     * requests. Every saved call passes through here, so a heavy user's budget
+     * must not cost more than a light one's.
+     *
+     * The key is bound as a string: trackable_id is a string column, and MySQL
+     * compares it with a number as doubles, which can't use the index.
+     *
+     * @return Builder<SpectraRequest>
+     */
+    protected function usageRows(Model $budgetable, ?CarbonInterface $since = null): Builder
+    {
+        $onDailyStats = $this->usesDailyStats();
+
+        return SpectraRequest::query()
+            ->when($onDailyStats, fn (Builder $query) => $query->from('spectra_daily_stats'))
+            ->where('trackable_type', $budgetable->getMorphClass())
+            ->where('trackable_id', (string) $budgetable->getKey())
+            ->when($since, fn (Builder $query, CarbonInterface $start) => $query->where($onDailyStats ? 'date' : 'created_at', '>=', $start));
+    }
+
+    /**
+     * Determine if usage is read from the daily stats.
+     */
+    protected function usesDailyStats(): bool
+    {
+        return app(RollupSchema::class)->isReadable();
+    }
+
+    /**
+     * Get when the current day, week or month started.
+     */
+    protected function periodStart(string $period): CarbonInterface
+    {
+        return match ($period) {
             'week' => now()->startOfWeek(),
             'month' => now()->startOfMonth(),
             default => today(),
         };
-
-        return SpectraRequest::query()
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', $budgetable->getKey())
-            ->where('created_at', '>=', $start)
-            ->count();
     }
 
     /**
@@ -573,8 +611,9 @@ class BudgetEnforcer
     }
 
     /**
-     * True the first time this budget / limit / level is reached in the
-     * current period; false after that until the period or the limit changes.
+     * Mark this budget / limit / level as announced for the current period,
+     * returning true the first time it is reached and false after that until
+     * the period or the limit changes.
      */
     protected function fireOnce(SpectraBudget $budget, string $limitType, string $level, int $limit): bool
     {
@@ -603,6 +642,8 @@ class BudgetEnforcer
     }
 
     /**
+     * Convert a cost to whole cents, rounding up.
+     *
      * Budgets are enforced in whole cents, rounding up so fractional usage
      * always counts against the limit (a 0.2-cent request consumes 1 cent).
      * The sum is first rounded to the storage precision (6 decimals) so float

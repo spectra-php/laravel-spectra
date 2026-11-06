@@ -10,7 +10,7 @@ paths:
 A job's `handle()` method-injects the service that does the work and calls it (`RequestWriter::write()`, `RequestExporter::export()`). No tracking, pricing or persistence logic in the job itself, so the sync, after-response and queued paths run the same code.
 
 ## Pass plain data
-The constructor takes arrays and scalars as promoted `public readonly` properties: the attributes to write, the transformed export payload. Don't pass a `RequestContext`, a service or an open stream; the job must serialise and run on another machine.
+The constructor takes arrays and scalars as promoted `public readonly` properties: the attributes to write, the transformed export payload. A property added to a job that is already released is a plain `public` property with a default instead, so a job queued by the older version still unserializes (`PersistSpectraRequestJob::$reviewQueues`). Don't pass a `RequestContext`, a service or an open stream; the job must serialise and run on another machine.
 
 ## The user's config picks the queue
 Spectra's queue settings live in `config('spectra.queue')`: `enabled`, `after_response`, `connection`, `queue`, `delay`. Apply them where the job is dispatched (`RequestPersister`), never hard-code a queue, connection or delay in the job. Use only properties and traits Laravel 12 supports; no Laravel 13 queue attributes.

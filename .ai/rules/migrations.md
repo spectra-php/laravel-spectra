@@ -6,7 +6,7 @@ paths:
 # Migrations
 
 ## Released migrations never change
-Users publish the migrations (`vendor:publish --tag=spectra-migrations`) and have already run every released one, so editing it changes nothing for them. A schema change is a new dated migration (`YYYY_MM_DD_000001_{verb}_…_spectra_tables.php`). The package does not auto-register its migrations (`MigrationsRegistrationTest`).
+Users publish the migrations (`vendor:publish --tag=spectra-migrations`) and have already run every released one, so editing it changes nothing for them. A schema change is a new dated migration, numbered in order within its day and named for what it changes: `YYYY_MM_DD_00000N_{verb}_…`, ending in the table it changes (`_to_spectra_requests_table.php`, `create_spectra_scores_table.php`) or `_spectra_tables.php` when it changes several. The package does not auto-register its migrations (`MigrationsRegistrationTest`).
 
 ## Run on the Spectra connection
 Every migration overrides `getConnection()` to return `config('spectra.storage.connection')` and builds through `Schema::connection($this->getConnection())`.

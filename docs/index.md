@@ -29,7 +29,7 @@ features:
   - title: Budget Enforcement
     details: Define daily, weekly, and monthly spending limits per user, team, or any Eloquent model. Enforce hard blocks via middleware or fire soft warning events at configurable thresholds.
   - title: Real-Time Dashboard
-    details: A built-in dashboard for exploring requests, inspecting payloads, comparing model costs, managing the pricing catalog, and viewing per-user analytics.
+    details: A built-in dashboard for exploring requests, inspecting payloads, comparing model costs, checking which prices bill your requests, and viewing per-user analytics.
   - title: Streaming & Media Persistence
     details: Streamed responses are tracked automatically, with time-to-first-token metrics. Optionally download and persist generated images and videos to any Laravel filesystem disk before provider URLs expire.
 ---

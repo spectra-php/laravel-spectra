@@ -18,7 +18,9 @@ it('reads the reported cost in cents', function (array $usage, float $expected) 
 
     expect($cost)->toEqualWithDelta($expected, 0.0000001);
 })->with([
+    // ($0.95 fee + $19 upstream) × 100
     'byok without the flag' => [['cost' => 0.95, 'cost_details' => ['upstream_inference_cost' => 19]], 1995.0],
+    // $0.01 × 100, the upstream cost is already inside `cost`
     'not byok never adds upstream' => [['cost' => 0.01, 'is_byok' => false, 'cost_details' => ['upstream_inference_cost' => 0.01]], 1.0],
 ]);
 

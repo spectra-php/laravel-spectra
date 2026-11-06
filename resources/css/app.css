@@ -1,6 +1,87 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss' source(none);
+
+@source '../js';
+@source '../views';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f4f4f5;
+  --color-gray-200: #e4e4e7;
+  --color-gray-300: #d4d4d8;
+  --color-gray-400: #a1a1aa;
+  --color-gray-500: #71717a;
+  --color-gray-600: #52525b;
+  --color-gray-700: #3f3f46;
+  --color-gray-800: #27272a;
+  --color-gray-850: #1f1f23;
+  --color-gray-900: #18181b;
+  --color-gray-925: #111114;
+  --color-gray-950: #0a0a0c;
+
+  --color-primary-50: #f1f0ff;
+  --color-primary-100: #e4e2ff;
+  --color-primary-200: #cdc9ff;
+  --color-primary-300: #aba3ff;
+  --color-primary-400: #8b7dff;
+  --color-primary-500: #6f5cf6;
+  --color-primary-600: #5b45e8;
+  --color-primary-700: #4c37c9;
+  --color-primary-800: #3f2fa2;
+  --color-primary-900: #352b80;
+  --color-primary-950: #211a4c;
+
+  --font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
+
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.03);
+  --shadow-pop:
+    0 10px 30px -10px rgb(0 0 0 / 0.25), 0 2px 6px -2px rgb(0 0 0 / 0.08);
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  --container-shell: 88rem;
+
+  /* Fixed line heights, so a smaller child keeps its parent's line box. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+}
+
+/*
+| Defaults Tailwind 4 changed, kept as the dashboard is designed: borders in
+| gray, buttons with a pointer and quiet placeholders.
+*/
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentcolor);
+    }
+
+    button:not(:disabled),
+    [role='button']:not(:disabled) {
+        cursor: pointer;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+        color: var(--color-gray-400);
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -40,7 +121,7 @@
     }
 
     *:focus-visible {
-        @apply outline-none ring-2 ring-primary-500/70 ring-offset-2 ring-offset-white dark:ring-offset-gray-950;
+        @apply outline-hidden ring-2 ring-primary-500/70 ring-offset-2 ring-offset-white dark:ring-offset-gray-950;
     }
 
     ::selection {
@@ -104,19 +185,12 @@
     }
 
     .stat-value {
-        @apply mt-1.5 text-[28px] font-semibold leading-tight tracking-tight text-gray-900 dark:text-white;
+        @apply mt-1.5 text-[28px] font-semibold tracking-tight text-gray-900 dark:text-white;
+        line-height: 1.25;
     }
 
     .stat-change {
         @apply mt-2 flex items-center gap-1 text-xs font-medium;
-    }
-
-    .stat-change.positive {
-        @apply text-emerald-600 dark:text-emerald-400;
-    }
-
-    .stat-change.negative {
-        @apply text-red-600 dark:text-red-400;
     }
 
     /*
@@ -131,11 +205,6 @@
     .card-header {
         @apply flex items-center justify-between gap-4 border-b border-gray-100 px-5 py-3.5;
         @apply dark:border-gray-800;
-    }
-
-    .card-header h2,
-    .card-header h3 {
-        @apply text-sm font-semibold text-gray-900 dark:text-white;
     }
 
     .card-body {
@@ -153,11 +222,11 @@
     }
 
     .btn-primary {
-        @apply bg-primary-600 text-white shadow-sm hover:bg-primary-500 active:bg-primary-700;
+        @apply bg-primary-600 text-white shadow-xs hover:bg-primary-500 active:bg-primary-700;
     }
 
     .btn-secondary {
-        @apply border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900;
+        @apply border border-gray-200 bg-white text-gray-700 shadow-xs hover:bg-gray-50 hover:text-gray-900;
         @apply dark:border-gray-700/80 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-white;
     }
 
@@ -235,42 +304,13 @@
         @apply w-full text-left text-sm;
     }
 
-    .table thead {
-        @apply border-b border-gray-100 bg-gray-50/70 text-xs text-gray-500;
-        @apply dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400;
-    }
-
-    .table th {
-        @apply whitespace-nowrap px-5 py-2.5 font-medium;
-    }
-
-    .table td {
-        @apply px-5 py-3 text-gray-700 dark:text-gray-300;
-    }
-
-    .table tbody tr {
-        @apply border-b border-gray-100 transition-colors duration-100 dark:border-gray-800/80;
-    }
-
-    .table tbody tr:last-child {
-        @apply border-b-0;
-    }
-
-    .table tbody tr:hover {
-        @apply bg-gray-50/80 dark:bg-white/[0.025];
-    }
-
-    .table tbody tr.cursor-pointer:hover {
-        @apply bg-primary-50/40 dark:bg-primary-400/[0.05];
-    }
-
     /*
     | Forms
     */
 
     .form-input,
     .form-select {
-        @apply block h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 shadow-sm;
+        @apply block h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 shadow-xs;
         @apply placeholder-gray-400 transition-colors duration-150;
         @apply hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
         @apply dark:border-gray-700/80 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500 dark:hover:border-gray-600;
@@ -301,34 +341,12 @@
         @apply inline-flex items-center gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800/80;
     }
 
-    .segmented > button,
-    .segmented > a {
-        @apply rounded-md px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors;
-        @apply hover:text-gray-900 dark:text-gray-400 dark:hover:text-white;
-    }
-
-    .segmented > .is-active {
-        @apply bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white;
-    }
-
     /*
     | Key/value lists
     */
 
     .kv {
         @apply divide-y divide-gray-100 dark:divide-gray-800;
-    }
-
-    .kv > div {
-        @apply flex items-center justify-between gap-4 py-2.5 text-sm;
-    }
-
-    .kv dt {
-        @apply text-gray-500 dark:text-gray-400;
-    }
-
-    .kv dd {
-        @apply min-w-0 truncate text-right font-medium text-gray-900 dark:text-gray-100;
     }
 
     /*
@@ -375,3 +393,76 @@
         @apply h-8 w-8;
     }
 }
+
+/*
+| Rules on an element inside a component. A single utility on that element
+| doesn't override them, so they sit in a layer after the utilities. Use `!` on
+| a utility that must win, such as a hover colour on a table cell.
+*/
+@layer overrides {
+
+    .stat-change.positive {
+        @apply text-emerald-600 dark:text-emerald-400;
+    }
+
+    .stat-change.negative {
+        @apply text-red-600 dark:text-red-400;
+    }
+
+    .card-header h2,
+    .card-header h3 {
+        @apply text-sm font-semibold text-gray-900 dark:text-white;
+    }
+
+    .table thead {
+        @apply border-b border-gray-100 bg-gray-50/70 text-xs text-gray-500;
+        @apply dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400;
+    }
+
+    .table th {
+        @apply whitespace-nowrap px-5 py-2.5 font-medium;
+    }
+
+    .table td {
+        @apply px-5 py-3 text-gray-700 dark:text-gray-300;
+    }
+
+    .table tbody tr {
+        @apply border-b border-gray-100 transition-colors duration-100 dark:border-gray-800/80;
+    }
+
+    .table tbody tr:last-child {
+        @apply border-b-0;
+    }
+
+    .table tbody tr:hover {
+        @apply bg-gray-50/80 dark:bg-white/[0.025];
+    }
+
+    .table tbody tr.cursor-pointer:hover {
+        @apply bg-primary-50/40 dark:bg-primary-400/[0.05];
+    }
+
+    .segmented > button,
+    .segmented > a {
+        @apply rounded-md px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors;
+        @apply hover:text-gray-900 dark:text-gray-400 dark:hover:text-white;
+    }
+
+    .segmented > .is-active {
+        @apply bg-white text-gray-900 shadow-xs dark:bg-gray-700 dark:text-white;
+    }
+
+    .kv > div {
+        @apply flex items-center justify-between gap-4 py-2.5 text-sm;
+    }
+
+    .kv dt {
+        @apply text-gray-500 dark:text-gray-400;
+    }
+
+    .kv dd {
+        @apply min-w-0 truncate text-right font-medium text-gray-900 dark:text-gray-100;
+    }
+}
+

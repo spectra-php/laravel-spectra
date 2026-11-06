@@ -36,6 +36,13 @@ class TraceContext
 
     public const PARENT_SPAN_ID = 'spectra.parent_span_id';
 
+    /**
+     * Spans of the work that dispatched this job, and of the work before it,
+     * that may never be saved on their own: a request or job is stored only
+     * when it makes an AI call. The job saves them with its own span.
+     */
+    public const PENDING_SPANS = 'spectra.pending_spans';
+
     /** Tags handed down by the work that started this one (a request, a job). */
     public const TAGS = 'spectra.tags';
 
@@ -50,7 +57,7 @@ class TraceContext
     protected const MAX_TAG_LENGTH = 255;
 
     /**
-     * The trace id for the current unit of work, created on first use.
+     * Get the trace id for the current unit of work, creating it on first use.
      */
     public static function traceId(): string
     {
@@ -61,7 +68,7 @@ class TraceContext
                 return $existing;
             }
 
-            [$traceId, $parentSpanId] = self::fromTraceparent() ?? [(string) Str::uuid(), null];
+            [$traceId, $parentSpanId] = self::fromTraceparent() ?? [(string) Str::uuid7(), null];
 
             Context::addHidden(self::TRACE_ID, $traceId);
 
@@ -72,12 +79,12 @@ class TraceContext
             return $traceId;
         } catch (Throwable) {
             // Context unavailable (e.g. a bare container): fall back to one id per call.
-            return (string) Str::uuid();
+            return (string) Str::uuid7();
         }
     }
 
     /**
-     * The span id of the incoming request's span, from `traceparent`.
+     * Get the span id of the incoming request's span, from `traceparent`.
      */
     public static function parentSpanId(): ?string
     {
@@ -91,20 +98,36 @@ class TraceContext
     }
 
     /**
+     * Get the spans this job was handed to save with its own ({@see PENDING_SPANS}),
+     * outermost first.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function pendingSpans(): array
+    {
+        try {
+            $spans = Context::getHidden(self::PENDING_SPANS);
+        } catch (Throwable) {
+            return [];
+        }
+
+        return is_array($spans)
+            ? array_values(array_filter($spans, fn (mixed $span): bool => is_array($span) && is_string($span['span_id'] ?? null) && is_string($span['trace_id'] ?? null)))
+            : [];
+    }
+
+    /**
      * Use the given trace id for the rest of this unit of work (and the jobs
      * it dispatches).
      */
     public static function set(string $traceId): void
     {
-        try {
-            Context::addHidden(self::TRACE_ID, $traceId);
-        } catch (Throwable) {
-            // Nothing to propagate to; the id still applies via Spectra's globals.
-        }
+        // Without a Context there is nothing to propagate to; the id still applies via Spectra's globals.
+        rescue(fn () => Context::addHidden(self::TRACE_ID, $traceId), report: false);
     }
 
     /**
-     * The tags this unit of work inherited: from the request or job that
+     * Get the tags this unit of work inherited: from the request or job that
      * dispatched it, or from an upstream service ({@see fromBaggage()}).
      *
      * @return array<int, string>
@@ -130,11 +153,7 @@ class TraceContext
      */
     public static function addTags(array $tags): void
     {
-        try {
-            Context::addHidden(self::TAGS, self::sanitizeTags([...self::tags(), ...$tags]));
-        } catch (Throwable) {
-            //
-        }
+        rescue(fn () => Context::addHidden(self::TAGS, self::sanitizeTags([...self::tags(), ...$tags])), report: false);
     }
 
     /**
@@ -142,16 +161,12 @@ class TraceContext
      */
     public static function forgetTags(): void
     {
-        try {
-            Context::forgetHidden(self::TAGS);
-        } catch (Throwable) {
-            //
-        }
+        rescue(fn () => Context::forgetHidden(self::TAGS), report: false);
     }
 
     /**
-     * A W3C `baggage` header carrying the trace id and tags to another of
-     * your services, which continues them with the `spectra.trace` middleware.
+     * Build a W3C `baggage` header carrying the trace id and tags to another
+     * of your services, which continues them with the `spectra.trace` middleware.
      *
      * @param  array<int, string>  $tags
      */
@@ -171,8 +186,9 @@ class TraceContext
     }
 
     /**
-     * The trace id and tags of a `baggage` header ({@see toBaggage()}). Other
-     * members are left alone, and a trace id that is not a UUID is dropped.
+     * Read the trace id and tags of a `baggage` header ({@see toBaggage()}).
+     *
+     * Other members are left alone, and a trace id that is not a UUID is dropped.
      *
      * @return array{traceId: string|null, tags: array<int, string>}
      */
@@ -185,7 +201,7 @@ class TraceContext
             // `key=value;property...`: the properties are not Spectra's.
             [$pair] = explode(';', $member, 2);
 
-            if (! str_contains($pair, '=')) {
+            if (! Str::contains($pair, '=')) {
                 continue;
             }
 
@@ -193,7 +209,7 @@ class TraceContext
             $value = rawurldecode($value);
 
             if ($key === self::BAGGAGE_TRACE_ID && Str::isUuid($value)) {
-                $traceId = strtolower($value);
+                $traceId = Str::lower($value);
             } elseif ($key === self::BAGGAGE_TAGS) {
                 $tags = self::sanitizeTags(explode(',', $value));
             }
@@ -212,7 +228,7 @@ class TraceContext
     {
         return collect($tags)
             ->map(fn (mixed $tag): string => is_string($tag) ? trim($tag) : '')
-            ->filter(fn (string $tag): bool => filled($tag) && mb_strlen($tag) <= self::MAX_TAG_LENGTH)
+            ->filter(fn (string $tag): bool => filled($tag) && Str::length($tag) <= self::MAX_TAG_LENGTH)
             ->uniqueStrict()
             ->values()
             ->take(self::MAX_TAGS)
@@ -224,11 +240,7 @@ class TraceContext
      */
     public static function reset(): void
     {
-        try {
-            Context::forgetHidden([self::TRACE_ID, self::PARENT_SPAN_ID]);
-        } catch (Throwable) {
-            //
-        }
+        rescue(fn () => Context::forgetHidden([self::TRACE_ID, self::PARENT_SPAN_ID, self::PENDING_SPANS]), report: false);
     }
 
     /**
@@ -248,16 +260,30 @@ class TraceContext
 
         $header = request()->header('traceparent');
 
-        if (! is_string($header)
-            || ! preg_match('/^[0-9a-f]{2}-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$/', strtolower(trim($header)), $matches)
-            || Str::isMatch('/^0+$/', $matches[1])
-            || Str::isMatch('/^0+$/', $matches[2])) {
+        if (! is_string($header)) {
             return null;
         }
 
-        $hex = $matches[1];
-        $uuid = substr($hex, 0, 8).'-'.substr($hex, 8, 4).'-'.substr($hex, 12, 4).'-'.substr($hex, 16, 4).'-'.substr($hex, 20);
+        $traceparent = Str::lower(trim($header));
 
-        return [$uuid, $matches[2]];
+        if (! Str::isMatch('/^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/', $traceparent)) {
+            return null;
+        }
+
+        [, $hex, $parentSpanId] = explode('-', $traceparent);
+
+        if (Str::isMatch('/^0+$/', $hex) || Str::isMatch('/^0+$/', $parentSpanId)) {
+            return null;
+        }
+
+        $uuid = implode('-', [
+            Str::substr($hex, 0, 8),
+            Str::substr($hex, 8, 4),
+            Str::substr($hex, 12, 4),
+            Str::substr($hex, 16, 4),
+            Str::substr($hex, 20),
+        ]);
+
+        return [$uuid, $parentSpanId];
     }
 }

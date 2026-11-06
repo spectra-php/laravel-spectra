@@ -4,15 +4,23 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Requests;
 
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
+use Spectra\Actions\Playground\GetPlaygroundRuns;
+use Spectra\Actions\Scores\GetScores;
 use Spectra\Actions\Traces\GetTraceDetails;
+use Spectra\Data\Responses\PlaygroundRunResponse;
 use Spectra\Data\Responses\RequestDetailsResponse;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Playground\PlaygroundAccess;
+use Spectra\Support\Playground\PlaygroundClient;
 use Spectra\Support\Pricing\PricingLookup;
+use Spectra\Support\Query\TraceSchema;
 
 /**
  * Everything the request detail screen shows for one request: its payloads
  * (the only endpoint that re-exposes them), tags, model capabilities, media
- * URLs and the other calls in its trace.
+ * URLs, the other calls in its trace and the Playground runs started from it.
  */
 class GetRequestDetails
 {
@@ -25,6 +33,9 @@ class GetRequestDetails
     public function __construct(
         private readonly PricingLookup $pricingLookup,
         private readonly GetTraceDetails $getTraceDetails,
+        private readonly GetScores $getScores,
+        private readonly TraceSchema $traceSchema,
+        private readonly GetPlaygroundRuns $getPlaygroundRuns,
     ) {}
 
     /**
@@ -36,30 +47,42 @@ class GetRequestDetails
 
         $request->append('formatted_expires_at');
 
-        $data = $request->makeVisible(['request', 'response'])->toArray();
-        $data['prompt'] = $request->prompt;
-        $data['tags'] = $request->tags->pluck('name')->toArray();
-        $data['model_capabilities'] = $this->pricingLookup->getCapabilities($request->provider ?? '', $request->model);
+        $details = $request->makeVisible(['request', 'response'])->toArray();
+        $details['prompt'] = $request->prompt;
+        $details['tags'] = $request->tags->pluck('name')->toArray();
+        $details['model_capabilities'] = $this->pricingLookup->getCapabilities($request->provider ?? '', $request->model);
 
         if ($request->model_type === 'image') {
-            $data['image_urls'] = $this->resolveImageUrls($id, $request);
+            $details['image_urls'] = $this->resolveImageUrls($id, $request);
         }
 
         if ($request->model_type === 'tts' && filled($request->media_storage_path)) {
             $basePath = config('spectra.dashboard.path', 'spectra');
-            $data['audio_url'] = "/{$basePath}/api/requests/{$id}/audio";
-            $data['audio_download_url'] = "/{$basePath}/api/requests/{$id}/audio/download";
+            $details['audio_url'] = "/{$basePath}/api/requests/{$id}/audio";
+            $details['audio_download_url'] = "/{$basePath}/api/requests/{$id}/audio/download";
         }
 
         if (in_array($request->model_type, ['image', 'tts', 'video'], true)) {
-            $data['media_storage_enabled'] = (bool) config('spectra.storage.media.enabled');
+            $details['media_storage_enabled'] = (bool) config('spectra.storage.media.enabled');
         }
 
-        $data['trace'] = filled($request->trace_id)
+        $details['can_open_in_playground'] = PlaygroundAccess::allowed();
+
+        // A run's page links to its original instead of listing runs of its own.
+        $playgroundRuns = in_array(PlaygroundClient::TAG, $details['tags'], true) ? ['runs' => [], 'count' => 0] : ($this->getPlaygroundRuns)($request->id, null);
+        $details['playground_runs'] = array_map(fn (PlaygroundRunResponse $run): array => Arr::except($run->toArray(), 'response'), $playgroundRuns['runs']);
+        $details['playground_run_count'] = $playgroundRuns['count'];
+
+        $details['scores'] = ($this->getScores)(requestId: $request->id);
+
+        // The trace card orders calls by started_at; until the trace
+        // migrations run it is left out and the page says so.
+        $details['trace_migrated'] = $this->traceSchema->hasTraceColumns();
+        $details['trace'] = $details['trace_migrated'] && filled($request->trace_id)
             ? ($this->getTraceDetails)($request->trace_id, $request->id, self::TRACE_LIMIT)?->toArray()
             : null;
 
-        return new RequestDetailsResponse(data: $data);
+        return new RequestDetailsResponse(data: $details);
     }
 
     /**
@@ -81,20 +104,23 @@ class GetRequestDetails
         }
 
         $response = $request->response;
-        $urls = [];
+        $outputItems = Arr::wrap($response['output'] ?? []);
 
-        /** @var array<int, array<string, mixed>> $outputItems */
-        $outputItems = $response['output'] ?? [];
         $imageOutputs = collect($outputItems)
-            ->filter(fn (array $item) => ($item['type'] ?? '') === 'image_generation_call');
+            ->filter(fn (mixed $item) => is_array($item) && ($item['type'] ?? '') === 'image_generation_call');
 
         if ($imageOutputs->isNotEmpty()) {
-            foreach ($imageOutputs->values() as $index => $item) {
-                $urls[] = "/{$basePath}/api/requests/{$requestId}/images/{$index}";
-            }
-
-            return $urls;
+            return $imageOutputs->values()->keys()->map(
+                fn (int $index) => "/{$basePath}/api/requests/{$requestId}/images/{$index}"
+            )->all();
         }
+
+        // Replicate's output is one image URL or a list of them.
+        /** @var array<int, string> $urls */
+        $urls = collect($outputItems)
+            ->filter(fn (mixed $item) => is_string($item) && Str::isUrl($item, ['http', 'https']))
+            ->values()
+            ->all();
 
         foreach ($response['data'] ?? [] as $index => $item) {
             if (filled($item['b64_json'] ?? null) && $item['b64_json'] !== '[stripped]') {

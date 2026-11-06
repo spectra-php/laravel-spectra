@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Tracking\TraceContext;
@@ -132,7 +133,7 @@ it('ignores a baggage trace id that is not a UUID, and tags that are blank or to
     Route::post('/internal/tool', fn () => response()->json(['trace' => Spectra::currentTraceId(), 'tags' => Spectra::currentTags()]))
         ->middleware('spectra.trace');
 
-    $response = $this->withHeaders(['baggage' => 'spectra.trace_id=not-a-uuid,spectra.tags=ok%2C%20%2C'.str_repeat('x', 256)])
+    $response = $this->withHeaders(['baggage' => 'spectra.trace_id=not-a-uuid,spectra.tags=ok%2C%20%2C'.Str::repeat('x', 256)])
         ->postJson('/internal/tool');
 
     expect($response->json('trace'))->not->toBe('not-a-uuid')

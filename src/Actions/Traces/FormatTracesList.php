@@ -78,19 +78,19 @@ class FormatTracesList
                     ])
                     ->values()
                     ->all(),
-                'trackable' => $this->trackable($calls, $metadata),
+                'trackable' => $this->resolveTrackable($calls, $metadata),
             ];
         })->values()->all();
     }
 
     /**
-     * The trace's trackable when all its calls have the same one.
+     * Get the trace's trackable when all its calls have the same one.
      *
      * @param  Collection<int, SpectraRequest>  $calls
      * @param  array<string, array<string, mixed>>  $metadata
      * @return array<string, mixed>|null
      */
-    private function trackable(Collection $calls, array $metadata): ?array
+    private function resolveTrackable(Collection $calls, array $metadata): ?array
     {
         $trackables = $calls
             ->filter(fn (SpectraRequest $call) => filled($call->trackable_type) && filled($call->trackable_id))

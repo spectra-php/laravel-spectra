@@ -30,7 +30,7 @@ class MessageTextExtractor
     ) {}
 
     /**
-     * The text of the last user message in a stored request body.
+     * Get the text of the last user message in a stored request body.
      *
      * @param  mixed  $request  the decoded `request` column
      */
@@ -64,7 +64,7 @@ class MessageTextExtractor
     }
 
     /**
-     * The model's reply text of a stored call.
+     * Get the model's reply text of a stored call.
      */
     public function reply(SpectraRequest $call): ?string
     {
@@ -86,8 +86,10 @@ class MessageTextExtractor
     }
 
     /**
-     * The last message a user sent. Gemini may leave out the role of a
-     * user's turn, so with $roleOptional a message without one counts.
+     * Find the last message a user sent.
+     *
+     * Gemini may leave out the role of a user's turn, so with $roleOptional
+     * a message without one counts.
      *
      * @param  array<mixed>  $messages
      * @return array<string, mixed>|null
@@ -110,7 +112,7 @@ class MessageTextExtractor
     }
 
     /**
-     * Text from a message's content: a string, or the text parts of a list
+     * Get the text from a message's content: a string, or the text parts of a list
      * (images, audio and tool results are left out).
      */
     protected function text(mixed $content): ?string

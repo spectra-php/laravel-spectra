@@ -21,19 +21,15 @@ trait FiltersRequests
     /** Every query parameter applyRequestFilters() reads. */
     protected const REQUEST_FILTER_KEYS = [
         'provider', 'model', 'status', 'model_type', 'capability', 'finish_reason', 'has_tool_calls',
-        'is_reasoning', 'reasoning_effort', 'trace_id', 'conversation_id', 'trackable_type', 'trackable_id', 'tag', 'tags',
+        'is_reasoning', 'reasoning_effort', 'trace_id', 'conversation_id', 'prompt_name', 'prompt_version', 'error_fingerprint', 'trackable_type', 'trackable_id', 'tag', 'tags',
     ];
 
-    /** Whether the request sets any of the filters applyRequestFilters() reads. */
+    /**
+     * Determine if the request sets any of the filters applyRequestFilters() reads.
+     */
     protected function hasRequestFilters(Request $request): bool
     {
-        foreach (self::REQUEST_FILTER_KEYS as $key) {
-            if ($request->filled($key)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $request->anyFilled(self::REQUEST_FILTER_KEYS);
     }
 
     /**
@@ -54,7 +50,7 @@ trait FiltersRequests
         if ($request->filled('status')) {
             $status = $request->input('status');
             if ($status === 'success') {
-                $query->whereBetween('status_code', [200, 299]);
+                $query->successful();
             } elseif ($status === 'error') {
                 $query->failed();
             }
@@ -80,11 +76,11 @@ trait FiltersRequests
         }
 
         if ($request->filled('has_tool_calls')) {
-            $query->where('has_tool_calls', filter_var($request->input('has_tool_calls'), FILTER_VALIDATE_BOOLEAN));
+            $query->where('has_tool_calls', $request->boolean('has_tool_calls'));
         }
 
         if ($request->filled('is_reasoning')) {
-            $query->where('is_reasoning', filter_var($request->input('is_reasoning'), FILTER_VALIDATE_BOOLEAN));
+            $query->where('is_reasoning', $request->boolean('is_reasoning'));
         }
 
         if ($request->filled('reasoning_effort')) {
@@ -97,6 +93,18 @@ trait FiltersRequests
 
         if ($request->filled('conversation_id')) {
             $query->where('conversation_id', $request->input('conversation_id'));
+        }
+
+        if ($request->filled('prompt_name')) {
+            $query->where('prompt_name', $request->input('prompt_name'));
+        }
+
+        if ($request->filled('prompt_version')) {
+            $query->where('prompt_version', $request->input('prompt_version'));
+        }
+
+        if ($request->filled('error_fingerprint')) {
+            $query->where('error_fingerprint', $request->input('error_fingerprint'));
         }
 
         if ($request->filled('trackable_type')) {

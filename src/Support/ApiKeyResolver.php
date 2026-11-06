@@ -23,6 +23,7 @@ class ApiKeyResolver
         'xai' => ['spectra.api_keys.xai', 'services.xai.api_key', 'prism.providers.xai.api_key', 'ai.providers.xai.key'],
         'elevenlabs' => ['spectra.api_keys.elevenlabs', 'services.elevenlabs.api_key', 'prism.providers.elevenlabs.api_key', 'ai.providers.elevenlabs.key'],
         'openrouter' => ['spectra.api_keys.openrouter', 'services.openrouter.api_key', 'services.openrouter.key', 'prism.providers.openrouter.api_key', 'ai.providers.openrouter.key'],
+        'mistral' => ['spectra.api_keys.mistral', 'services.mistral.api_key', 'services.mistral.key', 'prism.providers.mistral.api_key', 'ai.providers.mistral.key'],
     ];
 
     /** @var array<string, array<int, string>> */
@@ -138,12 +139,10 @@ class ApiKeyResolver
             return null;
         }
 
-        $host = $parsed['host'];
-
         if (isset($parsed['port'])) {
-            $host .= ':'.$parsed['port'];
+            return "{$parsed['host']}:{$parsed['port']}";
         }
 
-        return $host;
+        return $parsed['host'];
     }
 }

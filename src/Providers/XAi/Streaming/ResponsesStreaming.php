@@ -64,7 +64,7 @@ class ResponsesStreaming extends StreamHandler
             $normalised['reported_cost_in_cents'] = $cost;
         }
 
-        if ($toolCalls !== []) {
+        if (filled($toolCalls)) {
             $normalised['tool_calls'] = $toolCalls;
         }
 
@@ -98,7 +98,7 @@ class ResponsesStreaming extends StreamHandler
             'id' => is_string($response['id'] ?? null) ? $response['id'] : null,
         ], fn (?string $value) => (bool) $value);
 
-        return $result !== [] ? $result : null;
+        return filled($result) ? $result : null;
     }
 
     /**

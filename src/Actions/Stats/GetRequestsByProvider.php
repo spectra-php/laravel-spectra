@@ -22,10 +22,11 @@ class GetRequestsByProvider
     public function __invoke(DateRange $dateRange, string $layout): Collection
     {
         return RequestByProvider::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->forLayout($layout)
                 ->groupByColumns('provider')
                 ->countAs()
+                ->orderBy('provider')
                 ->get()
         );
     }

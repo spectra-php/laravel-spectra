@@ -23,7 +23,7 @@ class GetTrackableUsageByProvider
     public function __invoke(string $type, string $id, DateRange $dateRange): Collection
     {
         return UsageByProvider::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->forTrackable($type, $id)
                 ->groupByColumns('provider')
                 ->countAs('requests')
@@ -31,6 +31,7 @@ class GetTrackableUsageByProvider
                 ->mediaSums()
                 ->successfulCost()
                 ->orderByDesc('cost')
+                ->orderBy('provider')
                 ->get()
         );
     }

@@ -40,7 +40,7 @@ final class XAiUsage
     ];
 
     /**
-     * The charge xAI reported, in US cents.
+     * Get the charge xAI reported, in US cents.
      *
      * @param  array<string, mixed>  $usage
      */
@@ -48,11 +48,11 @@ final class XAiUsage
     {
         $ticks = $usage['cost_in_usd_ticks'] ?? null;
 
-        return is_numeric($ticks) ? (float) $ticks / self::TICKS_PER_CENT : null;
+        return is_numeric($ticks) ? Payload::float($ticks) / self::TICKS_PER_CENT : null;
     }
 
     /**
-     * Server-side tool usage keyed like XAiPricing::toolCallPricing().
+     * Get the server-side tool usage, keyed like XAiPricing::toolCallPricing().
      *
      * @param  array<string, mixed>  $usage
      * @return array<string, int>
@@ -79,7 +79,7 @@ final class XAiUsage
     }
 
     /**
-     * Tokens of an image or video job (spent by the prompt-rewriting model).
+     * Get the tokens of an image or video job (spent by the prompt-rewriting model).
      *
      * Unlike chat, these totals already include reasoning and image tokens:
      * `output_tokens` is the sum of `output_tokens_details`, and

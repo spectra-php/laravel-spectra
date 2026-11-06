@@ -42,6 +42,8 @@ class MessageStreaming extends StreamHandler
     }
 
     /**
+     * Get the usage so far from a `message_start` or `message_delta` event.
+     *
      * message_start: {"message": {"usage": {"input_tokens": 10, "cache_read_input_tokens": 5, ...}}}
      * message_delta: {"usage": {"input_tokens": 12, "output_tokens": 20, "server_tool_use": {...}}}
      *
@@ -124,7 +126,7 @@ class MessageStreaming extends StreamHandler
         $tier = Anthropic::pricingTierFromUsage($this->rawUsage);
         $multiplier = Anthropic::costMultiplierForGeo($this->rawUsage['inference_geo'] ?? null);
 
-        if ($toolCalls !== []) {
+        if (filled($toolCalls)) {
             $usage['tool_calls'] = $toolCalls;
         }
 

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenAI\Handlers;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\HasProviderLatency;
+use Spectra\Contracts\ReportsJobFailure;
 use Spectra\Data\Metrics;
 use Spectra\Providers\OpenAI\MeasuresJobLatency;
 
@@ -16,14 +18,15 @@ use Spectra\Providers\OpenAI\MeasuresJobLatency;
  * usage, which TextHandler skips. The response is recorded when a poll
  * returns it in a final state (`completed`, `incomplete`, `failed`,
  * `cancelled`). Every poll carries the same response id, so repeated polls
- * update one row instead of adding new ones.
+ * update one row instead of adding new ones. A `failed` response arrives as
+ * an HTTP 200 with its error inside, and is recorded as a failed request.
  *
  * Fetching a stored response that was not created in the background is not
  * recorded again: its original request already was. The same path also
  * serves `/v1/responses/input_tokens` (a free token count), which is never
  * a response object and so is skipped too.
  */
-class BackgroundResponseHandler extends TextHandler implements HasProviderLatency
+class BackgroundResponseHandler extends TextHandler implements HasProviderLatency, ReportsJobFailure
 {
     use MeasuresJobLatency;
 
@@ -46,11 +49,13 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
      */
     public function matchesEndpoint(string $endpoint): bool
     {
-        if (! preg_match('#^/v1/responses/([^/]+)(?:/cancel)?$#', $endpoint, $matches)) {
+        $pattern = '#^/v1/responses/([^/]+)(?:/cancel)?$#';
+
+        if (! Str::isMatch($pattern, $endpoint)) {
             return false;
         }
 
-        return ! in_array($matches[1], self::RESERVED_PATHS, true);
+        return ! in_array(Str::match($pattern, $endpoint), self::RESERVED_PATHS, true);
     }
 
     /**
@@ -69,6 +74,22 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
     }
 
     /**
+     * Get the error message of a background response that ended `failed`, otherwise null.
+     *
+     * @param  array<string, mixed>  $responseData
+     */
+    public function extractFailure(array $responseData): ?string
+    {
+        if (($responseData['status'] ?? null) !== 'failed') {
+            return null;
+        }
+
+        $message = $responseData['error']['message'] ?? null;
+
+        return filled($message) ? $message : 'Response failed';
+    }
+
+    /**
      * Get the metrics of a finished background response, image output included.
      *
      * @param  array<string, mixed>  $requestData
@@ -76,18 +97,20 @@ class BackgroundResponseHandler extends TextHandler implements HasProviderLatenc
      */
     public function extractMetrics(array $requestData, array $responseData): Metrics
     {
-        $images = app(ResponsesImageHandler::class);
+        $imageHandler = app(ResponsesImageHandler::class);
 
-        if ($images->matchesResponse($responseData)) {
-            return $images->extractMetrics($requestData, $responseData);
+        if ($imageHandler->matchesResponse($responseData)) {
+            return $imageHandler->extractMetrics($requestData, $responseData);
         }
 
         return parent::extractMetrics($requestData, $responseData);
     }
 
     /**
-     * Never claim a response by its shape alone: without an endpoint every
-     * Responses API body would look like a background poll.
+     * Determine if the body alone identifies a background response, which it never does.
+     *
+     * Without an endpoint every Responses API body would look like a
+     * background poll.
      *
      * @param  array<string, mixed>  $data
      */

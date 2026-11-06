@@ -7,6 +7,7 @@ namespace Spectra\Data;
 use ArrayAccess;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use JsonSerializable;
 use ReflectionClass;
@@ -69,7 +70,7 @@ abstract readonly class DataTransferObject implements Arrayable, ArrayAccess, Js
      */
     public function offsetExists(mixed $offset): bool
     {
-        return array_key_exists($offset, $this->toArray());
+        return Arr::exists($this->toArray(), $offset);
     }
 
     /**

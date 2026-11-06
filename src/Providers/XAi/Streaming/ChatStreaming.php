@@ -27,10 +27,10 @@ class ChatStreaming extends OpenAiCompatibleStreaming
     public function usage(array $data, array $currentUsage): array
     {
         $usage = parent::usage($data, $currentUsage);
-        $raw = $this->handler->usageFrom($data);
-        $toolCalls = $raw !== null ? XAiUsage::toolCalls($raw) : [];
+        $chunkUsage = $this->handler->usageFrom($data);
+        $toolCalls = $chunkUsage !== null ? XAiUsage::toolCalls($chunkUsage) : [];
 
-        if ($toolCalls !== []) {
+        if (filled($toolCalls)) {
             $usage['tool_calls'] = $toolCalls;
         }
 

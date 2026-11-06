@@ -39,8 +39,6 @@ class SpectraSpan extends Model
 
     public $timestamps = false;
 
-    protected $table = 'spectra_spans';
-
     protected $guarded = [];
 
     /**

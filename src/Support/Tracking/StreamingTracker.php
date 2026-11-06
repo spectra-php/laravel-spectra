@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Spectra\Support\Tracking;
 
 use Generator;
+use Illuminate\Support\Str;
+use JsonException;
 use OpenAI\Responses\StreamResponse;
 use Spectra\Contracts\StreamsResponse;
 use Spectra\Data\TokenMetrics;
 use Spectra\Models\SpectraRequest;
 use Spectra\Spectra as SpectraManager;
+use Spectra\Support\Payload;
 use Spectra\Support\ProviderRegistry;
 use Throwable;
 
@@ -32,6 +35,12 @@ use Throwable;
  * When both happen for the same request (the middleware saw it and the user
  * also wrapped it), the manual tracker claims the request and the automatic
  * one stays silent, so it is recorded once.
+ *
+ * A stream that throws while it is read is recorded as a failed request: the
+ * middleware's body reports the exception here, and a manual tracker keeps
+ * the exception its loop saw. A manual tracker that was never finished
+ * records what it has when it is released, so a stream that broke off
+ * before `finish()` is not lost.
  */
 class StreamingTracker
 {
@@ -105,7 +114,7 @@ class StreamingTracker
     ];
 
     /**
-     * Provider and model are optional - they will be auto-detected from the stream.
+     * Create a new streaming tracker; the provider and model are detected from the stream when not given.
      *
      * @param  array<string, mixed>  $options
      */
@@ -118,7 +127,7 @@ class StreamingTracker
     }
 
     /**
-     * A tracker bound to a request context the middleware already started.
+     * Create a tracker bound to a request context the middleware already started.
      */
     public static function forContext(RequestContext $context): self
     {
@@ -234,6 +243,7 @@ class StreamingTracker
             foreach ($stream as $chunk) {
                 $text = $this->ingest($chunk);
 
+                // A whitespace-only delta is real text, so only '' is held back.
                 if ($text !== null && $text !== '') {
                     yield $text;
                 }
@@ -303,15 +313,15 @@ class StreamingTracker
                 return self::STREAM_CLASS_MAP[$className];
             }
 
-            // Partial match fallback
-            $classNameLower = strtolower($className);
-            if (str_contains($classNameLower, 'openai')) {
+            // Stream classes missing from the map still carry the provider's name.
+            $classNameLower = Str::lower($className);
+            if (Str::contains($classNameLower, 'openai')) {
                 return 'openai';
             }
-            if (str_contains($classNameLower, 'anthropic')) {
+            if (Str::contains($classNameLower, 'anthropic')) {
                 return 'anthropic';
             }
-            if (str_contains($classNameLower, 'google') || str_contains($classNameLower, 'gemini')) {
+            if (Str::contains($classNameLower, ['google', 'gemini'])) {
                 return 'google';
             }
         }
@@ -354,6 +364,7 @@ class StreamingTracker
 
         $text = rescue(fn () => $this->extractText($data));
 
+        // A whitespace-only delta is the first token too.
         if ($text !== null && $text !== '' && $this->firstTokenTime === null) {
             $this->firstTokenTime = microtime(true);
             $ttft = (int) (($this->firstTokenTime - $this->startTime) * 1000);
@@ -381,10 +392,14 @@ class StreamingTracker
     {
         if (is_array($chunk)) {
             $data = $chunk;
+        } elseif (is_object($chunk) && method_exists($chunk, 'toArray')) {
+            $data = $chunk->toArray();
         } elseif (is_object($chunk)) {
-            $data = method_exists($chunk, 'toArray')
-                ? $chunk->toArray()
-                : (($json = json_encode($chunk)) !== false ? (json_decode($json, true) ?? []) : []);
+            try {
+                $data = json_decode(json_encode($chunk, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR) ?? [];
+            } catch (JsonException) {
+                return [];
+            }
         } else {
             return [];
         }
@@ -492,7 +507,7 @@ class StreamingTracker
     }
 
     /**
-     * Usage data typically arrives in the final chunk of the stream.
+     * Extract the token usage of a chunk; it typically arrives in the final chunk of the stream.
      *
      * @param  array<string, mixed>  $data
      */
@@ -542,7 +557,6 @@ class StreamingTracker
             return;
         }
 
-        // Generic fallback
         if (isset($data['choices'][0]['finish_reason'])) {
             $this->finishReason = $data['choices'][0]['finish_reason'];
         }
@@ -566,7 +580,6 @@ class StreamingTracker
             return;
         }
 
-        // Generic fallback
         if (filled($data['model'] ?? null) && $this->model === null) {
             $this->model = $data['model'];
         }
@@ -592,11 +605,44 @@ class StreamingTracker
     }
 
     /**
-     * Whether finish() has already recorded this stream.
+     * Record the stream as failed with the exception that broke it off,
+     * keeping the usage it reported before. Safe to call more than once.
+     */
+    public function fail(Throwable $exception): SpectraRequest
+    {
+        $this->error ??= $exception;
+
+        return $this->finish();
+    }
+
+    /**
+     * Determine if finish() has already recorded this stream.
      */
     public function isFinished(): bool
     {
         return $this->result !== null;
+    }
+
+    /**
+     * Record a stream that was never finished when the tracker is released:
+     * one whose loop threw, or one that claimed the middleware's context,
+     * which stays silent for it and would otherwise never be recorded.
+     */
+    public function __destruct()
+    {
+        if ($this->result !== null || ! $this->contextInitialized || $this->context === null) {
+            return;
+        }
+
+        if ($this->error === null && ! $this->context->streamClaimed) {
+            return;
+        }
+
+        try {
+            $this->finish();
+        } catch (Throwable) {
+            // The application may be shutting down; tracking is best effort.
+        }
     }
 
     /**
@@ -607,7 +653,8 @@ class StreamingTracker
         $manager = app(SpectraManager::class);
 
         // Nothing streamed, nothing set manually, no error: skip recording
-        // instead of persisting an all-zero request row.
+        // instead of persisting an all-zero request row. Content is compared
+        // with '' because whitespace-only streamed text still counts.
         if (! $this->contextInitialized
             && $this->error === null
             && ! $this->sawStreamData
@@ -679,10 +726,8 @@ class StreamingTracker
         }
 
         $context->finishReason = $this->finishReason;
-        $reasoningTokens = $this->usage['reasoning_tokens'] ?? 0;
-        $context->reasoningTokens = is_numeric($reasoningTokens) ? (int) $reasoningTokens : 0;
+        $context->reasoningTokens = Payload::int($this->usage['reasoning_tokens'] ?? null);
 
-        // Detect tool calls from finish_reason
         if ($this->finishReason !== null && in_array($this->finishReason, ['tool_calls', 'tool_use'], true)) {
             $context->hasToolCalls = true;
         }
@@ -705,8 +750,8 @@ class StreamingTracker
     }
 
     /**
-     * The model type from the handler that matches the last chunk, or from
-     * the endpoint alone when no handler matches.
+     * Set the model type from the handler that matches the last chunk, or
+     * from the endpoint alone when no handler matches.
      */
     protected function resolveModelType(RequestContext $context): void
     {
@@ -769,11 +814,11 @@ class StreamingTracker
         $usage = $this->usage;
 
         if (isset($usage['reported_cost_in_cents']) && is_numeric($usage['reported_cost_in_cents'])) {
-            $this->context->reportedCostInCents = (float) $usage['reported_cost_in_cents'];
+            $this->context->reportedCostInCents = Payload::float($usage['reported_cost_in_cents']);
         }
 
         if (isset($usage['cost_multiplier']) && is_numeric($usage['cost_multiplier'])) {
-            $this->context->costMultiplier = (float) $usage['cost_multiplier'];
+            $this->context->costMultiplier = Payload::float($usage['cost_multiplier']);
         }
 
         if (filled($usage['pricing_tier'] ?? null) && $this->context->pricingTier === null) {
@@ -785,7 +830,7 @@ class StreamingTracker
 
             foreach ($usage['tool_calls'] as $type => $count) {
                 if (is_string($type) && is_numeric($count) && $count > 0) {
-                    $counts[$type] = max($counts[$type] ?? 0, (int) $count);
+                    $counts[$type] = max($counts[$type] ?? 0, Payload::int($count));
                 }
             }
 
@@ -841,7 +886,7 @@ class StreamingTracker
     }
 
     /**
-     * Manually set usage (useful when usage comes from a separate source).
+     * Set the usage manually, when it comes from a separate source.
      *
      * Accepts the TokenMetrics usage keys (prompt_tokens, completion_tokens,
      * cached_tokens, cache_write_tokens, reasoning_tokens, ...).
@@ -856,10 +901,11 @@ class StreamingTracker
     }
 
     /**
-     * Manually append content (useful for custom stream processing).
+     * Append content manually, for custom stream processing.
      */
     public function appendContent(string $text): self
     {
+        // Whitespace-only text is still the first token, so only '' is ignored.
         if ($this->firstTokenTime === null && $text !== '') {
             $this->firstTokenTime = microtime(true);
 

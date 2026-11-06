@@ -143,7 +143,7 @@ it('adds hosted tool fees, counting code interpreter once per container', functi
     // Tools: 2 web searches * 1¢ + 1 file search * 0.25¢ + 2 containers * 3¢ = 8.25
     expect($row->model)->toBe('GPT-5.4')
         ->and($row->snapshot)->toBe('gpt-5.4-2026-03-05')
-        ->and($row->tool_call_counts)->toBe(['web_search_call' => 2, 'file_search_call' => 1, 'code_interpreter_call' => 2])
+        ->and($row->tool_call_counts)->toEqual(['web_search_call' => 2, 'file_search_call' => 1, 'code_interpreter_call' => 2])
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(9.5, 1e-9);
 });
 

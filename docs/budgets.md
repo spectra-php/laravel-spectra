@@ -99,7 +99,7 @@ $user->configureAiBudget()
     ->save();
 ```
 
-Setting either threshold to `0` disables it. The defaults are 80% (warning) and 95% (critical).
+Setting either threshold to `0` disables it: a disabled warning never fires, and with the critical threshold disabled the warning fires anywhere from its percentage up to the limit. The defaults are 80% (warning) and 95% (critical).
 
 **Provider and model restrictions:**
 
@@ -195,7 +195,7 @@ The middleware checks budgets **before** the request runs, using the spend recor
 Spectra dispatches events when a budget threshold is reached. Listen for them to send notifications, trigger alerts, or do anything else when a budget runs low.
 
 <a name="alerts-fire-once"></a>
-### Alerts Fire Once per Period
+### Alerts Fire Once per Period {#alerts-fire-once}
 
 The warning, critical, and exceeded alerts fire **once** per budget, limit, and period. For example, the monthly warning for a user fires once in October, and again in November if usage reaches it again. A daily limit can fire once per day, and a weekly limit once per week. If you change a limit, its alerts can fire again.
 
@@ -203,7 +203,8 @@ Spectra keeps the "already sent" mark in your application's default cache store,
 
 One exception: a blocked request always dispatches `BudgetExceeded` (with `wasBlocked = true`), every time. See [`BudgetExceeded`](#budget-exceeded-event).
 
-### `BudgetThresholdReached`
+<a name="budget-threshold-reached-event"></a>
+### `BudgetThresholdReached` {#budget-threshold-reached-event}
 
 Fired when usage hits the warning or critical threshold:
 
@@ -226,7 +227,7 @@ Event::listen(BudgetThresholdReached::class, function ($event) {
 ```
 
 <a name="budget-exceeded-event"></a>
-### `BudgetExceeded`
+### `BudgetExceeded` {#budget-exceeded-event}
 
 Fired in two cases:
 

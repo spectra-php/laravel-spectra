@@ -47,8 +47,6 @@ class SpectraBudget extends Model
 {
     use HasUuids;
 
-    protected $table = 'spectra_budgets';
-
     protected $guarded = [];
 
     protected $attributes = [
@@ -78,8 +76,8 @@ class SpectraBudget extends Model
             'warning_threshold' => 'integer',
             'critical_threshold' => 'integer',
             'hard_limit' => 'boolean',
-            'allowed_providers' => 'array',
-            'allowed_models' => 'array',
+            'allowed_providers' => 'json',
+            'allowed_models' => 'json',
             'is_active' => 'boolean',
         ];
     }

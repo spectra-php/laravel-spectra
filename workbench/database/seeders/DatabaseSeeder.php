@@ -6,10 +6,19 @@ namespace Workbench\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Str;
+use RuntimeException;
+use Spectra\Enums\ScoreSource;
 use Spectra\Enums\SpanKind;
 use Spectra\Facades\Spectra;
+use Spectra\Models\SpectraAnnotationItem;
+use Spectra\Models\SpectraRequest;
+use Spectra\Support\Annotations\AnnotationQueues;
+use Spectra\Support\Evaluations\EvaluationRunner;
 use Spectra\Support\Tracking\ProviderErrorException;
 use Spectra\Support\Tracking\SpanStack;
+use Workbench\App\Evals\SupportAnswerEval;
 use Workbench\App\Models\User;
 
 /**
@@ -93,6 +102,7 @@ class DatabaseSeeder extends Seeder
         // Each request freezes the clock at its own time, so remember the real time first.
         $realNow = Carbon::now();
         $today = $realNow->copy()->startOfDay();
+        $this->promptCutover = $today->copy()->subDays(12);
 
         for ($day = 29; $day >= 0; $day--) {
             $date = $today->copy()->subDays($day);
@@ -149,10 +159,20 @@ class DatabaseSeeder extends Seeder
                             return Carbon::now();
                         }, ['top_k' => 5])->addMilliseconds(mt_rand(40, 900))
                         : $this->recordOne($spec, $at, $user, $source, $origin, $conversation)->addMilliseconds(mt_rand(40, 900));
+
+                    // Between the steps of a chain, the model often asks for tools the app runs.
+                    if ($spec[2] === 'text' && $step < $steps - 1 && mt_rand(1, 100) <= 60) {
+                        $at = $this->runTools($at);
+                    }
                 }
 
                 Carbon::setTestNow($at->copy()->addMilliseconds(mt_rand(10, 80)));
+                $traceId = Spectra::currentTraceId();
                 app(SpanStack::class)->finishUnit($unitKey);
+
+                if ($conversation !== null && $traceId !== null) {
+                    $this->scoreChatTurn($traceId, $conversation['id'], $user);
+                }
 
                 if ($step === 0) {
                     $i++;
@@ -161,6 +181,202 @@ class DatabaseSeeder extends Seeder
         }
 
         Carbon::setTestNow();
+
+        // The evaluation runs are sampled into the review queue too, so run them first.
+        $this->runEvaluations();
+        $this->reviewQueuedTraces($users->take(2)->values()->all());
+        $this->seedRedactedCall($users->first());
+
+        // The overview's Alerts card shows the state of the last check.
+        Artisan::call('spectra:check-alerts');
+    }
+
+    /**
+     * A dataset of refund questions, and two runs of the support agent's
+     * evaluation over it: v2 of the prompt five days ago, v3 yesterday.
+     */
+    protected function runEvaluations(): void
+    {
+        $dataset = Spectra::dataset('refund-questions');
+        $dataset->model()->forceFill(['description' => 'Refund questions customers asked, with the answer we want'])->save();
+
+        foreach ([
+            'Can I get a refund on my annual plan?' => 'Yes. Annual plans get a full refund within 30 days, then a refund for the unused months.',
+            'How long does a refund take?' => 'A refund reaches your card in 5 to 10 business days.',
+            'Do you refund unused seats?' => 'Yes, removed seats are refunded on your next invoice.',
+            'I was charged twice, what do I do?' => 'We refund the double charge right away. Reply with the invoice number.',
+            'Can I get a refund after cancelling?' => 'Yes, within 30 days of the charge you get a full refund.',
+            'Is the setup fee refundable?' => 'The setup fee is refunded only within the first 14 days.',
+            'Can I get my refund as credit?' => 'Yes, we can add the refund as account credit instead.',
+            'Why was my refund smaller?' => 'Discounts and taxes are taken off the refund, as on the invoice.',
+        ] as $question => $answer) {
+            $dataset->add(['question' => $question], expected: $answer);
+        }
+
+        foreach (['v2' => 5, 'v3' => 1] as $version => $daysAgo) {
+            Carbon::setTestNow(Carbon::now()->subDays($daysAgo)->setTime(16, 20));
+            app(EvaluationRunner::class)->run(new SupportAnswerEval($version), metadata: ['prompt_version' => $version]);
+            Carbon::setTestNow();
+        }
+    }
+
+    /**
+     * Two reviewers worked through the support-review queue up to three
+     * days ago, so the Review screen shows progress and traces still waiting.
+     *
+     * @param  array<int, User>  $reviewers
+     */
+    protected function reviewQueuedTraces(array $reviewers): void
+    {
+        $queues = app(AnnotationQueues::class);
+
+        SpectraAnnotationItem::query()
+            ->where('queue', 'support-review')
+            ->where('created_at', '<', Carbon::now()->subDays(3))
+            ->oldest('created_at')
+            ->get()
+            ->each(function (SpectraAnnotationItem $item) use ($queues, $reviewers): void {
+                Carbon::setTestNow($item->created_at?->copy()->addHours(mt_rand(2, 30)));
+                $reviewer = $reviewers[mt_rand(0, count($reviewers) - 1)];
+
+                if (mt_rand(1, 100) <= 8) {
+                    $queues->skip($item, $reviewer);
+
+                    return;
+                }
+
+                $helpful = mt_rand(1, 100) <= 78;
+                $queues->review($item, [
+                    'helpful' => $helpful,
+                    'accuracy' => $helpful ? mt_rand(4, 5) : mt_rand(1, 3),
+                    'issue' => $helpful ? 'none' : ['wrong-facts', 'tone', 'incomplete'][mt_rand(0, 2)],
+                ], $helpful ? null : 'Missed what the customer asked.', $reviewer);
+            });
+
+        Carbon::setTestNow();
+    }
+
+    /**
+     * Run one or two of the support agent's tools with Spectra::tool(), as
+     * the app would between two calls of a chain, and return when they ended.
+     */
+    protected function runTools(Carbon $at): Carbon
+    {
+        $tools = [
+            ['search_docs', ['query' => 'refund policy for annual plans', 'limit' => 3], [['title' => 'Refunds and cancellations', 'score' => 0.91], ['title' => 'Annual billing', 'score' => 0.84], ['title' => 'Changing plans', 'score' => 0.62]]],
+            ['get_order', ['order_id' => 4821], ['id' => 4821, 'status' => 'shipped', 'total' => 129.0, 'currency' => 'EUR', 'carrier' => 'DHL']],
+            ['lookup_customer', ['customer_id' => 'cus_7Hq2'], ['plan' => 'pro', 'seats' => 12, 'since' => '2024-03-18']],
+            ['create_ticket', ['subject' => 'Double charge on invoice INV-2291', 'priority' => 'high'], ['ticket_id' => 'T-10482', 'status' => 'open']],
+        ];
+
+        foreach (range(1, mt_rand(1, 2)) as $ignored) {
+            [$name, $arguments, $result] = $tools[mt_rand(0, count($tools) - 1)];
+            Carbon::setTestNow($at);
+            $fails = $name === 'get_order' && mt_rand(1, 100) <= 15;
+
+            try {
+                Spectra::tool($name, function () use ($at, $fails, $result) {
+                    Carbon::setTestNow($at->copy()->addMilliseconds(mt_rand(30, 1_200)));
+
+                    throw_if($fails, RuntimeException::class, 'Order service timed out after 1s');
+
+                    return $result;
+                }, $arguments, id: 'call_'.bin2hex(random_bytes(6)));
+            } catch (RuntimeException) {
+                // The agent tells the model the tool failed and carries on.
+            }
+
+            $at = Carbon::now()->addMilliseconds(mt_rand(5, 40));
+        }
+
+        return $at;
+    }
+
+    /**
+     * One support call tracked with redaction on, so the dashboard shows what
+     * a masked prompt and reply look like.
+     */
+    protected function seedRedactedCall(User $user): void
+    {
+        config()->set('spectra.storage.redaction.enabled', true);
+        Spectra::newTrace();
+        // An hour and a half ago, taking as long as a real call, so it doesn't top the lists as a 0ms call.
+        Carbon::setTestNow(Carbon::now()->subMinutes(95));
+
+        Spectra::track('openai', 'gpt-5.4-mini', function () {
+            Carbon::setTestNow(Carbon::now()->addMilliseconds(1_840));
+
+            return [
+                'id' => 'chatcmpl-redaction-demo',
+                'model' => 'gpt-5.4-mini',
+                'choices' => [['index' => 0, 'finish_reason' => 'stop', 'message' => [
+                    'role' => 'assistant',
+                    'content' => 'Thanks! I sent the refund confirmation to jonas.berg@example.com. The card ending 4242 will be credited in 3-5 days.',
+                ]]],
+                'usage' => ['prompt_tokens' => 64, 'completion_tokens' => 31],
+            ];
+        }, [
+            'endpoint' => '/v1/chat/completions',
+            'origin' => 'POST /api/chats/{chat}/messages',
+            'trackable_type' => $user->getMorphClass(),
+            'trackable_id' => $user->getKey(),
+            'request_data' => ['model' => 'gpt-5.4-mini', 'messages' => [
+                ['role' => 'user', 'content' => 'Refund order 1234567812345678 to card 4242 4242 4242 4242. Email jonas.berg@example.com or call +49 30 1234 5678. My old key was sk-proj-Abc123def456ghi789jkl012mno345.'],
+            ]],
+        ]);
+
+        Carbon::setTestNow();
+        config()->set('spectra.storage.redaction.enabled', false);
+    }
+
+    /** When support-answer v3 replaced v2. */
+    protected ?Carbon $promptCutover = null;
+
+    /**
+     * The prompt template and version a demo call used, if any.
+     *
+     * @param  array{id: string, turn: int, at: Carbon}|null  $conversation
+     * @return array{0: ?string, 1: ?string}
+     */
+    protected function promptFor(string $type, string $origin, ?array $conversation, ?Carbon $at = null): array
+    {
+        if ($conversation !== null && $type === 'text') {
+            return ['support-answer', $at !== null && $this->promptCutover !== null && $at->lessThan($this->promptCutover) ? 'v2' : 'v3'];
+        }
+
+        if ($origin === 'App\\Jobs\\SummarizeDocument' && $type === 'text') {
+            return ['document-summary', 'v1'];
+        }
+
+        return [null, null];
+    }
+
+    /**
+     * Score some chat answers the way an app would: the user's thumbs up or
+     * down on the answer, a model's 1-5 rating of the last call, and now and
+     * then the conversation's sentiment.
+     */
+    protected function scoreChatTurn(string $traceId, string $conversationId, User $user): void
+    {
+        $lastCall = SpectraRequest::query()->where('trace_id', $traceId)->latest('created_at')->value('id');
+
+        if (mt_rand(1, 100) <= 45) {
+            $helpful = mt_rand(1, 100) <= 78;
+            $comments = $helpful
+                ? [null, null, null, 'Exactly what I needed', 'Clear and quick, thanks']
+                : [null, 'It ignored my order number', 'Too long, I just wanted the steps', 'Wrong refund policy'];
+
+            Spectra::score('helpful', $helpful, traceId: $traceId, comment: $comments[mt_rand(0, count($comments) - 1)], source: ScoreSource::User, author: $user);
+        }
+
+        if ($lastCall !== null && mt_rand(1, 100) <= 35) {
+            Spectra::score('answer_quality', mt_rand(25, 50) / 10, request: $lastCall, source: ScoreSource::Model, metadata: ['judge' => 'gpt-5.4-mini']);
+        }
+
+        if (mt_rand(1, 100) <= 10) {
+            $sentiments = ['positive', 'positive', 'neutral', 'negative'];
+            Spectra::score('sentiment', $sentiments[mt_rand(0, 3)], conversationId: $conversationId, source: ScoreSource::Model);
+        }
     }
 
     /**
@@ -183,6 +399,10 @@ class DatabaseSeeder extends Seeder
             'conversation_id' => $conversation['id'] ?? null,
             'conversation_turn' => $conversation['turn'] ?? null,
             'tags' => mt_rand(1, 100) <= 60 ? [$this->tags[array_rand($this->tags)]] : [],
+            // Chat answers and document summaries come from versioned prompts;
+            // support-answer v3 replaced v2 twelve days ago.
+            'prompt_name' => $this->promptFor($type, $origin, $conversation)[0],
+            'prompt_version' => $this->promptFor($type, $origin, $conversation, $at)[1],
         ]);
         $context->modelType = $type;
         $context->isStreaming = $streaming;
@@ -204,9 +424,7 @@ class DatabaseSeeder extends Seeder
         Carbon::setTestNow($at->copy()->addMilliseconds($latency));
 
         if (mt_rand(1, 100) <= 3) {
-            [$status, $message] = mt_rand(0, 1) === 0
-                ? [429, 'Rate limit reached for requests per minute. Please try again in 2s.']
-                : [500, 'The server had an error while processing your request.'];
+            [$status, $message] = $this->failureFor($provider, $model);
 
             Spectra::recordFailure($context, new ProviderErrorException($message, $status), $status);
 
@@ -234,7 +452,7 @@ class DatabaseSeeder extends Seeder
         $context->requestData = $exchange !== null ? $this->chatRequest($endpoint, $exchange[0]) : match ($type) {
             'tts' => [$provider === 'elevenlabs' ? 'text' : 'input' => str_repeat('Thanks for calling, how can I help you today? ', mt_rand(2, 60))],
             'video' => ['instances' => [['prompt' => 'A drone shot over a coastline at sunset']], 'parameters' => ['durationSeconds' => [4, 6, 8][mt_rand(0, 2)]]],
-            default => null,
+            default => [],
         };
 
         if ($type === 'tts') {
@@ -260,6 +478,25 @@ class DatabaseSeeder extends Seeder
         ]);
 
         return $at->copy()->addMilliseconds($latency);
+    }
+
+    /**
+     * A provider failure, with the ids and numbers that change from one call
+     * to the next, so the Errors screen has real groups to show.
+     *
+     * @return array{0: int, 1: string}
+     */
+    protected function failureFor(string $provider, string $model): array
+    {
+        $roll = mt_rand(1, 100);
+
+        return match (true) {
+            $provider === 'anthropic' && $roll <= 40 => [529, 'Overloaded'],
+            $roll <= 45 => [429, sprintf('Rate limit reached for %s in organization org-%s on tokens per min (TPM): Limit 30000, Used %d, Requested %d. Please try again in %ss.', $model, bin2hex(random_bytes(6)), mt_rand(24_000, 29_900), mt_rand(800, 6_000), number_format(mt_rand(5, 300) / 10, 1))],
+            $roll <= 70 => [500, sprintf('The server had an error while processing your request. Sorry about that! You can retry your request, or contact us through our help center if the error persists. (Please include the request ID req_%s in your message.)', bin2hex(random_bytes(12)))],
+            $roll <= 90 => [400, sprintf("This model's maximum context length is 128000 tokens. However, your messages resulted in %d tokens. Please reduce the length of the messages.", mt_rand(128_100, 190_000))],
+            default => [401, sprintf('Incorrect API key provided: sk-proj-****%s. You can find your API key at https://platform.openai.com/account/api-keys.', Str::lower(Str::random(4)))],
+        };
     }
 
     /**

@@ -11,10 +11,9 @@ use Spectra\Models\SpectraRequest;
  */
 function cohereSse(array ...$events): string
 {
-    return implode('', array_map(
-        fn (array $event) => 'event: '.$event['type']."\n".'data: '.json_encode($event)."\n\n",
-        $events,
-    ));
+    return collect($events)
+        ->map(fn (array $event) => 'event: '.$event['type']."\n".'data: '.json_encode($event, JSON_THROW_ON_ERROR)."\n\n")
+        ->implode('');
 }
 
 it('bills a v2 chat on its billed tokens, with cached tokens at the input rate', function () {
@@ -63,7 +62,8 @@ it('tracks a streamed v2 chat from its message-end usage', function () {
         ->and($row->prompt_tokens)->toBe(5)
         ->and($row->completion_tokens)->toBe(26)
         ->and($row->finish_reason)->toBe('COMPLETE')
-        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.00040875, 1e-12);
+        // The cost column holds six decimals, so the stored value is within 5e-7 of the exact one.
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.00040875, 1e-6);
 });
 
 it('bills embed image tokens on top of text tokens', function () {

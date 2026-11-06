@@ -17,9 +17,9 @@ readonly class TrackablesResponse extends PaginatedResponse
      * Create a new trackables response instance.
      *
      * @param  array<int, mixed>  $data
-     * @param  array<int, string>  $types
      * @param  array<int, string>  $available_tags
      * @param  array<int, string>  $available_finish_reasons
+     * @param  array<int, string>  $available_trackable_types
      * @param  Collection<int, ModelTypeLatency>  $latency_by_model_type
      */
     public function __construct(
@@ -27,12 +27,12 @@ readonly class TrackablesResponse extends PaginatedResponse
         int $current_page,
         int $last_page,
         int $total,
-        public array $types,
         public array $available_tags,
         public array $available_finish_reasons,
+        public array $available_trackable_types,
         public TrackablesSummaryResponse $summary,
         public Collection $latency_by_model_type,
     ) {
-        parent::__construct($data, $current_page, $last_page, $total);
+        parent::__construct(data: $data, current_page: $current_page, last_page: $last_page, total: $total);
     }
 }

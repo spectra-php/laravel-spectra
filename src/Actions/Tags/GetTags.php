@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Tags;
 
+use Illuminate\Support\Facades\DB;
 use Spectra\Data\Responses\TagsResponse;
 use Spectra\Data\Tag;
 use Spectra\Models\SpectraTag;
@@ -20,7 +21,12 @@ class GetTags
     {
         return new TagsResponse(
             tags: Tag::fromCollection(
-                SpectraTag::query()->withCount('requests')
+                // From the link table alone: joining each request adds nothing, as
+                // deleting a request deletes its links.
+                SpectraTag::query()
+                    ->addSelect(['requests_count' => DB::connection((new SpectraTag)->getConnectionName())->table('spectra_requests_tags')
+                        ->selectRaw('COUNT(*)')
+                        ->whereColumn('spectra_requests_tags.tag_id', 'spectra_tags.id')])
                     ->orderByDesc('requests_count')
                     ->get()
             ),

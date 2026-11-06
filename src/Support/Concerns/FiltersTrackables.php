@@ -23,8 +23,13 @@ trait FiltersTrackables
      */
     protected function applyTrackableFilters(Builder $query, Request $request): void
     {
-        if ($request->filled('type')) {
-            $query->where('trackable_type', $request->input('type'));
+        if ($request->filled('trackable_type')) {
+            $query->where('trackable_type', $request->input('trackable_type'));
+        }
+
+        // A list of types (the users screen's); an empty list matches nothing.
+        if (is_array($request->input('trackable_types'))) {
+            $query->whereIn('trackable_type', $request->input('trackable_types'));
         }
 
         if ($request->filled('provider')) {
@@ -32,13 +37,13 @@ trait FiltersTrackables
         }
 
         if ($request->filled('model')) {
-            $query->where('model', 'like', '%'.$request->input('model').'%');
+            $query->where('model', 'like', "%{$request->input('model')}%");
         }
 
         if ($request->filled('status')) {
             $status = $request->input('status');
             if ($status === 'success') {
-                $query->whereBetween('status_code', [200, 299]);
+                $query->successful();
             } elseif ($status === 'error') {
                 $query->failed();
             }
@@ -53,7 +58,7 @@ trait FiltersTrackables
         }
 
         if ($request->filled('has_tool_calls')) {
-            $query->where('has_tool_calls', filter_var($request->input('has_tool_calls'), FILTER_VALIDATE_BOOLEAN));
+            $query->where('has_tool_calls', $request->boolean('has_tool_calls'));
         }
 
         if ($request->filled('trace_id')) {

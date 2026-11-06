@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\OpenAI;
 
 use Spectra\Data\TokenMetrics;
+use Spectra\Support\Payload;
 
 /**
  * Turns the usage objects of OpenAI's APIs into TokenMetrics.
@@ -39,58 +40,58 @@ final class OpenAiUsage
     }
 
     /**
-     * Chat Completions and legacy Completions usage.
+     * Get the token metrics of a Chat Completions or legacy Completions usage object.
      *
      * @param  array<string, mixed>  $usage
      */
     public static function fromChatCompletions(array $usage): TokenMetrics
     {
-        $input = self::details($usage, 'prompt_tokens_details');
-        $output = self::details($usage, 'completion_tokens_details');
-        $cachedByModality = self::details($input, 'cached_tokens_details');
+        $input = self::readDetails($usage, 'prompt_tokens_details');
+        $output = self::readDetails($usage, 'completion_tokens_details');
+        $cachedByModality = self::readDetails($input, 'cached_tokens_details');
 
         return new TokenMetrics(
-            promptTokens: self::int($usage, 'prompt_tokens', 'input_tokens'),
-            completionTokens: self::int($usage, 'completion_tokens', 'output_tokens'),
-            cachedTokens: self::int($input, 'cached_tokens'),
-            reasoningTokens: self::int($output, 'reasoning_tokens'),
-            cacheWriteTokens: self::int($input, 'cache_write_tokens'),
-            cacheWrite1hTokens: self::cacheWrites12h($input),
-            audioInputTokens: self::uncached($input, $cachedByModality, 'audio_tokens'),
-            imageInputTokens: self::uncached($input, $cachedByModality, 'image_tokens'),
-            audioOutputTokens: self::int($output, 'audio_tokens'),
-            imageOutputTokens: self::int($output, 'image_tokens'),
+            promptTokens: self::readInt($usage, 'prompt_tokens', 'input_tokens'),
+            completionTokens: self::readInt($usage, 'completion_tokens', 'output_tokens'),
+            cachedTokens: self::readInt($input, 'cached_tokens'),
+            reasoningTokens: self::readInt($output, 'reasoning_tokens'),
+            cacheWriteTokens: self::readInt($input, 'cache_write_tokens'),
+            cacheWrite1hTokens: self::countCacheWrites12h($input),
+            audioInputTokens: self::countUncached($input, $cachedByModality, 'audio_tokens'),
+            imageInputTokens: self::countUncached($input, $cachedByModality, 'image_tokens'),
+            audioOutputTokens: self::readInt($output, 'audio_tokens'),
+            imageOutputTokens: self::readInt($output, 'image_tokens'),
         );
     }
 
     /**
-     * Responses API usage (also used by `/v1/responses/compact`).
+     * Get the token metrics of a Responses API usage object (also used by `/v1/responses/compact`).
      *
      * @param  array<string, mixed>  $usage
      */
     public static function fromResponses(array $usage): TokenMetrics
     {
-        $input = self::details($usage, 'input_tokens_details');
-        $output = self::details($usage, 'output_tokens_details');
-        $cachedByModality = self::details($input, 'cached_tokens_details');
+        $input = self::readDetails($usage, 'input_tokens_details');
+        $output = self::readDetails($usage, 'output_tokens_details');
+        $cachedByModality = self::readDetails($input, 'cached_tokens_details');
 
         return new TokenMetrics(
-            promptTokens: self::int($usage, 'input_tokens'),
-            completionTokens: self::int($usage, 'output_tokens'),
+            promptTokens: self::readInt($usage, 'input_tokens'),
+            completionTokens: self::readInt($usage, 'output_tokens'),
             // Some examples flatten the details next to the totals; accept both.
-            cachedTokens: self::int($input, 'cached_tokens') ?: self::int($usage, 'cached_tokens'),
-            reasoningTokens: self::int($output, 'reasoning_tokens') ?: self::int($usage, 'reasoning_tokens'),
-            cacheWriteTokens: self::int($input, 'cache_write_tokens') ?: self::int($usage, 'cache_write_tokens'),
-            cacheWrite1hTokens: self::cacheWrites12h($input),
-            audioInputTokens: self::uncached($input, $cachedByModality, 'audio_tokens'),
-            imageInputTokens: self::uncached($input, $cachedByModality, 'image_tokens'),
-            audioOutputTokens: self::int($output, 'audio_tokens'),
-            imageOutputTokens: self::int($output, 'image_tokens'),
+            cachedTokens: self::readInt($input, 'cached_tokens') ?: self::readInt($usage, 'cached_tokens'),
+            reasoningTokens: self::readInt($output, 'reasoning_tokens') ?: self::readInt($usage, 'reasoning_tokens'),
+            cacheWriteTokens: self::readInt($input, 'cache_write_tokens') ?: self::readInt($usage, 'cache_write_tokens'),
+            cacheWrite1hTokens: self::countCacheWrites12h($input),
+            audioInputTokens: self::countUncached($input, $cachedByModality, 'audio_tokens'),
+            imageInputTokens: self::countUncached($input, $cachedByModality, 'image_tokens'),
+            audioOutputTokens: self::readInt($output, 'audio_tokens'),
+            imageOutputTokens: self::readInt($output, 'image_tokens'),
         );
     }
 
     /**
-     * Images API usage (`/v1/images/*` and their streamed `*.completed` events).
+     * Get the token metrics of an Images API usage object (`/v1/images/*` and their streamed `*.completed` events).
      *
      * GPT Image models bill image output tokens at their own rate. When the
      * response has no `output_tokens_details`, every output token is an image
@@ -101,40 +102,41 @@ final class OpenAiUsage
      */
     public static function fromImages(array $usage): TokenMetrics
     {
-        $input = self::details($usage, 'input_tokens_details');
-        $output = self::details($usage, 'output_tokens_details');
-        $cachedByModality = self::details($input, 'cached_tokens_details');
-        $outputTokens = self::int($usage, 'output_tokens');
+        $input = self::readDetails($usage, 'input_tokens_details');
+        $output = self::readDetails($usage, 'output_tokens_details');
+        $cachedByModality = self::readDetails($input, 'cached_tokens_details');
+        $outputTokens = self::readInt($usage, 'output_tokens');
 
         return new TokenMetrics(
-            promptTokens: self::int($usage, 'input_tokens'),
+            promptTokens: self::readInt($usage, 'input_tokens'),
             completionTokens: $outputTokens,
-            cachedTokens: self::int($input, 'cached_tokens'),
-            imageInputTokens: self::uncached($input, $cachedByModality, 'image_tokens'),
-            imageOutputTokens: $output === [] ? $outputTokens : self::int($output, 'image_tokens'),
+            cachedTokens: self::readInt($input, 'cached_tokens'),
+            imageInputTokens: self::countUncached($input, $cachedByModality, 'image_tokens'),
+            imageOutputTokens: blank($output) ? $outputTokens : self::readInt($output, 'image_tokens'),
         );
     }
 
     /**
-     * Transcription usage of the `tokens` type. The `duration` type carries
-     * no tokens (see {@see transcriptionSeconds()}).
+     * Get the token metrics of a `tokens`-type transcription usage object.
+     *
+     * The `duration` type carries no tokens (see {@see transcriptionSeconds()}).
      *
      * @param  array<string, mixed>  $usage
      */
     public static function fromTranscription(array $usage): TokenMetrics
     {
         // The transcription API spells it `input_token_details`.
-        $input = self::details($usage, 'input_token_details') ?: self::details($usage, 'input_tokens_details');
+        $input = self::readDetails($usage, 'input_token_details') ?: self::readDetails($usage, 'input_tokens_details');
 
         return new TokenMetrics(
-            promptTokens: self::int($usage, 'input_tokens', 'prompt_tokens'),
-            completionTokens: self::int($usage, 'output_tokens', 'completion_tokens'),
-            audioInputTokens: self::int($input, 'audio_tokens'),
+            promptTokens: self::readInt($usage, 'input_tokens', 'prompt_tokens'),
+            completionTokens: self::readInt($usage, 'output_tokens', 'completion_tokens'),
+            audioInputTokens: self::readInt($input, 'audio_tokens'),
         );
     }
 
     /**
-     * Billed seconds of a `duration`-type transcription usage, if any.
+     * Get the billed seconds of a `duration`-type transcription usage, if any.
      *
      * @param  array<string, mixed>  $usage
      */
@@ -144,7 +146,7 @@ final class OpenAiUsage
             return null;
         }
 
-        return (float) $usage['seconds'];
+        return Payload::float($usage['seconds']);
     }
 
     /**
@@ -153,21 +155,21 @@ final class OpenAiUsage
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private static function details(array $data, string $key): array
+    private static function readDetails(array $data, string $key): array
     {
         return is_array($data[$key] ?? null) ? $data[$key] : [];
     }
 
     /**
-     * The first numeric value among the given keys, or 0.
+     * Get the first numeric value among the given keys, never below 0, or 0 when none is numeric.
      *
      * @param  array<string, mixed>  $data
      */
-    private static function int(array $data, string ...$keys): int
+    private static function readInt(array $data, string ...$keys): int
     {
         foreach ($keys as $key) {
             if (is_numeric($data[$key] ?? null)) {
-                return max(0, (int) $data[$key]);
+                return max(0, Payload::int($data[$key]));
             }
         }
 
@@ -175,27 +177,28 @@ final class OpenAiUsage
     }
 
     /**
-     * Cache writes with the 12-hour lifetime, capped at the write total.
+     * Count the cache writes with the 12-hour lifetime, capped at the write total.
      *
      * @param  array<string, mixed>  $input
      */
-    private static function cacheWrites12h(array $input): int
+    private static function countCacheWrites12h(array $input): int
     {
-        $writes = self::details($input, 'cache_write_tokens_details');
+        $writes = self::readDetails($input, 'cache_write_tokens_details');
 
-        return min(self::int($writes, 'ttl_12h_tokens'), self::int($input, 'cache_write_tokens'));
+        return min(self::readInt($writes, 'ttl_12h_tokens'), self::readInt($input, 'cache_write_tokens'));
     }
 
     /**
-     * Tokens of one modality minus the cached ones, because TokenMetrics
-     * counts audio and image input as uncached (cache reads have their own
-     * rate and are counted in cachedTokens).
+     * Count the tokens of one modality minus the cached ones.
+     *
+     * TokenMetrics counts audio and image input as uncached (cache reads
+     * have their own rate and are counted in cachedTokens).
      *
      * @param  array<string, mixed>  $input
      * @param  array<string, mixed>  $cachedByModality
      */
-    private static function uncached(array $input, array $cachedByModality, string $key): int
+    private static function countUncached(array $input, array $cachedByModality, string $key): int
     {
-        return max(0, self::int($input, $key) - self::int($cachedByModality, $key));
+        return max(0, self::readInt($input, $key) - self::readInt($cachedByModality, $key));
     }
 }

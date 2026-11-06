@@ -56,7 +56,7 @@ trait ReadsGeminiParts
     }
 
     /**
-     * The decoded bytes of an inline part, or null when it has none.
+     * Get the decoded bytes of an inline part, or null when it has none.
      *
      * @param  array<mixed>  $part
      */

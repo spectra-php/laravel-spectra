@@ -64,3 +64,14 @@ it('lists only the requests of the given trace id', function () {
 
     expect(collect(callRequests(['trace_id' => 'checkout-flow'])['data'])->pluck('model')->all())->toBe(['in-trace']);
 });
+
+it('lists only the requests attributed to one trackable type and offers every stored type', function () {
+    SpectraRequest::factory()->create(['model' => 'by-user', 'trackable_type' => 'App\\Models\\User', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['model' => 'by-team', 'trackable_type' => 'App\\Models\\Team', 'trackable_id' => '1']);
+    SpectraRequest::factory()->create(['model' => 'by-nobody']);
+
+    $json = callRequests(['trackable_type' => 'App\\Models\\Team']);
+
+    expect(collect($json['data'])->pluck('model')->all())->toBe(['by-team'])
+        ->and($json['available_trackable_types'])->toBe(['App\\Models\\Team', 'App\\Models\\User']);
+});

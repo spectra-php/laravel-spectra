@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace Spectra\Support\Tracking;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Enums\ModelType;
 use Spectra\Events\RequestTracked;
 use Spectra\Jobs\ExportTrackedRequestJob;
 use Spectra\Jobs\PersistSpectraRequestJob;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Annotations\AnnotationQueues;
+use Spectra\Support\Errors\ErrorFingerprint;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Pricing\RequestCostCalculator;
+use Spectra\Support\Redaction\Redactor;
 use Spectra\Support\RequestTransformer;
 use Throwable;
 
@@ -39,9 +43,12 @@ class RequestPersister
      */
     public function persist(RequestContext $context): SpectraRequest
     {
-        if (! config('spectra.enabled', true)) {
+        if (! config('spectra.enabled', true) || RecordingSwitch::isPaused()) {
             return new SpectraRequest;
         }
+
+        // The tools the model asked for before this call, when tool spans are on.
+        rescue(fn () => app(ToolSpanRecorder::class)->callFinished($context));
 
         try {
             return $this->store($context);
@@ -66,23 +73,28 @@ class RequestPersister
             return $request;
         }
 
-        $tags = $context->tags;
+        // Tag names are stored in a 255-character column.
+        $tags = array_map(fn (string $tag): string => Str::limit($tag, 255, ''), $context->tags);
+        // The review queues that sample this call's trace, picked now from
+        // config and written with the row, so the queue setting keeps that
+        // write off the request too.
+        $reviewQueues = rescue(fn () => app(AnnotationQueues::class)->sampling($context, $this->isFailed($context)), []);
 
         if (config('spectra.queue.enabled')) {
             // A retried job must update the row an earlier attempt saved,
             // not insert a second one and count the spend twice.
             $attributes['id'] ??= (new SpectraRequest)->newUniqueId();
 
-            return $this->persistViaQueue($attributes, $tags);
+            return $this->persistViaQueue($attributes, $tags, $reviewQueues);
         }
 
         if (config('spectra.queue.after_response') && ! app()->runningInConsole()) {
             $attributes['id'] ??= (new SpectraRequest)->newUniqueId();
 
-            return $this->persistAfterResponse($attributes, $tags);
+            return $this->persistAfterResponse($attributes, $tags, $reviewQueues);
         }
 
-        return $this->persistSync($attributes, $tags);
+        return $this->persistSync($attributes, $tags, $reviewQueues);
     }
 
     /**
@@ -92,7 +104,7 @@ class RequestPersister
      */
     public function buildAttributes(RequestContext $context): array
     {
-        $data = $context->toArray();
+        $columns = $context->toArray();
 
         $pricingTier = $context->pricingTier
             ?? app(PricingLookup::class)->defaultTier($context->provider)->value;
@@ -103,16 +115,22 @@ class RequestPersister
 
         // Raw payloads are only present in toArray() when the matching storage
         // switch allows it; never fall back to the context, which always has them.
-        $requestData = $data['request_data'] ?? null;
-        $response = $data['response'] ?? null;
+        $requestData = $columns['request_data'] ?? null;
+        $response = $columns['response'] ?? null;
+        $keepsPayload = $this->keepsPayload($context);
 
         return [
-            'batch_id' => $data['batch_id'] ?? null,
-            'trace_id' => $data['trace_id'] ?? null,
+            'id' => $context->id,
+            'batch_id' => $columns['batch_id'] ?? null,
+            'trace_id' => $columns['trace_id'] ?? null,
             'parent_span_id' => $context->parentSpanId,
             'span_id' => $context->spanId,
             'response_id' => $context->responseId,
-            'conversation_id' => $context->conversationId,
+            // Ids and names the app chooses are cut to their column's length, so
+            // an over-long one can't make the insert fail and lose the call.
+            'conversation_id' => $this->truncate($context->conversationId, 255),
+            'prompt_name' => $this->truncate($context->promptName, 100),
+            'prompt_version' => $this->truncate($context->promptVersion, 50),
             'conversation_turn' => $context->conversationTurn,
             'provider' => $context->provider,
             'model' => $this->resolveDisplayName($context->provider, $context->model),
@@ -124,8 +142,8 @@ class RequestPersister
             'pricing_tier' => $pricingTier,
             'trackable_type' => $context->trackableType,
             'trackable_id' => $context->trackableId,
-            'request' => $this->sanitizeForJson($requestData),
-            'response' => $this->sanitizeResponse($context, $response),
+            'request' => $keepsPayload ? $this->redact($this->sanitizeForJson($requestData)) : null,
+            'response' => $keepsPayload ? $this->redact($this->sanitizeResponse($context, $response)) : null,
             'prompt_tokens' => $context->promptTokens,
             'completion_tokens' => $context->completionTokens,
             'cached_tokens' => $context->cachedTokens,
@@ -143,7 +161,7 @@ class RequestPersister
             'prompt_cost' => $cost['prompt_cost'] ?? 0,
             'completion_cost' => $cost['completion_cost'] ?? 0,
             'total_cost_in_cents' => $cost['total_cost_in_cents'],
-            'currency' => strtoupper((string) config('spectra.costs.currency', 'USD')),
+            'currency' => Str::upper((string) config('spectra.costs.currency', 'USD')),
             // Async jobs report their own generation time; the HTTP call that
             // fetched the result only measured a status poll.
             'latency_ms' => $context->providerLatencyMs ?? $context->latencyMs,
@@ -154,12 +172,14 @@ class RequestPersister
             'is_streaming' => $context->isStreaming,
             'status_code' => $context->httpStatus,
             'error_type' => $context->errorType,
-            'error_message' => $this->truncate($context->errorMessage, 10_000),
+            'error_message' => $this->redact($this->truncate(app(Redactor::class)->scrubSecrets($context->errorMessage), 10_000)),
+            'error_fingerprint' => $this->isFailed($context) ? app(ErrorFingerprint::class)->for($context->provider, $context->httpStatus, $context->errorType, $context->errorMessage, [$context->model, $context->snapshot]) : null,
             'media_storage_path' => $context->mediaStoragePath ?: null,
             'metadata' => $context->metadata ?: null,
             'request_source' => $context->requestSource,
             'origin' => $context->origin,
-            'laravel_request_id' => $context->laravelRequestId,
+            // The X-Request-ID header is the client's: a long one must not drop the call.
+            'laravel_request_id' => $this->truncate($context->laravelRequestId, 255),
             'ip_address' => $context->ipAddress,
             'user_agent' => $this->truncate($context->userAgent, 1_000),
             'created_at' => $context->getStartedAt(),
@@ -167,6 +187,35 @@ class RequestPersister
             'started_at' => $context->getStartedAt(),
             'completed_at' => $context->getCompletedAt(),
         ];
+    }
+
+    /**
+     * Determine if this call's request and response bodies are stored. With
+     * `storage.sampling.rate` below 1, only that share of traces keep them
+     * (every call of a trace together, picked by its trace id), and failed
+     * calls always do unless `keep_failures` is off. Metrics and cost are
+     * stored for every call either way.
+     */
+    protected function keepsPayload(RequestContext $context): bool
+    {
+        return app(PayloadSampler::class)->keeps($context->traceId, $this->isFailed($context));
+    }
+
+    /**
+     * Determine if the call failed: it threw, the provider answered with no
+     * 2xx status, or it reported an error inside a 2xx answer.
+     */
+    protected function isFailed(RequestContext $context): bool
+    {
+        return ! SpectraRequest::isSuccessfulOutcome($context->httpStatus, $context->errorType);
+    }
+
+    /**
+     * Mask personal data and secrets in a stored value when redaction is on.
+     */
+    protected function redact(mixed $value): mixed
+    {
+        return app(Redactor::class)->redact($value);
     }
 
     /**
@@ -182,10 +231,13 @@ class RequestPersister
      *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
+     * @param  list<string>  $reviewQueues  Review queues to put the call's trace in
      */
-    protected function persistSync(array $attributes, array $tags): SpectraRequest
+    protected function persistSync(array $attributes, array $tags, array $reviewQueues = []): SpectraRequest
     {
-        return $this->writer->write($attributes, $tags);
+        // A synchronous write is never retried, so only a polled job (named by
+        // its response id) can already have a row.
+        return $this->writer->write($attributes, $tags, reviewQueues: $reviewQueues, mayExist: filled($attributes['response_id'] ?? null));
     }
 
     /**
@@ -193,10 +245,11 @@ class RequestPersister
      *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
+     * @param  list<string>  $reviewQueues  Review queues to put the call's trace in
      */
-    protected function persistViaQueue(array $attributes, array $tags): SpectraRequest
+    protected function persistViaQueue(array $attributes, array $tags, array $reviewQueues = []): SpectraRequest
     {
-        $job = new PersistSpectraRequestJob($attributes, $tags);
+        $job = new PersistSpectraRequestJob($attributes, $tags, $reviewQueues);
 
         if ($connection = config('spectra.queue.connection')) {
             $job->onConnection($connection);
@@ -220,10 +273,11 @@ class RequestPersister
      *
      * @param  array<string, mixed>  $attributes
      * @param  array<int, string>  $tags
+     * @param  list<string>  $reviewQueues  Review queues to put the call's trace in
      */
-    protected function persistAfterResponse(array $attributes, array $tags): SpectraRequest
+    protected function persistAfterResponse(array $attributes, array $tags, array $reviewQueues = []): SpectraRequest
     {
-        $this->afterResponse(new PersistSpectraRequestJob($attributes, $tags));
+        $this->afterResponse(new PersistSpectraRequestJob($attributes, $tags, $reviewQueues));
 
         return new SpectraRequest($attributes);
     }
@@ -244,18 +298,16 @@ class RequestPersister
      */
     public function exportToIntegrations(SpectraRequest $request): void
     {
-        $data = $this->transformer->transform($request);
+        $payload = $this->transformer->transform($request);
 
-        // Dispatch event for custom listeners
-        RequestTracked::dispatch($data);
+        RequestTracked::dispatch($payload);
 
-        // Export to OpenTelemetry (or whichever RequestExporter is bound)
         if (! config('spectra.integrations.opentelemetry.enabled')) {
             return;
         }
 
         if (config('spectra.queue.enabled')) {
-            $job = new ExportTrackedRequestJob($data);
+            $job = new ExportTrackedRequestJob($payload);
 
             if ($connection = config('spectra.queue.connection')) {
                 $job->onConnection($connection);
@@ -275,16 +327,16 @@ class RequestPersister
         }
 
         if (config('spectra.queue.after_response') && ! app()->runningInConsole()) {
-            $this->afterResponse(new ExportTrackedRequestJob($data));
+            $this->afterResponse(new ExportTrackedRequestJob($payload));
 
             return;
         }
 
-        $this->exporter->export($data);
+        $this->exporter->export($payload);
     }
 
     /**
-     * Minimal attributes for the unsaved model returned when saving failed.
+     * Get the minimal attributes for the unsaved model returned when saving failed.
      *
      * @return array<string, mixed>
      */
@@ -305,7 +357,7 @@ class RequestPersister
      */
     protected function truncate(?string $value, int $length): ?string
     {
-        return $value !== null && mb_strlen($value) > $length ? mb_substr($value, 0, $length) : $value;
+        return $value !== null && Str::length($value) > $length ? Str::substr($value, 0, $length) : $value;
     }
 
     /**
@@ -314,6 +366,10 @@ class RequestPersister
      * For embeddings: strips the large float-vector arrays from the response
      * when `store_embeddings` is disabled, keeping only the metadata (model,
      * usage, object type) while avoiding megabytes of vector data in the DB.
+     *
+     * The OpenAI Responses API echoes the request's `instructions` and
+     * `tools`, so `store_system_prompts` and `store_tools` apply to the
+     * stored response too.
      */
     protected function sanitizeResponse(RequestContext $context, mixed $response): mixed
     {
@@ -321,7 +377,16 @@ class RequestPersister
             return $response;
         }
 
-        // Strip embedding vectors (large float arrays) when store_embeddings is disabled
+        $filter = app(RequestDataFilter::class);
+
+        if (! config('spectra.storage.store_system_prompts', true)) {
+            $response = $filter->withoutSystemPrompts($response);
+        }
+
+        if (! config('spectra.storage.store_tools', true)) {
+            $response = $filter->withoutTools($response);
+        }
+
         if ($context->modelType === ModelType::Embedding->value && ! config('spectra.storage.store_embeddings', false)) {
             // OpenAI / Mistral: data[].embedding
             if (is_array($response['data'] ?? null)) {

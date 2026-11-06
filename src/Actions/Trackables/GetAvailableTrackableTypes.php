@@ -5,28 +5,38 @@ declare(strict_types=1);
 namespace Spectra\Actions\Trackables;
 
 use Spectra\Models\SpectraRequest;
-use Spectra\Support\DateRange;
 
 /**
- * The trackable types (morph classes) that made requests in the period, for
- * the trackables screen's type filter.
+ * The trackable types (morph classes) that ever made a request, for the
+ * trackable-type filter of the requests, traces, conversations, trackables
+ * and costs screens.
  */
 class GetAvailableTrackableTypes
 {
     /**
-     * Get the trackable types that made requests in the date range.
+     * Get every stored trackable type, sorted.
      *
      * @return array<int, string>
      */
-    public function __invoke(DateRange $dateRange): array
+    public function __invoke(): array
     {
-        $query = SpectraRequest::query()
-            ->whereNotNull('trackable_type')
-            ->select('trackable_type')
-            ->distinct();
+        $types = [];
+        $last = null;
 
-        $dateRange->apply($query);
+        // One index lookup per type: a type is the next value after the last
+        // one. DISTINCT walks every row of the index on PostgreSQL.
+        do {
+            $next = SpectraRequest::query()
+                ->whereNotNull('trackable_type')
+                ->when($last !== null, fn ($query) => $query->where('trackable_type', '>', $last))
+                ->orderBy('trackable_type')
+                ->value('trackable_type');
 
-        return $query->pluck('trackable_type')->toArray();
+            if ($next !== null) {
+                $types[] = $last = (string) $next;
+            }
+        } while ($next !== null);
+
+        return $types;
     }
 }

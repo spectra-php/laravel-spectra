@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\XAi;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsPricingTierFromRequest;
 use Spectra\Contracts\ExtractsPricingTierFromResponse;
 use Spectra\Enums\PricingTier;
@@ -39,6 +40,8 @@ class XAi extends Provider implements ExtractsPricingTierFromRequest, ExtractsPr
     }
 
     /**
+     * Get the handlers for xAI image, video, chat and Responses requests.
+     *
      * Each handler has distinct endpoints — no overlap.
      */
     public function handlers(): array
@@ -52,6 +55,8 @@ class XAi extends Provider implements ExtractsPricingTierFromRequest, ExtractsPr
     }
 
     /**
+     * Get the pricing tier the request's `service_tier` asked for.
+     *
      * Used only when the response does not say which tier served it.
      *
      * @param  array<string, mixed>  $requestData
@@ -62,6 +67,8 @@ class XAi extends Provider implements ExtractsPricingTierFromRequest, ExtractsPr
     }
 
     /**
+     * Get the pricing tier the response's `service_tier` reports.
+     *
      * xAI bills the priority rate only when the response confirms
      * `service_tier: priority` (`fast` is the same tier under another name).
      *
@@ -73,25 +80,25 @@ class XAi extends Provider implements ExtractsPricingTierFromRequest, ExtractsPr
     }
 
     /**
+     * Get the response id from `id` or `request_id`, or from a video poll's path.
+     *
      * Polled video results carry no id; the request id is the last path
      * segment (`/v1/videos/{request_id}`), and deferred image results return
      * it as `request_id`.
      */
     public function extractResponseId(mixed $response, string $endpoint = ''): ?string
     {
-        $data = $this->toArray($response);
+        $responseData = $this->toArray($response);
 
         foreach (['id', 'request_id'] as $key) {
-            if (filled($data[$key] ?? null)) {
-                return $data[$key];
+            if (filled($responseData[$key] ?? null)) {
+                return $responseData[$key];
             }
         }
 
-        if (preg_match('#^/v1/videos/(?!generations$|edits$|extensions$)([^/]+)$#', $endpoint, $matches)) {
-            return $matches[1];
-        }
+        $videoRequestId = Str::match('#^/v1/videos/(?!generations$|edits$|extensions$)([^/]+)$#', $endpoint);
 
-        return null;
+        return filled($videoRequestId) ? $videoRequestId : null;
     }
 
     /**

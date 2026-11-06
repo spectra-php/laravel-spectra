@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Spectra\Tests\Concerns;
 
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+
 trait LoadsMockResponses
 {
     /**
@@ -16,12 +19,14 @@ trait LoadsMockResponses
     {
         $fullPath = __DIR__.'/../responses/'.$path;
 
-        if (str_ends_with($path, '.jsonl')) {
-            $lines = file($fullPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-
-            return array_map(fn ($line) => json_decode($line, true), $lines);
+        if (Str::endsWith($path, '.jsonl')) {
+            return File::lines($fullPath)
+                ->reject(fn (string $line) => $line === '')
+                ->map(fn (string $line) => json_decode($line, true, 512, JSON_THROW_ON_ERROR))
+                ->values()
+                ->all();
         }
 
-        return json_decode(file_get_contents($fullPath), true);
+        return json_decode(File::get($fullPath), true, 512, JSON_THROW_ON_ERROR);
     }
 }

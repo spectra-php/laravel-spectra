@@ -13,6 +13,7 @@ use Spectra\Data\Metrics;
 use Spectra\Data\VideoMetrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\OpenRouter\Concerns\ReadsReportedCost;
+use Spectra\Support\Payload;
 
 /**
  * OpenRouter's async video API.
@@ -74,7 +75,7 @@ class VideoHandler implements Handler, HasFinishReason, ReportsJobFailure, Skips
         return new Metrics(
             video: new VideoMetrics(
                 count: $completed ? max(1, count($this->outputUrls($responseData))) : 0,
-                durationSeconds: is_numeric($requestData['duration'] ?? null) ? (float) $requestData['duration'] : null,
+                durationSeconds: is_numeric($requestData['duration'] ?? null) ? Payload::float($requestData['duration']) : null,
             ),
             reportedCostInCents: $this->costFromUsage($usage),
         );
@@ -89,7 +90,7 @@ class VideoHandler implements Handler, HasFinishReason, ReportsJobFailure, Skips
     {
         $urls = $this->outputUrls($response);
 
-        if ($urls !== []) {
+        if (filled($urls)) {
             return implode("\n", $urls);
         }
 
@@ -97,7 +98,7 @@ class VideoHandler implements Handler, HasFinishReason, ReportsJobFailure, Skips
     }
 
     /**
-     * A video job that ended `failed`, `cancelled` or `expired`.
+     * Get the failure message of a video job that ended `failed`, `cancelled` or `expired`.
      *
      * @param  array<string, mixed>  $responseData
      */

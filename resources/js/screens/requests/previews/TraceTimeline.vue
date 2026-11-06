@@ -1,13 +1,15 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import TraceWaterfall from '@/components/TraceWaterfall.vue';
+import Money from '@/components/Money.vue';
+import type { TraceDetailsResponse } from '@/types/api';
 
-const props = defineProps({
-    trace: { type: Object, required: true },
-});
+const props = defineProps<{
+    trace: TraceDetailsResponse;
+}>();
 
-const { formatNumber, formatCurrency, formatDuration } = useHelpers();
+const { formatNumber, formatDuration } = useHelpers();
 
 const failedCount = computed(() => props.trace.failed_count ?? (props.trace.requests || []).filter((step) => step.is_error).length);
 </script>
@@ -32,7 +34,7 @@ const failedCount = computed(() => props.trace.failed_count ?? (props.trace.requ
         <dl class="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100 dark:divide-gray-800 dark:border-gray-800">
             <div class="px-5 py-3">
                 <dt class="text-xs text-gray-500 dark:text-gray-400">Total cost</dt>
-                <dd class="mt-0.5 text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ formatCurrency(trace.total_cost_in_cents) }}</dd>
+                <dd class="mt-0.5 text-sm font-semibold tabular-nums text-gray-900 dark:text-white"><Money :cents="trace.total_cost_in_cents" /></dd>
             </div>
             <div class="px-5 py-3">
                 <dt class="text-xs text-gray-500 dark:text-gray-400">Total tokens</dt>

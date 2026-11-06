@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Spectra\Data\UsageStats;
+use Spectra\Models\SpectraRequest;
 use Spectra\Support\DateRange;
 
 /**
@@ -16,8 +17,8 @@ use Spectra\Support\DateRange;
  * model.
  *
  * Request counts include failed requests; cost and latency cover successful
- * (2xx) requests only, like the dashboard. A date-only end ("2026-01-31")
- * includes that whole day.
+ * requests only (a 2xx status and no recorded error, SpectraRequest::SUCCESSFUL_SQL),
+ * like the dashboard. A date-only end ("2026-01-31") includes that whole day.
  *
  * @phpstan-require-extends Model
  *
@@ -54,28 +55,34 @@ trait HasAiUsageStats
      */
     public function getAiUsageForPeriod(CarbonInterface|string $start, CarbonInterface|string $end): UsageStats
     {
+        $successful = SpectraRequest::SUCCESSFUL_SQL;
+
         $stats = $this->aiRequests()
             ->whereBetween('created_at', [$start, DateRange::inclusiveEnd($end)])
-            ->selectRaw('
+            ->selectRaw("
                 COUNT(*) as request_count,
-                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as successful_count,
-                SUM(CASE WHEN status_code IS NULL OR status_code NOT BETWEEN 200 AND 299 THEN 1 ELSE 0 END) as failed_count,
+                SUM(CASE WHEN {$successful} THEN 1 ELSE 0 END) as successful_count,
+                SUM(CASE WHEN {$successful} THEN 0 ELSE 1 END) as failed_count,
                 SUM(prompt_tokens + completion_tokens) as tokens_sum,
-                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents,
-                AVG(CASE WHEN status_code BETWEEN 200 AND 299 THEN latency_ms END) as avg_latency_ms
-            ')
+                SUM(CASE WHEN {$successful} THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents,
+                AVG(CASE WHEN {$successful} THEN latency_ms END) as avg_latency_ms
+            ")
             ->first();
 
+        $requestCount = (int) $stats->request_count;
+        $successfulCount = (int) $stats->successful_count;
+        $totalCostInCents = (float) $stats->total_cost_in_cents;
+
         return new UsageStats(
-            requestCount: (int) $stats->request_count,
-            successfulCount: (int) $stats->successful_count,
+            requestCount: $requestCount,
+            successfulCount: $successfulCount,
             failedCount: (int) $stats->failed_count,
-            successRate: $stats->request_count > 0
-                ? round(($stats->successful_count / $stats->request_count) * 100, 2)
+            successRate: $requestCount > 0
+                ? round(($successfulCount / $requestCount) * 100, 2)
                 : 0,
             totalTokens: (int) $stats->tokens_sum,
-            totalCostInCents: (float) $stats->total_cost_in_cents,
-            totalCost: round((float) $stats->total_cost_in_cents / 100, 4),
+            totalCostInCents: $totalCostInCents,
+            totalCost: round($totalCostInCents / 100, 4),
             avgLatencyMs: round((float) $stats->avg_latency_ms, 2),
         );
     }
@@ -88,14 +95,16 @@ trait HasAiUsageStats
         $start ??= now()->startOfMonth();
         $end ??= now();
 
+        $successful = SpectraRequest::SUCCESSFUL_SQL;
+
         return $this->aiRequests()
             ->whereBetween('created_at', [$start, DateRange::inclusiveEnd($end)])
-            ->selectRaw('
+            ->selectRaw("
                 provider,
                 COUNT(*) as request_count,
                 SUM(prompt_tokens + completion_tokens) as tokens_sum,
-                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents
-            ')
+                SUM(CASE WHEN {$successful} THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents
+            ")
             ->groupBy('provider')
             ->get()
             ->mapWithKeys(fn ($item) => [
@@ -117,15 +126,17 @@ trait HasAiUsageStats
         $start ??= now()->startOfMonth();
         $end ??= now();
 
+        $successful = SpectraRequest::SUCCESSFUL_SQL;
+
         return $this->aiRequests()
             ->whereBetween('created_at', [$start, DateRange::inclusiveEnd($end)])
-            ->selectRaw('
+            ->selectRaw("
                 provider,
                 model,
                 COUNT(*) as request_count,
                 SUM(prompt_tokens + completion_tokens) as tokens_sum,
-                SUM(CASE WHEN status_code BETWEEN 200 AND 299 THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents
-            ')
+                SUM(CASE WHEN {$successful} THEN total_cost_in_cents ELSE 0 END) as total_cost_in_cents
+            ")
             ->groupBy('provider', 'model')
             ->get()
             ->map(fn ($item) => [

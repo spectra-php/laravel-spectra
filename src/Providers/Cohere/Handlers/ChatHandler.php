@@ -59,21 +59,22 @@ class ChatHandler implements ExtractsModelFromResponse, Handler, HasFinishReason
     }
 
     /**
-     * Billed tokens from a v2 `usage` object (also used by the stream's
-     * `message-end` event). `cached_tokens` are prompt tokens that hit
-     * Cohere's cache; Cohere publishes no separate price for them.
+     * Build the billed tokens of a v2 `usage` object, also used by the stream's `message-end` event.
+     *
+     * `cached_tokens` are prompt tokens that hit Cohere's cache; Cohere
+     * publishes no separate price for them.
      *
      * @param  array<string, mixed>  $usage
      */
     public static function tokensFromUsage(array $usage): TokenMetrics
     {
-        $billed = is_array($usage['billed_units'] ?? null) ? $usage['billed_units'] : [];
-        $prompt = Payload::int($billed['input_tokens'] ?? null);
+        $billedUnits = is_array($usage['billed_units'] ?? null) ? $usage['billed_units'] : [];
+        $promptTokens = Payload::int($billedUnits['input_tokens'] ?? null);
 
         return new TokenMetrics(
-            promptTokens: $prompt,
-            completionTokens: Payload::int($billed['output_tokens'] ?? null),
-            cachedTokens: min($prompt, Payload::int($usage['cached_tokens'] ?? null)),
+            promptTokens: $promptTokens,
+            completionTokens: Payload::int($billedUnits['output_tokens'] ?? null),
+            cachedTokens: min($promptTokens, Payload::int($usage['cached_tokens'] ?? null)),
         );
     }
 

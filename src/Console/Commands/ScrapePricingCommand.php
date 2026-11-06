@@ -5,16 +5,14 @@ declare(strict_types=1);
 namespace Spectra\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use RuntimeException;
+use Spectra\Actions\Pricing\ScrapeProviderPrices;
 use Spectra\Enums\PricingUnit;
-use Spectra\Models\SpectraRequest;
 use Spectra\Pricing\ProviderPricing;
 use Spectra\Support\Pricing\PricingCatalog;
-use Spectra\Support\Pricing\ScrapedPricesFile;
-use Spectra\Support\Pricing\Scraping\FirecrawlPriceScraper;
-use Spectra\Support\Pricing\Scraping\PageText;
+use Spectra\Support\Pricing\PricingFile;
 use Spectra\Support\Pricing\Scraping\PriceChange;
 use Spectra\Support\Pricing\Scraping\ScrapedPriceMapper;
 use Spectra\Support\Pricing\Scraping\ScrapedPrices;
@@ -22,10 +20,14 @@ use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
  * Reads the providers' pricing pages through Firecrawl and saves the prices
- * that differ from the built-in catalog to the scraped prices file.
+ * that differ from the bundled catalog to the app's pricing file.
  *
- * Built-in prices are maintained by hand and can lag a provider's change;
- * the file lets an app bill with fresh prices before a Spectra release.
+ * Written to the bundled catalog itself (the package's
+ * resources/pricing/catalog.json, how the catalog is maintained), it
+ * rewrites each scraped provider's section in full: every model, with the
+ * changes applied. Written to any other file, it saves only the changed and
+ * new models, so the file stays a short overlay over the bundled catalog
+ * and keeps following it when the package is updated.
  */
 #[AsCommand(name: 'spectra:pricing-scrape')]
 class ScrapePricingCommand extends Command
@@ -34,78 +36,82 @@ class ScrapePricingCommand extends Command
                             {provider?* : Providers to scrape (default: spectra.costs.firecrawl.providers, else the providers your app has tracked)}
                             {--all : Scrape every provider that has pricing pages}
                             {--url=* : Scrape these pages instead of the provider\'s own (one provider only)}
-                            {--path= : The scraped prices file (default: spectra.costs.scraped_prices_path)}
+                            {--path= : The pricing file to write (default: spectra.costs.pricing_path, else resources/spectra/pricing.json)}
                             {--dry-run : Show the changes without writing the file}';
 
-    protected $description = 'Read the providers\' pricing pages with Firecrawl and save the prices that differ from the built-in catalog to the scraped prices file';
+    protected $description = 'Read the providers\' pricing pages with Firecrawl and save the prices that differ from the bundled catalog to your pricing file';
 
     /**
      * Scrape each provider's pricing pages and save the prices that differ from the catalog.
      */
-    public function handle(ScrapedPriceMapper $mapper): int
+    public function handle(ScrapedPriceMapper $mapper, ScrapeProviderPrices $scrapePrices): int
     {
-        if (! config('spectra.costs.firecrawl.api_key')) {
+        if (! ScrapeProviderPrices::configured()) {
             $this->components->error('Set SPECTRA_FIRECRAWL_API_KEY in your .env file. Get a key at https://firecrawl.dev.');
 
             return self::FAILURE;
         }
 
-        $catalogs = $this->catalogsToScrape();
+        $file = $this->targetFile();
+        $bundled = PricingCatalog::bundled();
+        $updatesBundled = $this->isBundled($file);
+
+        try {
+            $fileContents = $file->read();
+        } catch (RuntimeException $e) {
+            $this->components->error("{$e->getMessage()} Fix or delete it, then run the command again.");
+
+            return self::FAILURE;
+        }
+
+        $catalogs = $this->catalogsToScrape($this->referenceCatalogs($bundled, $fileContents['providers'], $file->path()));
 
         if ($catalogs === null) {
             return self::FAILURE;
         }
 
-        $file = $this->option('path') ? new ScrapedPricesFile($this->option('path')) : PricingCatalog::scrapedPricesFile();
-
-        try {
-            $data = $file->read();
-        } catch (RuntimeException $e) {
-            $this->components->error($e->getMessage().' Fix or delete it, then run the command again.');
-
-            return self::FAILURE;
-        }
-
-        $scraper = FirecrawlPriceScraper::fromConfig();
-        $urls = collect($this->option('url'))->filter()->values()->all();
+        $urls = array_values(collect($this->option('url'))->filter()->all());
         $scraped = 0;
 
         foreach ($catalogs as $provider => $pricing) {
-            $sources = $urls !== [] ? $urls : $pricing->sources();
-
             $this->newLine();
-            $this->components->twoColumnDetail("<fg=cyan;options=bold>{$provider}</>", implode(', ', $sources));
+            $this->components->twoColumnDetail("<fg=cyan;options=bold>{$provider}</>", implode(', ', $urls !== [] ? $urls : $pricing->sources()));
 
             try {
-                $rows = [];
-                $markdown = [];
-                foreach ($sources as $url) {
-                    $page = $scraper->scrape($pricing, $url);
-                    $rows = [...$rows, ...$page->rows];
-                    $markdown[] = $page->markdown;
-                }
+                $scrape = $scrapePrices($pricing, $urls);
             } catch (RuntimeException $e) {
-                $this->components->error($e->getMessage().' Kept the current file entries for '.$provider.'.');
+                $this->components->error("{$e->getMessage()} Kept the current file entries for {$provider}.");
 
                 continue;
             }
 
             $scraped++;
-            $result = $mapper->map($pricing, $rows, page: new PageText(implode("\n", $markdown)));
-            $this->report($mapper, $result, count($rows));
+            $result = $scrape->result;
+            $this->report($mapper, $result, $scrape->rows);
 
-            if ($result->models === []) {
-                unset($data['providers'][$provider]);
+            $section = is_array($fileContents['providers'][$provider] ?? null) ? $fileContents['providers'][$provider] : [];
+
+            // A provider the bundled catalog doesn't have is kept whole in the
+            // app's file, like every provider in the bundled catalog itself.
+            if ($updatesBundled || ! isset($bundled[$provider])) {
+                $models = $pricing->toSection()['models'];
+
+                foreach ($result->models as $id => $entry) {
+                    $models[$id] = $entry;
+                }
+
+                $fileContents['providers'][$provider] = [...$section, ...$scrape->fileSection($models)];
 
                 continue;
             }
 
-            $data['providers'][$provider] = [
-                'currency' => strtoupper($pricing->currency()),
-                'scraped_at' => now()->toIso8601String(),
-                'sources' => $sources,
-                'models' => $result->models,
-            ];
+            if ($result->models === []) {
+                unset($fileContents['providers'][$provider]);
+
+                continue;
+            }
+
+            $fileContents['providers'][$provider] = [...Arr::only($section, ['notes']), ...$scrape->fileSection($result->models)];
         }
 
         if ($scraped === 0) {
@@ -122,29 +128,80 @@ class ScrapePricingCommand extends Command
             return self::SUCCESS;
         }
 
-        ksort($data['providers']);
-        $file->write(['generated_at' => now()->toIso8601String(), 'providers' => $data['providers']]);
+        ksort($fileContents['providers']);
+        $file->write(['generated_at' => now()->toIso8601String(), 'providers' => $fileContents['providers']]);
+        PricingCatalog::flushCache();
 
         $this->components->info("Saved to {$file->path()}. Review the changes before you deploy them.");
 
-        if (! PricingCatalog::usesScrapedPrices()) {
-            $this->components->warn('Spectra is using the built-in prices. Set SPECTRA_USE_SCRAPED_PRICES=true to bill with this file.');
+        if (! $updatesBundled && PricingCatalog::userFile()?->path() !== $file->path()) {
+            $this->components->warn("Spectra is billing with the bundled catalog alone. Set SPECTRA_PRICING_PATH={$this->displayPath($file->path())} to bill with this file.");
         }
 
         return self::SUCCESS;
     }
 
     /**
-     * The providers to scrape, so a run only spends Firecrawl credits on the
+     * Get the file to write: --path, else `spectra.costs.pricing_path`, else
+     * the default location of the app's pricing file.
+     */
+    protected function targetFile(): PricingFile
+    {
+        $path = $this->option('path');
+
+        if (is_string($path) && $path !== '') {
+            $isAbsolute = str_starts_with($path, '/') || str_starts_with($path, '\\') || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
+
+            return new PricingFile($isAbsolute ? $path : getcwd().DIRECTORY_SEPARATOR.$path);
+        }
+
+        return PricingCatalog::userFile() ?? new PricingFile(resource_path('spectra/pricing.json'));
+    }
+
+    /**
+     * Determine if the file is the catalog bundled with the package.
+     */
+    protected function isBundled(PricingFile $file): bool
+    {
+        $bundled = realpath(PricingCatalog::bundledFile()->path());
+
+        return $bundled !== false && realpath($file->path()) === $bundled;
+    }
+
+    /**
+     * Get the catalogs scraped prices are compared with: the bundled
+     * catalogs, plus the providers only the app's file has.
+     *
+     * @param  array<string, ProviderPricing>  $bundled
+     * @param  array<array-key, mixed>  $sections  The file's provider sections.
+     * @return array<string, ProviderPricing>
+     */
+    protected function referenceCatalogs(array $bundled, array $sections, string $path): array
+    {
+        $catalogs = $bundled;
+
+        foreach ($sections as $provider => $section) {
+            $provider = (string) $provider;
+
+            if (! isset($catalogs[$provider]) && is_array($section)) {
+                $catalogs[$provider] = ProviderPricing::fromSection($provider, $section, origin: $path);
+            }
+        }
+
+        return $catalogs;
+    }
+
+    /**
+     * Get the providers to scrape, so a run only spends Firecrawl credits on the
      * providers you use: the ones named on the command line, else
      * `spectra.costs.firecrawl.providers`, else the providers Spectra has
      * tracked requests for. Every provider only with --all.
      *
+     * @param  array<string, ProviderPricing>  $reference
      * @return array<string, ProviderPricing>|null
      */
-    protected function catalogsToScrape(): ?array
+    protected function catalogsToScrape(array $reference): ?array
     {
-        $builtIn = PricingCatalog::builtIn();
         $requested = array_values(collect($this->argument('provider'))->filter()->all());
 
         if ($this->option('url') && count($requested) !== 1) {
@@ -154,10 +211,10 @@ class ScrapePricingCommand extends Command
         }
 
         if ($requested !== []) {
-            return $this->resolveCatalogs($builtIn, $requested);
+            return $this->resolveCatalogs($reference, $requested);
         }
 
-        $scrapable = Arr::where($builtIn, fn (ProviderPricing $pricing) => $pricing->sources() !== []);
+        $scrapable = Arr::where($reference, fn (ProviderPricing $pricing) => $pricing->sources() !== []);
 
         if ($this->option('all')) {
             return $scrapable;
@@ -168,10 +225,10 @@ class ScrapePricingCommand extends Command
         if ($configured !== []) {
             $this->components->info('Scraping the providers in SPECTRA_SCRAPE_PROVIDERS: '.implode(', ', $configured).'.');
 
-            return $this->resolveCatalogs($builtIn, $configured);
+            return $this->resolveCatalogs($reference, $configured);
         }
 
-        $tracked = $this->trackedProviders();
+        $tracked = ScrapeProviderPrices::trackedProviders();
         $catalogs = Arr::only($scrapable, $tracked);
 
         if ($catalogs === []) {
@@ -186,50 +243,33 @@ class ScrapePricingCommand extends Command
     }
 
     /**
-     * Get the pricing catalogs for the named providers, or null after reporting an unknown one.
+     * Get the catalogs for the named providers, or null after reporting an unknown one.
      *
-     * @param  array<string, ProviderPricing>  $builtIn
+     * @param  array<string, ProviderPricing>  $reference
      * @param  list<string>  $providers
      * @return array<string, ProviderPricing>|null
      */
-    protected function resolveCatalogs(array $builtIn, array $providers): ?array
+    protected function resolveCatalogs(array $reference, array $providers): ?array
     {
         $catalogs = [];
 
         foreach ($providers as $provider) {
-            if (! isset($builtIn[$provider])) {
-                $this->components->error("No pricing catalog for '{$provider}'. Known: ".implode(', ', array_keys($builtIn)).'.');
+            if (! isset($reference[$provider])) {
+                $this->components->error("No pricing catalog for '{$provider}'. Known: ".implode(', ', array_keys($reference)).'.');
 
                 return null;
             }
 
-            if ($builtIn[$provider]->sources() === [] && ! $this->option('url')) {
+            if ($reference[$provider]->sources() === [] && ! $this->option('url')) {
                 $this->components->error("'{$provider}' has no pricing pages to scrape. Pass them with --url.");
 
                 return null;
             }
 
-            $catalogs[$provider] = $builtIn[$provider];
+            $catalogs[$provider] = $reference[$provider];
         }
 
         return $catalogs;
-    }
-
-    /**
-     * Provider slugs with at least one tracked request. Empty when the
-     * Spectra tables aren't there (not migrated, or another connection).
-     *
-     * @return list<string>
-     */
-    protected function trackedProviders(): array
-    {
-        try {
-            $providers = SpectraRequest::query()->distinct()->orderBy('provider')->pluck('provider');
-        } catch (QueryException) {
-            return [];
-        }
-
-        return array_values($providers->map(fn (mixed $provider) => (string) $provider)->filter()->all());
     }
 
     /**
@@ -244,13 +284,14 @@ class ScrapePricingCommand extends Command
 
         if ($result->changes !== []) {
             $this->table(
-                ['Model', 'Tier', 'Price', 'Ours', 'Scraped'],
+                ['Model', 'Tier', 'Price', 'Ours', 'Scraped', 'On the page'],
                 collect($result->changes)->map(fn (PriceChange $change) => [
                     $change->model.(in_array($change->model, $result->newModels, true) ? ' <fg=green>(new)</>' : ''),
                     $change->tier.($change->aboveInputTokens !== null ? ' > '.number_format($change->aboveInputTokens) : ''),
                     $mapper->label($change->field),
                     $this->money($change->old, $change),
                     $this->money($change->new, $change),
+                    Str::limit((string) $change->pageLine, 70),
                 ])->all(),
             );
         }
@@ -276,5 +317,15 @@ class ScrapePricingCommand extends Command
             $change->unit === PricingUnit::Characters->value => "{$amount} /1M chars",
             default => "{$amount} /{$change->unit}",
         };
+    }
+
+    /**
+     * Show a path inside the app relative to its root.
+     */
+    protected function displayPath(string $path): string
+    {
+        $root = base_path(DIRECTORY_SEPARATOR);
+
+        return Str::startsWith($path, $root) ? Str::after($path, $root) : $path;
     }
 }

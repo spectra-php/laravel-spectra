@@ -36,7 +36,7 @@ readonly class ModelTypeStat extends DataTransferObject
     {
         return $items->map(fn (SpectraRequest $row) => new self(
             model_type: $row->model_type ?? 'unknown',
-            label: $row->model_type
+            label: filled($row->model_type)
                 ? (ModelType::tryFrom($row->model_type)?->label() ?? $row->model_type)
                 : 'Unknown',
             count: $row->count,

@@ -11,6 +11,7 @@ use Spectra\Actions\Traces\GetFilteredTraces;
 use Spectra\Actions\Traces\GetTracesSummary;
 use Spectra\Data\Responses\TracesResponse;
 use Spectra\Support\DateRange;
+use Spectra\Support\Query\TraceSchema;
 
 /**
  * GET /api/traces: the traces screen, one filtered and sorted page of traces
@@ -27,10 +28,17 @@ class TracesController extends BaseApiController
         GetTracesSummary $getTracesSummary,
         GetAvailableFilters $getAvailableFilters,
         FormatTracesList $formatTracesList,
+        TraceSchema $traceSchema,
     ): TracesResponse {
-        $dateRange = DateRange::fromRequest($request);
-        $paginated = $getFilteredTraces($request, $dateRange);
         $filters = $getAvailableFilters();
+
+        if (! $traceSchema->hasTraceColumns()) {
+            return TracesResponse::unmigrated($filters);
+        }
+
+        $dateRange = DateRange::fromRequest($request);
+        $page = $getFilteredTraces($request, $dateRange);
+        $paginated = $page->paginator;
 
         return new TracesResponse(
             data: $formatTracesList($paginated),
@@ -41,6 +49,8 @@ class TracesController extends BaseApiController
             available_tags: $filters->tags,
             available_finish_reasons: $filters->finish_reasons,
             available_reasoning_efforts: $filters->reasoning_efforts,
+            available_trackable_types: $filters->trackable_types,
+            total_is_estimate: $page->totalIsEstimate,
         );
     }
 }

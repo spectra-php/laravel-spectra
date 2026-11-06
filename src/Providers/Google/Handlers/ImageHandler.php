@@ -106,7 +106,6 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     {
         $parts = [];
 
-        // Gemini generateContent with inline image data
         foreach ($this->firstCandidateParts($response) as $part) {
             if ($this->isInlinePart($part, 'image/')) {
                 $parts[] = '[generated image]';
@@ -115,7 +114,6 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
             }
         }
 
-        // Imagen generateImages response
         foreach ($this->generatedImages($response) as $image) {
             $parts[] = '[generated image]';
         }
@@ -130,14 +128,12 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
      */
     public function matchesResponse(array $data): bool
     {
-        // Gemini image response: candidates with inline image data
         foreach ($this->firstCandidateParts($data) as $part) {
             if ($this->isInlinePart($part, 'image/')) {
                 return true;
             }
         }
 
-        // Imagen generateImages response
         return isset($data['generatedImages']);
     }
 
@@ -153,7 +149,6 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
         $stored = [];
         $index = 0;
 
-        // Gemini inline image data
         foreach ($this->firstCandidateParts($responseData) as $part) {
             $content = $this->isInlinePart($part, 'image/') ? $this->inlineBytes($part) : null;
 
@@ -172,7 +167,6 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
             $index++;
         }
 
-        // Imagen generateImages response
         foreach ($this->generatedImages($responseData) as $image) {
             $imageBytes = data_get($image, 'image.imageBytes');
 
@@ -192,7 +186,7 @@ class ImageHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
     }
 
     /**
-     * Images of an Imagen `generateImages` response.
+     * Get the images of an Imagen `generateImages` response.
      *
      * @param  array<string, mixed>  $data
      * @return array<int, array<mixed>>

@@ -49,7 +49,7 @@ class BuildConversationQuery
      *
      * @return Builder<SpectraRequest>
      */
-    private function matchingConversationIds(Request $request, DateRange $dateRange): Builder
+    public function matchingConversationIds(Request $request, DateRange $dateRange): Builder
     {
         $calls = SpectraRequest::query()->select('conversation_id')->whereNotNull('conversation_id');
 

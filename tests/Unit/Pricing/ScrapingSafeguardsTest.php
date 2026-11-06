@@ -2,57 +2,20 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Str;
 use Spectra\Pricing\ProviderPricing;
 use Spectra\Support\Pricing\Scraping\CatalogShape;
 use Spectra\Support\Pricing\Scraping\PageText;
+use Spectra\Support\Pricing\Scraping\PriceChange;
 use Spectra\Support\Pricing\Scraping\ScrapedPriceMapper;
-use Spectra\Tests\Fixtures\FakeOpenAIPricing;
+use Spectra\Tests\Fixtures\FakeCatalogs;
 
 /**
  * The checks that keep LLM extraction mistakes out of the pricing file. Each
  * case comes from a mistake seen on a real pricing page.
  */
 beforeEach(function () {
-    $this->catalog = new class extends ProviderPricing
-    {
-        public function provider(): string
-        {
-            return 'acme';
-        }
-
-        protected function define(): void
-        {
-            $this->model('realtime-x', fn ($m) => $m
-                ->canGenerateText()
-                ->tier('standard', inputPrice: 400, outputPrice: 2400, cachedInputPrice: 40, audioInputPrice: 3200, audioOutputPrice: 6400)
-                ->tier('priority', inputPrice: 800, outputPrice: 4800, cachedInputPrice: 80, audioInputPrice: 6400, audioOutputPrice: 12800));
-
-            $this->model('long-x', fn ($m) => $m
-                ->canGenerateText()
-                ->tier('standard', inputPrice: 200, outputPrice: 1200)
-                ->tier('standard', inputPrice: 400, outputPrice: 1800, aboveInputTokens: 200_000));
-
-            $this->model('claude-3-5-haiku', fn ($m) => $m
-                ->displayName('Claude 3.5 Haiku')
-                ->canGenerateText()
-                ->cost(inputPrice: 80, outputPrice: 400));
-
-            $this->model('embed-v5.0', fn ($m) => $m
-                ->type('embedding')
-                ->cost(inputPrice: 10));
-
-            $this->model('imagine-x', fn ($m) => $m
-                ->type('image')
-                ->pricingUnit('image')
-                ->canGenerateImages()
-                ->cost(pricePerUnit: 4));
-
-            $this->model('tts-x', fn ($m) => $m
-                ->pricingUnit('characters')
-                ->canGenerateAudio()
-                ->cost(pricePerUnit: 1500));
-        }
-    };
+    $this->catalog = FakeCatalogs::acme();
 
     $this->map = fn (array $rows, ?string $page = null, ?ProviderPricing $catalog = null) => (new ScrapedPriceMapper)
         ->map($catalog ?? $this->catalog, $rows, '2026-11-01', $page !== null ? new PageText($page) : null);
@@ -73,7 +36,7 @@ it('ignores tiers and price fields the catalog does not use', function () {
         ['model_id' => 'gpt-y', 'tier' => 'ultrafast', 'input' => 1, 'output' => 4],
         // OpenAI's 12-hour cache write, read as the 1-hour write.
         ['model_id' => 'gpt-y', 'tier' => 'standard', 'input' => 0.3, 'output' => 1.2, 'cache_write_1h' => 0.6],
-    ], catalog: new FakeOpenAIPricing);
+    ], catalog: FakeCatalogs::openai());
 
     expect($result->models)->toBe([])
         ->and($result->skipped)->toBe([
@@ -83,7 +46,7 @@ it('ignores tiers and price fields the catalog does not use', function () {
 });
 
 it('limits the extraction schema to the catalog tiers, their synonyms and price fields', function () {
-    $shape = CatalogShape::of(new FakeOpenAIPricing);
+    $shape = CatalogShape::of(FakeCatalogs::openai());
 
     expect($shape->tierLabels())->toBe(['batch', 'standard', 'hd'])
         ->and($shape->fields)->toBe(['input_price', 'output_price', 'cached_input_price', 'price_per_unit'])
@@ -136,6 +99,37 @@ it('ignores prices the page does not print next to the model', function () {
 
     expect($result->models['long-x']['tiers'][0])->toEqual(['tier' => 'standard', 'input_price' => 250.0, 'output_price' => 1200.0])
         ->and($result->skipped)->toBe(['long-x: standard output 15 not found next to the model on the page, ignored.']);
+});
+
+it('keeps the page line that confirms each change, for the review', function () {
+    $page = implode("\n", [
+        '## Long context',
+        '| long-x | $2.50 | $12.00 |',
+        '| long-x (> 200K) | $5.00 | $18.00 |',
+        '| new-x | $1.00   |   $4.00 |',
+    ]);
+
+    $result = ($this->map)([
+        ['model_id' => 'long-x', 'tier' => 'standard', 'input' => 2.5, 'output' => 12],
+        ['model_id' => 'new-x', 'tier' => 'standard', 'input' => 1, 'output' => 4],
+    ], $page);
+
+    $lines = collect($result->changes)->mapWithKeys(fn (PriceChange $change) => ["{$change->model} {$change->field}" => $change->pageLine])->all();
+
+    expect($lines)->toBe([
+        'long-x input_price' => '| long-x | $2.50 | $12.00 |',
+        'new-x input_price' => '| new-x | $1.00 | $4.00 |',
+        'new-x output_price' => '| new-x | $1.00 | $4.00 |',
+    ]);
+});
+
+it('cuts a long confirming line for the review', function () {
+    $page = '| long-x | $2.50 | $12.00 | '.Str::repeat('notes ', 50).'|';
+
+    $change = ($this->map)([['model_id' => 'long-x', 'tier' => 'standard', 'input' => 2.5]], $page)->changes[0];
+
+    expect(Str::length((string) $change->pageLine))->toBe(ScrapedPriceMapper::MAX_PAGE_LINE_LENGTH + 1)
+        ->and($change->pageLine)->toStartWith('| long-x | $2.50 | $12.00 |')->toEndWith('…');
 });
 
 it('converts printed prices with the quantity they are for', function () {
@@ -232,7 +226,7 @@ describe('PageText', function () {
     it('does not count numbers in the model name or in prose', function () {
         $page = new PageText(implode("\n", [
             '| gpt-6-astra | $10.00 |',
-            str_repeat('Search content tokens for gpt-5 are billed as 8,000 input tokens per call, with a 5-minute minimum. ', 6),
+            Str::repeat('Search content tokens for gpt-5 are billed as 8,000 input tokens per call, with a 5-minute minimum. ', 6),
         ]));
 
         expect($page->confirms(['gpt-6-astra'], 6))->toBeFalse()

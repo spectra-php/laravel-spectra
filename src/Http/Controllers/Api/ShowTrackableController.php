@@ -7,6 +7,7 @@ namespace Spectra\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Spectra\Actions\Trackables\GetTrackableDetails;
 use Spectra\Data\Responses\TrackableDetailsResponse;
+use Spectra\Support\DateRange;
 
 /**
  * GET /api/trackables/view/{id}: the trackable detail screen.
@@ -19,8 +20,12 @@ class ShowTrackableController extends BaseApiController
     public function __invoke(
         Request $request,
         string $id,
-        GetTrackableDetails $action,
+        GetTrackableDetails $getTrackableDetails,
     ): TrackableDetailsResponse {
-        return $action($request, $id);
+        $type = $request->input('type');
+
+        abort_unless((bool) $type, 400, 'Missing type parameter.');
+
+        return $getTrackableDetails($type, $id, DateRange::fromRequest($request));
     }
 }

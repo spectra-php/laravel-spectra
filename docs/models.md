@@ -2,6 +2,7 @@
 
 Every tracked request gets a **model type**. The model type decides which metrics are extracted, which pricing formula applies, and how the request is shown in the dashboard. Spectra detects it from the endpoint and the shape of the response, so you don't need to configure anything.
 
+<a name="supported-providers"></a>
 ## Supported Providers
 
 - OpenAI (including [Azure OpenAI](/configuration#azure-openai))
@@ -20,6 +21,7 @@ Every tracked request gets a **model type**. The model type decides which metric
 
 To support a provider not listed here, see [Custom Providers](/custom-providers).
 
+<a name="model-types"></a>
 ## Model Types
 
 <a name="text-completions"></a>
@@ -38,6 +40,7 @@ Text generation is the most widely supported model type. It covers chat completi
 
 Spectra uses the same rule for every provider, even when the provider reports usage in another way. For example, Anthropic leaves cache tokens out of `input_tokens`, and Gemini leaves thinking tokens out of its output count. Spectra adds them back, so `prompt_tokens` and `completion_tokens` always hold the full totals.
 
+<a name="cached-token-pricing"></a>
 #### Cached Token Pricing
 
 Providers such as OpenAI, Anthropic, Google, and xAI offer prompt caching. Tokens read from the cache are billed at a lower price. Some providers also bill cache **writes** at their own price: Anthropic has 5-minute and 1-hour writes, and newer OpenAI models have one write price. Spectra detects these tokens automatically and bills each part at its own price:
@@ -56,7 +59,7 @@ This is a short version. The full formula, with 1-hour writes, audio and image t
 <a name="embeddings"></a>
 ### Embeddings
 
-Embeddings turn text into dense vectors for semantic search, clustering, and similarity comparisons. Unlike text completions, embedding models produce no output tokens, so the cost is based only on the input token count.
+An embedding turns a piece of text into a list of numbers that stands for its meaning. Texts that mean similar things get similar numbers, so your app can find the documents closest to a question, group similar texts, or compare two of them. Unlike text completions, embedding models produce no output tokens, so the cost is based only on the input token count.
 
 | Metric | Column | Description |
 | --- | --- | --- |
@@ -113,7 +116,7 @@ STT requests send the audio file as multipart form data instead of JSON. Spectra
 STT models are priced **per minute** of input audio, or **per token** for token-billed models.
 
 <a name="documents"></a>
-### Documents (OCR)
+### Documents (OCR) {#documents}
 
 Document endpoints such as Mistral OCR bill by page. They are recorded as text requests.
 
@@ -123,6 +126,7 @@ Document endpoints such as Mistral OCR bill by page. They are recorded as text r
 
 Document models are priced **per page**.
 
+<a name="not-yet-supported"></a>
 ### Not Yet Supported
 
 | Category | Example Models | Reason |

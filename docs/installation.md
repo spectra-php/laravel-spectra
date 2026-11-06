@@ -2,12 +2,14 @@
 
 # Installation
 
+<a name="requirements"></a>
 ## Requirements
 
 - PHP 8.2 or higher (PHP 8.3+ required for Laravel 13)
 - Laravel 12.x or 13.x
 - MySQL 8.0+ or PostgreSQL 13+
 
+<a name="install-the-package"></a>
 ## Install the Package
 
 Install Spectra with Composer:
@@ -24,7 +26,7 @@ composer require james-heinrich/getid3
 ```
 :::
 
-::: tip Upgrading from 2.x or 1.x?
+::: tip Upgrading from 3.x, 2.x or 1.x?
 Read the [Upgrade Guide](/upgrade). Most apps only need to run `php artisan spectra:install` once.
 :::
 
@@ -36,6 +38,8 @@ php artisan spectra:install
 
 The installer publishes the configuration file to `config/spectra.php` and the schema migrations to `database/migrations/`, then asks whether to run the migrations.
 
+Run it again after each upgrade to publish the new version's migrations, or let `composer update` do it with [a Composer script](/commands#spectra-install-composer).
+
 To run each step yourself instead of using the interactive installer:
 
 ```shell
@@ -44,6 +48,7 @@ php artisan vendor:publish --tag=spectra-migrations
 php artisan migrate
 ```
 
+<a name="configuration"></a>
 ## Configuration
 
 Spectra's configuration file is `config/spectra.php`. It controls storage, persistence mode, dashboard options, cost calculation, budget enforcement, and integrations. Each option has a comment that explains it. For the full reference, see [Configuration](/configuration).
@@ -56,6 +61,7 @@ The most important setting is the master switch:
 
 When it is `false`, Spectra does nothing: no interception, no tracking, no database writes. Use it to turn Spectra off in some environments without removing the package.
 
+<a name="dashboard-authorization"></a>
 ## Dashboard Authorization
 
 The Spectra dashboard lives at the `/spectra` route. By default, you can only open it in the `local` environment. In other environments, access is controlled by a Laravel gate called `viewSpectra`. Define the gate to decide who can see your Spectra installation:
@@ -68,6 +74,14 @@ Gate::define('viewSpectra', function ($user) {
     return in_array($user->email, [
         'admin@example.com',
     ]);
+});
+```
+
+The dashboard's [Maintenance screen](/dashboard#maintenance) can delete data and pause recording, and its [Playground](/playground) can spend money, so both need a second gate, `manageSpectra`. It also allows only the `local` environment by default, so allowing `viewSpectra` in production does not let viewers run them. Define it for the people who may:
+
+```php
+Gate::define('manageSpectra', function ($user) {
+    return $user->is_admin;
 });
 ```
 
@@ -87,6 +101,7 @@ Change the dashboard path with the `SPECTRA_PATH` environment variable or the `d
 ],
 ```
 
+<a name="layout-modes"></a>
 ## Layout Modes
 
 The `dashboard.layout` option controls which model types the dashboard shows. Use it if your application only uses some model types and you want a focused view:
@@ -100,9 +115,10 @@ The `dashboard.layout` option controls which model types the dashboard shows. Us
 | `video` | Video generation only |
 | `audio` | TTS and STT metrics |
 
+<a name="separate-database"></a>
 ## Separate Database
 
-For high-volume applications, you may want Spectra to use its own database connection. This keeps Spectra's writes out of your application database, so they don't compete with your application queries for connections. To use a separate connection, set the `storage.connection` option:
+For high-volume applications, you may want Spectra to use its own database connection. This keeps Spectra's writes out of your application database, so they don't compete with your application queries for connections. [Running at High Volume](/production) covers this and the rest of the production setup. To use a separate connection, set the `storage.connection` option:
 
 ```php
 // config/spectra.php

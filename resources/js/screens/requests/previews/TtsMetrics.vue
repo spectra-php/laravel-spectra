@@ -1,15 +1,21 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
+import Money from '@/components/Money.vue';
+import type { RequestDetailsResponse } from '@/types/api';
 
-const props = defineProps({
-    request: { type: Object, required: true },
-    expanded: { type: Boolean, default: true },
+const props = withDefaults(defineProps<{
+    request: RequestDetailsResponse;
+    expanded?: boolean;
+}>(), {
+    expanded: true,
 });
 
-const emit = defineEmits(['toggle']);
+const emit = defineEmits<{
+    toggle: [];
+}>();
 
-const { formatNumber, formatCurrency } = useHelpers();
+const { formatNumber } = useHelpers();
 
 const hasDuration = computed(() => props.request.duration_seconds != null && props.request.duration_seconds > 0);
 const hasCharacters = computed(() => props.request.input_characters != null && props.request.input_characters > 0);
@@ -46,19 +52,19 @@ const columnCount = computed(() => {
         </div>
         <div v-if="expanded" class="card-body">
             <div class="grid gap-6" :style="{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }">
-                <div v-if="hasDuration" class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                <div v-if="hasDuration" class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                     <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Duration</div>
                     <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
-                        {{ request.duration_seconds.toFixed(1) }}s
+                        {{ request.duration_seconds!.toFixed(1) }}s
                     </div>
                 </div>
-                <div v-if="hasCharacters" class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                <div v-if="hasCharacters" class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                     <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Input Characters</div>
                     <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                         {{ formatNumber(request.input_characters) }}
                     </div>
                 </div>
-                <div v-if="hasTokens" class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/[0.03]">
+                <div v-if="hasTokens" class="text-center p-4 rounded-lg bg-gray-50 dark:bg-white/3">
                     <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Tokens</div>
                     <div class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
                         {{ formatNumber(request.total_tokens) }}
@@ -67,7 +73,7 @@ const columnCount = computed(() => {
                 <div class="text-center p-4 rounded-lg bg-primary-50 dark:bg-primary-900/20">
                     <div class="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1">Cost</div>
                     <div class="text-2xl font-bold text-primary-700 dark:text-primary-300 tabular-nums">
-                        {{ formatCurrency(request.total_cost_in_cents) }}
+                        <Money :cents="request.total_cost_in_cents" />
                     </div>
                 </div>
             </div>

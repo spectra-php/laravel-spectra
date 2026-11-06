@@ -25,17 +25,21 @@ abstract class GeneratedAudioHandler implements ExtractsModelFromRequest, Handle
 {
     use MatchesEndpoints;
 
-    /** The model the API uses when the request names none. */
+    /**
+     * Get the model the API uses when the request names none.
+     */
     abstract protected function defaultModel(): string;
 
     /**
-     * Requested length in seconds, or null to read it from the audio.
+     * Get the requested length in seconds, or null to read it from the audio.
      *
      * @param  array<string, mixed>  $requestData
      */
     abstract protected function requestedSeconds(array $requestData): ?float;
 
     /**
+     * Get the model type generated audio is recorded as.
+     *
      * Tts, so the duration is read from the returned audio like for speech.
      */
     public function modelType(): ModelType

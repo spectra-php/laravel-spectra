@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\Google\Handlers;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Concerns\MatchesParametricEndpoints;
 use Spectra\Contracts\ExtractsModelFromRequest;
 use Spectra\Contracts\ExtractsModelFromResponse;
@@ -154,7 +155,6 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
      */
     public function matchesResponse(array $data): bool
     {
-        // Completed Veo response (either format)
         if (isset($data['response']['generateVideoResponse'])) {
             return true;
         }
@@ -163,16 +163,14 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
             return true;
         }
 
-        // Long-running operation (in-progress or completed)
         if (isset($data['name'], $data['done'])) {
             $name = $data['name'];
 
-            if (is_string($name) && str_contains($name, 'veo')) {
+            if (is_string($name) && Str::contains($name, 'veo')) {
                 return true;
             }
 
-            // Check for /models/{model}/operations/ pattern
-            if (is_string($name) && preg_match('#/models/[^/]+/operations/#', $name)) {
+            if (is_string($name) && Str::isMatch('#/models/[^/]+/operations/#', $name)) {
                 return true;
             }
         }
@@ -232,14 +230,12 @@ class VideoHandler implements ExtractsModelFromRequest, ExtractsModelFromRespons
      */
     protected function extractSamples(array $responseData): array
     {
-        // Format 1: generateVideoResponse.generatedSamples
         $samples = data_get($responseData, 'response.generateVideoResponse.generatedSamples');
 
         if (is_array($samples) && $samples !== []) {
             return $this->videoSamples($samples, 'video.uri', 'video.gcsUri', 'video.mimeType');
         }
 
-        // Format 2: videos[]
         $videos = data_get($responseData, 'response.videos');
 
         if (is_array($videos) && $videos !== []) {

@@ -96,7 +96,7 @@ abstract class OpenAiCompatibleChatHandler implements ExtractsModelFromResponse,
     }
 
     /**
-     * Where the usage object sits in a response or stream chunk.
+     * Get the usage object of a response or stream chunk.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>|null
@@ -109,8 +109,8 @@ abstract class OpenAiCompatibleChatHandler implements ExtractsModelFromResponse,
     }
 
     /**
-     * Whether `completion_tokens_details.reasoning_tokens` is billed on top of
-     * `completion_tokens` (true for xAI) rather than included in it (OpenAI).
+     * Determine if `completion_tokens_details.reasoning_tokens` is billed on top
+     * of `completion_tokens` (true for xAI) rather than included in it (OpenAI).
      */
     protected function reasoningTokensAreSeparate(): bool
     {
@@ -118,7 +118,7 @@ abstract class OpenAiCompatibleChatHandler implements ExtractsModelFromResponse,
     }
 
     /**
-     * The cost the provider reports for this request, in US cents.
+     * Get the cost the provider reports for this request, in US cents.
      *
      * @param  array<string, mixed>  $usage
      * @param  array<string, mixed>  $responseData
@@ -129,8 +129,10 @@ abstract class OpenAiCompatibleChatHandler implements ExtractsModelFromResponse,
     }
 
     /**
-     * The first choice's text. Some providers (Mistral with reasoning, for
-     * one) send `content` as a list of typed parts instead of a string.
+     * Get the first choice's text.
+     *
+     * Some providers (Mistral with reasoning, for one) send `content` as a
+     * list of typed parts instead of a string.
      *
      * @param  array<string, mixed>  $response
      */

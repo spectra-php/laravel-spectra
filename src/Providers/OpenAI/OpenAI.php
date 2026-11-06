@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenAI;
 
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsPricingTierFromRequest;
 use Spectra\Contracts\ExtractsPricingTierFromResponse;
 use Spectra\Enums\PricingTier;
@@ -35,8 +36,10 @@ class OpenAI extends Provider implements ExtractsPricingTierFromRequest, Extract
     }
 
     /**
-     * The global host, the regional (data residency) hosts, and the Azure
-     * resource hosts. Azure requests are priced at OpenAI's rates.
+     * Get the global host, the regional (data residency) hosts, and the Azure
+     * resource hosts.
+     *
+     * Azure requests are priced at OpenAI's rates.
      *
      * Regional endpoints add a 10% uplift for models released on or after
      * 2026-03-05; the uplift is not applied yet because the request host is
@@ -64,21 +67,37 @@ class OpenAI extends Provider implements ExtractsPricingTierFromRequest, Extract
     }
 
     /**
-     * Map Azure OpenAI paths onto the OpenAI /v1 endpoints:
+     * Map Azure OpenAI paths onto the OpenAI /v1 endpoints.
+     *
      *   /openai/deployments/{deployment}/chat/completions => /v1/chat/completions
      *   /openai/v1/responses                              => /v1/responses
      *   /openai/responses (preview API)                   => /v1/responses
      */
     public function normalizeEndpoint(string $path): string
     {
-        if (! str_starts_with($path, '/openai/')) {
+        if (! Str::startsWith($path, '/openai/')) {
             return $path;
         }
 
-        return (string) preg_replace('#^/openai(?:/deployments/[^/]+|/v1)?/#', '/v1/', $path);
+        return (string) Str::replaceMatches('#^/openai(?:/deployments/[^/]+|/v1)?/#', '/v1/', $path);
     }
 
     /**
+     * Get the Azure deployment name of a `/openai/deployments/{deployment}/`
+     * path. Deployments are usually named after their model, and an image or
+     * speech response names none, so the deployment is the only model name
+     * such a call has.
+     */
+    public function extractDeployment(string $path): ?string
+    {
+        $deployment = Str::match('#^/openai/deployments/([^/]+)/#', $path);
+
+        return filled($deployment) ? rawurldecode($deployment) : null;
+    }
+
+    /**
+     * Get the handlers for OpenAI's endpoints, in resolution order.
+     *
      * Order matters:
      * - TextHandler comes first because a stream without a known endpoint
      *   (a bare Spectra::stream()) uses the first handler that streams.
@@ -101,8 +120,9 @@ class OpenAI extends Provider implements ExtractsPricingTierFromRequest, Extract
     }
 
     /**
-     * The tier the request asked for. Only used when the response doesn't
-     * say which tier served it.
+     * Get the pricing tier the request asked for.
+     *
+     * Only used when the response doesn't say which tier served it.
      *
      * @param  array<string, mixed>  $requestData
      */
@@ -142,10 +162,6 @@ class OpenAI extends Provider implements ExtractsPricingTierFromRequest, Extract
      */
     public static function pricingTierFor(mixed $serviceTier): ?string
     {
-        if (! is_string($serviceTier)) {
-            return null;
-        }
-
         return match ($serviceTier) {
             'default', 'auto', 'scale', 'standard' => PricingTier::Standard->value,
             'flex' => PricingTier::Flex->value,

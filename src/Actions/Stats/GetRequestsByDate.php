@@ -22,7 +22,7 @@ class GetRequestsByDate
     public function __invoke(DateRange $dateRange, string $layout): Collection
     {
         return RequestByDate::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::fromRollups($dateRange)
                 ->forLayout($layout)
                 ->byDate()
                 ->countAs()

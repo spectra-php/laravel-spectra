@@ -1,11 +1,13 @@
-<script setup>
-
+<script setup lang="ts">
+// Each logo gets its own gradient, mask and filter ids: with shared ids, a
+// logo removed from the page takes the others' fill with it.
+const uid = Math.random().toString(36).slice(2, 8);
 </script>
 
 <template>
   <svg viewBox="0 0 500 120" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <linearGradient :id="`rainbow-${uid}`" x1="0%" y1="0%" x2="100%" y2="0%">
         <stop offset="0%">
           <animate attributeName="stop-color" values="#E31E24;#2E3192;#00AEEF;#4DB748;#FFD200;#F68B1E;#E31E24" dur="6s" repeatCount="indefinite" />
         </stop>
@@ -25,7 +27,7 @@
           <animate attributeName="stop-color" values="#2E3192;#00AEEF;#4DB748;#FFD200;#F68B1E;#E31E24;#2E3192" dur="6s" repeatCount="indefinite" />
         </stop>
       </linearGradient>
-      <mask id="softStripes">
+      <mask :id="`softStripes-${uid}`">
         <rect width="100%" height="100%" fill="white" />
         <g fill="black" opacity="0.3">
           <rect y="52" width="100%" height="3" />
@@ -34,7 +36,7 @@
           <rect y="82" width="100%" height="3" />
         </g>
       </mask>
-      <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <filter :id="`softGlow-${uid}`" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="1.4" result="blur" />
         <feMerge>
           <feMergeNode in="blur" />
@@ -51,9 +53,9 @@
         font-weight="700"
         letter-spacing="-1.5"
         font-family="Inter, SF Pro Display, Helvetica Neue, Arial, sans-serif"
-        fill="url(#rainbow)"
-        mask="url(#softStripes)"
-        filter="url(#softGlow)"
+        :fill="`url(#rainbow-${uid})`"
+        :mask="`url(#softStripes-${uid})`"
+        :filter="`url(#softGlow-${uid})`"
         transform="skewX(-6)"
     >
       Spectra

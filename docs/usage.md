@@ -49,7 +49,7 @@ $response = Prism::text()
 echo $response->text;
 ```
 
-Spectra records provider errors too. Any response outside 200–299 (a 4xx, a 5xx, or an unfollowed 3xx), or one with no status code, is stored as a failed request, with the provider's error message in the `error_message` column. A connection failure is recorded and still thrown to your code. Saving a tracked request never throws into your application: if saving fails, the error goes to your exception handler.
+Spectra records provider errors too. Any response outside 200–299 (a 4xx, a 5xx, or an unfollowed 3xx), or one with no status code, is stored as a failed request, with the provider's error message in the `error_message` column. So is an error the provider reports inside an HTTP 200: an async job that ends `failed` (a Replicate prediction, an OpenAI background response, an OpenRouter video) or a stream that breaks off keeps its 200 status code, but is stored with the error and counts as failed in every number. A connection failure is recorded and still thrown to your code. Saving a tracked request never throws into your application: if saving fails, the error goes to your exception handler.
 
 > [!TIP]
 > Automatic tracking is on whenever `spectra.watcher.enabled` is `true` (the default). It works for requests made through Laravel's `Http` facade, the OpenAI PHP SDK, and any library built on either of them. Direct `curl` calls and other HTTP libraries are not tracked. Use the [Guzzle middleware](#guzzle-middleware) or [manual tracking](#manual-tracking) for those.
@@ -165,7 +165,7 @@ The trackable type is stored as the model's morph alias (`$model->getMorphClass(
 <a name="conversation-tracking"></a>
 ### Conversation Tracking
 
-For multi-turn conversations, attach a conversation ID and a turn number to link related requests in the dashboard. They are stored in the `conversation_id` and `conversation_turn` columns:
+A conversation is a chat with many back-and-forth messages. Each **turn** is one user message and everything your app did to answer it: the chat call, the tools it ran and the embeddings it looked up. Attach a conversation ID and a turn number to the calls, and the dashboard groups them into a transcript you can read. They are stored in the `conversation_id` and `conversation_turn` columns:
 
 ```php
 $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($conversationId, $turn) {
@@ -179,6 +179,18 @@ $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($conversationI
 ```
 
 Give every call of one user message the same turn number, including tool calls and the embeddings you look up for it. The dashboard then shows them as one turn.
+
+**Calls tracked on their own.** Calls through the HTTP client, the OpenAI SDK, Laravel AI or Prism are tracked without `track()`, so there is no context to set. Set the conversation for the rest of the request or job instead, before the calls:
+
+```php
+use Spectra\Facades\Spectra;
+
+Spectra::forConversation($chat, turn: $chat->messages()->where('role', 'user')->count());
+
+$reply = $agent->prompt($message); // every call it makes is in the conversation, at this turn
+```
+
+`forConversation()` takes an id or a model (its key is used), and an optional turn number. It lasts until the request, job or command ends, or until `Spectra::clearGlobals()`. A call given its own conversation (the `conversation_id` option, or `$ctx->inConversation()`) keeps it. Conversation ids are stored in a 255-character column; a longer one is cut.
 
 The **Conversations** screen lists one row per conversation: its turns and failed calls, the models it used, its trackable, its cost and its last activity. Above the list are totals for every conversation you filter for. The filters are the same as on the requests list, and search matches part of a conversation id.
 
@@ -232,8 +244,9 @@ Spectra records the request when the stream ends. This happens when your code re
 - Newline-delimited JSON (Ollama)
 - Streamed JSON arrays (Gemini without `alt=sse`)
 
-An error event inside a stream (for example, an Anthropic `error` event) is recorded as a failed request. Spectra also measures the time to the first token of each stream.
+An error event inside a stream (for example, an Anthropic `error` event) is recorded as a failed request, and so is a stream that breaks off before its end (the connection drops, the provider stops sending): the request keeps the status code the response had, the usage read so far, and the exception as its error, and the exception still reaches your code. Spectra also measures the time to the first token of each stream.
 
+<a name="with-the-laravel-http-client"></a>
 ### With the Laravel HTTP Client
 
 ```php
@@ -260,6 +273,7 @@ while (! $body->eof()) {
 // Spectra records the request when the body has been read to the end.
 ```
 
+<a name="with-the-openai-sdk"></a>
 ### With the OpenAI SDK
 
 ```php
@@ -281,12 +295,13 @@ foreach ($stream as $response) {
 > [!IMPORTANT]
 > When you stream from the OpenAI Chat Completions API (`/v1/chat/completions`), you must include `'stream_options' => ['include_usage' => true]` in your request. Without it, OpenAI does not send token usage in the stream, and Spectra records zero tokens and zero cost. The Responses API (`/v1/responses`) doesn't need this, because it always includes usage in the `response.completed` event.
 
-### Streamed Image Generation (OpenAI Responses API)
+<a name="streamed-image-generation"></a>
+### Streamed Image Generation (OpenAI Responses API) {#streamed-image-generation}
 
 OpenAI's Responses API can stream image generation. Spectra tracks these streams too. When [media persistence](/configuration#media-persistence) is enabled, it stores the final image when the stream finishes.
 
 <a name="spectra-stream"></a>
-### Other SDKs: `Spectra::stream()`
+### Other SDKs: `Spectra::stream()` {#spectra-stream}
 
 Use `Spectra::stream()` only for SDKs that don't go through one of the clients above (for example, an SDK with its own HTTP client). It returns a `StreamingTracker`. Its `track()` method wraps the stream, yields the text as it arrives, and measures the time to the first token. Call `finish()` when the stream is done:
 
@@ -309,7 +324,23 @@ $tracker->finish();
 
 The `finish()` method returns the `SpectraRequest` record, with token counts, cost, latency, and time-to-first-token metrics. You can call it more than once. Later calls return the first result.
 
-If you wrap a stream that Spectra already tracks on its own (for example, a stream from the OpenAI SDK), the request is recorded once, not twice.
+When the stream throws inside the loop, the exception reaches your code, and the request is recorded as failed, with the usage read so far, when the tracker is released. To record it right away, or to record an exception you caught around the stream, call `fail()`:
+
+```php
+try {
+    foreach ($tracker->track($sdkStream) as $text) {
+        echo $text;
+    }
+
+    $tracker->finish();
+} catch (Throwable $e) {
+    $tracker->fail($e);
+
+    throw $e;
+}
+```
+
+If you wrap a stream that Spectra already tracks on its own (for example, a stream from the OpenAI SDK), the request is recorded once, not twice. A tracked stream your code hasn't started reading yet is never taken over by an unrelated `Spectra::stream()`.
 
 If your SDK gives you the text and the usage separately, add them yourself before you call `finish()`:
 
@@ -330,14 +361,12 @@ $tracker->finish();
 ```
 
 > [!NOTE]
-> **How Spectra stores streaming responses.** For a normal response, Spectra stores the full API response body. For a streamed response, it stores only the accumulated text, not the individual SSE chunks. This is on purpose: a stream can produce hundreds or thousands of chunks, and storing each raw chunk as JSON would make huge database rows. The `response_id` of a streamed request comes from the first chunk that has an ID (for example, `chatcmpl-...` for OpenAI or `msg_...` for Anthropic).
+> **How Spectra stores streaming responses.** For a normal response, Spectra stores the full API response body. For a streamed response, it stores only the accumulated text, not the individual stream chunks. This is on purpose: a stream can produce hundreds or thousands of chunks, and storing each raw chunk as JSON would make huge database rows. The `response_id` of a streamed request comes from the first chunk that has an ID (for example, `chatcmpl-...` for OpenAI or `msg_...` for Anthropic).
 
 <a name="traces"></a>
 ## Traces
 
-One user action often makes several AI calls: an embedding to search your
-documents, a chat completion, then a tool call and a second completion.
-Spectra links these calls with a **trace id**.
+One user action often makes several AI calls. A support question, say, makes an embedding call to search your documents, a chat call to draft the answer, a tool call to look up the order, and a second chat call to finish. On the requests list these are four unrelated rows. A **trace** ties them together: it is the group of AI calls made for one piece of work, and every call in it carries the same **trace id**. Open a trace and you see its calls in order on one timeline, with what each one cost and how long the whole thing took.
 
 All AI calls made in the same unit of work share one trace id:
 
@@ -407,17 +436,19 @@ the millisecond. A new lane starts when the origin changes, for example when a
 request dispatches a job. The trace page also shows the cost, calls and tokens
 per model, the tags, the trackable and the parent span from `traceparent`.
 
-<img class="screenshot" src="/images/dashboard/trace-detail.png" alt="A trace timeline with a span and five calls" />
+<img class="screenshot" src="/images/dashboard/trace-detail.png" alt="A trace timeline with a span, three tools and five calls" />
 
 The request page shows a **Trace** card when a trace has more than one call,
 with an **Open trace** link. As everywhere in the dashboard, cost counts
 successful calls only. Duration runs from the start of the first call to the
 end of the last one.
 
+<img class="screenshot" src="/images/dashboard/request-trace.png" alt="The Trace card on a request page, with the request's root span, its calls and a tool" />
+
 <a name="spans"></a>
 ### Spans
 
-A trace is a tree. Each AI call has a span, and calls can sit inside other spans: the request, job or command they ran in, and the blocks of your code you wrap in `Spectra::span()`.
+A span is one timed step inside a trace: when it started, when it ended, and whether it failed. Spans nest, so a trace reads as a tree. The request, job or command sits at the top, your own steps sit under it, and the AI calls sit inside the steps they ran in. Each AI call is a span of its own. You add spans for the blocks of your code that matter, such as the search before the prompt or the parsing after the reply, by wrapping them in `Spectra::span()`.
 
 **Your own spans.** Wrap a step in `Spectra::span()` to see it on the timeline, with the AI calls it makes nested inside:
 
@@ -436,10 +467,13 @@ $answer = Spectra::span('answer-question', function () use ($question) {
 
 `span()` returns what the callback returns. The span stores its start and end to the millisecond, its attributes, and whether the callback threw; the exception is re-thrown unchanged. Spans nest, and a job dispatched inside a span runs under it. Dispatch from a block body, not an arrow function: `fn () => dispatch($job)` returns the pending dispatch, which only dispatches after the span has ended. Outside a trace (with `trace_per_request` off), a span starts one for its duration.
 
-**Root spans.** Each HTTP request, queued job and Artisan command that makes an AI call gets a span of its own, named by its origin, with its calls and spans inside. A job's span sits under the span that dispatched it, so a trace reads request, job, call. A request, job or command that makes no AI call stores nothing. Turn root spans off with `root_spans` (see [Configuration](/configuration#tracking-context)). They need `trace_per_request`, the default: with it off, each call is a trace of its own and no root span is stored.
+**Tools.** Run a tool the model asked for through `Spectra::tool()` to draw it as a `tool` span with its arguments and result, or turn on `tool_spans` to draw the tools of an agent loop from the results it sends back. See [Tools](/tools).
 
-Spans are stored in the `spectra_spans` table. They are never billed or counted as requests, and `spectra:prune` deletes them with the requests. The trace page draws the tree: each span with its children indented under it. In the screenshot above, the embedding call sits inside the `retrieve-context` span, which sits inside the `POST /api/chat` request.
+**Root spans.** Each HTTP request, queued job and Artisan command that makes an AI call gets a span of its own, named by its origin, with its calls and spans inside. A job's span sits under the span that dispatched it, so a trace reads request, job, call. A request, job or command that makes no AI call stores nothing, unless a job it queued does: then the job also saves the spans it came from, so the tree has no gap (a request that queues a job that stores a message and queues its analysis reads request, job, job, call). Such a span is marked `spectra.inferred` in its attributes and ends when it queued the job, since nothing recorded its real end. Turn root spans off with `root_spans` (see [Configuration](/configuration#tracking-context)). They need `trace_per_request`, the default: with it off, each call is a trace of its own and no root span is stored.
 
+Spans are stored in the `spectra_spans` table. They are never billed or counted as requests, and `spectra:prune` deletes them with the requests. The trace page draws the tree: each span with its children indented under it. In the trace screenshot above, the embedding call sits inside the `retrieve-context` span, and the trace is named after the `App\Jobs\GenerateWeeklyDigest` job it ran in. The Trace card above shows the root span too: the `POST /api/chats/{chat}/messages` request, with the calls and tools inside it.
+
+<a name="setting-the-trace-yourself"></a>
 ### Setting the Trace Yourself
 
 ```php
@@ -462,7 +496,9 @@ foreach ($tickets as $ticket) {
 Spectra::track('openai', 'gpt-4o', fn () => ..., ['trace_id' => $traceId]);
 ```
 
-To give every AI call its own trace id (the 1.x behaviour), set
+A trace id is any string of up to 64 characters (Spectra's own are UUIDs); a longer one is cut. Apps on PostgreSQL need [the trace id migration](/migrations#trace-id-migration) for ids that aren't UUIDs.
+
+To give every AI call its own trace id, set
 `SPECTRA_TRACE_PER_REQUEST=false`. See [Tracking Context](/configuration#tracking-context).
 
 <a name="global-configuration"></a>
@@ -472,6 +508,7 @@ These methods set defaults for every request tracked after them. Use them in mid
 
 Global settings are reset between queued jobs and Octane requests (`Spectra` is a scoped service). They do not leak from one job or request into the next one. Set them where the work happens: in the job, or in middleware.
 
+<a name="global-tags"></a>
 ### Global Tags
 
 Attach tags to every tracked request, for example to record the environment or deployment:
@@ -480,6 +517,7 @@ Attach tags to every tracked request, for example to record the environment or d
 Spectra::addGlobalTags(['production', 'us-east-1']);
 ```
 
+<a name="global-pricing-tier"></a>
 ### Global Pricing Tier
 
 Set the pricing tier for all requests, so their costs use the right tier. This helps when you process batch jobs or have a specific pricing agreement. A tier set this way wins over the tier in the response or request:
@@ -488,6 +526,7 @@ Set the pricing tier for all requests, so their costs use the right tier. This h
 Spectra::withPricingTier('batch');
 ```
 
+<a name="global-trackable"></a>
 ### Global Trackable
 
 Associate all requests with a specific user or Eloquent model. This wins over the signed-in user:
@@ -503,6 +542,7 @@ Spectra::forUser(1);
 Spectra::forTrackable($team);
 ```
 
+<a name="combining-and-clearing-globals"></a>
 ### Combining and Clearing Globals
 
 You can chain global settings, and clear them when you no longer need them:

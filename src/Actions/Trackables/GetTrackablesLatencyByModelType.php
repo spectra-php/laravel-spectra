@@ -25,13 +25,14 @@ class GetTrackablesLatencyByModelType
     public function __invoke(Request $request, DateRange $dateRange): Collection
     {
         return ModelTypeLatency::fromCollection(ModelTypeStat::fromCollection(
-            RequestAggregateQuery::make($dateRange)
+            RequestAggregateQuery::forTrackableFilters($dateRange, $request)
                 ->withTrackable()
                 ->filteredBy($request)
                 ->groupByColumns('model_type')
                 ->countAs()
                 ->successfulCost()
                 ->successfulLatency()
+                ->orderBy('model_type')
                 ->get(),
         ));
     }

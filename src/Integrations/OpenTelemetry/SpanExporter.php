@@ -6,6 +6,8 @@ namespace Spectra\Integrations\OpenTelemetry;
 
 use Carbon\CarbonInterface;
 use Composer\InstalledVersions;
+use Illuminate\Support\Str;
+use JsonException;
 use Spectra\Contracts\SpanBuilder;
 use Spectra\Enums\SpanKind;
 use Spectra\Enums\SpanStatus;
@@ -57,8 +59,10 @@ class SpanExporter
     }
 
     /**
-     * An OTLP span for a stored span that is not an AI call: a
-     * Spectra::span() block or the request, job or command of a trace.
+     * Create an OTLP span for a stored span that is not an AI call: a
+     * Spectra::span() block, a tool, or the request, job or command of a
+     * trace. A tool is named and tagged as the OpenTelemetry GenAI
+     * conventions say: `execute_tool {name}`, `gen_ai.operation.name`.
      *
      * @param  array<string, mixed>  $span  The span's columns, dates as dates
      * @return array<string, mixed>
@@ -72,6 +76,10 @@ class SpanExporter
             ['key' => 'spectra.span.kind', 'value' => ['stringValue' => $kind->value]],
         ];
 
+        if ($kind === SpanKind::Tool) {
+            $attributes[] = ['key' => 'gen_ai.operation.name', 'value' => ['stringValue' => 'execute_tool']];
+        }
+
         if (filled($span['origin'] ?? null)) {
             $attributes[] = ['key' => 'spectra.origin', 'value' => ['stringValue' => (string) $span['origin']]];
         }
@@ -81,10 +89,10 @@ class SpanExporter
         }
 
         return [
-            'traceId' => str_replace('-', '', (string) $span['trace_id']),
+            'traceId' => Str::replace('-', '', (string) $span['trace_id']),
             'spanId' => (string) $span['span_id'],
             'parentSpanId' => (string) ($span['parent_span_id'] ?? ''),
-            'name' => (string) $span['name'],
+            'name' => $kind === SpanKind::Tool ? "execute_tool {$span['name']}" : (string) $span['name'],
             'kind' => $kind->otlpKind(),
             'startTimeUnixNano' => $this->toNano($span['started_at'] ?? null),
             'endTimeUnixNano' => $this->toNano($span['ended_at'] ?? null),
@@ -98,7 +106,7 @@ class SpanExporter
     }
 
     /**
-     * An OTLP attribute value for a span attribute the app set.
+     * Build the OTLP attribute value for a span attribute the app set.
      *
      * @return array<string, mixed>
      */
@@ -109,8 +117,20 @@ class SpanExporter
             is_int($value) => ['intValue' => $value],
             is_float($value) => ['doubleValue' => $value],
             is_string($value) => ['stringValue' => $value],
-            default => ['stringValue' => (string) json_encode($value)],
+            default => ['stringValue' => $this->encodeAttributeValue($value)],
         };
+    }
+
+    /**
+     * Encode an attribute value that is not a scalar as JSON, or '' when it cannot be encoded.
+     */
+    private function encodeAttributeValue(mixed $value): string
+    {
+        try {
+            return json_encode($value, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return '';
+        }
     }
 
     /**

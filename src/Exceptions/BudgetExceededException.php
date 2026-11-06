@@ -6,6 +6,7 @@ namespace Spectra\Exceptions;
 
 use Exception;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use Spectra\Models\SpectraBudget;
 
 /**
@@ -45,7 +46,7 @@ class BudgetExceededException extends Exception
         return sprintf(
             'AI budget exceeded for %s. %s limit: $%.2f, current usage: $%.2f',
             $this->limitType,
-            ucfirst($this->limitType),
+            Str::ucfirst($this->limitType),
             $limitInDollars,
             $currentInDollars
         );
@@ -146,7 +147,7 @@ class BudgetExceededException extends Exception
             sprintf(
                 'AI token budget exceeded for %s. %s token limit: %d, current usage: %d tokens',
                 $period,
-                ucfirst($period),
+                Str::ucfirst($period),
                 $limit,
                 $current
             )
@@ -172,7 +173,7 @@ class BudgetExceededException extends Exception
             sprintf(
                 'AI request limit exceeded for %s. %s request limit: %d, current count: %d requests',
                 $period,
-                ucfirst($period),
+                Str::ucfirst($period),
                 $limit,
                 $current
             )

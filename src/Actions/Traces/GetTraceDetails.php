@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use Spectra\Actions\Requests\BuildModelBreakdown;
+use Spectra\Actions\Scores\GetScores;
 use Spectra\Actions\Trackables\ResolveSoleTrackable;
 use Spectra\Data\Responses\TraceDetailsResponse;
 use Spectra\Models\SpectraRequest;
@@ -40,6 +41,7 @@ class GetTraceDetails
     public function __construct(
         private readonly BuildModelBreakdown $buildModelBreakdown,
         private readonly ResolveSoleTrackable $resolveSoleTrackable,
+        private readonly GetScores $getScores,
     ) {}
 
     /**
@@ -55,7 +57,7 @@ class GetTraceDetails
 
         $requestCount = $totals->request_count;
 
-        $spans = $this->spans($traceId);
+        $spans = $this->getSpans($traceId);
 
         // The timeline starts at the earliest call or span: a request's span starts before its first call.
         $traceStart = collect([$this->parseDate($totals->first_started_at), $spans->min('started_at')])
@@ -90,8 +92,8 @@ class GetTraceDetails
             'total_cost_in_cents' => $call->total_cost_in_cents,
             'latency_ms' => $call->latency_ms,
             'created_at' => $call->created_at?->toIso8601String(),
-            'started_at' => $this->startOf($call)?->format(self::ISO_MILLISECONDS),
-            'offset_ms' => $this->offsetMs($traceStart, $this->startOf($call)),
+            'started_at' => $this->getStartOf($call)?->format(self::ISO_MILLISECONDS),
+            'offset_ms' => $this->getOffsetMs($traceStart, $this->getStartOf($call)),
             'is_current' => $call->id === $currentRequestId,
         ])->values()->all();
 
@@ -105,38 +107,39 @@ class GetTraceDetails
             'error_message' => $span->error_message,
             'attributes' => $span->attributes ?? [],
             'started_at' => $span->started_at->format(self::ISO_MILLISECONDS),
-            'offset_ms' => $this->offsetMs($traceStart, $span->started_at),
+            'offset_ms' => $this->getOffsetMs($traceStart, $span->started_at),
             'duration_ms' => $span->duration_ms,
         ])->values()->all();
 
         return new TraceDetailsResponse(
             trace_id: $traceId,
-            parent_span_id: $this->upstreamParentSpanId($requests, $spanRows),
+            parent_span_id: $this->findUpstreamParentSpanId($requests, $spanRows),
             origin: $calls->first(fn (SpectraRequest $call) => filled($call->origin))?->origin,
             request_count: $requestCount,
             failed_count: $totals->failed_count,
-            position: $this->position($traceId, $currentRequestId, $requests),
+            position: $this->getPosition($traceId, $currentRequestId, $requests),
             total_cost_in_cents: $totals->cost,
             total_tokens: $totals->tokens,
             started_at: $traceStart?->format(self::ISO_MILLISECONDS),
             duration_ms: max(0, (int) round($totals->duration_ms)),
-            timeline_ms: $this->timelineMs($requests, $spanRows),
+            timeline_ms: $this->getTimelineMs($requests, $spanRows),
             truncated: $requestCount > count($requests),
             requests: $requests,
             spans: $spanRows,
             models: ($this->buildModelBreakdown)(RequestAggregateQuery::make()->forTrace($traceId)),
-            tags: $this->tags($traceId),
+            tags: $this->getTags($traceId),
             trackable: ($this->resolveSoleTrackable)(RequestAggregateQuery::make()->forTrace($traceId)),
+            scores: ($this->getScores)(traceId: $traceId),
         );
     }
 
     /**
-     * The 1-based place of the current call in the trace. Counted with a
+     * Get the 1-based place of the current call in the trace. Counted with a
      * query only when the call is past the calls returned.
      *
      * @param  array<int, array<string, mixed>>  $requests
      */
-    private function position(string $traceId, ?string $currentRequestId, array $requests): ?int
+    private function getPosition(string $traceId, ?string $currentRequestId, array $requests): ?int
     {
         if ($currentRequestId === null) {
             return null;
@@ -149,7 +152,7 @@ class GetTraceDetails
         }
 
         $current = SpectraRequest::query()->select(['id', 'created_at', 'started_at'])->find($currentRequestId);
-        $start = $current === null ? null : $this->startOf($current)?->format('Y-m-d H:i:s.v');
+        $start = $current === null ? null : $this->getStartOf($current)?->format('Y-m-d H:i:s.v');
 
         if ($start === null) {
             return null;
@@ -168,7 +171,7 @@ class GetTraceDetails
      *
      * @return array<int, string>
      */
-    private function tags(string $traceId): array
+    private function getTags(string $traceId): array
     {
         return SpectraTag::query()
             ->whereHas('requests', fn ($requests) => $requests->forTrace($traceId))
@@ -178,12 +181,12 @@ class GetTraceDetails
     }
 
     /**
-     * The trace's spans, earliest first. None until the app runs the spans
-     * migration.
+     * Get the trace's spans, earliest first. None until the app runs the
+     * spans migration.
      *
      * @return Collection<int, SpectraSpan>
      */
-    private function spans(string $traceId): Collection
+    private function getSpans(string $traceId): Collection
     {
         return rescue(
             fn () => SpectraSpan::query()->where('trace_id', $traceId)->oldest('started_at')->limit(self::SPAN_LIMIT)->get(),
@@ -193,18 +196,18 @@ class GetTraceDetails
     }
 
     /**
-     * The span the trace came from (the incoming `traceparent`): the first
-     * parent that is none of the trace's own spans or calls.
+     * Find the span the trace came from (the incoming `traceparent`): the
+     * first parent that is none of the trace's own spans or calls.
      *
      * @param  array<int, array<string, mixed>>  $requests
      * @param  array<int, array<string, mixed>>  $spans
      */
-    private function upstreamParentSpanId(array $requests, array $spans): ?string
+    private function findUpstreamParentSpanId(array $requests, array $spans): ?string
     {
-        $own = collect([...$spans, ...$requests])->pluck('span_id')->filter()->all();
+        $ownSpanIds = collect([...$spans, ...$requests])->pluck('span_id')->filter()->all();
 
         foreach ([...$spans, ...$requests] as $node) {
-            if (filled($node['parent_span_id']) && ! in_array($node['parent_span_id'], $own, true)) {
+            if (filled($node['parent_span_id']) && ! in_array($node['parent_span_id'], $ownSpanIds, true)) {
                 return $node['parent_span_id'];
             }
         }
@@ -213,13 +216,13 @@ class GetTraceDetails
     }
 
     /**
-     * From the start of the timeline to the end of its last call or span, so
-     * every bar fits.
+     * Get the milliseconds from the start of the timeline to the end of its
+     * last call or span, so every bar fits.
      *
      * @param  array<int, array<string, mixed>>  $requests
      * @param  array<int, array<string, mixed>>  $spans
      */
-    private function timelineMs(array $requests, array $spans): int
+    private function getTimelineMs(array $requests, array $spans): int
     {
         $ends = [
             0,
@@ -233,7 +236,7 @@ class GetTraceDetails
     /**
      * Get when the call started, falling back to when it was recorded.
      */
-    private function startOf(SpectraRequest $call): ?CarbonInterface
+    private function getStartOf(SpectraRequest $call): ?CarbonInterface
     {
         return $call->started_at ?? $call->created_at;
     }
@@ -247,9 +250,9 @@ class GetTraceDetails
     }
 
     /**
-     * Milliseconds from the start of the trace to the given time.
+     * Get the milliseconds from the start of the trace to the given time.
      */
-    private function offsetMs(?CarbonInterface $from, ?CarbonInterface $to): ?int
+    private function getOffsetMs(?CarbonInterface $from, ?CarbonInterface $to): ?int
     {
         if ($from === null || $to === null) {
             return null;

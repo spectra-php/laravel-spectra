@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 use Spectra\Models\SpectraRequest;
 
 /**
- * One model's usage for a trackable: requests, tokens and the cost of
+ * One model's usage for a trackable under one provider: requests, tokens and the cost of
  * successful requests.
  */
 readonly class UsageByModel extends DataTransferObject
@@ -18,13 +18,14 @@ readonly class UsageByModel extends DataTransferObject
      */
     public function __construct(
         public string $model,
+        public ?string $provider,
         public int $requests,
         public int $tokens,
         public float $cost,
     ) {}
 
     /**
-     * Build one row per model from a trackable's per-model aggregate rows.
+     * Build one row per provider and model from a trackable's aggregate rows.
      *
      * @param  Collection<int, SpectraRequest>  $items
      * @return Collection<int, self>
@@ -33,6 +34,7 @@ readonly class UsageByModel extends DataTransferObject
     {
         return $items->map(fn (SpectraRequest $item) => new self(
             model: $item->model,
+            provider: $item->provider,
             requests: $item->requests,
             tokens: $item->tokens_sum,
             cost: $item->cost,

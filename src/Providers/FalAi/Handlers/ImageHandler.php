@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Spectra\Providers\FalAi\Handlers;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsModelFromRequest;
 use Spectra\Contracts\Handler;
 use Spectra\Contracts\HasFinishReason;
@@ -16,6 +17,7 @@ use Spectra\Data\Metrics;
 use Spectra\Enums\ModelType;
 use Spectra\Providers\FalAi\Concerns\HandlesFalRequests;
 use Spectra\Support\MediaPersister;
+use Spectra\Support\Payload;
 
 /**
  * fal.ai image models, called directly or through the queue.
@@ -97,7 +99,7 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
         $persister = app(MediaPersister::class);
         $stored = [];
 
-        foreach ($this->resolveImages($responseData) as $i => $image) {
+        foreach ($this->resolveImages($responseData) as $index => $image) {
             $url = $image['url'] ?? null;
 
             if (! is_string($url)) {
@@ -105,7 +107,7 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
             }
 
             // One image that fails to download or store must not lose the others.
-            $path = rescue(function () use ($persister, $requestId, $i, $url, $image) {
+            $path = rescue(function () use ($persister, $requestId, $index, $url, $image) {
                 $response = Http::withoutAITracking()->timeout(self::MEDIA_DOWNLOAD_TIMEOUT_SECONDS)->get($url);
 
                 if (! $response->successful()) {
@@ -114,7 +116,7 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
 
                 $extension = $this->resolveExtension($image['content_type'] ?? $response->header('Content-Type'));
 
-                return $persister->store($requestId, $i, $response->body(), $extension);
+                return $persister->store($requestId, $index, $response->body(), $extension);
             });
 
             if ($path !== null) {
@@ -126,8 +128,9 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
     }
 
     /**
-     * Images from a result (`images[]`, or a single `image` for edit
-     * models), unwrapping webhook `payload`s.
+     * Get the images of a result (`images[]`, or a single `image` for edit models).
+     *
+     * Webhook `payload`s are unwrapped first.
      *
      * @param  array<string, mixed>  $data
      * @return array<int, array<mixed>>
@@ -141,7 +144,7 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
     }
 
     /**
-     * Billed megapixels, or null when an image has no size.
+     * Get the billed megapixels of the images, or null when an image has no size.
      *
      * @param  array<int, array<mixed>>  $images
      */
@@ -161,7 +164,7 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
                 return null;
             }
 
-            $total += max(1, (int) ceil(((float) $width * (float) $height) / self::MEGAPIXEL));
+            $total += max(1, (int) ceil((Payload::float($width) * Payload::float($height)) / self::MEGAPIXEL));
         }
 
         return (float) $total;
@@ -173,7 +176,7 @@ class ImageHandler implements ExtractsModelFromRequest, Handler, HasFinishReason
     private function resolveExtension(?string $contentType): string
     {
         if (filled($contentType)) {
-            $mime = strtolower(trim(explode(';', $contentType, 2)[0]));
+            $mime = Str::lower(trim(Str::before($contentType, ';')));
 
             return match ($mime) {
                 'image/jpeg' => 'jpg',

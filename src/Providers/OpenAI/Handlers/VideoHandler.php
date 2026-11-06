@@ -21,6 +21,7 @@ use Spectra\Enums\ModelType;
 use Spectra\Providers\OpenAI\MeasuresJobLatency;
 use Spectra\Support\ApiKeyResolver;
 use Spectra\Support\MediaPersister;
+use Spectra\Support\Payload;
 
 /**
  * Sora video generation (`/v1/videos`), billed per second of video.
@@ -103,7 +104,7 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
     {
         $expiresAt = $responseData['expires_at'] ?? null;
 
-        return is_numeric($expiresAt) ? Date::createFromTimestamp((int) $expiresAt) : null;
+        return is_numeric($expiresAt) ? Date::createFromTimestamp(Payload::int($expiresAt)) : null;
     }
 
     /**
@@ -120,7 +121,7 @@ class VideoHandler implements ExtractsModelFromResponse, Handler, HasExpiration,
         }
 
         $apiKey = app(ApiKeyResolver::class)->resolve('openai');
-        if (! $apiKey) {
+        if (blank($apiKey)) {
             return [];
         }
 

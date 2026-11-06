@@ -52,7 +52,7 @@ class BuildTraceQuery
      *
      * @return Builder<SpectraRequest>
      */
-    private function matchingTraceIds(Request $request, DateRange $dateRange): Builder
+    public function matchingTraceIds(Request $request, DateRange $dateRange): Builder
     {
         $calls = SpectraRequest::query()->select('trace_id')->whereNotNull('trace_id');
 
@@ -62,11 +62,13 @@ class BuildTraceQuery
         if ($request->filled('search')) {
             $search = (string) $request->input('search');
 
-            // trace_id is a native uuid column on PostgreSQL, which errors on
-            // any other string, so only compare it with a UUID.
+            // A native uuid trace_id column (PostgreSQL before the trace id
+            // migration) errors on any other string, so it is only compared with a UUID.
+            $matchesTraceId = Str::isUuid($search) || ! (new SpectraRequest)->hasUuidTraceIdColumn();
+
             $calls->where(fn (Builder $match) => $match
                 ->where('origin', 'like', "%{$search}%")
-                ->when(Str::isUuid($search), fn (Builder $uuid) => $uuid->orWhere('trace_id', $search)));
+                ->when($matchesTraceId, fn (Builder $trace) => $trace->orWhere('trace_id', $search)));
         }
 
         return $calls;

@@ -9,10 +9,14 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Spectra\Models\SpectraBudget;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Relations\StringKeyedMorphMany;
+use Spectra\Support\Relations\StringKeyedMorphOne;
 
 /**
  * The Eloquent relations from a trackable model to its Spectra rows: the
  * requests it made and its (active) budget, keyed by the model's morph class.
+ * Spectra's morph id columns are strings, so the relations compare this
+ * model's key as a string whether it is an integer, a UUID or a ULID.
  *
  * @phpstan-require-extends Model
  *
@@ -25,7 +29,10 @@ trait HasAiRelationships
      */
     public function aiRequests(): MorphMany
     {
-        return $this->morphMany(SpectraRequest::class, 'trackable');
+        $requests = $this->newRelatedInstance(SpectraRequest::class);
+        [$type, $id] = $this->getMorphs('trackable', null, null);
+
+        return new StringKeyedMorphMany($requests->newQuery(), $this, $requests->qualifyColumn($type), $requests->qualifyColumn($id), $this->getKeyName());
     }
 
     /**
@@ -33,7 +40,10 @@ trait HasAiRelationships
      */
     public function aiBudget(): MorphOne
     {
-        return $this->morphOne(SpectraBudget::class, 'budgetable');
+        $budgets = $this->newRelatedInstance(SpectraBudget::class);
+        [$type, $id] = $this->getMorphs('budgetable', null, null);
+
+        return new StringKeyedMorphOne($budgets->newQuery(), $this, $budgets->qualifyColumn($type), $budgets->qualifyColumn($id), $this->getKeyName());
     }
 
     /**
