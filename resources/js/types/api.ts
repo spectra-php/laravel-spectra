@@ -1002,3 +1002,89 @@ export interface PlaygroundRunResponse {
     latency_ms: number | null;
     request_id: string | null;
 }
+
+// Shared dashboards: what a viewer gets. A cost is null on a dashboard that hides costs.
+export interface DashboardStats {
+    total_requests: number;
+    total_tokens: number;
+    total_images: number;
+    total_videos: number;
+    total_tts_characters: number;
+    stt_duration_seconds: number;
+    avg_latency: number;
+    total_cost: number | null;
+}
+
+export interface DashboardUsageRow {
+    provider: string | null;
+    provider_name: string | null;
+    model: string | null;
+    requests: number;
+    tokens: number;
+    cost: number | null;
+}
+
+export interface DashboardRequest {
+    provider: string | null;
+    provider_name: string | null;
+    model: string | null;
+    model_type: string | null;
+    tokens: number;
+    images: number;
+    videos: number;
+    input_characters: number;
+    duration_seconds: number;
+    latency_ms: number | null;
+    failed: boolean;
+    cost: number | null;
+    created_at: string | null;
+}
+
+export interface DashboardBudgetLimit {
+    metric: 'cost' | 'tokens' | 'requests';
+    period: 'daily' | 'weekly' | 'monthly' | 'total';
+    used: number;
+    limit: number;
+}
+
+export type DashboardWidgetSize = 'full' | 'half';
+
+export type DashboardWidgetData = { size: DashboardWidgetSize } & (
+    | { type: 'stats'; data: DashboardStats }
+    | { type: 'cost_trend'; data: CostByDate[] }
+    | { type: 'requests_trend'; data: RequestByDate[] }
+    | { type: 'usage_by_model'; data: DashboardUsageRow[] }
+    | { type: 'usage_by_provider'; data: DashboardUsageRow[] }
+    | { type: 'recent_requests'; data: DashboardRequest[] }
+    | { type: 'budget'; data: DashboardBudgetLimit[] }
+);
+
+export interface DashboardResponse {
+    name: string;
+    trackable_name: string | null;
+    period: string;
+    show_costs: boolean;
+    widgets: DashboardWidgetData[];
+}
+
+// Shared dashboards: what an admin designs.
+export interface DashboardSummary {
+    id: string;
+    name: string;
+    trackable_type: string;
+    trackable_id: string | null;
+    trackable_name: string | null;
+    widgets: { type: DashboardWidgetData['type']; size: DashboardWidgetSize }[];
+    default_period: string;
+    show_costs: boolean;
+    is_active: boolean;
+    url: string;
+}
+
+export interface DashboardsResponse {
+    enabled: boolean;
+    allowed: boolean;
+    migrated: boolean;
+    dashboards: DashboardSummary[];
+    trackable_types: string[];
+}

@@ -51,6 +51,7 @@ it('publishes only the missing migrations when run again', function () {
         'change_trace_id_to_string_on_spectra_requests_table.php',
         'change_trackable_id_to_string_on_spectra_tables.php',
         'create_spectra_annotation_items_table.php',
+        'create_spectra_dashboards_table.php',
         'create_spectra_entries.php',
         'create_spectra_evaluation_tables.php',
         'create_spectra_scores_table.php',

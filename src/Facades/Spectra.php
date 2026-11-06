@@ -10,6 +10,7 @@ use Spectra\Data\TokenMetrics;
 use Spectra\Enums\ScoreSource;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
+use Spectra\Support\Dashboards\Dashboards;
 use Spectra\Support\Evaluations\Dataset;
 use Spectra\Support\Query\CostQueryBuilder;
 use Spectra\Support\Query\UsageQueryBuilder;
@@ -33,6 +34,7 @@ use Spectra\Testing\SpectraFake;
  * @method static \Spectra\Spectra redactUsing(\Closure $callback)
  * @method static bool queueForReview(string $queue, ?string $traceId = null)
  * @method static Dataset dataset(string $name)
+ * @method static Dashboards dashboard()
  * @method static StreamingTracker stream(?string $provider = null, ?string $model = null, array<string, mixed> $options = [])
  * @method static \Spectra\Spectra addGlobalTags(array<int, string> $tags)
  * @method static mixed withPrompt(string $name, ?string $version, callable $callback)
@@ -67,6 +69,8 @@ use Spectra\Testing\SpectraFake;
  * @method static void assertSpanRecorded(string $name, ?callable $callback = null)
  * @method static void assertToolCalled(string $name, ?callable $callback = null)
  * @method static void assertQueuedForReview(string $queue, ?string $traceId = null)
+ * @method static void assertDashboardCreated(?string $name = null)
+ * @method static void assertDashboardDeleted(?string $id = null)
  * @method static array<int, array<string, mixed>> getSpans()
  * @method static void assertScored(string $name, ?callable $callback = null)
  * @method static void assertNotScored(?string $name = null)

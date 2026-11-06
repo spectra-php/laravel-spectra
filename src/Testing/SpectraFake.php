@@ -41,6 +41,11 @@ class SpectraFake extends Spectra
     protected array $spans = [];
 
     /**
+     * Shared dashboards kept in memory for dashboard().
+     */
+    protected ?FakeDashboards $dashboards = null;
+
+    /**
      * Traces queued with queueForReview().
      *
      * @var array<int, array{queue: string, trace_id: string}>
@@ -320,6 +325,34 @@ class SpectraFake extends Spectra
         $this->reviewQueue[] = ['queue' => $queue, 'trace_id' => $traceId];
 
         return true;
+    }
+
+    /**
+     * Get the shared dashboards, kept in memory instead of saved.
+     */
+    public function dashboard(): FakeDashboards
+    {
+        return $this->dashboards ??= app(FakeDashboards::class);
+    }
+
+    /**
+     * Assert a dashboard (the named one, or any) exists.
+     */
+    public function assertDashboardCreated(?string $name = null): void
+    {
+        $matching = $this->dashboard()->list()->filter(fn ($dashboard) => $name === null || $dashboard->name === $name);
+
+        Assert::assertNotEmpty($matching, $name === null ? 'Expected a dashboard to be created, but none was.' : "Expected a dashboard named [{$name}] to be created, but none was.");
+    }
+
+    /**
+     * Assert a dashboard (the given one, or any) was deleted.
+     */
+    public function assertDashboardDeleted(?string $id = null): void
+    {
+        $deleted = $this->dashboard()->deleted;
+
+        Assert::assertTrue($id === null ? $deleted !== [] : in_array($id, $deleted, true), $id === null ? 'Expected a dashboard to be deleted, but none was.' : "Expected the dashboard [{$id}] to be deleted, but it wasn't.");
     }
 
     /**

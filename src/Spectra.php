@@ -17,6 +17,7 @@ use Spectra\Enums\SpanKind;
 use Spectra\Models\SpectraRequest;
 use Spectra\Models\SpectraScore;
 use Spectra\Support\Annotations\AnnotationQueues;
+use Spectra\Support\Dashboards\Dashboards;
 use Spectra\Support\Evaluations\Dataset;
 use Spectra\Support\Query\CostQueryBuilder;
 use Spectra\Support\Query\UsageQueryBuilder;
@@ -365,6 +366,19 @@ class Spectra
         throw_if(blank($name) || Str::length($name) > 100, InvalidArgumentException::class, 'A dataset needs a name of 1 to 100 characters.');
 
         return new Dataset($name);
+    }
+
+    /**
+     * Get the shared dashboards: read-only pages for a trackable, which logs in
+     * through your app and sees only its own data.
+     *
+     *   $url = Spectra::dashboard()->create('Usage', $user, widgets: ['stats', 'recent_requests'])->url();
+     *   Spectra::dashboard()->list($user);
+     *   Spectra::dashboard()->delete($dashboard);
+     */
+    public function dashboard(): Dashboards
+    {
+        return $this->app->make(Dashboards::class);
     }
 
     /**

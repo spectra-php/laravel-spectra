@@ -2,7 +2,11 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import path from 'path';
 
-export default defineConfig({
+// Two builds, because the layouts inline each file into a single script, which
+// can't import a chunk two entries would share: `app` is the dashboard, and
+// `viewer` (--mode viewer) is the page viewers of a shared dashboard get, with
+// none of the admin screens. The shared page reuses app.css.
+export default defineConfig(({ mode }) => ({
     plugins: [
         vue(),
     ],
@@ -12,11 +16,11 @@ export default defineConfig({
         emptyOutDir: false,
         chunkSizeWarningLimit: 2000,
         rolldownOptions: {
-            input: 'resources/js/app.ts',
+            input: mode === 'viewer' ? 'resources/js/viewer.ts' : 'resources/js/app.ts',
             output: {
-                entryFileNames: 'app.js',
+                entryFileNames: mode === 'viewer' ? 'viewer.js' : 'app.js',
                 chunkFileNames: '[name].js',
-                assetFileNames: 'app.[ext]',
+                assetFileNames: mode === 'viewer' ? 'viewer.[ext]' : 'app.[ext]',
             },
         },
     },
@@ -25,4 +29,4 @@ export default defineConfig({
             '@': path.resolve(import.meta.dirname, 'resources/js'),
         },
     },
-});
+}));

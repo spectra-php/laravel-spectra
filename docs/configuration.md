@@ -253,6 +253,25 @@ Configure the built-in SPA dashboard.
 | `layout` | `string` | `full` | Which model types the dashboard displays. Options: `full`, `text`, `embedding`, `image`, `video`, `audio`. |
 | `date_format` | `string` | `M j, Y g:i:s A` | PHP date format string for timestamps in the dashboard. |
 
+<a name="dashboards"></a>
+## Dashboards
+
+Configure [dashboards](/dashboards), the read-only pages you share with people outside Spectra.
+
+```php
+'dashboards' => [
+    'enabled'    => env('SPECTRA_DASHBOARDS_ENABLED', false),
+    'middleware' => ['web', 'auth', 'throttle:60,1'],
+    'domain'     => env('SPECTRA_DASHBOARDS_DOMAIN'),
+],
+```
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `enabled` | `bool` | `false` | Turn dashboards on. They give people who can't open Spectra's own dashboard access to data. Designing one also needs the `manageSpectra` gate. |
+| `middleware` | `array` | `['web', 'auth', 'throttle:60,1']` | Middleware on the pages viewers open, in place of `dashboard.middleware`. Keep `auth`, naming your guard if viewers use another one (`auth:customer`). |
+| `domain` | `string\|null` | `null` | Serve the pages on this domain. `null` answers on any. |
+
 <a name="costs"></a>
 ## Costs
 
@@ -527,6 +546,10 @@ SPECTRA_PLAYGROUND_ENABLED=false
 SPECTRA_PLAYGROUND_TIMEOUT=120
 SPECTRA_DASHBOARD_LAYOUT=full
 SPECTRA_DATE_FORMAT="M j, Y g:i:s A"
+
+# Dashboards
+SPECTRA_DASHBOARDS_ENABLED=false
+SPECTRA_DASHBOARDS_DOMAIN=
 
 # Watcher
 SPECTRA_WATCHER_ENABLED=true

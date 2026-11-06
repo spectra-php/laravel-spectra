@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Js;
+use Spectra\Models\SpectraDashboard;
 
 /**
  * Inlines the dashboard's built CSS, JavaScript and favicons into its Blade
@@ -100,6 +101,55 @@ class DashboardAssets
         Log::warning("Spectra dashboard JavaScript not found at {$jsPath} — the dashboard will not load. Run `npm run build` in the package to generate the dist assets.");
 
         return new HtmlString('');
+    }
+
+    /**
+     * Get a shared dashboard's compiled JavaScript as an inline module script,
+     * with its config. It is a build of its own, so a viewer's page holds none
+     * of the admin screens.
+     */
+    public static function viewerJs(SpectraDashboard $dashboard): HtmlString
+    {
+        $jsPath = __DIR__.'/../../dist/viewer.js';
+
+        if (File::exists($jsPath)) {
+            $js = File::get($jsPath);
+            $config = Js::from(static::viewerScriptVariables());
+            $shared = Js::from([
+                'dataUrl' => route('spectra.dashboards.data', ['id' => $dashboard->id], false),
+                'period' => $dashboard->default_period,
+            ]);
+
+            return new HtmlString(<<<HTML
+                <script type="module">
+                    window.Spectra = {$config};
+                    window.SpectraViewer = {$shared};
+                    {$js}
+                </script>
+            HTML);
+        }
+
+        Log::warning("Spectra shared dashboard JavaScript not found at {$jsPath} — the page will not load. Run `npm run build` in the package to generate the dist assets.");
+
+        return new HtmlString('');
+    }
+
+    /**
+     * Get the config a shared dashboard's JavaScript reads from window.Spectra:
+     * what formats numbers and dates, and nothing about the installation.
+     *
+     * @return array<string, mixed>
+     */
+    public static function viewerScriptVariables(): array
+    {
+        return [
+            'path' => '',
+            'timezone' => config('app.timezone', 'UTC'),
+            'currency' => config('spectra.costs.currency', 'USD'),
+            'currencySymbol' => config('spectra.costs.currency_symbol', '$'),
+            'version' => '',
+            'csrfToken' => null,
+        ];
     }
 
     /**

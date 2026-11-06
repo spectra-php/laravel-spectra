@@ -344,7 +344,14 @@ onUnmounted(() => {
 <template>
     <div class="">
         <!-- Breadcrumb -->
-        <Breadcrumb :items="breadcrumbs" />
+        <div class="flex items-start justify-between gap-4">
+            <Breadcrumb :items="breadcrumbs" />
+            <router-link
+                v-if="trackable"
+                :to="{ name: 'dashboards-create', query: { type: trackable.type, id: trackable.id } }"
+                class="shrink-0 text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
+            >Share a dashboard</router-link>
+        </div>
 
         <!-- Header -->
         <PageRangeHeader

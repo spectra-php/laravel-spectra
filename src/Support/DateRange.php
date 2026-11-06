@@ -52,6 +52,14 @@ readonly class DateRange
             }
         }
 
+        return self::forPeriod(is_string($period) ? $period : 'month');
+    }
+
+    /**
+     * Create a date range from a preset period up to now; anything else is this month.
+     */
+    public static function forPeriod(string $period): self
+    {
         $start = match ($period) {
             'today' => today(),
             'week' => now()->startOfWeek(),

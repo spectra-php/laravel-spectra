@@ -17,6 +17,9 @@ import PlaygroundCall from './screens/playground/call.vue';
 import Trackables from './screens/trackables/index.vue';
 import TrackableDetail from './screens/trackables/detail.vue';
 import Users from './screens/users/index.vue';
+import Dashboards from './screens/dashboards/index.vue';
+import DashboardEdit from './screens/dashboards/edit.vue';
+import DashboardPreview from './screens/dashboards/preview.vue';
 import Maintenance from './screens/maintenance/index.vue';
 import Review from './screens/review/index.vue';
 import ReviewQueue from './screens/review/queue.vue';
@@ -106,6 +109,26 @@ const routes: RouteRecordRaw[] = [
         path: '/users/view/:id',
         name: 'user-detail',
         component: TrackableDetail,
+    },
+    {
+        path: '/dashboards',
+        name: 'dashboards',
+        component: Dashboards,
+    },
+    {
+        path: '/dashboards/new',
+        name: 'dashboards-create',
+        component: DashboardEdit,
+    },
+    {
+        path: '/dashboards/:id/edit',
+        name: 'dashboards-edit',
+        component: DashboardEdit,
+    },
+    {
+        path: '/dashboards/:id/preview',
+        name: 'dashboards-preview',
+        component: DashboardPreview,
     },
     {
         path: '/trackables',

@@ -62,3 +62,9 @@ export interface SpectraConfig {
     version: string;
     csrfToken: string | null;
 }
+
+// What a shared dashboard's page gets from its layout.
+export interface SpectraViewerConfig {
+    dataUrl: string;
+    period: string;
+}

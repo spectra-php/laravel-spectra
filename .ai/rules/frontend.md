@@ -11,6 +11,9 @@ paths:
 ## A Vue 3 SPA over the dashboard API
 The dashboard is Vue 3 with Vue Router and Tailwind 4, in TypeScript (`<script setup lang="ts">`, strict mode). Screens live in `resources/js/screens/{area}/`, shared pieces in `components/`, logic in `composables/` (`useCharts`, `usePeriodQuery`, `useProviders`, …) and shared types in `types/`. It reads only the API in `routes/web.php`; keep the JSON keys, their type in `types/api.ts` (the PHP DTOs in `src/Data` are the source of truth) and the screen that reads them in step. Give API data its real type rather than `any`, and run `npm run typecheck` after a change.
 
+## Two builds
+`resources/js/app.ts` is the dashboard, and `resources/js/viewer.ts` (`vite build --mode viewer`) is the page a dashboard's viewer gets, with none of the admin screens. `npm run build` runs both; each layout inlines one file into one script, so they can't share a chunk. Viewer code (`components/dashboards/`) reaches no dashboard API and needs nothing `App.vue` provides: `useProviders` and `apiRequest` are out, and what it needs comes from the viewer's own endpoint. It reuses `dist/app.css`, whose Tailwind scan covers it; `dist/viewer.css` is ignored.
+
 ## Rebuild and commit dist
 Users install the package without Node, so the built assets in `dist/` are committed. After changing anything under `resources/js` or `resources/css`, run `npm run build` and commit `dist/` with the change. Never edit `dist/` by hand.
 

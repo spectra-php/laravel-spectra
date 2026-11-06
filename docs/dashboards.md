@@ -1,0 +1,191 @@
+# Dashboards
+
+A customer asks how much AI usage their account has had this month. Spectra knows, but its dashboard shows everyone's data, so you can't give them access to it. A dashboard solves that: you design a small read-only page, choose whose data it shows, and give that person the link. They log in to your app as usual and see only their own numbers.
+
+<a name="what-is-a-dashboard"></a>
+## What Is a Dashboard?
+
+A dashboard is a saved page with two parts: the **widgets** it shows, such as total requests and the latest calls, and the **trackable** it shows them for. A trackable is any model you attribute AI calls to, such as a `User` or a `Team`.
+
+A dashboard can be for one trackable, or for every trackable of a type. For example, you might:
+
+- Make one page for your biggest customer, showing their spend and budget.
+- Make one page for every `User`, and link to it from your app's account settings. Everyone opens the same link and sees only their own data.
+- Give a team lead a page for their `Team`, without giving them Spectra's own dashboard.
+
+This is separate from [Spectra's own dashboard](/dashboard), the admin screens at `/spectra`. Viewers of a dashboard can't open those, and don't need to.
+
+<a name="turning-them-on"></a>
+## Turning Them On
+
+Dashboards give people who can't open Spectra's own dashboard access to data, so they are off until you turn them on. Add this to your `.env`:
+
+```ini
+SPECTRA_DASHBOARDS_ENABLED=true
+```
+
+Then run the installer, which publishes and runs [the migration](/migrations#dashboards-migration):
+
+```shell
+php artisan spectra:install
+```
+
+Designing a dashboard needs the `manageSpectra` gate, which allows only the `local` environment until you define it:
+
+```php
+Gate::define('manageSpectra', fn ($user) => $user->isAdmin());
+```
+
+<a name="creating-a-dashboard"></a>
+## Creating a Dashboard
+
+Open **Dashboards** in Spectra's sidebar and press **New dashboard**. Name it, choose who can see it, and add the widgets you want, in the order you want them. **Share a dashboard** on a trackable's page starts one for that trackable. **Preview** shows exactly what the viewer gets, and **Copy link** gives you the URL to send them.
+
+<a name="from-code"></a>
+### From Code
+
+You can do the same with `Spectra::dashboard()`, for example when a customer signs up:
+
+```php
+use Spectra\Facades\Spectra;
+
+// For one user. Pass a model...
+$dashboard = Spectra::dashboard()->create('Usage', $user);
+
+// ...or a type and an id.
+Spectra::dashboard()->create('Usage', User::class, trackableId: 123);
+
+// For every user, each seeing their own data.
+Spectra::dashboard()->create('Usage', User::class);
+
+// The link to give them.
+$dashboard->url();
+```
+
+Choose the widgets, and how the page starts, with named arguments:
+
+```php
+Spectra::dashboard()->create(
+    'Acme usage',
+    $team,
+    widgets: ['stats', ['type' => 'budget', 'size' => 'half'], ['type' => 'usage_by_model', 'size' => 'half']],
+    period: 'week',
+    showCosts: true,
+);
+```
+
+Without `widgets`, a dashboard shows the headline numbers, requests over time and recent requests. The name and the trackable identify a dashboard, so creating the same one again changes it and keeps its link. That makes it safe to call from a seeder or a deploy script. A wrong argument throws an `InvalidArgumentException`.
+
+To find and delete dashboards:
+
+```php
+// Every dashboard.
+Spectra::dashboard()->list();
+
+// What this user can open, including those for every user.
+Spectra::dashboard()->list($user);
+
+// Every dashboard for a type.
+Spectra::dashboard()->list(User::class);
+
+// By the model or its id. Returns whether one was deleted.
+Spectra::dashboard()->delete($dashboard);
+```
+
+`list()` includes paused dashboards, so check `is_active` before you link to one. Deleting a dashboard ends its link. The calls it showed stay stored.
+
+<a name="widgets"></a>
+## Widgets
+
+| Widget | Shows |
+| --- | --- |
+| `stats` | Requests, tokens, average latency and any media usage, plus spend when costs are shown |
+| `requests_trend` | Requests per day |
+| `cost_trend` | Spend per day. Left out unless costs are shown |
+| `usage_by_model` | Requests and tokens per model, plus cost when costs are shown |
+| `usage_by_provider` | Requests per provider, plus cost when costs are shown |
+| `recent_requests` | The latest 20 calls: model, usage, latency, status and time, plus cost when costs are shown |
+| `budget` | Usage against the trackable's [budget](/budgets) limits. Cost limits show only when costs are shown |
+
+Each widget is `full` or `half` width. Viewers can switch the page between today, this week, this month and this year. The budget widget uses each limit's own period instead.
+
+<a name="what-viewers-see"></a>
+## What Viewers See
+
+A dashboard shows totals and a short list of calls, and nothing a viewer could use to read your prompts:
+
+- **Prompts and responses are never sent**, and neither are a call's id, metadata or trace, whichever widgets you choose.
+- **Costs are hidden unless you turn them on.** They are what you pay the provider, so a customer could work out your margin. On a dashboard that hides them, the server doesn't send them at all.
+- **Model and provider names are shown** by `usage_by_model`, `usage_by_provider` and `recent_requests`. Leave those widgets out if you'd rather not say which ones you use.
+
+<a name="who-can-open-a-dashboard"></a>
+## Who Can Open a Dashboard
+
+Spectra has no login of its own. Viewers log in through your app:
+
+1. They open the link. If they aren't logged in, your app's `auth` middleware sends them to your login page.
+2. After logging in, your app sends them back. Your login must redirect with `redirect()->intended()`, as Laravel's starter kits do.
+3. Spectra checks that the logged-in user is the dashboard's trackable. Anyone else gets a 403, so forwarding the link gives nobody access.
+
+Pausing a dashboard makes its link answer 404 until you turn it back on.
+
+<a name="teams-and-other-trackables"></a>
+### Teams and Other Trackables
+
+By default, a viewer must be the trackable themselves. When your trackable is something else, such as a `Team`, tell Spectra who counts by binding your own `DashboardTrackableResolver`:
+
+```php
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
+use Spectra\Contracts\DashboardTrackableResolver;
+
+class TeamDashboards implements DashboardTrackableResolver
+{
+    public function resolve(Authenticatable $viewer, string $type, ?string $id): ?Model
+    {
+        // A dashboard for every team: show the viewer's current team.
+        if ($id === null) {
+            return $viewer->currentTeam;
+        }
+
+        // A dashboard for one team: the viewer must belong to it.
+        return $viewer->teams()->find($id);
+    }
+}
+```
+
+```php
+$this->app->bind(DashboardTrackableResolver::class, TeamDashboards::class);
+```
+
+Return the trackable the viewer may see, or `null` to refuse them. Spectra also checks that what you return is what the dashboard is for.
+
+<a name="the-pages-middleware"></a>
+### The Pages' Middleware
+
+Viewers' pages have their own middleware, so restricting Spectra's own dashboard doesn't block them. If your customers log in on another guard, name it, and use `domain` to serve the pages on another domain (see [Configuration](/configuration#dashboards)):
+
+```php
+'dashboards' => [
+    'enabled' => env('SPECTRA_DASHBOARDS_ENABLED', false),
+    'middleware' => ['web', 'auth:customer', 'throttle:60,1'],
+    'domain' => env('SPECTRA_DASHBOARDS_DOMAIN'),
+],
+```
+
+<a name="testing"></a>
+## Testing
+
+Under `Spectra::fake()`, dashboards are kept in memory, so your tests need no migrations. Arguments are checked as they are for the real thing:
+
+```php
+$fake = Spectra::fake();
+
+$dashboard = Spectra::dashboard()->create('Usage', $user);
+
+$fake->assertDashboardCreated('Usage');
+
+Spectra::dashboard()->delete($dashboard);
+
+$fake->assertDashboardDeleted($dashboard->id);
+```

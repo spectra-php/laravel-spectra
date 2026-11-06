@@ -28,6 +28,7 @@ class TestCase extends Orchestra
         'spectra_dataset_examples',
         'spectra_eval_runs',
         'spectra_eval_results',
+        'spectra_dashboards',
     ];
 
     /** Columns later migrations add to spectra_requests; a test that drops one leaves the schema incomplete. */
@@ -101,6 +102,7 @@ class TestCase extends Orchestra
             __DIR__.'/../database/migrations/2026_11_04_000005_create_spectra_evaluation_tables.php',
             __DIR__.'/../database/migrations/2026_11_05_000001_change_budgetable_id_to_string_on_spectra_budgets_table.php',
             __DIR__.'/../database/migrations/2026_11_05_000002_change_trace_id_to_string_on_spectra_requests_table.php',
+            __DIR__.'/../database/migrations/2026_11_06_000001_create_spectra_dashboards_table.php',
         ] as $path) {
             $migration = include $path;
             $migration->up();

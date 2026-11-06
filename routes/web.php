@@ -11,6 +11,11 @@ use Spectra\Http\Controllers\Api\Annotations\ReviewAnnotationItemController;
 use Spectra\Http\Controllers\Api\ConfigController;
 use Spectra\Http\Controllers\Api\ConversationsController;
 use Spectra\Http\Controllers\Api\CostsController;
+use Spectra\Http\Controllers\Api\Dashboards\DashboardsController;
+use Spectra\Http\Controllers\Api\Dashboards\DeleteDashboardController;
+use Spectra\Http\Controllers\Api\Dashboards\PreviewDashboardController;
+use Spectra\Http\Controllers\Api\Dashboards\StoreDashboardController;
+use Spectra\Http\Controllers\Api\Dashboards\UpdateDashboardController;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
 use Spectra\Http\Controllers\Api\ErrorsController;
 use Spectra\Http\Controllers\Api\Evaluations\AddDatasetExampleController;
@@ -91,6 +96,14 @@ Route::prefix('api')->group(function () {
     Route::get('/playground', PlaygroundController::class);
     Route::get('/playground/{id}', ShowPlaygroundCallController::class)->whereUuid('id');
     Route::post('/playground/{id}/run', RunPlaygroundCallController::class)->whereUuid('id');
+
+    // Shared dashboards: anyone who may view the dashboard sees whether they are
+    // on; the dashboards themselves also need the option and the manageSpectra gate.
+    Route::get('/dashboards', DashboardsController::class);
+    Route::post('/dashboards', StoreDashboardController::class);
+    Route::put('/dashboards/{id}', UpdateDashboardController::class)->whereUuid('id');
+    Route::delete('/dashboards/{id}', DeleteDashboardController::class)->whereUuid('id');
+    Route::get('/dashboards/{id}/preview', PreviewDashboardController::class)->whereUuid('id');
 });
 
 // SPA catch-all route. It skips api/ so an unknown or malformed API URL is a

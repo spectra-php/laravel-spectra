@@ -185,6 +185,11 @@ Pick a recent call on the Playground screen, or use **Open in Playground** on a 
 
 <img class="screenshot" src="/images/dashboard/request-open-in-playground.png" alt="The Open in Playground button on a request's page" />
 
+<a name="dashboards"></a>
+## Dashboards
+
+[Dashboards](/dashboards) are read-only pages you design here and share with people who can't open Spectra's own dashboard, such as a customer who wants to see their own usage. You choose the widgets and who can see it, and get a link to give them. They're off until you set `SPECTRA_DASHBOARDS_ENABLED=true`, and designing one needs the `manageSpectra` gate.
+
 <a name="costs"></a>
 ## Costs
 
@@ -255,4 +260,4 @@ vendor/bin/testbench workbench:build
 vendor/bin/testbench serve
 ```
 
-Then open `http://localhost:8000/spectra`. The demo's [Playground](/playground) is on and answers from a fake provider, so trying it needs no API key and costs nothing. To see a failed run, use a model name with `does-not-exist` in it.
+Then open `http://localhost:8000/spectra`. The demo's [Playground](/playground) is on and answers from a fake provider, so trying it needs no API key and costs nothing. To see a failed run, use a model name with `does-not-exist` in it. [Dashboards](/dashboards) are on too: open `/workbench/view-as/2` to log in as a user and open a dashboard's link as its viewer.

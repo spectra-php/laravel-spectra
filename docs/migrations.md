@@ -31,6 +31,7 @@ Spectra ships these migration files:
 | `create_spectra_evaluation_tables` | Creates `spectra_datasets`, `spectra_dataset_examples`, `spectra_eval_runs` and `spectra_eval_results`, for [evaluations](/evaluations) (see [below](#evaluation-migration)) |
 | `change_budgetable_id_to_string_on_spectra_budgets_table` | Stores budget owner ids as strings, so [budgets](/budgets) work for integer and ULID keys on every database (see [below](#budgetable-id-migration)) |
 | `change_trace_id_to_string_on_spectra_requests_table` | Stores trace ids as strings of up to 64 characters, like the spans and scores tables, so `Spectra::withTraceId()` takes any id on every database (see [below](#trace-id-migration)) |
+| `create_spectra_dashboards_table` | Creates `spectra_dashboards`, for [dashboards](/dashboards) (see [below](#dashboards-migration)) |
 
 <a name="publishing-schema-migrations"></a>
 ### Publishing Schema Migrations
@@ -144,6 +145,17 @@ php artisan spectra:install
 ```
 
 Until it runs, the Evals screen asks you to, and `Spectra::dataset()` and `spectra:eval` fail with a database error.
+
+<a name="dashboards-migration"></a>
+## The Dashboards Migration
+
+`create_spectra_dashboards_table` creates the `spectra_dashboards` table for [dashboards](/dashboards). Run the installer to publish and run it:
+
+```shell
+php artisan spectra:install
+```
+
+Until it runs, the Dashboards screen asks you to, and `Spectra::dashboard()` fails with a database error.
 
 <a name="budgetable-id-migration"></a>
 ## The Budgetable Id Migration

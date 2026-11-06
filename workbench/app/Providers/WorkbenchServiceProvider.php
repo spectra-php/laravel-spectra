@@ -7,11 +7,14 @@ namespace Workbench\App\Providers;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
+use Workbench\App\Models\User;
 
 class WorkbenchServiceProvider extends ServiceProvider
 {
@@ -46,11 +49,32 @@ class WorkbenchServiceProvider extends ServiceProvider
             ],
         ]);
 
+        $this->registerDashboardsDemo();
+
         // The demo's Playground runs against a fake provider, so trying it here
         // or retaking its screenshots needs no key and costs nothing.
         if (! $this->app->runningInConsole()) {
             $this->fakePlaygroundProvider();
         }
+    }
+
+    /**
+     * Turn dashboards on, with a way to open one as its viewer: the demo
+     * has no login, so /workbench/view-as/{id} logs in as that user.
+     */
+    protected function registerDashboardsDemo(): void
+    {
+        config()->set('spectra.dashboards.enabled', true);
+        config()->set('auth.providers.users.model', User::class);
+
+        Route::middleware('web')->group(function () {
+            Route::get('/login', fn () => 'The demo has no login page. Open /workbench/view-as/{id} to log in as a user.')->name('login');
+            Route::get('/workbench/view-as/{id}', function (string $id) {
+                Auth::loginUsingId($id);
+
+                return redirect()->intended('/spectra');
+            });
+        });
     }
 
     /**

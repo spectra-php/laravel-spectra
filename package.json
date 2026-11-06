@@ -2,7 +2,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && vite build --mode viewer",
     "watch": "vite build --watch",
     "dev": "vite",
     "typecheck": "vue-tsc --noEmit"

@@ -735,6 +735,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Dashboards
+    |--------------------------------------------------------------------------
+    |
+    | Read-only pages you design for someone outside Spectra's own dashboard,
+    | such as a customer who wants to see their own usage. They give people who
+    | can't open Spectra's dashboard access to data, so they are off by default,
+    | and designing one needs the `manageSpectra` gate.
+    |
+    | `middleware` guards the pages instead of the dashboard's own middleware.
+    | Viewers log in through your app, so keep `auth` here, naming your guard
+    | if they use another one (`auth:customer`). `domain` serves the pages on
+    | another domain; null answers on any.
+    |
+    | Docs: https://spectraphp.com/dashboards
+    |
+    */
+
+    'dashboards' => [
+        'enabled' => env('SPECTRA_DASHBOARDS_ENABLED', false),
+        'middleware' => ['web', 'auth', 'throttle:60,1'],
+        'domain' => env('SPECTRA_DASHBOARDS_DOMAIN'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Cost Configuration
     |--------------------------------------------------------------------------
     |

@@ -1,8 +1,10 @@
-import type { SpectraConfig } from './app';
+import type { SpectraConfig, SpectraViewerConfig } from './app';
 
 declare global {
     interface Window {
         Spectra: SpectraConfig;
+        // Set only on a shared dashboard's page.
+        SpectraViewer: SpectraViewerConfig;
     }
 }
 

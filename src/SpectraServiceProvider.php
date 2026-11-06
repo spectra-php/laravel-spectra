@@ -30,6 +30,7 @@ use Spectra\Console\Commands\PruneCommand;
 use Spectra\Console\Commands\RebuildStatsCommand;
 use Spectra\Console\Commands\ResumeCommand;
 use Spectra\Console\Commands\ScrapePricingCommand;
+use Spectra\Contracts\DashboardTrackableResolver;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Contracts\SpanBuilder;
 use Spectra\Contracts\Watcher;
@@ -42,6 +43,7 @@ use Spectra\Integrations\OpenTelemetry\SpanExporter;
 use Spectra\Support\Annotations\AnnotationQueues;
 use Spectra\Support\ApiKeyResolver;
 use Spectra\Support\Budget\BudgetEnforcer;
+use Spectra\Support\Dashboards\ViewerAsTrackable;
 use Spectra\Support\HttpMacros;
 use Spectra\Support\Pricing\CostCalculator;
 use Spectra\Support\Pricing\PricingCatalog;
@@ -161,6 +163,8 @@ class SpectraServiceProvider extends ServiceProvider
         $this->app->singleton(RequestExporter::class, fn ($app) => $app->make(OtlpExporter::class));
 
         $this->app->singleton(ApiKeyResolver::class, fn () => new ApiKeyResolver);
+
+        $this->app->bind(DashboardTrackableResolver::class, ViewerAsTrackable::class);
 
         $this->registerProviders();
     }
@@ -372,6 +376,16 @@ class SpectraServiceProvider extends ServiceProvider
             }
 
             $router->middlewareGroup('spectra', $app->make('config')->get('spectra.dashboard.middleware', ['web']));
+            $router->middlewareGroup('spectra.dashboards', $app->make('config')->get('spectra.dashboards.middleware', ['web', 'auth', 'throttle:60,1']));
+
+            // Before the dashboard's routes, whose SPA catch-all would swallow these.
+            $router->group([
+                'domain' => $app->make('config')->get('spectra.dashboards.domain'),
+                'prefix' => $app->make('config')->get('spectra.dashboard.path').'/dashboards',
+                'middleware' => 'spectra.dashboards',
+            ], function () {
+                $this->loadRoutesFrom(__DIR__.'/../routes/dashboards.php');
+            });
 
             $router->group([
                 'domain' => $app->make('config')->get('spectra.dashboard.domain'),

@@ -18,11 +18,12 @@ Unchanged: PHP 8.2 or newer (8.3 for Laravel 13), and Laravel 12 or 13.
 
 ### 1. Run the installer (recommended)
 
-4.0 adds five migrations: `create_spectra_scores_table`,
+4.0 adds six migrations: `create_spectra_scores_table`,
 `add_prompt_columns_to_spectra_requests_table`,
 `add_error_fingerprint_to_spectra_requests_table`,
-`create_spectra_annotation_items_table` and
-`create_spectra_evaluation_tables`. The installer publishes only the ones
+`create_spectra_annotation_items_table`,
+`create_spectra_evaluation_tables` and
+`create_spectra_dashboards_table`. The installer publishes only the ones
 your app doesn't have yet and offers to run them:
 
 ```bash

@@ -30,6 +30,7 @@ export default defineConfig({
         items: [
           { text: 'Usage', link: '/usage' },
           { text: 'Dashboard', link: '/dashboard' },
+          { text: 'Dashboards', link: '/dashboards' },
           { text: 'Models', link: '/models' },
           { text: 'Tags', link: '/tags' },
           { text: 'Metadata', link: '/metadata' },
