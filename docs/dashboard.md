@@ -184,9 +184,9 @@ On a dataset's page, **Add example** lets you [write an example by hand](/datase
 
 <img class="screenshot" src="/images/dashboard/playground-call.png" alt="A call opened in the Playground, with a new answer compared with the original" />
 
-The [Playground](/playground) lets you write a new prompt, or open a real call to change its prompt, model or settings, send it again, and compare the new answer's reply, cost, tokens and latency with the original. Each run is a real call that costs money, so it's off until you set `SPECTRA_PLAYGROUND_ENABLED=true`, and using it needs the `manageSpectra` gate.
+The [Playground](/playground) lets you write a new request, or open a real call to change its prompt, model or settings, send it again, and compare the new answer's reply, cost, tokens and latency with the original. Each run is a real call that costs money, so it's off until you set `SPECTRA_PLAYGROUND_ENABLED=true`, and using it needs the `manageSpectra` gate.
 
-Press **New prompt** or pick a recent call on the Playground screen, or use **Open in Playground** on any request's page:
+Press **New request** on the Playground screen, which lists what you've sent from it, or use **Open in Playground** on any request's page:
 
 <img class="screenshot" src="/images/dashboard/request-open-in-playground.png" alt="The Open in Playground button on a request's page" />
 
@@ -265,4 +265,4 @@ vendor/bin/testbench workbench:build
 vendor/bin/testbench serve
 ```
 
-Then open `http://localhost:8000/spectra`. The demo's [Playground](/playground) is on and answers from a fake provider, so trying it needs no API key and costs nothing. To see a failed run, use a model name with `does-not-exist` in it. [Dashboards](/dashboards) are on too: open `/workbench/view-as/2` to log in as a user and open a dashboard's link as its viewer.
+Then open `http://localhost:8000/spectra`. The demo's [Playground](/playground) is on and answers from a fake provider, so trying it needs no API key and costs nothing. To see a failed run, use a model name with `does-not-exist` in it. [Shared dashboards](/dashboards) are on too: open `/workbench/view-as/2` to log in as a user and open a shared dashboard's link as its viewer.

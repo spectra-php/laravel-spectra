@@ -193,6 +193,8 @@ export interface RequestDetailsResponse extends SpectraRequestAttributes {
     audio_download_url?: string;
     media_storage_enabled?: boolean;
     can_open_in_playground: boolean;
+    playground_runs: RequestPlaygroundRun[];
+    playground_run_count: number;
     scores: ScoreEntry[];
     trace_migrated: boolean;
     trace: TraceDetailsResponse | null;
@@ -695,10 +697,10 @@ export interface EvalsResponse {
 }
 
 export interface DatasetsResponse {
-    can_curate: boolean;
-}
     datasets: DatasetListItem[];
     migrated: boolean;
+    can_curate: boolean;
+}
 
 export interface DatasetExample {
     id: string;
@@ -718,14 +720,14 @@ export interface DatasetResponse {
     };
     examples: DatasetExample[];
     runs: EvalRun[];
-}
-
     latest_input: JsonValue;
     can_curate: boolean;
 }
 
 export interface StoreDatasetResponse {
     id: string;
+}
+
 export interface AddDatasetExampleResponse {
     dataset_id: string;
     example_id: string;
@@ -981,10 +983,17 @@ export interface PlaygroundCall {
     formatted_created_at: string | null;
 }
 
+export interface PlaygroundGroup {
+    open_id: string;
+    prompt: string | null;
+    run_count: number;
+    latest: PlaygroundCall;
+}
+
 export interface PlaygroundResponse {
     enabled: boolean;
     allowed: boolean;
-    calls: PlaygroundCall[];
+    groups: PlaygroundGroup[];
 }
 
 export interface PlaygroundProvider {
@@ -1005,6 +1014,11 @@ export interface PlaygroundCallResponse {
     notices: string[];
     unavailable_reason: string | null;
     providers: PlaygroundProvider[];
+    runs: PlaygroundRunResponse[];
+    run_count: number;
+    session: string | null;
+    run: PlaygroundRunResponse | null;
+    original: PlaygroundCall | null;
 }
 
 export interface PlaygroundRunResponse {
@@ -1022,7 +1036,11 @@ export interface PlaygroundRunResponse {
     total_cost_in_cents: number;
     latency_ms: number | null;
     request_id: string | null;
+    number: number | null;
 }
+
+// A run listed on the request it started from, without its full response.
+export type RequestPlaygroundRun = Omit<PlaygroundRunResponse, 'response'>;
 
 // Shared dashboards: what a viewer gets. A cost is null on a dashboard that hides costs.
 export interface DashboardStats {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
@@ -18,8 +18,8 @@ import type { ApiError } from '@/types/app';
 // The Playground's editor, for one stored call or a new prompt: edit the messages,
 // model and settings, or the whole body as JSON, and run it. A stored call's
 // answers are compared with the original; a new prompt has none to compare with.
+// A saved run opens at its own URL, so a refresh shows the same screen.
 type Tab = 'messages' | 'json';
-type Run = PlaygroundRunResponse & { number: number };
 
 const route = useRoute();
 const router = useRouter();
@@ -41,7 +41,9 @@ const jsonText = ref('');
 
 const running = ref(false);
 const runError = ref('');
-const runs = ref<Run[]>([]);
+// The run at the top of the screen, and the others below the original.
+const leadRun = ref<PlaygroundRunResponse | null>(null);
+const runs = ref<PlaygroundRunResponse[]>([]);
 let runCount = 0;
 
 const isNewPrompt = computed(() => route.name === 'playground-new');
@@ -137,18 +139,35 @@ const reset = () => {
 
 const fetchNewPrompt = (slug: string | null) => apiRequest<PlaygroundCallResponse>('get', `/playground/new${slug ? `?provider=${encodeURIComponent(slug)}` : ''}`);
 
+const show = (response: PlaygroundCallResponse) => {
+    opened.value = response;
+    leadRun.value = response.run;
+    runs.value = response.runs;
+    runCount = response.run_count;
+    reset();
+};
+
 const load = async () => {
+    loadFailed.value = false;
+
     try {
         const slug = typeof route.query.provider === 'string' ? route.query.provider : null;
 
-        opened.value = await (isNewPrompt.value ? fetchNewPrompt(slug) : apiRequest<PlaygroundCallResponse>('get', `/playground/${route.params.id}`));
-        reset();
+        show(await (isNewPrompt.value ? fetchNewPrompt(slug) : apiRequest<PlaygroundCallResponse>('get', `/playground/${route.params.id}`)));
     } catch {
         loadFailed.value = true;
     } finally {
         loading.value = false;
     }
 };
+
+// Going back or forward between runs keeps this screen, so it has to load again.
+// Opening a run from run() has already put that run on the screen.
+watch(() => route.params.id, (id) => {
+    const isEditor = route.name === 'playground-call' || route.name === 'playground-new';
+
+    if (isEditor && id !== (opened.value?.call?.id ?? undefined)) load();
+});
 
 // Another provider has another format, so a new prompt keeps its text, roles and
 // settings, and anything added only in the JSON tab stays behind.
@@ -159,15 +178,16 @@ const changeProvider = async (event: Event) => {
 
     const written = messages.value.filter((message) => !message.locked).map((message) => ({ role: message.role, text: message.text }));
     const settings = { temperature: temperature.value, maxTokens: maxTokens.value };
+    const session = opened.value?.session ?? null;
 
     try {
-        opened.value = await fetchNewPrompt(slug);
+        opened.value = { ...await fetchNewPrompt(slug), session };
     } catch {
         return;
     }
 
     reset();
-    router.replace({ query: { provider: slug } });
+    router.replace({ query: { ...route.query, provider: slug } });
 
     if (shape.value) {
         const nextShape = shape.value;
@@ -202,6 +222,26 @@ const rolesOf = (message: EditorMessage) => {
     return roles.includes(message.role) ? roles : [message.role, ...roles];
 };
 
+// Open a saved run at its own URL. A run stays on this screen when there's nothing
+// to open it from: it wasn't saved, isn't saved yet, or its body wasn't stored.
+const openRun = async (id: string | null) => {
+    if (!id) return false;
+
+    const response = await apiRequest<PlaygroundCallResponse>('get', `/playground/${id}`).catch(() => null);
+
+    if (!response?.body) return false;
+
+    const wasJson = tab.value === 'json';
+
+    opened.value = response;
+    await router.push({ name: 'playground-call', params: { id } });
+    show(response);
+
+    if (wasJson) showTab('json');
+
+    return true;
+};
+
 const run = async () => {
     if (!canRun.value) return;
 
@@ -212,9 +252,13 @@ const run = async () => {
         // Sent as a string so the app's input middleware can't trim or null any of the prompt's text.
         const input = { model: model.value.trim(), body: JSON.stringify(currentBody()) };
         const result = await (isNewPrompt.value
-            ? apiRequest<PlaygroundRunResponse>('post', '/playground/run', { ...input, provider: provider.value })
+            ? apiRequest<PlaygroundRunResponse>('post', '/playground/run', { ...input, provider: provider.value, session: opened.value?.session })
             : apiRequest<PlaygroundRunResponse>('post', `/playground/${route.params.id}/run`, input));
-        runs.value = [{ ...result, number: ++runCount }, ...runs.value];
+
+        if (!await openRun(result.request_id)) {
+            if (leadRun.value) runs.value = [leadRun.value, ...runs.value];
+            leadRun.value = { ...result, number: ++runCount };
+        }
     } catch (error) {
         console.error('Failed to run the call:', error);
         runError.value = (error as ApiError)?.response?.data?.message || 'The run could not be sent.';
@@ -230,19 +274,20 @@ const onKeydown = (event: KeyboardEvent) => {
     }
 };
 
+// What the runs are compared with: the call they started from, or the opened call
+// unless it is a run itself. A new request's runs have nothing to compare with.
+const original = computed(() => opened.value?.original ?? (opened.value?.run ? null : opened.value?.call ?? null));
+
 const isSuccessful = computed(() => {
-    const call = opened.value?.call;
+    const call = original.value;
 
     return !!call && !!call.status_code && call.status_code >= 200 && call.status_code < 300 && !call.error_type;
 });
 
 const breadcrumbs = computed(() => [
     { label: 'Playground', to: { name: 'playground' } },
-    { label: isNewPrompt.value ? 'New prompt' : opened.value?.call?.model ?? 'Call' },
+    { label: isNewPrompt.value ? 'New request' : opened.value?.call?.model ?? 'Call' },
 ]);
-
-const latestRun = computed(() => runs.value[0] ?? null);
-const earlierRuns = computed(() => runs.value.slice(1));
 
 onMounted(() => {
     window.addEventListener('keydown', onKeydown);
@@ -277,7 +322,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     </div>
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
-                            <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ isNewPrompt ? 'New prompt' : 'Playground' }}</h1>
+                            <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ isNewPrompt ? 'New request' : 'Playground' }}</h1>
                             <DocsLink page="playground" />
                         </div>
                         <p v-if="!opened.call" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -285,7 +330,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                             <span class="font-mono text-xs">{{ opened.endpoint }}</span>
                         </p>
                         <p v-else class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            From <router-link :to="{ name: 'request-preview', params: { id: opened.call.id } }" class="font-medium text-primary-600 hover:underline dark:text-primary-400">a call to {{ opened.call.provider_display_name || opened.call.provider }}</router-link>
+                            From <router-link :to="{ name: 'request-preview', params: { id: opened.call.id } }" class="font-medium text-primary-600 hover:underline dark:text-primary-400">{{ opened.run ? 'a run' : 'a call' }} to {{ opened.call.provider_display_name || opened.call.provider }}</router-link>
                             · {{ opened.call.formatted_created_at }}
                             · <span class="font-mono text-xs">{{ opened.call.endpoint }}</span>
                         </p>
@@ -396,69 +441,70 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     <div v-if="running" class="card"><div class="card-body"><Skeleton variant="text" :lines="4" /></div></div>
 
                     <RunResult
-                        v-if="latestRun && !running"
-                        :title="`Run ${latestRun.number}`"
-                        :model="latestRun.model"
-                        :succeeded="latestRun.succeeded"
-                        :status-code="latestRun.status_code"
-                        :error-type="latestRun.error_type"
-                        :error-message="latestRun.error_message"
-                        :reply="latestRun.reply"
-                        :has-tool-calls="latestRun.has_tool_calls"
-                        :finish-reason="latestRun.finish_reason"
-                        :prompt-tokens="latestRun.prompt_tokens"
-                        :completion-tokens="latestRun.completion_tokens"
-                        :cost-in-cents="latestRun.total_cost_in_cents"
-                        :latency-ms="latestRun.latency_ms"
-                        :response="latestRun.response"
-                        :request-id="latestRun.request_id"
-                        :compare-with="opened.call"
+                        v-if="leadRun && !running"
+                        :key="leadRun.request_id ?? `run-${leadRun.number}`"
+                        :title="leadRun.number ? `Run ${leadRun.number}` : 'This run'"
+                        :model="leadRun.model"
+                        :succeeded="leadRun.succeeded"
+                        :status-code="leadRun.status_code"
+                        :error-type="leadRun.error_type"
+                        :error-message="leadRun.error_message"
+                        :reply="leadRun.reply"
+                        :has-tool-calls="leadRun.has_tool_calls"
+                        :finish-reason="leadRun.finish_reason"
+                        :prompt-tokens="leadRun.prompt_tokens"
+                        :completion-tokens="leadRun.completion_tokens"
+                        :cost-in-cents="leadRun.total_cost_in_cents"
+                        :latency-ms="leadRun.latency_ms"
+                        :response="leadRun.response"
+                        :request-id="leadRun.request_id"
+                        :compare-with="original"
                         highlighted
                     />
 
-                    <div v-if="!opened.call && !runs.length && !running" class="card">
+                    <div v-if="!original && !leadRun && !runs.length && !running" class="card">
                         <div class="empty-state">
                             <p class="empty-state-title">The answer appears here</p>
-                            <p class="empty-state-description">Each run stays on this screen, so you can change the prompt or model and compare.</p>
+                            <p class="empty-state-description">Each run gets its own page and stays listed with the others, so you can change the prompt or model and compare.</p>
                         </div>
                     </div>
 
                     <RunResult
-                        v-if="opened.call"
+                        v-if="original"
                         title="Original call"
-                        :model="opened.call.model"
+                        :model="original.model"
                         :succeeded="isSuccessful"
-                        :status-code="opened.call.status_code"
-                        :error-type="opened.call.error_type"
-                        :error-message="opened.call.error_message"
-                        :reply="opened.call.reply"
-                        :finish-reason="opened.call.finish_reason"
-                        :prompt-tokens="opened.call.prompt_tokens"
-                        :completion-tokens="opened.call.completion_tokens"
-                        :cost-in-cents="opened.call.total_cost_in_cents"
-                        :latency-ms="opened.call.latency_ms"
-                        :request-id="opened.call.id"
+                        :status-code="original.status_code"
+                        :error-type="original.error_type"
+                        :error-message="original.error_message"
+                        :reply="original.reply"
+                        :finish-reason="original.finish_reason"
+                        :prompt-tokens="original.prompt_tokens"
+                        :completion-tokens="original.completion_tokens"
+                        :cost-in-cents="original.total_cost_in_cents"
+                        :latency-ms="original.latency_ms"
+                        :request-id="original.id"
                     />
 
                     <RunResult
-                        v-for="earlier in earlierRuns"
-                        :key="earlier.number"
-                        :title="`Run ${earlier.number}`"
-                        :model="earlier.model"
-                        :succeeded="earlier.succeeded"
-                        :status-code="earlier.status_code"
-                        :error-type="earlier.error_type"
-                        :error-message="earlier.error_message"
-                        :reply="earlier.reply"
-                        :has-tool-calls="earlier.has_tool_calls"
-                        :finish-reason="earlier.finish_reason"
-                        :prompt-tokens="earlier.prompt_tokens"
-                        :completion-tokens="earlier.completion_tokens"
-                        :cost-in-cents="earlier.total_cost_in_cents"
-                        :latency-ms="earlier.latency_ms"
-                        :response="earlier.response"
-                        :request-id="earlier.request_id"
-                        :compare-with="opened.call"
+                        v-for="other in runs"
+                        :key="other.request_id ?? `run-${other.number}`"
+                        :title="`Run ${other.number}`"
+                        :model="other.model"
+                        :succeeded="other.succeeded"
+                        :status-code="other.status_code"
+                        :error-type="other.error_type"
+                        :error-message="other.error_message"
+                        :reply="other.reply"
+                        :has-tool-calls="other.has_tool_calls"
+                        :finish-reason="other.finish_reason"
+                        :prompt-tokens="other.prompt_tokens"
+                        :completion-tokens="other.completion_tokens"
+                        :cost-in-cents="other.total_cost_in_cents"
+                        :latency-ms="other.latency_ms"
+                        :response="other.response"
+                        :request-id="other.request_id"
+                        :compare-with="original"
                     />
                 </div>
             </div>

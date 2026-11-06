@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Actions\Playground;
 
+use Illuminate\Support\Str;
 use Spectra\Data\Responses\PlaygroundCallResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Playground\PlaygroundClient;
@@ -14,7 +15,8 @@ use Spectra\Support\ProviderRegistry;
  * What the Playground's editor opens for a new prompt: the chosen provider's
  * starting body and models. With no provider chosen it starts from the one the
  * app used last, so the screen opens on a provider that has a key and a model
- * the app really uses.
+ * the app really uses. A session ties a new prompt's runs together, since they
+ * have no stored call to point back to.
  */
 class GetNewPlaygroundPrompt
 {
@@ -49,6 +51,7 @@ class GetNewPlaygroundPrompt
                 'name' => $this->providers->displayName($slug),
                 'has_key' => $this->client->hasKey($slug),
             ], $this->client->providers()),
+            session: (string) Str::uuid7(),
         );
     }
 

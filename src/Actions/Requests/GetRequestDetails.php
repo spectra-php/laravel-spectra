@@ -6,18 +6,21 @@ namespace Spectra\Actions\Requests;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Spectra\Actions\Playground\GetPlaygroundRuns;
 use Spectra\Actions\Scores\GetScores;
 use Spectra\Actions\Traces\GetTraceDetails;
+use Spectra\Data\Responses\PlaygroundRunResponse;
 use Spectra\Data\Responses\RequestDetailsResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Playground\PlaygroundAccess;
+use Spectra\Support\Playground\PlaygroundClient;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Query\TraceSchema;
 
 /**
  * Everything the request detail screen shows for one request: its payloads
  * (the only endpoint that re-exposes them), tags, model capabilities, media
- * URLs and the other calls in its trace.
+ * URLs, the other calls in its trace and the Playground runs started from it.
  */
 class GetRequestDetails
 {
@@ -32,6 +35,7 @@ class GetRequestDetails
         private readonly GetTraceDetails $getTraceDetails,
         private readonly GetScores $getScores,
         private readonly TraceSchema $traceSchema,
+        private readonly GetPlaygroundRuns $getPlaygroundRuns,
     ) {}
 
     /**
@@ -63,6 +67,12 @@ class GetRequestDetails
         }
 
         $details['can_open_in_playground'] = PlaygroundAccess::allowed();
+
+        // A run's page links to its original instead of listing runs of its own.
+        $playgroundRuns = in_array(PlaygroundClient::TAG, $details['tags'], true) ? ['runs' => [], 'count' => 0] : ($this->getPlaygroundRuns)($request->id, null);
+        $details['playground_runs'] = array_map(fn (PlaygroundRunResponse $run): array => Arr::except($run->toArray(), 'response'), $playgroundRuns['runs']);
+        $details['playground_run_count'] = $playgroundRuns['count'];
+
         $details['scores'] = ($this->getScores)(requestId: $request->id);
 
         // The trace card orders calls by started_at; until the trace

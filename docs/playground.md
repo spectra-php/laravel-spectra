@@ -7,14 +7,14 @@ A customer got a bad answer, and you want to know whether a better prompt would 
 <a name="what-is-the-playground"></a>
 ## What Is the Playground?
 
-The Playground is a screen for trying prompts and models without touching your code. You can write a new prompt, or start from a call Spectra has already recorded, so you test with the exact messages your app sent rather than a made-up example.
+The Playground is a screen for trying prompts and models without touching your code. You can write a new request, or start from a call Spectra has already recorded, so you test with the exact messages your app sent rather than a made-up example.
 
 Each time you press **Run**, Spectra sends your edited version to the same provider and shows the result. We call that a **run**. For example, you might:
 
 - Add "Answer in one short sentence" to the system prompt, and see whether replies get shorter and cheaper.
 - Try a cheaper model, and see whether the answer is still good enough.
 - Open a call that failed, change what caused the failure, and check that it now works.
-- Write a new prompt for a feature you haven't built yet, and try it on a few models.
+- Write a new request for a feature you haven't built yet, and try it on a few models.
 
 A run is a real call, not a simulation. It uses your API key, costs money, and sends the prompt to the provider. That's why the Playground is off until you turn it on.
 
@@ -62,11 +62,11 @@ The Playground uses the keys your app is already configured with. For each provi
 A run goes to the provider's default address, or to the base URL you set in [`spectra.endpoint_urls`](/configuration#endpoint-urls) or the usual config keys. The note under the editor shows the address, so you can see where a run will go before you press **Run**. Only the scheme and host of a configured URL are used; the path comes from the stored call.
 
 <a name="starting-from-a-new-prompt"></a>
-## Starting From a New Prompt
+## Starting From a New Request
 
-Click **Playground** in the sidebar, then **New prompt**. Pick a provider and a model, write your messages, and press **Run**:
+Click **Playground** in the sidebar, then **New request**. Pick a provider and a model, write your messages, and press **Run**:
 
-<img class="screenshot" src="/images/dashboard/playground-new.png" alt="A new prompt in the Playground, with its answer from two models" />
+<img class="screenshot" src="/images/dashboard/playground-new.png" alt="A new request in the Playground, with a provider, a model and messages filled in, ready to run" />
 
 The screen opens on the provider and model used last. A provider without an API key is listed but can't be picked.
 
@@ -74,18 +74,23 @@ The system message is optional: if you leave it empty, it isn't sent. If you cha
 
 There's no original to compare with, so each answer shows its own numbers. Your runs stay on the screen, so you can change the provider or model and read the answers one above the other.
 
+Each run opens at [its own address](#each-run-has-its-own-page), with the other runs of the same new request below it. **New request** always starts again with an empty list.
+
 <a name="opening-a-call"></a>
 ## Opening a Call
 
-There are two ways to open a call.
-
-**From the Playground screen.** Click **Playground** in the sidebar to see the latest few calls your app made that can run. Your own runs are left out of this list, and **Your runs** at the top of the screen shows them instead. Click a row to open it:
-
-<img class="screenshot" src="/images/dashboard/playground.png" alt="The Playground screen with a New prompt button above the latest calls to start from" />
-
-**From a request's page.** Every request has an **Open in Playground** button at the top of its page. This is the quickest way to try again from a bad answer or an error you found in the [requests list](/dashboard#requests):
+To try again from a call your app made, find it in the [requests list](/dashboard#requests) and press **Open in Playground** at the top of its page:
 
 <img class="screenshot" src="/images/dashboard/request-open-in-playground.png" alt="The Open in Playground button on a request's page" />
+
+<a name="the-playground-screen"></a>
+## The Playground Screen
+
+Click **Playground** in the sidebar to see what you've sent from the Playground, newest first. Each row is one request with all its runs: a call you opened, or a new request you wrote. It shows how many runs there are and the numbers of the latest one. Your app's own calls aren't listed here.
+
+Click a row to open that request with its runs, or **View all** to see every run in the requests list:
+
+<img class="screenshot" src="/images/dashboard/playground.png" alt="The Playground screen with a New request button above the latest requests sent from the Playground" />
 
 <a name="editing-the-call"></a>
 ## Editing the Call
@@ -100,7 +105,7 @@ The **Messages** tab shows the call as a list of messages, whichever provider it
 - **Change the text** of any message.
 - **Change a message's role**, such as user or assistant.
 - **Add or remove messages**, for example to give the model an example to follow, or to remove the system prompt and see what it was doing.
-- **Change the model.** The field suggests the provider's current text models from [the pricing catalog](/pricing), and you can type any other name. A run of a stored call always stays with the same provider. To compare providers, use a [new prompt](#starting-from-a-new-prompt).
+- **Change the model.** The field suggests the provider's current text models from [the pricing catalog](/pricing), and you can type any other name. A run of a stored call always stays with the same provider. To compare providers, use a [new request](#starting-from-a-new-prompt).
 - **Set the temperature and max tokens.** Leave one empty to use the provider's default.
 
 Some messages hold more than plain text: an image, a tool call, or several blocks of text. These are locked. They are shown and sent as they are, and you change them in the **JSON** tab.
@@ -119,7 +124,7 @@ If the JSON isn't valid, the tab says what's wrong, and you can't run the call o
 <a name="running-it-and-comparing"></a>
 ## Running It and Comparing
 
-Press **Run**, or <kbd>⌘</kbd> or <kbd>Ctrl</kbd> + <kbd>Enter</kbd>. The answer appears above the original call:
+Press **Run**, or <kbd>⌘</kbd> or <kbd>Ctrl</kbd> + <kbd>Enter</kbd>. Once the answer is back, the screen moves to the run's own page, with the answer above the original call:
 
 <img class="screenshot" src="/images/dashboard/playground-compare.png" alt="A run above the original call, showing a shorter reply with lower cost, tokens and latency" />
 
@@ -129,9 +134,18 @@ Each answer shows:
 - The **status code** and **finish reason**: `stop` means the model finished, and `length` means it hit the max tokens.
 - The **cost**, **tokens** and **latency**. A run also shows how each number changed from the original.
 
-**Show the response** opens the provider's full response, and **View the call** opens the run's own page. If the model asked for a tool instead of replying, the card says so, and the response shows what it asked for.
+**Show the response** opens the provider's full response, and **View the call** opens the run in the [requests list](/dashboard#requests). If the model asked for a tool instead of replying, the card says so, and the response shows what it asked for.
 
-You can keep going: every run stays on the screen until you leave the page, newest first, and each is compared with the original. Earlier runs stay below the original call. **Reset** restores the prompt and keeps your runs.
+You can keep going: the run you just sent is at the top, the original call is below it, and the other runs are below that, newest first. Each is compared with the original. **Reset** puts back the prompt of the page you're on and keeps your runs.
+
+<a name="each-run-has-its-own-page"></a>
+### Each Run Has Its Own Page
+
+Every run has its own address, so refreshing the page, going back, or sharing the link shows the same run. The page opens with that run's prompt in the editor, its answer at the top, and the latest 20 runs that belong with it.
+
+What you see is the saved copy, so it shows everyone's runs of that call and follows your [storage settings](/configuration#storage). A reply that wasn't stored can't be shown, and [redaction](/configuration#redaction) masks stay in the prompt until you replace them.
+
+A run stays on the page you sent it from when there's nothing to open: [recording is paused](/dashboard#maintenance), its body isn't stored, or your app saves requests through a queue that hasn't got to it yet. Its answer is shown there and is gone when you leave.
 
 <a name="when-a-run-fails"></a>
 ### When a Run Fails
@@ -145,14 +159,16 @@ If the provider rejects a run, you see its error in place of the reply, so you c
 
 A run is tracked like any other AI call, so it appears in the dashboard with its cost:
 
-- **It's tagged `playground`.** To see every run, click **Your runs** on the Playground screen or **#playground** in the editor's note, or filter the [requests list](/dashboard#requests) by that tag.
+- **It's a request of its own, shown as a run.** A run is real spending, so it's stored and priced like any other call. In the [requests list](/dashboard#requests) it has a **Run** badge that links to the request it started from, and that request's page lists its runs under **Playground runs**.
+- **It's tagged `playground`.** To see every run, click **View all** on the Playground screen or **#playground** in the editor's note, or filter the [requests list](/dashboard#requests) by that tag.
 - **A run of a stored call points back to it.** Its page has a **Started from** link to the original call, stored in its [metadata](/metadata) as `playground_source`.
+- **A run of a new request names the others it was sent with**, through a session id stored in its metadata as `playground_session`.
 - **It belongs to whoever ran it**, when `tracking.auto_track_user` is on and they are signed in.
 - **It isn't tagged with a prompt version**, so experiments don't change the numbers on the [Prompts screen](/prompts).
 
 Because runs are real spending, they count everywhere real spending counts: the Overview, the Costs screen, [alerts](/alerts), and the recorded spend of [budgets](/budgets). The Playground doesn't check a budget before a run, so a limit won't block one, but a run can still trigger a `BudgetExceeded` event once it's recorded. A run can also be picked for an [annotation queue](/annotations) that samples all your traffic and has no filter.
 
-The stored copy follows your [storage settings](/configuration#storage) like any other call, including [redaction](/configuration#redaction). The answer on screen isn't masked, because only the person who ran it sees it.
+The stored copy follows your [storage settings](/configuration#storage) like any other call, including [redaction](/configuration#redaction). A run's page shows the stored copy, masks included.
 
 While [recording is paused](/dashboard#maintenance), a run still works and shows its numbers, but nothing is saved, so it has no **View the call** link.
 
@@ -180,7 +196,7 @@ Two more things can change an answer, and no note covers them:
 <a name="what-can-be-opened"></a>
 ## What Can Be Opened
 
-The Playground runs text calls to these chat endpoints, when the request body was stored. A [new prompt](#starting-from-a-new-prompt) can go to any of these providers:
+The Playground runs text calls to these chat endpoints, when the request body was stored. A [new request](#starting-from-a-new-prompt) can go to any of these providers:
 
 | Provider | Endpoints |
 | --- | --- |
@@ -216,9 +232,9 @@ The Playground works in production, but think about what you're turning on:
 A safe setup is to leave it off in production and use it where you develop, with a copy of the calls you care about. If you turn it on in production, a low-limit API key for that environment caps the damage.
 
 <a name="what-it-doesnt-do"></a>
-## What It Doesn't Do
+## What It Doesn't Do {#what-it-doesnt-do}
 
-- **It doesn't save prompts.** You keep your prompts in your code, and copy a better one there yourself. Runs are kept as calls, but the editor's contents are gone when you leave the page.
+- **It doesn't save prompts.** You keep your prompts in your code, and copy a better one there yourself. Runs are kept as calls, each with the prompt it sent, but edits you haven't run are gone when you leave the page.
 - **It doesn't run over a dataset.** To grade a change across many examples, write an [evaluation](/evaluations).
 - **It doesn't run your tools.** If the model asks for a tool, you see what it asked for. To continue, add the tool's result as a message yourself.
 - **It doesn't stream.** The answer appears once it's complete.

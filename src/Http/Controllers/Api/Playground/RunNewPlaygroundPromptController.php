@@ -17,7 +17,8 @@ use Spectra\Support\Playground\PlaygroundClient;
  * `provider`, with a `model` and a `body`. The endpoint never comes from the
  * input. The body arrives as a JSON string, because an app's TrimStrings and
  * ConvertEmptyStringsToNull middleware would otherwise change the text of the
- * prompt. A provider's error is a result, not an HTTP error.
+ * prompt. A provider's error is a result, not an HTTP error. `session` ties the
+ * run to the others of the same new prompt.
  */
 class RunNewPlaygroundPromptController extends BaseApiController
 {
@@ -32,6 +33,7 @@ class RunNewPlaygroundPromptController extends BaseApiController
             'provider' => ['required', 'string', Rule::in($client->providers())],
             'model' => ['required', 'string', 'max:255'],
             'body' => ['required', 'json'],
+            'session' => ['nullable', 'uuid'],
         ]);
 
         $body = json_decode($input['body'], true, 512, JSON_THROW_ON_ERROR);
@@ -44,6 +46,6 @@ class RunNewPlaygroundPromptController extends BaseApiController
 
         abort_if($reason !== null, 422, (string) $reason);
 
-        return $client->run($input['provider'], $client->newPromptEndpoint($input['provider']), $input['model'], $body);
+        return $client->run($input['provider'], $client->newPromptEndpoint($input['provider']), $input['model'], $body, sessionId: $input['session'] ?? null);
     }
 }

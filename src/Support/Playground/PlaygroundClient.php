@@ -37,6 +37,9 @@ class PlaygroundClient
     /** The metadata key that names the call a run started from. */
     public const SOURCE_METADATA_KEY = 'playground_source';
 
+    /** The metadata key that names the new-prompt session a run belongs to. */
+    public const SESSION_METADATA_KEY = 'playground_session';
+
     /**
      * The chat endpoints a run can be sent to, per provider. A Gemini endpoint
      * names its model, so it is matched by GEMINI_ENDPOINT instead.
@@ -192,6 +195,27 @@ class PlaygroundClient
     }
 
     /**
+     * Get the stored call a run started from, if any. A run sent from another
+     * run's page names the same call, so a call's runs all point at it.
+     */
+    public function sourceOf(SpectraRequest $call): ?string
+    {
+        $source = $call->metadata[self::SOURCE_METADATA_KEY] ?? null;
+
+        return is_string($source) && Str::isUuid($source) ? $source : null;
+    }
+
+    /**
+     * Get the new-prompt session a stored call belongs to, if any.
+     */
+    public function sessionOf(SpectraRequest $call): ?string
+    {
+        $session = $call->metadata[self::SESSION_METADATA_KEY] ?? null;
+
+        return is_string($session) ? $session : null;
+    }
+
+    /**
      * Get the body to send: streaming and background mode off, since a run is
      * read in one piece, and empty JSON objects restored.
      *
@@ -211,12 +235,13 @@ class PlaygroundClient
 
     /**
      * Send a body to the provider's endpoint, and get the result. `$sourceId` is
-     * the stored call the run started from, if any. The caller takes the endpoint
-     * from the stored call or newPromptEndpoint(), never from the input.
+     * the stored call the run started from, if any, and `$sessionId` the new-prompt
+     * session it belongs to. The caller takes the endpoint from the stored call or
+     * newPromptEndpoint(), never from the input.
      *
      * @param  array<string, mixed>  $body
      */
-    public function run(string $provider, string $endpoint, string $model, array $body, ?string $sourceId = null): PlaygroundRunResponse
+    public function run(string $provider, string $endpoint, string $model, array $body, ?string $sourceId = null, ?string $sessionId = null): PlaygroundRunResponse
     {
         $endpoint = $this->endpointFor($provider, $endpoint, $model);
         $payload = $this->prepareBody($provider, $body);
@@ -231,7 +256,7 @@ class PlaygroundClient
         $response = null;
 
         try {
-            $response = $this->pendingRequest($provider, $model, $sourceId)->post($this->baseUrl($provider).$endpoint, $payload);
+            $response = $this->pendingRequest($provider, $model, $sourceId, $sessionId)->post($this->baseUrl($provider).$endpoint, $payload);
         } catch (ConnectionException) {
             // GuzzleMiddleware records the failure, and the context holds its message.
         }
@@ -282,13 +307,13 @@ class PlaygroundClient
     /**
      * Build the tracked HTTP request with the provider's way of sending a key.
      */
-    protected function pendingRequest(string $provider, string $model, ?string $sourceId): PendingRequest
+    protected function pendingRequest(string $provider, string $model, ?string $sourceId, ?string $sessionId): PendingRequest
     {
         $key = $this->apiKeyResolver->resolve($provider);
 
         $request = Http::withAITracking($provider, $model, [
             'tags' => [self::TAG],
-            'metadata' => $sourceId !== null ? [self::SOURCE_METADATA_KEY => $sourceId] : [],
+            'metadata' => array_filter([self::SOURCE_METADATA_KEY => $sourceId, self::SESSION_METADATA_KEY => $sessionId]),
         ])->acceptJson()->timeout((int) config('spectra.dashboard.playground.timeout', 120));
 
         return match ($provider) {

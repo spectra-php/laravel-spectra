@@ -10,6 +10,7 @@ import CodeBlock from '@/components/CodeBlock.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import StatusCode from '@/components/StatusCode.vue';
 import ExpiryCountdown from '@/components/ExpiryCountdown.vue';
+import PlaygroundRunsCard from './PlaygroundRunsCard.vue';
 import TokenMetrics from './previews/TokenMetrics.vue';
 import ImageMetrics from './previews/ImageMetrics.vue';
 import TtsMetrics from './previews/TtsMetrics.vue';
@@ -229,6 +230,9 @@ const showTrace = computed(() => (request.value?.trace?.request_count ?? 0) > 1)
                     <div v-else-if="request.trace_migrated === false && request.trace_id" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
                         This call's trace is drawn once the trace migrations run. Run <code class="font-mono">php artisan spectra:install</code> to publish and run them.
                     </div>
+
+                    <!-- What was tried from this request in the Playground -->
+                    <PlaygroundRunsCard v-if="request.playground_runs.length" :runs="request.playground_runs" :count="request.playground_run_count" :can-open="request.can_open_in_playground" />
 
                     <!-- Model-specific metrics -->
                     <component :is="metricsComponent" :request="request" :expanded="metricsExpanded" @toggle="metricsExpanded = !metricsExpanded" />

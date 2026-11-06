@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Spectra\Data\PlaygroundCall;
 use Spectra\Data\Responses\PlaygroundCallResponse;
+use Spectra\Data\Responses\PlaygroundRunResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\MessageTextExtractor;
 use Spectra\Support\Playground\PlaygroundClient;
@@ -16,8 +17,9 @@ use Spectra\Support\Tracking\RequestDataFilter;
 
 /**
  * Everything the Playground needs to open one stored call: the body to edit,
- * the provider's models, and what the stored body may have lost, since a run
- * sends what was stored rather than what the app first sent.
+ * the provider's models, the runs that belong with it, and what the stored body
+ * may have lost, since a run sends what was stored rather than what the app first
+ * sent. A call sent from the Playground opens as a run, next to its original.
  */
 class GetPlaygroundCall
 {
@@ -28,6 +30,7 @@ class GetPlaygroundCall
         private readonly PlaygroundClient $client,
         private readonly MessageTextExtractor $textExtractor,
         private readonly PricingLookup $pricingLookup,
+        private readonly GetPlaygroundRuns $getPlaygroundRuns,
     ) {}
 
     /**
@@ -36,6 +39,7 @@ class GetPlaygroundCall
     public function __invoke(SpectraRequest $call): PlaygroundCallResponse
     {
         $body = is_array($call->request) ? $this->client->prepareBody($call->provider, $call->request) : null;
+        $saved = ($this->getPlaygroundRuns)($this->client->sourceOf($call) ?? $call->id, $this->client->sessionOf($call));
 
         return new PlaygroundCallResponse(
             call: PlaygroundCall::fromModel($call, $this->textExtractor->prompt($call->request), rescue(fn () => $this->textExtractor->reply($call), report: false)),
@@ -47,7 +51,42 @@ class GetPlaygroundCall
             base_url: $this->client->baseUrl($call->provider),
             notices: $this->notices($call),
             unavailable_reason: $this->client->unavailableReason($call),
+            runs: array_values(array_filter($saved['runs'], fn (PlaygroundRunResponse $run): bool => $run->request_id !== $call->id)),
+            run_count: $saved['count'],
+            run: $this->openedRun($call, $saved['runs']),
+            original: $this->original($call),
         );
+    }
+
+    /**
+     * Get the opened call as a run when it was sent from the Playground. It isn't
+     * among the saved runs when it is older than they reach, and then has no number.
+     *
+     * @param  array<int, PlaygroundRunResponse>  $saved
+     */
+    private function openedRun(SpectraRequest $call, array $saved): ?PlaygroundRunResponse
+    {
+        if (! $call->tags()->where('name', PlaygroundClient::TAG)->exists()) {
+            return null;
+        }
+
+        return collect($saved)->firstWhere('request_id', $call->id)
+            ?? PlaygroundRunResponse::fromModel($call, $this->client->modelOf($call), rescue(fn () => $this->textExtractor->reply($call), report: false));
+    }
+
+    /**
+     * Get the stored call a run started from, to compare with. A new request's
+     * runs have no original, so a run in a session has none either, even when it
+     * was sent from another run's page. The original may have been pruned.
+     */
+    private function original(SpectraRequest $call): ?PlaygroundCall
+    {
+        $sourceId = $this->client->sourceOf($call);
+        $source = $sourceId !== null && $this->client->sessionOf($call) === null ? SpectraRequest::query()->find($sourceId) : null;
+
+        return $source !== null
+            ? PlaygroundCall::fromModel($source, $this->textExtractor->prompt($source->request), rescue(fn () => $this->textExtractor->reply($source), report: false))
+            : null;
     }
 
     /**

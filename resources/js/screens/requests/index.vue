@@ -113,6 +113,13 @@ const loadConfig = async () => {
     }
 };
 
+// The request a Playground run started from; a new request's runs have none.
+const playgroundSource = (request: RequestListItem): string => {
+    const source = request.metadata?.playground_source;
+
+    return typeof source === 'string' ? source : '';
+};
+
 const goToRequest = (id: string) => {
     router.push({ name: 'request-preview', params: { id } });
 };
@@ -309,6 +316,14 @@ onUnmounted(() => {
                                             class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
                                         />
                                         <span class="font-medium text-gray-900 dark:text-white">{{ request.model }}</span>
+                                        <router-link
+                                            v-if="request.tags?.includes('playground') && playgroundSource(request)"
+                                            :to="{ name: 'request-preview', params: { id: playgroundSource(request) } }"
+                                            class="badge badge-purple shrink-0"
+                                            v-tooltip="'A Playground run. Opens the request it started from.'"
+                                            @click.stop
+                                        >Run</router-link>
+                                        <span v-else-if="request.tags?.includes('playground')" class="badge badge-purple shrink-0" v-tooltip="'A Playground run of a new request'">Run</span>
                                         <span
                                             v-if="request.model_type"
                                             class="badge badge-secondary shrink-0"

@@ -13,6 +13,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Tracking\RecordingSwitch;
@@ -79,7 +80,7 @@ describe('access', function () {
 
         $this->getJson('/spectra/api/playground')
             ->assertOk()
-            ->assertJson(['enabled' => false, 'allowed' => false, 'calls' => []]);
+            ->assertJson(['enabled' => false, 'allowed' => false, 'groups' => []]);
     });
 
     it('links every call page to the playground, which says why it can not run a call', function () {
@@ -104,18 +105,53 @@ describe('access', function () {
 });
 
 describe('opening a call', function () {
-    it('lists recent chat calls and leaves out embeddings and the playground runs', function () {
-        $chat = storedChatCall();
-        storedChatCall(['model_type' => 'embedding', 'endpoint' => '/v1/embeddings']);
-        storedChatCall(['request' => null]);
+    it('lists one row per stored call or new request, with its run count and latest run, and leaves out the app\'s calls', function () {
+        Http::fake(['*' => fn () => Http::response(['id' => 'chatcmpl-'.Str::uuid(), 'model' => 'gpt-4o', 'choices' => [['message' => ['role' => 'assistant', 'content' => 'On its way.'], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 2]])]);
+        $original = storedChatCall();
+        storedChatCall();
+        $edited = ['model' => 'gpt-4o', 'messages' => [['role' => 'user', 'content' => 'Edited question']]];
+        playgroundRun($original)->assertOk();
+        $latestOfOriginal = playgroundRun($original, ['body' => $edited])->assertOk()->json('request_id');
+        $newRequest = fn (string $session) => $this->postJson('/spectra/api/playground/run', ['provider' => 'openai', 'model' => 'gpt-4o', 'session' => $session, 'body' => json_encode(['messages' => [['role' => 'user', 'content' => 'Capital of Iraq?']]], JSON_THROW_ON_ERROR)])->assertOk()->json('request_id');
+        $session = (string) Str::uuid7();
+        $newRequest($session);
+        $latestOfSession = $newRequest($session);
+
+        $groups = $this->getJson('/spectra/api/playground')->assertOk()->json('groups');
+
+        expect($groups)->toHaveCount(2)
+            ->and($groups[0]['open_id'])->toBe($latestOfSession)
+            ->and($groups[0]['run_count'])->toBe(2)
+            ->and($groups[0]['prompt'])->toBe('Capital of Iraq?')
+            ->and($groups[1]['open_id'])->toBe($original->id)
+            ->and($groups[1]['run_count'])->toBe(2)
+            ->and($groups[1]['prompt'])->toBe('Where is my order?')
+            ->and($groups[1]['latest']['id'])->toBe($latestOfOriginal);
+    });
+
+    it('opens a group\'s latest run once its original was pruned', function () {
         Http::fake(['*' => Http::response($this->loadMockResponse('openai/chat_completion_cache_writes.json'))]);
-        playgroundRun($chat)->assertOk();
+        $original = storedChatCall();
+        $run = playgroundRun($original)->assertOk()->json('request_id');
+        $original->delete();
 
-        $calls = $this->getJson('/spectra/api/playground')->assertOk()->json('calls');
+        expect($this->getJson('/spectra/api/playground')->assertOk()->json('groups.0.open_id'))->toBe($run);
+    });
 
-        expect($calls)->toHaveCount(1)
-            ->and($calls[0]['id'])->toBe($chat->id)
-            ->and($calls[0]['prompt'])->toBe('Where is my order?');
+    it('lists a call\'s runs on its request page without their responses, and none on a run\'s own page', function () {
+        Http::fake(['*' => fn () => Http::response(['id' => 'chatcmpl-'.Str::uuid(), 'model' => 'gpt-4o', 'choices' => [['message' => ['role' => 'assistant', 'content' => 'On its way.'], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 2]])]);
+        $original = storedChatCall();
+        $first = playgroundRun($original)->assertOk()->json('request_id');
+        $second = playgroundRun($original)->assertOk()->json('request_id');
+
+        $details = $this->getJson("/spectra/api/requests/{$original->id}")->assertOk();
+
+        expect($details->json('playground_run_count'))->toBe(2)
+            ->and(array_column($details->json('playground_runs'), 'request_id'))->toBe([$second, $first])
+            ->and($details->json('playground_runs.0.number'))->toBe(2)
+            ->and($details->json('playground_runs.0.reply'))->toBe('On its way.')
+            ->and($details->json('playground_runs.0'))->not->toHaveKey('response')
+            ->and($this->getJson("/spectra/api/requests/{$first}")->json('playground_runs'))->toBe([]);
     });
 
     it('opens a call with its body, reply and the provider\'s models', function () {
@@ -126,19 +162,86 @@ describe('opening a call', function () {
         expect($response->json('body.messages.0.content'))->toBe('Where is my order?')
             ->and($response->json('model'))->toBe('gpt-4o')
             ->and($response->json('call.reply'))->toBe('On its way.')
+            ->and($response->json('run'))->toBeNull()
             ->and($response->json('models'))->toContain('gpt-4o')
             ->and($response->json('models'))->not->toContain('claude-opus-4-8')
             ->and($response->json('unavailable_reason'))->toBeNull();
     });
 
-    it('opens and lists a call that failed before it got a model type', function () {
+    it('brings back a call\'s saved runs newest first, with failures, and not another call\'s', function () {
+        $call = storedChatCall();
+        $reply = fn (string $text): array => ['id' => "chatcmpl-{$text}", 'model' => 'gpt-4o-mini', 'choices' => [['message' => ['role' => 'assistant', 'content' => $text], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 2]];
+        Http::fake(['*' => Http::sequence()
+            ->push($reply('First run'))
+            ->push(['error' => ['message' => 'Unknown model', 'type' => 'invalid_request_error']], 400)
+            ->push($reply('Another call\'s run'))]);
+        $first = playgroundRun($call, ['model' => 'gpt-4o-mini'])->assertOk()->json();
+        $failed = playgroundRun($call, ['model' => 'gpt-nope'])->assertOk()->json();
+        playgroundRun(storedChatCall())->assertOk();
+
+        $opened = $this->getJson("/spectra/api/playground/{$call->id}")->assertOk();
+
+        expect($opened->json('run_count'))->toBe(2)
+            ->and(array_column($opened->json('runs'), 'request_id'))->toBe([$failed['request_id'], $first['request_id']])
+            ->and($opened->json('runs.0.succeeded'))->toBeFalse()
+            ->and($opened->json('runs.0.status_code'))->toBe(400)
+            ->and($opened->json('runs.0.error_message'))->toBe($failed['error_message'])
+            ->and($opened->json('runs.1.succeeded'))->toBeTrue()
+            ->and($opened->json('runs.1.reply'))->toBe('First run')
+            ->and($opened->json('runs.1.model'))->toBe('gpt-4o-mini')
+            ->and($opened->json('runs.1.finish_reason'))->toBe('stop')
+            ->and($opened->json('runs.1.total_cost_in_cents'))->toEqualWithDelta($first['total_cost_in_cents'], 0.000001);
+    });
+
+    it('brings back only a call\'s latest 20 runs and counts them all', function () {
+        $call = storedChatCall();
+        $runs = SpectraRequest::factory()->count(21)->create(['metadata' => ['playground_source' => $call->id]]);
+        $runs->each(fn (SpectraRequest $run) => $run->attachTags(['playground']));
+
+        $opened = $this->getJson("/spectra/api/playground/{$call->id}")->assertOk();
+
+        expect($opened->json('runs'))->toHaveCount(20)
+            ->and($opened->json('run_count'))->toBe(21);
+    });
+
+    it('opens a run with its original and the other runs, and a run sent from there starts from the same original', function () {
+        Http::fake(['*' => fn () => Http::response(['id' => 'chatcmpl-'.Str::uuid(), 'model' => 'gpt-4o', 'choices' => [['message' => ['role' => 'assistant', 'content' => 'On its way.'], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 2]])]);
+        $original = storedChatCall();
+        $first = playgroundRun($original)->assertOk()->json('request_id');
+        $second = playgroundRun($original)->assertOk()->json('request_id');
+
+        $opened = $this->getJson("/spectra/api/playground/{$first}")->assertOk();
+
+        $third = playgroundRun(SpectraRequest::query()->findOrFail($first))->assertOk()->json('request_id');
+
+        expect($opened->json('run.request_id'))->toBe($first)
+            ->and($opened->json('run.number'))->toBe(1)
+            ->and($opened->json('original.id'))->toBe($original->id)
+            ->and(array_column($opened->json('runs'), 'request_id'))->toBe([$second])
+            ->and($opened->json('runs.0.number'))->toBe(2)
+            ->and(SpectraRequest::query()->findOrFail($third)->metadata)->toEqual(['playground_source' => $original->id])
+            ->and($this->getJson("/spectra/api/playground/{$original->id}")->json('run_count'))->toBe(3);
+    });
+
+    it('opens a run whose original was pruned, with nothing to compare with', function () {
+        Http::fake(['*' => Http::response($this->loadMockResponse('openai/chat_completion_cache_writes.json'))]);
+        $original = storedChatCall();
+        $run = playgroundRun($original)->assertOk()->json('request_id');
+        $original->delete();
+
+        $opened = $this->getJson("/spectra/api/playground/{$run}")->assertOk();
+
+        expect($opened->json('original'))->toBeNull()
+            ->and($opened->json('run.request_id'))->toBe($run);
+    });
+
+    it('opens a call that failed before it got a model type', function () {
         $call = storedChatCall(['model_type' => null, 'status_code' => 429, 'error_message' => 'Rate limit reached', 'response' => null]);
 
         $opened = $this->getJson("/spectra/api/playground/{$call->id}")->assertOk();
 
         expect($opened->json('unavailable_reason'))->toBeNull()
             ->and($opened->json('call.error_message'))->toBe('Rate limit reached')
-            ->and($this->getJson('/spectra/api/playground')->json('calls.0.id'))->toBe($call->id)
             ->and($this->getJson("/spectra/api/requests/{$call->id}")->json('can_open_in_playground'))->toBeTrue();
     });
 
@@ -398,6 +501,33 @@ describe('a new prompt', function () {
             'body' => is_array($input['body']) ? json_encode($input['body'], JSON_THROW_ON_ERROR) : $input['body'],
         ]);
     }
+
+    it('opens a new request\'s run with the other runs of its session and no original', function () {
+        Http::fake(['*' => fn () => Http::response(['id' => 'chatcmpl-'.Str::uuid(), 'model' => 'gpt-4o', 'choices' => [['message' => ['role' => 'assistant', 'content' => 'Baghdad'], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 2]])]);
+        $session = (string) $this->getJson('/spectra/api/playground/new')->assertOk()->json('session');
+        $other = (string) $this->getJson('/spectra/api/playground/new')->assertOk()->json('session');
+        $first = runNewPrompt(['session' => $session])->assertOk()->json('request_id');
+        $second = runNewPrompt(['session' => $session, 'provider' => 'anthropic', 'model' => 'claude-opus-4-8', 'body' => ['max_tokens' => 10, 'messages' => [['role' => 'user', 'content' => 'Hello']]]])->assertOk()->json('request_id');
+        runNewPrompt(['session' => $other])->assertOk();
+
+        $third = playgroundRun(SpectraRequest::query()->findOrFail($second))->assertOk()->json('request_id');
+
+        $opened = $this->getJson("/spectra/api/playground/{$third}")->assertOk();
+
+        expect($session)->not->toBe($other)
+            ->and(SpectraRequest::query()->findOrFail($first)->metadata)->toEqual(['playground_session' => $session])
+            ->and($opened->json('run.number'))->toBe(3)
+            ->and($opened->json('original'))->toBeNull()
+            ->and(array_column($opened->json('runs'), 'request_id'))->toBe([$second, $first]);
+    });
+
+    it('rejects a session that is not a uuid', function () {
+        Http::fake();
+
+        runNewPrompt(['session' => 'nope'])->assertUnprocessable();
+
+        Http::assertNothingSent();
+    });
 
     it('refuses to open or run while the option is off or without the gate', function () {
         Http::fake();
