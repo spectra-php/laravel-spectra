@@ -15,6 +15,7 @@ use Spectra\Facades\Spectra;
 use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\StatsAggregator;
+use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\RequestPersister;
 use Spectra\Support\Tracking\RequestWriter;
 use Spectra\Support\Tracking\StreamEventParser;
@@ -625,4 +626,30 @@ it('stores the provider model id even when the response echoes the request', fun
     $row = SpectraRequest::query()->sole();
     expect($row->snapshot)->toBe('gpt-4o')
         ->and($row->model)->toBe('GPT-4o');
+});
+
+it('saves a stream that arrives all at once, without a tokens per second', function () {
+    $context = new RequestContext(['provider' => 'openai', 'model' => 'gpt-4o']);
+    $context->isStreaming = true;
+    $context->latencyMs = 500;
+    $context->timeToFirstTokenMs = 500;
+    $context->setUsage(['prompt_tokens' => 10, 'completion_tokens' => 2000]);
+
+    app(RequestPersister::class)->persist($context);
+
+    // 2,000 tokens over the 1 ms floor would be 2,000,000 tokens per second.
+    expect(SpectraRequest::query()->sole()->tokens_per_second)->toBeNull();
+});
+
+it('saves the tokens per second of a stream that took time to generate', function () {
+    $context = new RequestContext(['provider' => 'openai', 'model' => 'gpt-4o']);
+    $context->isStreaming = true;
+    $context->latencyMs = 2500;
+    $context->timeToFirstTokenMs = 500;
+    $context->setUsage(['prompt_tokens' => 10, 'completion_tokens' => 2000]);
+
+    app(RequestPersister::class)->persist($context);
+
+    // 2,000 tokens over 2,000 ms.
+    expect((float) SpectraRequest::query()->sole()->tokens_per_second)->toBe(1000.0);
 });

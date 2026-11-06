@@ -22,6 +22,9 @@ use Spectra\Support\Pricing\RequestCostCalculator;
  */
 class RequestContext implements Arrayable
 {
+    /** The most `spectra_requests.tokens_per_second`, a decimal(8, 2), can hold. */
+    protected const MAX_TOKENS_PER_SECOND = 999999.99;
+
     /**
      * List properties: empty when unset, and stored as NULL while empty.
      *
@@ -387,7 +390,12 @@ class RequestContext implements Arrayable
         // tokens/s is only meaningful for streaming where we have TTFT
         if ($this->isStreaming && $this->timeToFirstTokenMs !== null && $this->latencyMs && $this->completionTokens > 0) {
             $generationMs = max(1, $this->latencyMs - $this->timeToFirstTokenMs);
-            $this->tokensPerSecond = round(($this->completionTokens / $generationMs) * 1000, 2);
+            $tokensPerSecond = round(($this->completionTokens / $generationMs) * 1000, 2);
+
+            // A stream that arrives all at once (a buffering proxy) has no real
+            // generation time, and a rate this high would overflow the column
+            // on PostgreSQL and strict MySQL, which loses the whole call.
+            $this->tokensPerSecond = $tokensPerSecond <= self::MAX_TOKENS_PER_SECOND ? $tokensPerSecond : null;
         }
 
         return $this;

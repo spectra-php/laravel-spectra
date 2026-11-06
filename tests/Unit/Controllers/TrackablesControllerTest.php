@@ -131,7 +131,7 @@ it('limits the list, summary and type filter to users when asked', function () {
     Relation::morphMap(['member' => User::class, 'conversation' => SpectraRequest::class]);
 
     SpectraRequest::factory()->create(['total_cost_in_cents' => 10, 'trackable_type' => 'member', 'trackable_id' => '1']);
-    SpectraRequest::factory()->create(['total_cost_in_cents' => 20, 'trackable_type' => 'conversation', 'trackable_id' => '48']);
+    SpectraRequest::factory()->create(['total_cost_in_cents' => 20, 'trackable_type' => 'conversation', 'trackable_id' => '01a1b04c-d820-7140-bea1-3e85e8d94cfb']);
     SpectraRequest::factory()->create(['total_cost_in_cents' => 40, 'trackable_type' => 'App\\Models\\Gone', 'trackable_id' => '3']);
 
     $users = app()->call([app(TrackablesController::class), '__invoke'], ['request' => new Request(['period' => 'all', 'users_only' => '1'])])->toArray();
