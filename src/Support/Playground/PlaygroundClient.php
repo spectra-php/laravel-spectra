@@ -20,12 +20,12 @@ use Spectra\Support\Redaction\Redactor;
 use Spectra\Support\Tracking\RecordingSwitch;
 
 /**
- * Sends a stored chat call to its provider again, for the dashboard's
- * Playground.
+ * Sends a chat call to a provider for the dashboard's Playground: a stored call
+ * again with edits, or a new prompt.
  *
- * The provider and endpoint always come from the stored call and the base URL
- * and key from the app's config, never from the browser, so a run can only
- * reach a provider the app already talks to. The call goes through
+ * The endpoint always comes from the stored call or the list of chat endpoints
+ * below, and the base URL and key from the app's config, never from the browser,
+ * so a run can only reach a provider's chat API. The call goes through
  * `withAITracking()`, so a run is recorded and priced like any other call, and
  * is tagged `playground`.
  */
@@ -52,6 +52,25 @@ class PlaygroundClient
         'openrouter' => ['/api/v1/chat/completions'],
         'cohere' => ['/v2/chat'],
         'ollama' => ['/api/chat', '/api/generate'],
+    ];
+
+    /**
+     * The endpoint and starting body of a new prompt, per provider, in the order
+     * the screen lists them. Anthropic refuses a call without `max_tokens`. A
+     * Gemini endpoint's model is filled in when the prompt runs.
+     *
+     * @var array<string, string>
+     */
+    protected const NEW_PROMPT_ENDPOINTS = [
+        'openai' => '/v1/chat/completions',
+        'anthropic' => '/v1/messages',
+        'google' => '/v1beta/models/model:generateContent',
+        'groq' => '/openai/v1/chat/completions',
+        'mistral' => '/v1/chat/completions',
+        'openrouter' => '/api/v1/chat/completions',
+        'xai' => '/v1/chat/completions',
+        'cohere' => '/v2/chat',
+        'ollama' => '/api/chat',
     ];
 
     /** A Gemini chat endpoint: its version, its model, and whether it streams. */
@@ -84,7 +103,37 @@ class PlaygroundClient
      */
     public function providers(): array
     {
-        return [...array_keys(self::ENDPOINTS), 'google'];
+        return array_keys(self::NEW_PROMPT_ENDPOINTS);
+    }
+
+    /**
+     * Determine if the provider's key is configured, or the provider needs none.
+     */
+    public function hasKey(string $provider): bool
+    {
+        return $provider === self::KEYLESS_PROVIDER || filled($this->apiKeyResolver->resolve($provider));
+    }
+
+    /**
+     * Get the endpoint a new prompt to the provider goes to.
+     */
+    public function newPromptEndpoint(string $provider): string
+    {
+        return self::NEW_PROMPT_ENDPOINTS[$provider];
+    }
+
+    /**
+     * Get the body a new prompt to the provider starts from.
+     *
+     * @return array<string, mixed>
+     */
+    public function newPromptBody(string $provider): array
+    {
+        return match ($provider) {
+            'anthropic' => ['max_tokens' => 1024, 'messages' => [['role' => 'user', 'content' => '']]],
+            'google' => ['contents' => [['role' => 'user', 'parts' => [['text' => '']]]]],
+            default => ['messages' => [['role' => 'user', 'content' => '']]],
+        };
     }
 
     /**
@@ -109,11 +158,19 @@ class PlaygroundClient
             return 'This call\'s request body wasn\'t stored, so there is nothing to run. Payload sampling or the storage settings left it out.';
         }
 
-        if ($call->provider !== self::KEYLESS_PROVIDER && blank($this->apiKeyResolver->resolve($call->provider))) {
-            return "No API key was found for {$this->providers->displayName($call->provider)}. Set spectra.api_keys.{$call->provider} in config/spectra.php, or the service's usual config key.";
+        return $this->missingKeyReason($call->provider);
+    }
+
+    /**
+     * Get the message to show when the provider's key isn't configured, or null when it is.
+     */
+    public function missingKeyReason(string $provider): ?string
+    {
+        if ($this->hasKey($provider)) {
+            return null;
         }
 
-        return null;
+        return "No API key was found for {$this->providers->displayName($provider)}. Set spectra.api_keys.{$provider} in config/spectra.php, or the service's usual config key.";
     }
 
     /**
@@ -153,14 +210,15 @@ class PlaygroundClient
     }
 
     /**
-     * Send the edited body to the stored call's provider and endpoint, and get the result.
+     * Send a body to the provider's endpoint, and get the result. `$sourceId` is
+     * the stored call the run started from, if any. The caller takes the endpoint
+     * from the stored call or newPromptEndpoint(), never from the input.
      *
      * @param  array<string, mixed>  $body
      */
-    public function run(SpectraRequest $source, string $model, array $body): PlaygroundRunResponse
+    public function run(string $provider, string $endpoint, string $model, array $body, ?string $sourceId = null): PlaygroundRunResponse
     {
-        $provider = $source->provider;
-        $endpoint = $this->endpointFor($provider, (string) $source->endpoint, $model);
+        $endpoint = $this->endpointFor($provider, $endpoint, $model);
         $payload = $this->prepareBody($provider, $body);
 
         // A Gemini endpoint names the model; every other API reads it from the body.
@@ -173,7 +231,7 @@ class PlaygroundClient
         $response = null;
 
         try {
-            $response = $this->pendingRequest($source, $model)->post($this->baseUrl($provider).$endpoint, $payload);
+            $response = $this->pendingRequest($provider, $model, $sourceId)->post($this->baseUrl($provider).$endpoint, $payload);
         } catch (ConnectionException) {
             // GuzzleMiddleware records the failure, and the context holds its message.
         }
@@ -224,14 +282,13 @@ class PlaygroundClient
     /**
      * Build the tracked HTTP request with the provider's way of sending a key.
      */
-    protected function pendingRequest(SpectraRequest $source, string $model): PendingRequest
+    protected function pendingRequest(string $provider, string $model, ?string $sourceId): PendingRequest
     {
-        $provider = $source->provider;
         $key = $this->apiKeyResolver->resolve($provider);
 
         $request = Http::withAITracking($provider, $model, [
             'tags' => [self::TAG],
-            'metadata' => [self::SOURCE_METADATA_KEY => $source->id],
+            'metadata' => $sourceId !== null ? [self::SOURCE_METADATA_KEY => $sourceId] : [],
         ])->acceptJson()->timeout((int) config('spectra.dashboard.playground.timeout', 120));
 
         return match ($provider) {

@@ -321,6 +321,7 @@ This is expected. Warning, critical, and exceeded alerts fire once per budget, l
 
 - **The screen says the Playground is off.** Set `SPECTRA_PLAYGROUND_ENABLED=true`. If you cache your config, run `php artisan config:cache` again.
 - **The screen says you can't use it.** Define the `manageSpectra` gate for your user. See [Who Can Use It](/playground#who-can-use-it).
-- **A request has no Open in Playground button.** It isn't a text call to a chat endpoint, its request body wasn't stored, or it went to a custom provider. See [What Can Be Opened](/playground#what-can-be-opened).
+- **A request has no Open in Playground button.** The Playground is off, or you don't have the `manageSpectra` gate.
+- **A call opens but Run is turned off.** The screen says why: it isn't a text call to a chat endpoint, its request body wasn't stored, or it went to a custom provider. See [What Can Be Opened](/playground#what-can-be-opened).
 - **It says no API key was found.** Set `spectra.api_keys.{provider}` in `config/spectra.php`. See [API Keys and Base URLs](/playground#api-keys-and-base-urls).
 - **The provider rejects a run that worked in your app.** The stored body may have lost something, or the call may need a header Spectra doesn't store. See [When a Run Differs From the Original](/playground#when-a-run-differs-from-the-original).

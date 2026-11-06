@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 /**
- * The dashboard's Playground: opening a stored call, and sending it to its
- * provider again with edits. A run is a real, tracked call, so it needs the
- * option and the manageSpectra gate, and always goes to the stored call's
- * provider and endpoint.
+ * The dashboard's Playground: opening a stored call and sending it to its
+ * provider again with edits, or writing a new prompt. A run is a real, tracked
+ * call, so it needs the option and the manageSpectra gate, and always goes to a
+ * stored call's endpoint or the provider's chat endpoint.
  */
 
 use Illuminate\Http\Client\ConnectionException;
@@ -80,6 +80,16 @@ describe('access', function () {
         $this->getJson('/spectra/api/playground')
             ->assertOk()
             ->assertJson(['enabled' => false, 'allowed' => false, 'calls' => []]);
+    });
+
+    it('links every call page to the playground, which says why it can not run a call', function () {
+        $call = SpectraRequest::factory()->create(['model_type' => 'image', 'endpoint' => '/v1/images/generations', 'request' => null]);
+
+        $this->getJson("/spectra/api/requests/{$call->id}")->assertJson(['can_open_in_playground' => true]);
+
+        $this->getJson("/spectra/api/playground/{$call->id}")
+            ->assertOk()
+            ->assertJsonPath('unavailable_reason', fn (string $reason) => str_contains($reason, 'chat endpoint'));
     });
 
     it('offers the playground on a call page only when the user may run it', function () {
@@ -375,5 +385,126 @@ describe('running a call', function () {
         playgroundRun(storedChatCall(), ['body' => ['messages' => [['role' => 'user', 'content' => "  Keep my spaces\n\n"], ['role' => 'assistant', 'content' => '']]]])->assertOk();
 
         Http::assertSent(fn (Request $request) => $request['messages'][0]['content'] === "  Keep my spaces\n\n" && $request['messages'][1]['content'] === '');
+    });
+});
+
+describe('a new prompt', function () {
+    function runNewPrompt(array $input = []): TestResponse
+    {
+        $input = ['provider' => 'openai', 'model' => 'gpt-4o', 'body' => ['messages' => [['role' => 'user', 'content' => 'Hello']]], ...$input];
+
+        return test()->postJson('/spectra/api/playground/run', [
+            ...$input,
+            'body' => is_array($input['body']) ? json_encode($input['body'], JSON_THROW_ON_ERROR) : $input['body'],
+        ]);
+    }
+
+    it('refuses to open or run while the option is off or without the gate', function () {
+        Http::fake();
+        config()->set('spectra.dashboard.playground.enabled', false);
+
+        $this->getJson('/spectra/api/playground/new')->assertForbidden();
+        runNewPrompt()->assertForbidden();
+
+        config()->set('spectra.dashboard.playground.enabled', true);
+        Gate::define('manageSpectra', fn ($user = null) => false);
+
+        $this->getJson('/spectra/api/playground/new')->assertForbidden();
+        runNewPrompt()->assertForbidden();
+
+        Http::assertNothingSent();
+    });
+
+    it('starts from the provider asked for, with its endpoint and models', function () {
+        $response = $this->getJson('/spectra/api/playground/new?provider=anthropic')->assertOk();
+
+        expect($response->json('call'))->toBeNull()
+            ->and($response->json('provider'))->toBe('anthropic')
+            ->and($response->json('endpoint'))->toBe('/v1/messages')
+            ->and($response->json('body.max_tokens'))->toBe(1024)
+            ->and($response->json('models'))->toContain('claude-opus-4-8')
+            ->and($response->json('base_url'))->toBe('https://api.anthropic.com');
+    });
+
+    it('starts from the provider and model the app used last, when it has a key', function () {
+        storedChatCall(['provider' => 'google', 'endpoint' => '/v1beta/models/gemini-2.5-flash:generateContent', 'snapshot' => 'gemini-2.5-flash', 'created_at' => now()->subHour()]);
+        storedChatCall(['provider' => 'groq', 'endpoint' => '/openai/v1/chat/completions', 'snapshot' => 'llama-x', 'created_at' => now()]);
+
+        $response = $this->getJson('/spectra/api/playground/new')->assertOk();
+
+        expect($response->json('provider'))->toBe('google')
+            ->and($response->json('model'))->toBe('gemini-2.5-flash')
+            ->and(collect($response->json('providers'))->firstWhere('slug', 'groq')['has_key'])->toBeFalse()
+            ->and(collect($response->json('providers'))->firstWhere('slug', 'google')['has_key'])->toBeTrue();
+    });
+
+    it('starts from a provider with a key when the app has no calls yet', function () {
+        config()->set('spectra.api_keys', ['mistral' => 'test-mistral']);
+
+        $this->getJson('/spectra/api/playground/new')->assertJson(['provider' => 'mistral', 'model' => '', 'unavailable_reason' => null]);
+    });
+
+    it('says when the provider has no key', function () {
+        $this->getJson('/spectra/api/playground/new?provider=groq')->assertJsonPath('unavailable_reason', fn (string $reason) => str_contains($reason, 'No API key'));
+    });
+
+    it('rejects a provider it cannot send to', function (string $provider) {
+        Http::fake();
+
+        $this->getJson("/spectra/api/playground/new?provider={$provider}")->assertJsonValidationErrors('provider');
+        runNewPrompt(['provider' => $provider])->assertJsonValidationErrors('provider');
+
+        Http::assertNothingSent();
+    })->with([
+        'a custom provider' => ['acme'],
+        'one with no chat api' => ['elevenlabs'],
+    ]);
+
+    it('sends a new prompt to the provider\'s chat endpoint whatever the input says', function (string $provider, string $url) {
+        Http::fake(['*' => Http::response(['id' => 'x'])]);
+
+        runNewPrompt(['provider' => $provider, 'endpoint' => '/v1/files', 'url' => 'https://evil.test'])->assertOk();
+
+        Http::assertSent(fn (Request $request) => $request->url() === $url);
+    })->with([
+        'openai' => ['openai', 'https://api.openai.com/v1/chat/completions'],
+        'anthropic' => ['anthropic', 'https://api.anthropic.com/v1/messages'],
+    ]);
+
+    it('puts the model in the gemini endpoint', function () {
+        Http::fake(['*' => Http::response($this->loadMockResponse('google/response.json'))]);
+
+        runNewPrompt(['provider' => 'google', 'model' => 'gemini-2.5-pro', 'body' => ['contents' => [['role' => 'user', 'parts' => [['text' => 'Hello']]]]]])->assertOk();
+
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent');
+    });
+
+    it('records a new prompt as a priced call tagged playground with no source', function () {
+        Http::fake(['*' => Http::response($this->loadMockResponse('openai/chat_completion_cache_writes.json'))]);
+
+        $result = runNewPrompt()->assertOk();
+
+        $run = SpectraRequest::query()->with('tags')->findOrFail($result->json('request_id'));
+
+        expect($result->json('succeeded'))->toBeTrue()
+            ->and($run->total_cost_in_cents)->toBeGreaterThan(0)
+            ->and($run->tags->pluck('name')->all())->toBe(['playground'])
+            ->and($run->metadata)->toBeNull();
+    });
+
+    it('refuses a new prompt to a provider with no key and sends nothing', function () {
+        Http::fake();
+
+        runNewPrompt(['provider' => 'groq'])->assertStatus(422);
+
+        Http::assertNothingSent();
+    });
+
+    it('rejects a body that is not a json object', function () {
+        Http::fake();
+
+        runNewPrompt(['body' => '[1, 2]'])->assertJsonValidationErrors('body');
+
+        Http::assertNothingSent();
     });
 });

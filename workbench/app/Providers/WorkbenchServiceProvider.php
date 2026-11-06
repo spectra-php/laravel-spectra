@@ -132,11 +132,12 @@ class WorkbenchServiceProvider extends ServiceProvider
 
         Sleep::for($wantsShort ? 640 : 1180)->milliseconds();
 
+        // Each reply gets its own id: Spectra treats a repeated one as the same call.
         return Http::response(match (true) {
             Str::contains($path, ':generateContent') => ['modelVersion' => $model, 'candidates' => [['content' => ['role' => 'model', 'parts' => [['text' => $text]]], 'finishReason' => 'STOP']], 'usageMetadata' => ['promptTokenCount' => $promptTokens, 'candidatesTokenCount' => $replyTokens, 'totalTokenCount' => $promptTokens + $replyTokens]],
-            Str::endsWith($path, '/responses') => ['id' => 'resp_demo', 'object' => 'response', 'status' => 'completed', 'model' => $model, 'output' => [['type' => 'message', 'role' => 'assistant', 'content' => [['type' => 'output_text', 'text' => $text]]]], 'usage' => ['input_tokens' => $promptTokens, 'output_tokens' => $replyTokens, 'total_tokens' => $promptTokens + $replyTokens]],
-            Str::endsWith($path, '/messages') => ['id' => 'msg_demo', 'type' => 'message', 'role' => 'assistant', 'model' => $model, 'content' => [['type' => 'text', 'text' => $text]], 'stop_reason' => 'end_turn', 'usage' => ['input_tokens' => $promptTokens, 'output_tokens' => $replyTokens]],
-            default => ['id' => 'chatcmpl_demo', 'object' => 'chat.completion', 'model' => $model, 'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => $text], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => $promptTokens, 'completion_tokens' => $replyTokens, 'total_tokens' => $promptTokens + $replyTokens]],
+            Str::endsWith($path, '/responses') => ['id' => 'resp_'.Str::random(16), 'object' => 'response', 'status' => 'completed', 'model' => $model, 'output' => [['type' => 'message', 'role' => 'assistant', 'content' => [['type' => 'output_text', 'text' => $text]]]], 'usage' => ['input_tokens' => $promptTokens, 'output_tokens' => $replyTokens, 'total_tokens' => $promptTokens + $replyTokens]],
+            Str::endsWith($path, '/messages') => ['id' => 'msg_'.Str::random(16), 'type' => 'message', 'role' => 'assistant', 'model' => $model, 'content' => [['type' => 'text', 'text' => $text]], 'stop_reason' => 'end_turn', 'usage' => ['input_tokens' => $promptTokens, 'output_tokens' => $replyTokens]],
+            default => ['id' => 'chatcmpl_'.Str::random(16), 'object' => 'chat.completion', 'model' => $model, 'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => $text], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => $promptTokens, 'completion_tokens' => $replyTokens, 'total_tokens' => $promptTokens + $replyTokens]],
         });
     }
 }

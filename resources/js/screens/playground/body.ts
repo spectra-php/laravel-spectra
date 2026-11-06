@@ -205,6 +205,15 @@ export const rolesFor = (shape: BodyShape): string[] => {
     }
 };
 
+// The closest role in another provider's API, when a new prompt changes provider.
+export const roleInShape = (role: string, shape: BodyShape): string => {
+    if (shape === 'google' && role === 'assistant') return 'model';
+    if (shape !== 'google' && role === 'model') return 'assistant';
+    if ((shape === 'google' || shape === 'anthropic') && role === 'developer') return 'system';
+
+    return role;
+};
+
 // Whether the editor can add a message: a generate body holds one prompt.
 export const canAddMessages = (shape: BodyShape): boolean => shape !== 'generate';
 

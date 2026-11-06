@@ -7,13 +7,14 @@ A customer got a bad answer, and you want to know whether a better prompt would 
 <a name="what-is-the-playground"></a>
 ## What Is the Playground?
 
-The Playground is a screen for trying changes to a real AI call without touching your code. You start from a call Spectra has already recorded, so you test with the exact messages your app sent, not a made-up example.
+The Playground is a screen for trying prompts and models without touching your code. You can write a new prompt, or start from a call Spectra has already recorded, so you test with the exact messages your app sent rather than a made-up example.
 
 Each time you press **Run**, Spectra sends your edited version to the same provider and shows the result. We call that a **run**. For example, you might:
 
 - Add "Answer in one short sentence" to the system prompt, and see whether replies get shorter and cheaper.
 - Try a cheaper model, and see whether the answer is still good enough.
 - Open a call that failed, change what caused the failure, and check that it now works.
+- Write a new prompt for a feature you haven't built yet, and try it on a few models.
 
 A run is a real call, not a simulation. It uses your API key, costs money, and sends the prompt to the provider. That's why the Playground is off until you turn it on.
 
@@ -60,16 +61,29 @@ The Playground uses the keys your app is already configured with. For each provi
 
 A run goes to the provider's default address, or to the base URL you set in [`spectra.endpoint_urls`](/configuration#endpoint-urls) or the usual config keys. The note under the editor shows the address, so you can see where a run will go before you press **Run**. Only the scheme and host of a configured URL are used; the path comes from the stored call.
 
+<a name="starting-from-a-new-prompt"></a>
+## Starting From a New Prompt
+
+Click **Playground** in the sidebar, then **New prompt**. Pick a provider and a model, write your messages, and press **Run**:
+
+<img class="screenshot" src="/images/dashboard/playground-new.png" alt="A new prompt in the Playground, with its answer from two models" />
+
+The screen opens on the provider and model used last. A provider without an API key is listed but can't be picked.
+
+The system message is optional: if you leave it empty, it isn't sent. If you change the provider, your messages and settings come with you, converted to that provider's format. Anything you added only in the **JSON** tab, such as tools, stays behind, because each provider writes those differently.
+
+There's no original to compare with, so each answer shows its own numbers. Your runs stay on the screen, so you can change the provider or model and read the answers one above the other.
+
 <a name="opening-a-call"></a>
 ## Opening a Call
 
 There are two ways to open a call.
 
-**From the Playground screen.** Click **Playground** in the sidebar to see the most recent calls you can open. Your own runs are left out of this list. Click a row to open it:
+**From the Playground screen.** Click **Playground** in the sidebar to see the latest few calls your app made that can run. Your own runs are left out of this list, and **Your runs** at the top of the screen shows them instead. Click a row to open it:
 
-<img class="screenshot" src="/images/dashboard/playground.png" alt="The Playground screen listing recent calls to start from" />
+<img class="screenshot" src="/images/dashboard/playground.png" alt="The Playground screen with a New prompt button above the latest calls to start from" />
 
-**From a request's page.** Any call you can open has an **Open in Playground** button at the top of its page. This is the quickest way to try again from a bad answer or an error you found in the [requests list](/dashboard#requests):
+**From a request's page.** Every request has an **Open in Playground** button at the top of its page. This is the quickest way to try again from a bad answer or an error you found in the [requests list](/dashboard#requests):
 
 <img class="screenshot" src="/images/dashboard/request-open-in-playground.png" alt="The Open in Playground button on a request's page" />
 
@@ -86,7 +100,7 @@ The **Messages** tab shows the call as a list of messages, whichever provider it
 - **Change the text** of any message.
 - **Change a message's role**, such as user or assistant.
 - **Add or remove messages**, for example to give the model an example to follow, or to remove the system prompt and see what it was doing.
-- **Change the model.** The field suggests the provider's current text models from [the pricing catalog](/pricing), and you can type any other name. A run always stays with the same provider, so to compare providers, open a call made to each.
+- **Change the model.** The field suggests the provider's current text models from [the pricing catalog](/pricing), and you can type any other name. A run of a stored call always stays with the same provider. To compare providers, use a [new prompt](#starting-from-a-new-prompt).
 - **Set the temperature and max tokens.** Leave one empty to use the provider's default.
 
 Some messages hold more than plain text: an image, a tool call, or several blocks of text. These are locked. They are shown and sent as they are, and you change them in the **JSON** tab.
@@ -131,8 +145,8 @@ If the provider rejects a run, you see its error in place of the reply, so you c
 
 A run is tracked like any other AI call, so it appears in the dashboard with its cost:
 
-- **It's tagged `playground`.** Click **#playground** in the editor's note, or filter the [requests list](/dashboard#requests) by that tag, to see every run.
-- **It points back to where it started.** Its page has a **Started from** link to the original call, stored in its [metadata](/metadata) as `playground_source`.
+- **It's tagged `playground`.** To see every run, click **Your runs** on the Playground screen or **#playground** in the editor's note, or filter the [requests list](/dashboard#requests) by that tag.
+- **A run of a stored call points back to it.** Its page has a **Started from** link to the original call, stored in its [metadata](/metadata) as `playground_source`.
 - **It belongs to whoever ran it**, when `tracking.auto_track_user` is on and they are signed in.
 - **It isn't tagged with a prompt version**, so experiments don't change the numbers on the [Prompts screen](/prompts).
 
@@ -166,7 +180,7 @@ Two more things can change an answer, and no note covers them:
 <a name="what-can-be-opened"></a>
 ## What Can Be Opened
 
-The Playground opens text calls to these chat endpoints, when the request body was stored:
+The Playground runs text calls to these chat endpoints, when the request body was stored. A [new prompt](#starting-from-a-new-prompt) can go to any of these providers:
 
 | Provider | Endpoints |
 | --- | --- |
@@ -180,10 +194,10 @@ The Playground opens text calls to these chat endpoints, when the request body w
 | Cohere | `/v2/chat` |
 | Ollama | `/api/chat`, `/api/generate` (no API key needed) |
 
-It can't open:
+It can't run the calls below. They still open, with the reason at the top of the screen and **Run** turned off:
 
 - **Other kinds of calls**, such as images, audio, video or embeddings.
-- **Calls whose body wasn't stored**, because of [payload sampling](/configuration#storage) or your storage settings. Their page has no **Open in Playground** button.
+- **Calls whose body wasn't stored**, because of [payload sampling](/configuration#storage) or your storage settings.
 - **Calls to [custom providers](/custom-providers)**, because Spectra doesn't know how they expect their key to be sent.
 
 ::: warning Azure OpenAI
@@ -205,7 +219,6 @@ A safe setup is to leave it off in production and use it where you develop, with
 ## What It Doesn't Do
 
 - **It doesn't save prompts.** You keep your prompts in your code, and copy a better one there yourself. Runs are kept as calls, but the editor's contents are gone when you leave the page.
-- **It doesn't start from a blank page.** Every session starts from a call your app has made.
 - **It doesn't run over a dataset.** To grade a change across many examples, write an [evaluation](/evaluations).
 - **It doesn't run your tools.** If the model asks for a tool, you see what it asked for. To continue, add the tool's result as a message yourself.
 - **It doesn't stream.** The answer appears once it's complete.

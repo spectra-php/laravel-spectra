@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { Ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
 import Breadcrumb from '@/components/Breadcrumb.vue';
@@ -10,17 +10,19 @@ import ProviderLogo from '@/components/ProviderLogo.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import JsonEditor from './JsonEditor.vue';
 import RunResult from './RunResult.vue';
-import { canAddMessages, detectShape, newMessage, readMessages, readSettings, rolesFor, writeMessages, writeSettings } from './body';
+import { canAddMessages, detectShape, newMessage, readMessages, readSettings, roleInShape, rolesFor, writeMessages, writeSettings } from './body';
 import type { BodyShape, EditorMessage } from './body';
 import type { JsonObject, PlaygroundCallResponse, PlaygroundRunResponse } from '@/types/api';
 import type { ApiError } from '@/types/app';
 
-// One call opened in the Playground: edit its messages, model and settings, or
-// its whole body as JSON, and run it to compare the answer with the original.
+// The Playground's editor, for one stored call or a new prompt: edit the messages,
+// model and settings, or the whole body as JSON, and run it. A stored call's
+// answers are compared with the original; a new prompt has none to compare with.
 type Tab = 'messages' | 'json';
 type Run = PlaygroundRunResponse & { number: number };
 
 const route = useRoute();
+const router = useRouter();
 const { apiRequest } = useHelpers();
 const loading = useLoading();
 
@@ -42,8 +44,9 @@ const runError = ref('');
 const runs = ref<Run[]>([]);
 let runCount = 0;
 
-const provider = computed(() => opened.value?.call.provider ?? '');
-const endpoint = computed(() => opened.value?.call.endpoint ?? null);
+const isNewPrompt = computed(() => route.name === 'playground-new');
+const provider = computed(() => opened.value?.provider ?? '');
+const endpoint = computed(() => opened.value?.endpoint ?? null);
 const shape = computed<BodyShape | null>(() => detectShape(provider.value, endpoint.value, body.value));
 const isGoogle = computed(() => provider.value === 'google');
 
@@ -59,7 +62,11 @@ const jsonError = computed(() => {
     }
 });
 
-const canRun = computed(() => !running.value && !opened.value?.unavailable_reason && model.value.trim() !== '' && !jsonError.value);
+// A new prompt has nothing to send until a message is written; the JSON tab is
+// left to the provider to judge.
+const hasPrompt = computed(() => !isNewPrompt.value || tab.value === 'json' || messages.value.some((message) => message.role !== 'system' && message.text.trim() !== ''));
+
+const canRun = computed(() => !running.value && !opened.value?.unavailable_reason && model.value.trim() !== '' && !jsonError.value && hasPrompt.value);
 
 // What the editor doesn't show in its form but still sends.
 const keptInBody = computed(() => {
@@ -79,7 +86,10 @@ const currentBody = (): JsonObject => {
 
     const settings = { temperature: temperature.value, maxTokens: maxTokens.value };
 
-    return writeSettings(shape.value, provider.value, writeMessages(shape.value, body.value, messages.value), settings);
+    // A new prompt shows an empty system message to fill in, which is not sent as it is.
+    const sent = isNewPrompt.value ? messages.value.filter((message) => message.locked || message.role !== 'system' || message.text.trim() !== '') : messages.value;
+
+    return writeSettings(shape.value, provider.value, writeMessages(shape.value, body.value, sent), settings);
 };
 
 const loadEditor = (source: JsonObject) => {
@@ -87,6 +97,11 @@ const loadEditor = (source: JsonObject) => {
 
     if (shape.value) {
         messages.value = readMessages(shape.value, source);
+
+        if (isNewPrompt.value && !messages.value.some((message) => message.role === 'system')) {
+            messages.value.unshift(newMessage('system'));
+        }
+
         const settings = readSettings(shape.value, provider.value, source);
         temperature.value = settings.temperature;
         maxTokens.value = settings.maxTokens;
@@ -120,15 +135,53 @@ const reset = () => {
     jsonText.value = JSON.stringify(opened.value.body ?? {}, null, 2);
 };
 
+const fetchNewPrompt = (slug: string | null) => apiRequest<PlaygroundCallResponse>('get', `/playground/new${slug ? `?provider=${encodeURIComponent(slug)}` : ''}`);
+
 const load = async () => {
     try {
-        opened.value = await apiRequest<PlaygroundCallResponse>('get', `/playground/${route.params.id}`);
+        const slug = typeof route.query.provider === 'string' ? route.query.provider : null;
+
+        opened.value = await (isNewPrompt.value ? fetchNewPrompt(slug) : apiRequest<PlaygroundCallResponse>('get', `/playground/${route.params.id}`));
         reset();
     } catch {
         loadFailed.value = true;
     } finally {
         loading.value = false;
     }
+};
+
+// Another provider has another format, so a new prompt keeps its text, roles and
+// settings, and anything added only in the JSON tab stays behind.
+const changeProvider = async (event: Event) => {
+    const slug = (event.target as HTMLSelectElement).value;
+
+    if (tab.value === 'json') showTab('messages');
+
+    const written = messages.value.filter((message) => !message.locked).map((message) => ({ role: message.role, text: message.text }));
+    const settings = { temperature: temperature.value, maxTokens: maxTokens.value };
+
+    try {
+        opened.value = await fetchNewPrompt(slug);
+    } catch {
+        return;
+    }
+
+    reset();
+    router.replace({ query: { provider: slug } });
+
+    if (shape.value) {
+        const nextShape = shape.value;
+
+        messages.value = written.map(({ role, text }) => {
+            const message = newMessage(roleInShape(role, nextShape));
+            message.text = text;
+
+            return message;
+        });
+    }
+
+    temperature.value = settings.temperature;
+    if (settings.maxTokens !== '') maxTokens.value = settings.maxTokens;
 };
 
 const addMessage = () => {
@@ -157,7 +210,10 @@ const run = async () => {
 
     try {
         // Sent as a string so the app's input middleware can't trim or null any of the prompt's text.
-        const result = await apiRequest<PlaygroundRunResponse>('post', `/playground/${route.params.id}/run`, { model: model.value.trim(), body: JSON.stringify(currentBody()) });
+        const input = { model: model.value.trim(), body: JSON.stringify(currentBody()) };
+        const result = await (isNewPrompt.value
+            ? apiRequest<PlaygroundRunResponse>('post', '/playground/run', { ...input, provider: provider.value })
+            : apiRequest<PlaygroundRunResponse>('post', `/playground/${route.params.id}/run`, input));
         runs.value = [{ ...result, number: ++runCount }, ...runs.value];
     } catch (error) {
         console.error('Failed to run the call:', error);
@@ -182,7 +238,7 @@ const isSuccessful = computed(() => {
 
 const breadcrumbs = computed(() => [
     { label: 'Playground', to: { name: 'playground' } },
-    { label: opened.value?.call.model ?? 'Call' },
+    { label: isNewPrompt.value ? 'New prompt' : opened.value?.call?.model ?? 'Call' },
 ]);
 
 const latestRun = computed(() => runs.value[0] ?? null);
@@ -217,14 +273,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
             <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div class="flex min-w-0 items-start gap-3.5">
                     <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-card dark:border-gray-800 dark:bg-gray-900">
-                        <ProviderLogo :provider="opened.call.provider" class="inline-flex h-5 w-5 items-center text-gray-700 dark:text-gray-200 [&>svg]:h-full [&>svg]:w-full" />
+                        <ProviderLogo :provider="opened.provider" class="inline-flex h-5 w-5 items-center text-gray-700 dark:text-gray-200 [&>svg]:h-full [&>svg]:w-full" />
                     </div>
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
-                            <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">Playground</h1>
+                            <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ isNewPrompt ? 'New prompt' : 'Playground' }}</h1>
                             <DocsLink page="playground" />
                         </div>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <p v-if="!opened.call" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Write a prompt, pick a model, and see the answer.
+                            <span class="font-mono text-xs">{{ opened.endpoint }}</span>
+                        </p>
+                        <p v-else class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                             From <router-link :to="{ name: 'request-preview', params: { id: opened.call.id } }" class="font-medium text-primary-600 hover:underline dark:text-primary-400">a call to {{ opened.call.provider_display_name || opened.call.provider }}</router-link>
                             · {{ opened.call.formatted_created_at }}
                             · <span class="font-mono text-xs">{{ opened.call.endpoint }}</span>
@@ -262,10 +322,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     </div>
 
                     <div class="space-y-4 p-5">
+                        <div v-if="isNewPrompt">
+                            <label for="playground-provider" class="mb-1 block text-xs text-gray-500 dark:text-gray-400">Provider</label>
+                            <select id="playground-provider" :value="opened.provider" class="form-select w-full" :disabled="running || !!jsonError" @change="changeProvider">
+                                <option v-for="option in opened.providers" :key="option.slug" :value="option.slug" :disabled="!option.has_key">{{ option.name }}{{ option.has_key ? '' : ' (no API key)' }}</option>
+                            </select>
+                        </div>
+
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-4">
                             <div :class="tab === 'messages' ? 'sm:col-span-2' : 'sm:col-span-4'">
                                 <label for="playground-model" class="mb-1 block text-xs text-gray-500 dark:text-gray-400">Model</label>
-                                <input id="playground-model" v-model="model" list="playground-models" class="form-input w-full font-mono !text-xs" autocomplete="off" spellcheck="false" />
+                                <input id="playground-model" v-model="model" list="playground-models" class="form-input w-full font-mono !text-xs" placeholder="Pick or type a model" autocomplete="off" spellcheck="false" />
                                 <datalist id="playground-models">
                                     <option v-for="name in opened.models" :key="name" :value="name" />
                                 </datalist>
@@ -317,7 +384,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                         </template>
 
                         <p class="border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
-                            Each run is a real call to <span class="font-mono">{{ opened.base_url }}</span>: it uses your API key, costs money, and is saved with the tag <router-link :to="{ name: 'requests', query: { tag: 'playground' } }" class="font-mono text-primary-600 hover:underline dark:text-primary-400">#playground</router-link>.
+                            Each run is a real call to <span class="font-mono">{{ opened.base_url }}</span>: it uses your API key, costs money, and is saved with the tag <router-link :to="{ name: 'requests', query: { tag: 'playground', period: 'all' } }" class="font-mono text-primary-600 hover:underline dark:text-primary-400">#playground</router-link>.
                         </p>
                     </div>
                 </div>
@@ -349,7 +416,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                         highlighted
                     />
 
+                    <div v-if="!opened.call && !runs.length && !running" class="card">
+                        <div class="empty-state">
+                            <p class="empty-state-title">The answer appears here</p>
+                            <p class="empty-state-description">Each run stays on this screen, so you can change the prompt or model and compare.</p>
+                        </div>
+                    </div>
+
                     <RunResult
+                        v-if="opened.call"
                         title="Original call"
                         :model="opened.call.model"
                         :succeeded="isSuccessful"

@@ -39,6 +39,8 @@ class GetPlaygroundCall
 
         return new PlaygroundCallResponse(
             call: PlaygroundCall::fromModel($call, $this->textExtractor->prompt($call->request), rescue(fn () => $this->textExtractor->reply($call), report: false)),
+            provider: $call->provider,
+            endpoint: $call->endpoint,
             body: $body,
             model: $this->client->modelOf($call),
             models: $this->pricingLookup->textModels($call->provider),

@@ -45,6 +45,6 @@ class RunPlaygroundCallController extends BaseApiController
 
         abort_if($reason !== null, 422, (string) $reason);
 
-        return $client->run($source, $input['model'], $body);
+        return $client->run($source->provider, (string) $source->endpoint, $input['model'], $body, $source->id);
     }
 }

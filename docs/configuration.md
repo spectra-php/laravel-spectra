@@ -248,7 +248,7 @@ Configure the built-in SPA dashboard.
 | `path` | `string` | `spectra` | URI path where the dashboard is served. |
 | `middleware` | `array` | `['web']` | Middleware applied to dashboard routes. Add `'auth'` to require authentication. |
 | `maintenance` | `bool` | `true` | Allow the [Maintenance screen](/dashboard#maintenance) to prune, rebuild stats and pause recording. Running them also needs the `manageSpectra` gate. When `false`, the screen is read-only. |
-| `playground.enabled` | `bool` | `false` | Let the [Playground](/playground) send stored calls to their provider again. Each run uses your API key and costs money. Using it also needs the `manageSpectra` gate. |
+| `playground.enabled` | `bool` | `false` | Let the [Playground](/playground) send new prompts, and stored calls again with edits, to a provider. Each run uses your API key and costs money. Using it also needs the `manageSpectra` gate. |
 | `playground.timeout` | `int` | `120` | How long a Playground run may wait for the provider, in seconds. |
 | `layout` | `string` | `full` | Which model types the dashboard displays. Options: `full`, `text`, `embedding`, `image`, `video`, `audio`. |
 | `date_format` | `string` | `M j, Y g:i:s A` | PHP date format string for timestamps in the dashboard. |

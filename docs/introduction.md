@@ -40,7 +40,7 @@ The rest of these docs use a handful of words from AI observability. Each has it
 | **Tool** | A function the model asked your code to run, such as looking up an order, drawn as a step in the trace. See [Tools](/tools). |
 | **Annotation queue** | A review queue: traces waiting for a person on your team to read and grade. See [Annotation Queues](/annotations). |
 | **Evaluation** | A test that runs your AI code over a fixed set of examples and grades every answer, so you can compare before and after a change. See [Evaluations](/evaluations). |
-| **Playground** | A dashboard screen where you open a real call, change its prompt or model, and send it again to compare the answers. Each try is a **run**. See [Playground](/playground). |
+| **Playground** | A dashboard screen where you try a new prompt, or open a real call, change its prompt or model, and send it again to compare the answers. Each try is a **run**. See [Playground](/playground). |
 | **Dashboards** | Read-only pages you design and share with someone outside Spectra, such as a customer who wants to see their own usage. See [Dashboards](/dashboards). |
 
 <a name="supported-providers"></a>

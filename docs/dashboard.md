@@ -179,9 +179,9 @@ A call's page has an **Add to dataset** card that saves the call as an example:
 
 <img class="screenshot" src="/images/dashboard/playground-call.png" alt="A call opened in the Playground, with a new answer compared with the original" />
 
-The [Playground](/playground) opens a real call so you can change its prompt, model or settings, send it again, and compare the new answer's reply, cost, tokens and latency with the original. Each run is a real call that costs money, so it's off until you set `SPECTRA_PLAYGROUND_ENABLED=true`, and using it needs the `manageSpectra` gate.
+The [Playground](/playground) lets you write a new prompt, or open a real call to change its prompt, model or settings, send it again, and compare the new answer's reply, cost, tokens and latency with the original. Each run is a real call that costs money, so it's off until you set `SPECTRA_PLAYGROUND_ENABLED=true`, and using it needs the `manageSpectra` gate.
 
-Pick a recent call on the Playground screen, or use **Open in Playground** on a request's page:
+Press **New prompt** or pick a recent call on the Playground screen, or use **Open in Playground** on any request's page:
 
 <img class="screenshot" src="/images/dashboard/request-open-in-playground.png" alt="The Open in Playground button on a request's page" />
 

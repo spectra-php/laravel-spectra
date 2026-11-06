@@ -96,6 +96,11 @@ const routes: RouteRecordRaw[] = [
         component: Playground,
     },
     {
+        path: '/playground/new',
+        name: 'playground-new',
+        component: PlaygroundCall,
+    },
+    {
         path: '/playground/:id',
         name: 'playground-call',
         component: PlaygroundCall,

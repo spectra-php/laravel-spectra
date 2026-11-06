@@ -11,7 +11,6 @@ use Spectra\Actions\Traces\GetTraceDetails;
 use Spectra\Data\Responses\RequestDetailsResponse;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Playground\PlaygroundAccess;
-use Spectra\Support\Playground\PlaygroundClient;
 use Spectra\Support\Pricing\PricingLookup;
 use Spectra\Support\Query\TraceSchema;
 
@@ -33,7 +32,6 @@ class GetRequestDetails
         private readonly GetTraceDetails $getTraceDetails,
         private readonly GetScores $getScores,
         private readonly TraceSchema $traceSchema,
-        private readonly PlaygroundClient $playgroundClient,
     ) {}
 
     /**
@@ -64,7 +62,7 @@ class GetRequestDetails
             $details['media_storage_enabled'] = (bool) config('spectra.storage.media.enabled');
         }
 
-        $details['can_open_in_playground'] = PlaygroundAccess::allowed() && $this->playgroundClient->supports($request);
+        $details['can_open_in_playground'] = PlaygroundAccess::allowed();
         $details['scores'] = ($this->getScores)(requestId: $request->id);
 
         // The trace card orders calls by started_at; until the trace

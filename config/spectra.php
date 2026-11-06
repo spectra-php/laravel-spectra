@@ -673,8 +673,8 @@ return [
         | Dashboard Playground
         |--------------------------------------------------------------------------
         |
-        | Whether the dashboard's Playground may send a stored call to its provider
-        | again, with your edits, to try a different prompt or model. Each run is a
+        | Whether the dashboard's Playground may send a new prompt, or a stored call
+        | again with your edits, to try a different prompt or model. Each run is a
         | real call: it uses your API key, costs money, and sends the prompt to the
         | provider. So it is off by default, and running it also needs the
         | `manageSpectra` gate, which allows only the local environment unless you

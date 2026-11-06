@@ -9,8 +9,8 @@ import Skeleton from '@/components/Skeleton.vue';
 import StatusCode from '@/components/StatusCode.vue';
 import type { PlaygroundResponse } from '@/types/api';
 
-// Where a Playground session starts: a recent call to open and change, or how
-// to turn the Playground on.
+// Where a Playground session starts: a new prompt, a recent call to open and
+// change, or how to turn the Playground on.
 const { formatNumber, formatDuration, apiRequest } = useHelpers();
 const loading = useLoading();
 
@@ -30,12 +30,21 @@ onMounted(async () => {
 
 <template>
     <div>
-        <div class="mb-6">
-            <div class="flex items-center gap-2">
-                <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">Playground</h1>
-                <DocsLink page="playground" />
+        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">Playground</h1>
+                    <DocsLink page="playground" />
+                </div>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Try a prompt or a model and compare the answers, without touching your code.</p>
             </div>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Open a real call, change its prompt or model, and compare the answers.</p>
+            <div v-if="playground?.allowed" class="flex shrink-0 items-center gap-2 self-start">
+                <router-link :to="{ name: 'requests', query: { tag: 'playground', period: 'all' } }" class="btn btn-secondary">Your runs</router-link>
+                <router-link :to="{ name: 'playground-new' }" class="btn btn-primary">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                    New prompt
+                </router-link>
+            </div>
         </div>
 
         <div v-if="loading" class="card"><Skeleton variant="table-row" :lines="6" /></div>
@@ -61,20 +70,21 @@ onMounted(async () => {
             <div v-else-if="!playground.calls.length" class="card">
                 <div class="empty-state">
                     <p class="empty-state-title">No calls to start from yet</p>
-                    <p class="empty-state-description">The Playground opens text calls whose request body was stored. Make a chat call from your app, and it shows up here.</p>
+                    <p class="empty-state-description">Your app's chat calls show up here to open and change. Until then, start from a new prompt.</p>
+                    <router-link :to="{ name: 'playground-new' }" class="btn btn-primary mt-4">New prompt</router-link>
                 </div>
             </div>
 
             <div v-else class="card overflow-hidden">
                 <div class="card-header">
                     <div>
-                        <h3>Start from a recent call</h3>
-                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Or open any text call from its page in the requests list.</p>
+                        <h3>Or start from a real call</h3>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">The latest few your app made. Any request opens from its page in the requests list.</p>
                     </div>
                     <router-link :to="{ name: 'requests' }" class="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">All requests</router-link>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="table table-fixed">
+                    <table class="table min-w-[48rem] table-fixed">
                         <colgroup>
                             <col class="w-[24%]" />
                             <col />

@@ -8,9 +8,10 @@ use Spectra\Data\DataTransferObject;
 use Spectra\Data\PlaygroundCall;
 
 /**
- * One call opened in the Playground: the call, the body to edit, the models to
- * pick from, where a run goes, what may differ from the original, and why it
- * can't run, if so.
+ * What the Playground's editor opens: a stored call, or a new prompt when `call`
+ * is null, with the body to edit, the models to pick from, where a run goes, what
+ * may differ from the original, and why it can't run, if so. `providers` lists
+ * the providers a new prompt can go to.
  */
 readonly class PlaygroundCallResponse extends DataTransferObject
 {
@@ -20,14 +21,18 @@ readonly class PlaygroundCallResponse extends DataTransferObject
      * @param  array<string, mixed>|null  $body
      * @param  list<string>  $models
      * @param  list<string>  $notices
+     * @param  list<array{slug: string, name: string, has_key: bool}>  $providers
      */
     public function __construct(
-        public PlaygroundCall $call,
+        public ?PlaygroundCall $call,
+        public string $provider,
+        public ?string $endpoint,
         public ?array $body,
         public string $model,
         public array $models,
         public string $base_url,
         public array $notices,
         public ?string $unavailable_reason,
+        public array $providers = [],
     ) {}
 }

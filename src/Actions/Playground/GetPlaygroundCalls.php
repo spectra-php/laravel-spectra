@@ -19,7 +19,7 @@ use Spectra\Support\Playground\PlaygroundClient;
 class GetPlaygroundCalls
 {
     /** Calls listed. */
-    private const LIMIT = 15;
+    private const LIMIT = 8;
 
     /** Rows read to find them, since not every text call went to a chat endpoint. */
     private const SCAN_LIMIT = 100;

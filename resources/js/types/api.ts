@@ -976,14 +976,24 @@ export interface PlaygroundResponse {
     calls: PlaygroundCall[];
 }
 
+export interface PlaygroundProvider {
+    slug: string;
+    name: string;
+    has_key: boolean;
+}
+
+// A stored call opened in the editor, or a new prompt when `call` is null.
 export interface PlaygroundCallResponse {
-    call: PlaygroundCall;
+    call: PlaygroundCall | null;
+    provider: string;
+    endpoint: string | null;
     body: JsonObject | null;
     model: string;
     models: string[];
     base_url: string;
     notices: string[];
     unavailable_reason: string | null;
+    providers: PlaygroundProvider[];
 }
 
 export interface PlaygroundRunResponse {
