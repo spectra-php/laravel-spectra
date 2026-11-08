@@ -1,8 +1,63 @@
+import { closeSync, openSync, readSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
+
+const publicDir = fileURLToPath(new URL('../public', import.meta.url))
+const pngSizes = new Map<string, { width: number; height: number } | null>()
+
+// Width and height of a PNG in docs/public, read from its IHDR header.
+function pngSize(src: string): { width: number; height: number } | null {
+  if (!pngSizes.has(src)) {
+    let size = null
+
+    try {
+      const header = Buffer.alloc(24)
+      const fd = openSync(publicDir + src, 'r')
+      readSync(fd, header, 0, 24, 0)
+      closeSync(fd)
+      size = { width: header.readUInt32BE(16), height: header.readUInt32BE(20) }
+    } catch {
+      // Not in docs/public: leave the tag alone.
+    }
+
+    pngSizes.set(src, size)
+  }
+
+  return pngSizes.get(src)!
+}
+
+// Give every <img> of a PNG its width and height, so the page keeps its layout
+// while the screenshots load and a link to a #heading lands on the heading.
+function sizeImages(html: string): string {
+  return html.replace(/<img\b[^>]*>/g, (tag) => {
+    const src = tag.match(/\ssrc="(\/[^"]+\.png)"/)?.[1]
+    const size = src && !/\swidth=/.test(tag) ? pngSize(src) : null
+
+    return size ? tag.replace(/<img\b/, `<img width="${size.width}" height="${size.height}"`) : tag
+  })
+}
 
 export default defineConfig({
   title: 'Laravel Spectra',
   description: 'Observability for AI and LLM operations in Laravel applications.',
+  cleanUrls: true,
+  markdown: {
+    config(md) {
+      md.core.ruler.push('image_sizes', (state) => {
+        for (const token of state.tokens) {
+          if (token.type === 'html_block') {
+            token.content = sizeImages(token.content)
+          }
+
+          for (const child of token.children ?? []) {
+            if (child.type === 'html_inline') {
+              child.content = sizeImages(child.content)
+            }
+          }
+        }
+      })
+    }
+  },
   themeConfig: {
     logo: {
       src: '/images/logo.svg',

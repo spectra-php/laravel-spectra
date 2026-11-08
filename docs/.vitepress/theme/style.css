@@ -89,10 +89,17 @@
   }
 }
 
+/* The chatvia command bar shows on the doc pages only (see theme/index.ts) */
+html.chatvia-hidden .chatvia-widget,
+html.chatvia-hidden .chatvia-widget-confirm-dialog {
+  display: none !important;
+}
+
 /* Dashboard screenshots */
 .vp-doc img.screenshot {
   display: block;
   width: 100%;
+  height: auto;
   margin: 20px 0;
   border: 1px solid var(--vp-c-divider);
   border-radius: 10px;
