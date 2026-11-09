@@ -1,5 +1,5 @@
 {
-    "generated_at": "2026-11-09T08:47:47+00:00",
+    "generated_at": "2026-11-09T09:10:11+00:00",
     "providers": {
         "anthropic": {
             "currency": "USD",
@@ -649,7 +649,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:03:23+00:00"
         },
         "cohere": {
             "currency": "USD",
@@ -936,7 +937,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:03:40+00:00"
         },
         "elevenlabs": {
             "currency": "USD",
@@ -1189,7 +1191,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:03:56+00:00"
         },
         "falai": {
             "currency": "USD",
@@ -1405,7 +1408,7 @@
                             "tier": "standard",
                             "input_price": 0,
                             "output_price": 0,
-                            "price_per_unit": 16.8
+                            "price_per_unit": 14
                         }
                     ]
                 },
@@ -1427,7 +1430,7 @@
                             "tier": "standard",
                             "input_price": 0,
                             "output_price": 0,
-                            "price_per_unit": 16.8
+                            "price_per_unit": 14
                         }
                     ]
                 },
@@ -1561,8 +1564,25 @@
                             "price_per_unit": 0.5
                         }
                     ]
+                },
+                "fal-ai/kling-video/v2.5-turbo/pro/image-to-video": {
+                    "display_name": "Kling Video",
+                    "type": "video",
+                    "pricing_unit": "second",
+                    "capabilities": [
+                        "video"
+                    ],
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 0,
+                            "output_price": 0,
+                            "price_per_unit": 7
+                        }
+                    ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:04:31+00:00"
         },
         "google": {
             "currency": "USD",
@@ -3003,8 +3023,23 @@
                             "output_price": 900
                         }
                     ]
+                },
+                "gemini-2.5-flash-native-audio-preview-12-2025": {
+                    "type": "text",
+                    "pricing_unit": "tokens",
+                    "capabilities": [
+                        "text"
+                    ],
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 50,
+                            "output_price": 1200
+                        }
+                    ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:06:33+00:00"
         },
         "groq": {
             "currency": "USD",
@@ -3391,7 +3426,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:06:47+00:00"
         },
         "mistral": {
             "currency": "USD",
@@ -4417,7 +4453,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:07:08+00:00"
         },
         "openai": {
             "currency": "USD",
@@ -7049,7 +7086,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:08:05+00:00"
         },
         "openrouter": {
             "currency": "USD",
@@ -7926,7 +7964,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:08:12+00:00"
         },
         "scaleway": {
             "currency": "EUR",
@@ -8416,7 +8455,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:08:34+00:00"
         },
         "xai": {
             "currency": "USD",
@@ -9249,7 +9289,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-09T09:10:11+00:00"
         }
     }
 }
