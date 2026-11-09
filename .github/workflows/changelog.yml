@@ -3,6 +3,16 @@ name: "Update Changelog"
 on:
   release:
     types: [released]
+  # A release made with GITHUB_TOKEN (pricing-release.yml) triggers no other
+  # workflow, so that workflow calls this one itself.
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      notes:
+        type: string
+        required: true
 
 permissions:
   contents: write
@@ -21,8 +31,8 @@ jobs:
       - name: Update Changelog
         uses: stefanzweifel/changelog-updater-action@v1
         with:
-          latest-version: ${{ github.event.release.name }}
-          release-notes: ${{ github.event.release.body }}
+          latest-version: ${{ inputs.version || github.event.release.name }}
+          release-notes: ${{ inputs.notes || github.event.release.body }}
 
       - name: Commit updated CHANGELOG
         uses: stefanzweifel/git-auto-commit-action@v7

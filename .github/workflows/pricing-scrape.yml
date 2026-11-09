@@ -1,0 +1,111 @@
+name: pricing-scrape
+
+# Scrapes the providers' pricing pages with Firecrawl every day and keeps one
+# open pull request with the catalog changes. The branch is rebuilt from main
+# on each run, so the PR always shows today's scrape against main. Merging the
+# PR releases the next patch version (pricing-release.yml).
+#
+# Needs the FIRECRAWL_API_KEY repository secret, and "Allow GitHub Actions to
+# create and approve pull requests" (Settings → Actions → General).
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  BRANCH: pricing/scrape
+  CATALOG: resources/pricing/catalog.json
+
+jobs:
+  scrape:
+    name: Pricing scrape
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v4
+
+      - name: Scrape the pricing pages
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: |
+          set -o pipefail
+          vendor/bin/testbench spectra:pricing-scrape --all --path="$CATALOG" --no-ansi | tee scrape.log
+
+      - name: Check for price changes
+        id: changes
+        run: |
+          # The scrape always rewrites generated_at; only real catalog changes count.
+          git show "HEAD:$CATALOG" | jq -S 'del(.generated_at)' > before.json
+          jq -S 'del(.generated_at)' "$CATALOG" > after.json
+          if cmp -s before.json after.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          rm before.json after.json
+
+      - name: Run the tests against the new catalog
+        id: tests
+        if: steps.changes.outputs.changed == 'true'
+        continue-on-error: true
+        run: vendor/bin/pest --no-coverage
+
+      - name: Open or update the pricing pull request
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTS: ${{ steps.tests.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BRANCH"
+          git add "$CATALOG"
+          git commit -m "Update the pricing catalog from the providers' pages"
+          git push --force origin "$BRANCH"
+
+          {
+            echo "Daily Firecrawl scrape of the providers' pricing pages ([run]($RUN_URL))."
+            echo
+            if [ "$TESTS" = "success" ]; then
+              echo "Tests pass with the new catalog."
+            else
+              echo "> [!WARNING]"
+              echo "> Tests fail with the new catalog. See the run log."
+            fi
+            echo
+            echo "Firecrawl's extraction is not deterministic: check each change against the provider's page before merging."
+            echo "Merging releases the next patch version."
+            echo
+            echo '```text'
+            head -c 55000 scrape.log
+            echo
+            echo '```'
+          } > body.md
+
+          gh label create pricing --color 0E8A16 --description "Pricing catalog update" --force
+          pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --body-file body.md
+          else
+            gh pr create --base "${{ github.event.repository.default_branch }}" --head "$BRANCH" \
+              --title "Update the pricing catalog" --label pricing --body-file body.md
+          fi

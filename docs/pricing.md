@@ -5,7 +5,11 @@ Spectra prices every tracked request from a pricing catalog: a JSON file bundled
 <a name="how-it-works"></a>
 ## How It Works
 
-The catalog is the package's `resources/pricing/catalog.json`. It is generated from the providers' pricing pages with [`spectra:pricing-scrape`](#scraping-prices), reviewed by hand and shipped with every release. The file is the whole catalog: every built-in provider, with its currency, pricing pages, separately billed tool calls and models.
+The catalog is the package's `resources/pricing/catalog.json`. It is generated from the providers' pricing pages with [`spectra:pricing-scrape`](#scraping-prices) and reviewed by hand. The file is the whole catalog: every built-in provider, with its currency, pricing pages, separately billed tool calls and models.
+
+::: info Prices are checked every 24 hours
+Every day, Spectra's repository reads every provider's pricing page. When a price changes or a new model appears, a maintainer checks the change against the provider's page and releases it as a patch version (for example 4.0.0 → 4.0.1). Run `composer update spectra-php/laravel-spectra` to get the latest prices. See [Daily Price Updates](#daily-price-updates).
+:::
 
 To bill with prices of your own, point `SPECTRA_PRICING_PATH` at a [file in the same format](#your-own-prices). A model in your file replaces the bundled model with the same id, and every other model keeps its bundled price. [`spectra:pricing-scrape`](#scraping-prices) writes that file for you from the providers' pricing pages.
 
@@ -496,11 +500,33 @@ A long-running process loads the index once and keeps it in memory, so queue wor
 <a name="keeping-prices-current"></a>
 ## Keeping Prices Current
 
-The bundled catalog is generated from the providers' pricing pages and reviewed before each release. Provider prices change, and new models ship often, so it needs a refresh from time to time. Between releases, you can pick up new prices yourself with [`spectra:pricing-scrape`](#scraping-prices).
+Provider prices change, and new models ship often. The bundled catalog follows them with a daily check, and you get the updates with `composer update`. The catalog's `generated_at` says when it was last updated.
 
-**Prices last reviewed: 2026-11-04.**
+<a name="daily-price-updates"></a>
+### Daily Price Updates
 
-Maintainers refresh the catalog in the package repository with:
+**Every 24 hours**, a GitHub Actions workflow in Spectra's repository (`pricing-scrape`) checks every provider's pricing page:
+
+1. At 05:00 UTC, it runs [`spectra:pricing-scrape --all`](#scraping-prices) against the bundled catalog.
+2. If no price changed and no new model appeared, it stops. Nothing is released.
+3. Otherwise it runs the test suite with the new catalog and opens one pull request with the changes, each with the page line it was read from. A day's run replaces the previous day's changes in that same pull request, so there is never more than one open.
+4. A maintainer checks each change against the provider's pricing page and merges the pull request. The extraction can still be wrong in ways the checks miss, so nothing is merged without that review.
+5. Merging releases the next **patch version** (4.0.0 → 4.0.1) and adds it to the changelog (the `pricing-release` workflow).
+
+To pick up new prices in your app:
+
+```bash
+composer update spectra-php/laravel-spectra
+```
+
+Then restart your queue workers, Horizon or Octane, which [keep the old prices in memory](#caching) until they restart.
+
+A price change can take a day to be found and a little longer to be reviewed. To bill a new price sooner, put it in [your own file](#your-own-prices), or run [`spectra:pricing-scrape`](#scraping-prices) yourself.
+
+<a name="refreshing-by-hand"></a>
+### Refreshing by Hand
+
+Maintainers can run the same refresh locally in the package repository:
 
 ```bash
 composer pricing-scrape

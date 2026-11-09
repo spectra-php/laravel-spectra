@@ -1,0 +1,71 @@
+name: pricing-release
+
+# When the pricing PR from pricing-scrape.yml is merged, releases the next
+# patch version (v4.0.0 → v4.0.1) from the merge commit and adds it to
+# CHANGELOG.md. The tag ships main as it is, other unreleased commits included.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Patch release
+    if: >-
+      github.event.pull_request.merged == true
+      && github.event.pull_request.head.ref == 'pricing/scrape'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      notes: ${{ steps.release.outputs.notes }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Release the next patch version
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          latest=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [ -z "$latest" ]; then
+            echo "::error::No vX.Y.Z tag to bump."
+            exit 1
+          fi
+
+          IFS=. read -r major minor patch <<< "${latest#v}"
+          next="v${major}.${minor}.$((patch + 1))"
+
+          gh release create "$next" --target "$SHA" --title "$next" \
+            --notes "Updates the bundled pricing catalog from the providers' pricing pages (#${PR})." \
+            --generate-notes --notes-start-tag "$latest"
+
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          {
+            echo "notes<<RELEASE_NOTES_EOF"
+            gh release view "$next" --json body --jq .body
+            echo "RELEASE_NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  changelog:
+    name: Changelog
+    needs: release
+    permissions:
+      contents: write
+    uses: ./.github/workflows/changelog.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+      notes: ${{ needs.release.outputs.notes }}
