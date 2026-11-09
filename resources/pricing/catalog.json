@@ -2193,6 +2193,24 @@
                         }
                     ]
                 },
+                "gemini-2.5-flash-native-audio-preview-12-2025": {
+                    "display_name": "Gemini 2.5 Flash Native Audio Preview",
+                    "type": "text",
+                    "pricing_unit": "tokens",
+                    "capabilities": [
+                        "text",
+                        "audio"
+                    ],
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 50,
+                            "output_price": 200,
+                            "audio_input_price": 300,
+                            "audio_output_price": 1200
+                        }
+                    ]
+                },
                 "gemini-2.0-flash": {
                     "display_name": "Gemini 2.0 Flash",
                     "type": "text",
