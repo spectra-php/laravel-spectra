@@ -2,6 +2,27 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## v4.0.1 - 2026-11-09
+
+Spectra 4.0.1 adds prices for new OpenAI, Google and fal.ai models, and the bundled prices are now checked against the providers' pricing pages every 24 hours. Run `composer update spectra-php/laravel-spectra` to get them, then restart your queue workers, Horizon or Octane.
+
+#### Added
+
+- Pricing: the bundled catalog is checked against every provider's pricing page every 24 hours. Changes are reviewed against the provider's page and released as a patch version. See [Daily Price Updates](https://spectraphp.com/pricing#daily-price-updates)
+- OpenAI: GPT-6 Cyber (`gpt-6-cyber`), $20 / $100 per 1M tokens, $2 cached input, $25 / $50 cache writes
+- Google: Gemini 3.5 Transcribe (`gemini-3.5-transcribe`, $2 / $12 per 1M tokens) and Gemini 3.5 Transcribe Live (`gemini-3.5-transcribe-live`, $3.50 / $21)
+- Google: Gemini Omni 1.2 Flash (`gemini-omni-1.2-flash`), $1.50 / $9 per 1M tokens. Like Omni 1.1, video output tokens are billed at the text output price
+- Google: Gemini 2.5 Flash Native Audio Preview (`gemini-2.5-flash-native-audio-preview-12-2025`), $0.50 text / $3 audio input and $2 text / $12 audio output per 1M tokens
+- fal.ai: Z-Image Turbo (`fal-ai/z-image/turbo`), $0.005 per megapixel
+
+#### Changed
+
+- `spectra:pricing-scrape` skips more extraction mistakes. A new model is only added when the page prints its id, one of the provider's handlers bills its kind of model (fal.ai's speech and 3D models are skipped), and, when billed per unit, its price is within 10 times of the catalog's prices for that unit. A token price the page prints per minute, second, image or page, or labels as another modality ("$12.00 (audio)"), is ignored. Models priced per option (fal.ai video `variants`) keep their prices and are edited by hand. The extraction asks each row for a new `kind` field
+
+#### Fixed
+
+- Docs: heading links land on their heading, and links keep clean URLs
+
 ## v4.0.0 - 2026-11-06
 
 #### Added
