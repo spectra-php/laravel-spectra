@@ -156,6 +156,23 @@ class RequestAggregateQuery
     }
 
     /**
+     * Scope the query to one model, and to one provider when given: the same
+     * model id can be served by more than one provider. No model, no scope.
+     */
+    public function forModel(?string $model, ?string $provider = null): self
+    {
+        if ($model === null) {
+            return $this;
+        }
+
+        $this->query
+            ->where('model', $model)
+            ->when($provider !== null, fn (Builder $query) => $query->where('provider', $provider));
+
+        return $this;
+    }
+
+    /**
      * Scope the query to a single polymorphic trackable.
      */
     public function forTrackable(string $type, string $id): self

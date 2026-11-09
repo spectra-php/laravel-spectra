@@ -10,11 +10,12 @@ use Spectra\Data\CostByModel;
 use Spectra\Data\CostByModelType;
 use Spectra\Data\CostByProvider;
 use Spectra\Data\CostByUser;
+use Spectra\Data\CostModelOption;
 use Spectra\Data\DataTransferObject;
 
 /**
  * The costs screen: the period total, the summary cards, and cost by provider,
- * model, model type, day and user.
+ * model, model type, day and user, plus the models its model filter offers.
  */
 readonly class CostsResponse extends DataTransferObject
 {
@@ -26,6 +27,7 @@ readonly class CostsResponse extends DataTransferObject
      * @param  Collection<int, CostByModelType>  $costs_by_model_type
      * @param  Collection<int, CostByDate>  $costs_by_date
      * @param  Collection<int, CostByUser>  $costs_by_user
+     * @param  Collection<int, CostModelOption>  $models
      */
     public function __construct(
         public float $total_cost_in_cents,
@@ -35,5 +37,6 @@ readonly class CostsResponse extends DataTransferObject
         public Collection $costs_by_model_type,
         public Collection $costs_by_date,
         public Collection $costs_by_user,
+        public Collection $models,
     ) {}
 }

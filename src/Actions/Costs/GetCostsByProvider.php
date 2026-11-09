@@ -17,13 +17,15 @@ class GetCostsByProvider
 {
     /**
      * Get the cost per provider for the date range, most expensive first.
+     * Narrowed to one model when `$model` (and `$provider`) is given.
      *
      * @return Collection<int, CostByProvider>
      */
-    public function __invoke(DateRange $dateRange): Collection
+    public function __invoke(DateRange $dateRange, ?string $model = null, ?string $provider = null): Collection
     {
         return CostByProvider::fromCollection(
             RequestAggregateQuery::fromRollups($dateRange)
+                ->forModel($model, $provider)
                 ->successfulOnly()
                 ->groupByColumns('provider')
                 ->successfulCost()

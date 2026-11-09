@@ -16,13 +16,15 @@ class GetCostsByDate
 {
     /**
      * Get the cost per day of successful requests in the date range.
+     * Narrowed to one model when `$model` (and `$provider`) is given.
      *
      * @return Collection<int, CostByDate>
      */
-    public function __invoke(DateRange $dateRange): Collection
+    public function __invoke(DateRange $dateRange, ?string $model = null, ?string $provider = null): Collection
     {
         return CostByDate::fromCollection(
             RequestAggregateQuery::fromRollups($dateRange)
+                ->forModel($model, $provider)
                 ->successfulOnly()
                 ->byDate()
                 ->successfulCost()

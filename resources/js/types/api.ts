@@ -569,6 +569,13 @@ export interface CostByUser {
     trackable_type: string | null;
 }
 
+/** A model the costs screen can be narrowed to. */
+export interface CostModelOption {
+    model: string;
+    provider: string | null;
+    cost: number;
+}
+
 export interface CostsResponse {
     total_cost_in_cents: number;
     cost_overview: CostOverviewResponse;
@@ -577,6 +584,7 @@ export interface CostsResponse {
     costs_by_model_type: CostByModelType[];
     costs_by_date: CostByDate[];
     costs_by_user: CostByUser[];
+    models: CostModelOption[];
 }
 
 /* Prompts and errors */

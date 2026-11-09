@@ -210,6 +210,8 @@ The costs screen shows where the money goes:
 - **Cost by model**, with the usage in the model's own unit: tokens, images, videos or characters.
 - **Top users** by spend. Only trackables whose model is authenticatable count as users; teams, conversations and other trackables are in the [trackables list](#trackables). **All users** opens the Users screen.
 
+To see what one model costs, pick it in the model filter next to the period. It lists every model called in the period, grouped by provider, and narrows every number and card on the screen to that model. The same model id served by two providers (an OpenAI model called directly and through OpenRouter, say) is two choices. The filter stays in the URL, so a filtered view can be bookmarked or shared.
+
 See [Costs](/costs) for how each cost is calculated.
 
 <a name="trackables"></a>

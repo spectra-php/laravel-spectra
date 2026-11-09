@@ -4,15 +4,17 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 ## v4.1.0 - 2026-11-09
 
-Spectra 4.1 adds refresh buttons to the dashboard's cards. Run `composer update spectra-php/laravel-spectra` to get it.
+Spectra 4.1 adds refresh buttons to the dashboard's cards and a model filter to the costs screen. Run `composer update spectra-php/laravel-spectra` to get it.
 
 #### Added
 
 - Dashboard: the stats cards have a refresh button in their header that reloads the card in place, without the loading skeletons: the arrows spin and the card fades while it loads, then a check shows for a moment. On the Overview (alerts, requests over time, breakdown, top models, recent requests, performance and scores), Costs, a trackable's page and Errors. Cards that read the same data update together. The refresh button in the top bar still reloads the whole screen
+- Costs: a model filter next to the period narrows every number and card on the costs screen to one model. It lists the models called in the period, grouped by provider, and the same model id from two providers is two choices. The filter is kept in the URL. `GET /api/costs` takes `model` and an optional `provider` (without it, every provider's calls of that model count), and its answer lists the period's models as `models`
 
 #### Fixed
 
 - Dashboard: on a trackable's page, the Cost and Requests tabs of the trend card each show their own chart after switching tabs. Chart.js set the chart's visibility itself when a chart was redrawn, which could show the hidden chart or neither
+- Costs: "Models used" says "From 1 provider", not "From 1 providers"
 
 ## v4.0.1 - 2026-11-09
 

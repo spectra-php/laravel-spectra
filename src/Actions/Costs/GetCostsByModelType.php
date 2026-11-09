@@ -17,13 +17,15 @@ class GetCostsByModelType
 {
     /**
      * Get the requests, usage and cost per model type for the date range.
+     * Narrowed to one model when `$model` (and `$provider`) is given.
      *
      * @return Collection<int, CostByModelType>
      */
-    public function __invoke(DateRange $dateRange): Collection
+    public function __invoke(DateRange $dateRange, ?string $model = null, ?string $provider = null): Collection
     {
         return CostByModelType::fromCollection(
             RequestAggregateQuery::fromRollups($dateRange)
+                ->forModel($model, $provider)
                 ->groupByColumns('model_type')
                 ->countAs('requests')
                 ->tokenSum()

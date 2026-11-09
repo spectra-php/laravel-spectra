@@ -53,12 +53,16 @@ const endDateModel = computed({
             <p v-if="subtitle" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
             <slot name="subtitle" />
         </div>
-        <PeriodRangePicker
-            v-model:period="periodModel"
-            v-model:start-date="startDateModel"
-            v-model:end-date="endDateModel"
-            :loading="loading"
-            @change="(payload) => emit('change', payload)"
-        />
+        <div class="flex flex-col gap-2 sm:flex-row sm:gap-3">
+            <!-- Filters of the screen's own, left of the period. -->
+            <slot name="filters" />
+            <PeriodRangePicker
+                v-model:period="periodModel"
+                v-model:start-date="startDateModel"
+                v-model:end-date="endDateModel"
+                :loading="loading"
+                @change="(payload) => emit('change', payload)"
+            />
+        </div>
     </div>
 </template>

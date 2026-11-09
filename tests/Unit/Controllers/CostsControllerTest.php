@@ -156,3 +156,54 @@ it('has no top users when no call was attributed to a user', function () {
 
     expect($json['costs_by_user'])->toHaveCount(0);
 });
+
+it('narrows every breakdown to one model, still offering every model in the period', function () {
+    $this->travelTo('2026-02-12 12:00:00');
+
+    SpectraRequest::factory()
+        ->count(5)
+        ->state(new Sequence(
+            ['provider' => 'openai', 'model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 100, 'trackable_type' => User::class, 'trackable_id' => '1', 'created_at' => Date::parse('2026-02-10 08:00:00')],
+            ['provider' => 'openai', 'model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 50, 'created_at' => Date::parse('2026-02-11 08:00:00')],
+            // A failure: counted as a request, never as cost.
+            ['provider' => 'openai', 'model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 999, 'status_code' => 500, 'created_at' => Date::parse('2026-02-11 09:00:00')],
+            // The same model id from another provider stays out.
+            ['provider' => 'openrouter', 'model' => 'gpt-4o', 'model_type' => 'text', 'total_cost_in_cents' => 70, 'created_at' => Date::parse('2026-02-11 10:00:00')],
+            ['provider' => 'elevenlabs', 'model' => 'eleven_v3', 'model_type' => 'tts', 'total_cost_in_cents' => 300, 'trackable_type' => User::class, 'trackable_id' => '2', 'created_at' => Date::parse('2026-02-12 08:00:00')],
+        ))
+        ->create();
+
+    $json = app()->call([app(CostsController::class), '__invoke'], ['request' => new Request([
+        'period' => 'month',
+        'model' => 'gpt-4o',
+        'provider' => 'openai',
+    ])])->toArray();
+
+    expect((float) $json['total_cost_in_cents'])->toEqualWithDelta(150.0, 0.0001)
+        ->and(collect($json['costs_by_provider'])->pluck('provider')->all())->toBe(['openai'])
+        ->and($json['costs_by_model'])->toHaveCount(1)
+        ->and($json['costs_by_model'][0]['requests'])->toBe(3)
+        ->and((float) $json['costs_by_model'][0]['cost'])->toEqualWithDelta(150.0, 0.0001)
+        ->and(collect($json['costs_by_model_type'])->pluck('model_type')->all())->toBe(['text'])
+        ->and(collect($json['costs_by_date'])->pluck('date')->all())->toBe(['2026-02-10', '2026-02-11'])
+        ->and(collect($json['costs_by_user'])->pluck('user_id')->all())->toBe(['1'])
+        // The filter's own options cover every model, most expensive first.
+        ->and(collect($json['models'])->map(fn ($row) => "{$row['provider']}|{$row['model']}")->all())
+        ->toBe(['elevenlabs|eleven_v3', 'openai|gpt-4o', 'openrouter|gpt-4o'])
+        // The summary cards keep their fixed periods over every model.
+        ->and((float) $json['cost_overview']['this_month'])->toEqualWithDelta(520.0, 0.0001);
+});
+
+it('counts a model from every provider when no provider is given', function () {
+    SpectraRequest::factory()->create(['provider' => 'openai', 'model' => 'gpt-4o', 'total_cost_in_cents' => 100]);
+    SpectraRequest::factory()->create(['provider' => 'openrouter', 'model' => 'gpt-4o', 'total_cost_in_cents' => 70]);
+    SpectraRequest::factory()->create(['provider' => 'openai', 'model' => 'gpt-4o-mini', 'total_cost_in_cents' => 5]);
+
+    $json = app()->call([app(CostsController::class), '__invoke'], ['request' => new Request([
+        'period' => 'all',
+        'model' => 'gpt-4o',
+    ])])->toArray();
+
+    expect((float) $json['total_cost_in_cents'])->toEqualWithDelta(170.0, 0.0001)
+        ->and(collect($json['costs_by_provider'])->pluck('provider')->sort()->values()->all())->toBe(['openai', 'openrouter']);
+});

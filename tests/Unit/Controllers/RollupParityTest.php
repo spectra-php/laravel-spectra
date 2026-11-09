@@ -100,6 +100,13 @@ it('answers the same on the costs screen', function (array $query) {
         ->toEqual(comparable(dashboardAnswer(CostsController::class, $query, false)));
 })->with('periods');
 
+it('answers the same on the costs screen for one model', function (array $query) {
+    $query += ['model' => 'gpt-4o', 'provider' => 'openai'];
+
+    expect(comparable(dashboardAnswer(CostsController::class, $query, true)))
+        ->toEqual(comparable(dashboardAnswer(CostsController::class, $query, false)));
+})->with('periods');
+
 it('answers the same on the performance card', function (array $query) {
     expect(comparable(dashboardAnswer(PerformanceController::class, $query, true)))
         ->toEqual(comparable(dashboardAnswer(PerformanceController::class, $query, false)));

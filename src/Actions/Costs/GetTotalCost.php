@@ -14,10 +14,12 @@ class GetTotalCost
 {
     /**
      * Get the total cost of successful requests in the date range.
+     * Narrowed to one model when `$model` (and `$provider`) is given.
      */
-    public function __invoke(DateRange $dateRange): float
+    public function __invoke(DateRange $dateRange, ?string $model = null, ?string $provider = null): float
     {
         return RequestAggregateQuery::fromRollups($dateRange)
+            ->forModel($model, $provider)
             ->successfulOnly()
             ->sumCost();
     }

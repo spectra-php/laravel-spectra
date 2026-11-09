@@ -27,14 +27,16 @@ class GetCostsByUser
 
     /**
      * Get the users that spent the most in the date range, with their names.
+     * Narrowed to one model when `$model` (and `$provider`) is given.
      *
      * @return Collection<int, CostByUser>
      */
-    public function __invoke(DateRange $dateRange, int $limit = 10): Collection
+    public function __invoke(DateRange $dateRange, int $limit = 10, ?string $model = null, ?string $provider = null): Collection
     {
         // Group by type + id: ids alone collide across polymorphic types
         // (User 1 and Admin 1 must not be merged into one row).
         $items = RequestAggregateQuery::fromRollups($dateRange)
+            ->forModel($model, $provider)
             ->withTrackable()
             ->forTrackableTypes(($this->getUserTrackableTypes)())
             ->groupByColumns('trackable_type', 'trackable_id')

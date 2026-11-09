@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
@@ -13,13 +14,22 @@ import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import StatCard from '@/components/StatCard.vue';
 import Money from '@/components/Money.vue';
-import type { CostByModel, CostByModelType, CostByProvider, CostsResponse } from '@/types/api';
+import type { CostByModel, CostByModelType, CostByProvider, CostModelOption, CostsResponse } from '@/types/api';
 
 // A row of the breakdown doughnut: a provider's or a model type's, depending on the tab.
 type BreakdownRow = Partial<CostByProvider & CostByModelType>;
 
 const { formatNumber, formatCompact, formatCurrency, formatShortDate, providerChartColor, seriesColor, apiRequest } = useHelpers();
-const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery();
+const route = useRoute();
+
+// The model filter: every card narrows to one model (and its provider), kept in
+// the URL with the period.
+const modelFilter = ref<{ model: string; provider: string }>({ model: '', provider: '' });
+
+const { period, startDate, endDate, periodLabel, queryString, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery({
+    filterKeys: ['model', 'provider'],
+    getFilters: () => modelFilter.value,
+});
 const { providers, loadProviders, providerDisplayName } = useProviders();
 const { createLineChart, createDoughnutChart } = useCharts();
 const loading = useLoading();
@@ -33,6 +43,7 @@ const stats = ref<Omit<CostsResponse, 'cost_overview'>>({
     costs_by_model_type: [],
     costs_by_date: [],
     costs_by_user: [],
+    models: [],
 });
 
 // The short class name: `App\Models\User` shows as `User`, a morph alias as itself.
@@ -171,6 +182,45 @@ const onRangeChange = async () => {
     await loadStats();
 };
 
+// A select option's value: provider and model, split by a character no id holds.
+const SEPARATOR = '\u001f';
+const optionKey = (option: { provider: string | null; model: string }) => `${option.provider ?? ''}${SEPARATOR}${option.model}`;
+
+const selectedModel = computed({
+    get: () => (modelFilter.value.model ? optionKey(modelFilter.value) : ''),
+    set: (key: string) => {
+        const [provider = '', model = ''] = key ? key.split(SEPARATOR) : [];
+        modelFilter.value = { model, provider };
+    },
+});
+
+// The period's models grouped by provider, most expensive provider first. A
+// model picked from the URL that the period doesn't have stays on offer.
+const modelGroups = computed(() => {
+    const options: CostModelOption[] = [...(stats.value.models || [])];
+    const { model, provider } = modelFilter.value;
+
+    if (model && !options.some((option) => optionKey(option) === optionKey(modelFilter.value))) {
+        options.push({ model, provider: provider || null, cost: 0 });
+    }
+
+    const groups = new Map<string, { provider: string | null; label: string; cost: number; models: CostModelOption[] }>();
+    for (const option of options) {
+        const key = option.provider ?? '';
+        const group = groups.get(key) ?? { provider: option.provider, label: option.provider ? (providerDisplayName(option.provider) ?? option.provider) : 'Unknown provider', cost: 0, models: [] };
+        group.cost += Number(option.cost || 0);
+        group.models.push(option);
+        groups.set(key, group);
+    }
+
+    return [...groups.values()].sort((a, b) => b.cost - a.cost);
+});
+
+const onModelChange = async () => {
+    await syncQueryToRouter();
+    await loadStats();
+};
+
 const totalCost = computed(() => Number(stats.value.total_cost_in_cents || 0));
 
 // Legend rows for the breakdown doughnut, with amounts and shares.
@@ -202,6 +252,10 @@ const initials = (name: string | null) => String(name || 'U').split(/\s+/).map((
 
 onMounted(async () => {
     applyQueryState();
+    modelFilter.value = {
+        model: queryString(route.query.model) || '',
+        provider: queryString(route.query.provider) || '',
+    };
     await syncQueryToRouter(null, true);
     await loadProviders();
     await loadStats();
@@ -218,13 +272,24 @@ onUnmounted(() => {
     <div>
         <PageRangeHeader
             title="Costs"
-            :subtitle="`Where the money goes · ${periodLabel}`"
+            :subtitle="`Where the money goes · ${periodLabel}${modelFilter.model ? ' · ' + modelFilter.model : ''}`"
             v-model:period="period"
             v-model:start-date="startDate"
             v-model:end-date="endDate"
             :loading="loading"
             @change="onRangeChange"
-        />
+        >
+            <template #filters>
+                <div class="w-full sm:w-56">
+                    <select v-model="selectedModel" class="form-select w-full" :disabled="loading" aria-label="Model" @change="onModelChange">
+                        <option value="">All models</option>
+                        <optgroup v-for="group in modelGroups" :key="group.provider ?? ''" :label="group.label">
+                            <option v-for="option in group.models" :key="optionKey(option)" :value="optionKey(option)">{{ option.model }}</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </template>
+        </PageRangeHeader>
 
         <!-- Headline numbers -->
         <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -260,7 +325,7 @@ onUnmounted(() => {
             <StatCard label="Models used" :loading="loading">
                 <div class="stat-value">{{ formatNumber((stats.costs_by_model || []).length) }}</div>
                 <template #footer>
-                    <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">From {{ formatNumber((stats.costs_by_provider || []).length) }} providers</div>
+                    <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">From {{ formatNumber((stats.costs_by_provider || []).length) }} {{ (stats.costs_by_provider || []).length === 1 ? 'provider' : 'providers' }}</div>
                 </template>
             </StatCard>
         </div>
