@@ -87,14 +87,17 @@ onUnmounted(() => {
 
 <template>
     <div class="card flex h-full flex-col">
-        <div class="card-header">
+        <div class="card-header flex-wrap gap-y-2.5">
             <div>
                 <h3>Breakdown</h3>
                 <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ description }}</p>
             </div>
-            <div class="segmented">
-                <button type="button" :class="{ 'is-active': tab === 'provider' }" @click="tab = 'provider'">Provider</button>
-                <button v-if="showTypes" type="button" :class="{ 'is-active': tab === 'model-type' }" @click="tab = 'model-type'">Type</button>
+            <div class="card-actions">
+                <div class="segmented">
+                    <button type="button" :class="{ 'is-active': tab === 'provider' }" @click="tab = 'provider'">Provider</button>
+                    <button v-if="showTypes" type="button" :class="{ 'is-active': tab === 'model-type' }" @click="tab = 'model-type'">Type</button>
+                </div>
+                <slot name="action" />
             </div>
         </div>
         <div class="card-body flex flex-1 flex-col gap-5">

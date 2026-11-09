@@ -6,6 +6,8 @@ import { useProviders } from '@/composables/useProviders';
 import { useCharts } from '@/composables/useCharts';
 import type { ThemedChart } from '@/composables/useCharts';
 import { useLoading } from '@/composables/useLoading';
+import { useCardRefresh } from '@/composables/useCardRefresh';
+import RefreshButton from '@/components/RefreshButton.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
@@ -21,6 +23,7 @@ const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryPara
 const { providers, loadProviders, providerDisplayName } = useProviders();
 const { createLineChart, createDoughnutChart } = useCharts();
 const loading = useLoading();
+const { isRefreshing, refresh } = useCardRefresh();
 
 loading.value = true;
 const stats = ref<Omit<CostsResponse, 'cost_overview'>>({
@@ -58,6 +61,18 @@ const loadStats = async () => {
         loading.value = false;
     }
 };
+
+// A card's refresh button reloads `/costs` in place, without the skeletons; every
+// card on the page reads that one response.
+const refreshCard = (card: string) => refresh(card, async () => {
+    try {
+        stats.value = await apiRequest<CostsResponse>('get', '/costs?' + buildQueryParams().toString());
+        await nextTick();
+        renderCharts();
+    } catch (error) {
+        console.error('Failed to refresh costs:', error);
+    }
+});
 
 const renderCharts = () => {
     renderCostChart();
@@ -252,12 +267,13 @@ onUnmounted(() => {
 
         <!-- Charts -->
         <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <div class="card lg:col-span-2">
+            <div class="card lg:col-span-2" :class="{ 'is-refreshing': isRefreshing('trend') }">
                 <div class="card-header">
                     <div>
                         <h3>Spend over time</h3>
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Daily cost</p>
                     </div>
+                    <RefreshButton v-if="!loading" :refreshing="isRefreshing('trend')" @refresh="refreshCard('trend')" />
                 </div>
                 <div class="card-body">
                     <template v-if="loading">
@@ -267,15 +283,18 @@ onUnmounted(() => {
                 </div>
             </div>
 
-            <div class="card flex flex-col">
-                <div class="card-header">
+            <div class="card flex flex-col" :class="{ 'is-refreshing': isRefreshing('breakdown') }">
+                <div class="card-header flex-wrap gap-y-2.5">
                     <div>
                         <h3>Breakdown</h3>
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Share of spend</p>
                     </div>
-                    <div class="segmented">
-                        <button type="button" :class="{ 'is-active': breakdownTab === 'provider' }" @click="breakdownTab = 'provider'">Provider</button>
-                        <button type="button" :class="{ 'is-active': breakdownTab === 'model-type' }" @click="breakdownTab = 'model-type'">Type</button>
+                    <div class="card-actions">
+                        <div class="segmented">
+                            <button type="button" :class="{ 'is-active': breakdownTab === 'provider' }" @click="breakdownTab = 'provider'">Provider</button>
+                            <button type="button" :class="{ 'is-active': breakdownTab === 'model-type' }" @click="breakdownTab = 'model-type'">Type</button>
+                        </div>
+                        <RefreshButton v-if="!loading" :refreshing="isRefreshing('breakdown')" @refresh="refreshCard('breakdown')" />
                     </div>
                 </div>
                 <div class="card-body flex flex-1 flex-col gap-5">
@@ -307,12 +326,13 @@ onUnmounted(() => {
 
         <!-- Tables -->
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-5">
-            <div class="card overflow-hidden lg:col-span-3">
+            <div class="card overflow-hidden lg:col-span-3" :class="{ 'is-refreshing': isRefreshing('models') }">
                 <div class="card-header">
                     <div>
                         <h3>Cost by model</h3>
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Highest spend first</p>
                     </div>
+                    <RefreshButton v-if="!loading" :refreshing="isRefreshing('models')" @refresh="refreshCard('models')" />
                 </div>
                 <div class="overflow-x-auto">
                     <table class="table">
@@ -364,13 +384,16 @@ onUnmounted(() => {
                 </div>
             </div>
 
-            <div class="card overflow-hidden lg:col-span-2">
+            <div class="card overflow-hidden lg:col-span-2" :class="{ 'is-refreshing': isRefreshing('users') }">
                 <div class="card-header">
                     <div>
                         <h3>Top users</h3>
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">By spend</p>
                     </div>
-                    <router-link :to="{ name: 'users' }" class="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">All users</router-link>
+                    <div class="card-actions">
+                        <router-link :to="{ name: 'users' }" class="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">All users</router-link>
+                        <RefreshButton v-if="!loading" :refreshing="isRefreshing('users')" @refresh="refreshCard('users')" />
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="table">

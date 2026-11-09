@@ -5,6 +5,7 @@ import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useLoading } from '@/composables/useLoading';
+import { useCardRefresh } from '@/composables/useCardRefresh';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import BreakdownCard from '@/components/widgets/BreakdownCard.vue';
 import HeadlineCards from '@/components/widgets/HeadlineCards.vue';
@@ -15,6 +16,7 @@ import ScoreSummaryCard from '@/components/widgets/ScoreSummaryCard.vue';
 import TopModelsCard from '@/components/widgets/TopModelsCard.vue';
 import TrendCard from '@/components/widgets/TrendCard.vue';
 import AlertsCard from '@/components/AlertsCard.vue';
+import RefreshButton from '@/components/RefreshButton.vue';
 import type { AlertsResponse, DashboardConfigResponse, ModelPerformance, PerformanceResponse, ScoreSummary, ScoresResponse, StatsResponse } from '@/types/api';
 
 const router = useRouter();
@@ -22,6 +24,7 @@ const { formatNumber, formatCompact, formatDurationSeconds, apiRequest } = useHe
 const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery();
 const { loadProviders, providerDisplayName } = useProviders();
 const loading = useLoading();
+const { isRefreshing, refresh } = useCardRefresh();
 
 loading.value = true;
 const layout = ref('full');
@@ -96,21 +99,28 @@ const loadAlerts = async () => {
     }
 };
 
-const loadStats = async () => {
-    loading.value = true;
-    loadScores();
-    loadPerformance();
-    loadAlerts();
+const fetchStats = async () => {
     try {
         const data = await apiRequest<StatsResponse>('get', '/stats?' + buildQueryParams().toString());
         stats.value = data;
         layout.value = data.layout || layout.value;
     } catch (error) {
         console.error('Failed to load stats:', error);
-    } finally {
-        loading.value = false;
     }
 };
+
+const loadStats = async () => {
+    loading.value = true;
+    loadScores();
+    loadPerformance();
+    loadAlerts();
+    await fetchStats();
+    loading.value = false;
+};
+
+// A card's refresh button reloads its data in place, without the skeletons. The
+// trend, breakdown, top models and recent requests cards all read `/stats`.
+const refreshStats = (card: string) => refresh(card, fetchStats);
 
 const onRangeChange = async () => {
     await syncQueryToRouter();
@@ -201,7 +211,11 @@ onMounted(async () => {
             </template>
         </HeadlineCards>
 
-        <AlertsCard v-if="alerts.alerts?.length || alerts.error" class="mb-4" :alerts="alerts.alerts" :error="alerts.error" />
+        <AlertsCard v-if="alerts.alerts?.length || alerts.error" class="mb-4" :class="{ 'is-refreshing': isRefreshing('alerts') }" :alerts="alerts.alerts" :error="alerts.error">
+            <template #action>
+                <RefreshButton :refreshing="isRefreshing('alerts')" @refresh="refresh('alerts', loadAlerts)" />
+            </template>
+        </AlertsCard>
 
         <!-- Media usage (only kinds that appear in this period) -->
         <MediaUsageCard v-if="!loading && mediaCards.length" class="mb-4" :cards="mediaCards" />
@@ -210,37 +224,61 @@ onMounted(async () => {
         <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
             <TrendCard
                 class="lg:col-span-2"
+                :class="{ 'is-refreshing': isRefreshing('trend') }"
                 title="Requests over time"
                 description="Daily volume"
                 kind="requests"
                 :labels="(stats.requests_by_date || []).map((row) => row.date)"
                 :values="requestTrend"
                 :loading="loading"
-            />
+            >
+                <template #action>
+                    <RefreshButton v-if="!loading" :refreshing="isRefreshing('trend')" @refresh="refreshStats('trend')" />
+                </template>
+            </TrendCard>
             <BreakdownCard
+                :class="{ 'is-refreshing': isRefreshing('breakdown') }"
                 :providers="breakdownProviders"
                 :model-types="stats.stats_by_model_type || []"
                 :show-types="layout === 'full'"
                 :loading="loading"
-            />
+            >
+                <template #action>
+                    <RefreshButton v-if="!loading" :refreshing="isRefreshing('breakdown')" @refresh="refreshStats('breakdown')" />
+                </template>
+            </BreakdownCard>
         </div>
 
         <!-- Tables -->
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <TopModelsCard :models="topModels" :loading="loading">
+            <TopModelsCard :class="{ 'is-refreshing': isRefreshing('top-models') }" :models="topModels" :loading="loading">
                 <template #action>
-                    <router-link :to="{ name: 'costs' }" class="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">View costs</router-link>
+                    <div class="card-actions">
+                        <router-link :to="{ name: 'costs' }" class="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">View costs</router-link>
+                        <RefreshButton v-if="!loading" :refreshing="isRefreshing('top-models')" @refresh="refreshStats('top-models')" />
+                    </div>
                 </template>
             </TopModelsCard>
-            <RecentRequestsCard :requests="stats.recent_requests || []" clickable :loading="loading" @select="goToRequest">
+            <RecentRequestsCard :class="{ 'is-refreshing': isRefreshing('recent') }" :requests="stats.recent_requests || []" clickable :loading="loading" @select="goToRequest">
                 <template #action>
-                    <router-link :to="{ name: 'requests' }" class="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">View all</router-link>
+                    <div class="card-actions">
+                        <router-link :to="{ name: 'requests' }" class="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">View all</router-link>
+                        <RefreshButton v-if="!loading" :refreshing="isRefreshing('recent')" @refresh="refreshStats('recent')" />
+                    </div>
                 </template>
             </RecentRequestsCard>
         </div>
 
-        <PerformanceCard v-if="performance.length" class="mt-4" :models="performance" />
+        <PerformanceCard v-if="performance.length" class="mt-4" :class="{ 'is-refreshing': isRefreshing('performance') }" :models="performance">
+            <template #action>
+                <RefreshButton :refreshing="isRefreshing('performance')" @refresh="refresh('performance', loadPerformance)" />
+            </template>
+        </PerformanceCard>
 
-        <ScoreSummaryCard v-if="scoreSummary.length" class="mt-4" :scores="scoreSummary" />
+        <ScoreSummaryCard v-if="scoreSummary.length" class="mt-4" :class="{ 'is-refreshing': isRefreshing('scores') }" :scores="scoreSummary">
+            <template #action>
+                <RefreshButton :refreshing="isRefreshing('scores')" @refresh="refresh('scores', loadScores)" />
+            </template>
+        </ScoreSummaryCard>
     </div>
 </template>

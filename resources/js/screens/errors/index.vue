@@ -3,11 +3,13 @@ import { ref, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useLoading } from '@/composables/useLoading';
+import { useCardRefresh } from '@/composables/useCardRefresh';
 import type { ErrorGroup, ErrorsResponse } from '@/types/api';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import StatusCode from '@/components/StatusCode.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
+import RefreshButton from '@/components/RefreshButton.vue';
 
 // Failed calls grouped by cause: the same provider, status, error type and
 // message (ids and numbers aside) make one group, so one rate limit is one
@@ -15,19 +17,23 @@ import ProviderLogo from '@/components/ProviderLogo.vue';
 const { formatNumber, apiRequest } = useHelpers();
 const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery();
 const loading = useLoading();
+const { isRefreshing, refresh } = useCardRefresh();
 
 loading.value = true;
 const data = ref<ErrorsResponse>({ request_count: 0, failed_count: 0, error_rate: 0, ungrouped_count: 0, migrated: true, groups: [] });
 
-const load = async () => {
-    loading.value = true;
+const fetchErrors = async () => {
     try {
         data.value = await apiRequest<ErrorsResponse>('get', '/errors?' + buildQueryParams().toString());
     } catch (error) {
         console.error('Failed to load errors:', error);
-    } finally {
-        loading.value = false;
     }
+};
+
+const load = async () => {
+    loading.value = true;
+    await fetchErrors();
+    loading.value = false;
 };
 
 const onRangeChange = async () => {
@@ -106,12 +112,13 @@ onMounted(async () => {
             {{ formatNumber(data.ungrouped_count) }} failed {{ data.ungrouped_count === 1 ? 'call was' : 'calls were' }} saved before failures were grouped. Run <code class="font-mono">php artisan spectra:group-errors</code> to group {{ data.ungrouped_count === 1 ? 'it' : 'them' }}.
         </div>
 
-        <div class="card mt-4 overflow-hidden">
+        <div class="card mt-4 overflow-hidden" :class="{ 'is-refreshing': isRefreshing('groups') }">
             <div class="card-header">
                 <div>
                     <h3>Error groups</h3>
                     <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Most failures first; the message is the latest one</p>
                 </div>
+                <RefreshButton v-if="!loading" :refreshing="isRefreshing('groups')" @refresh="refresh('groups', fetchErrors)" />
             </div>
 
             <Skeleton v-if="loading" variant="table-row" :lines="6" />

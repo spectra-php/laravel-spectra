@@ -24,6 +24,7 @@ const percent = (score: ScoreSummary) => Math.round(Number(score.average ?? 0) *
                 <h3>Scores</h3>
                 <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Feedback and evaluations given in this period</p>
             </div>
+            <slot name="action" />
         </div>
         <ul class="grid grid-cols-1 gap-px bg-gray-100 sm:grid-cols-2 lg:grid-cols-3 dark:bg-gray-800/80">
             <li v-for="score in scores" :key="score.name + score.type" class="bg-white px-5 py-4 dark:bg-gray-900">

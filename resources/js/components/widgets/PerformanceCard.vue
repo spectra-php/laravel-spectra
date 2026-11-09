@@ -30,6 +30,7 @@ const errorClass = (rate: number) => {
                 <h3>Performance</h3>
                 <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Error rate over all calls; latency over successful ones</p>
             </div>
+            <slot name="action" />
         </div>
         <div class="overflow-x-auto">
             <table class="table">

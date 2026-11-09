@@ -7,6 +7,7 @@ import { useProviders } from '@/composables/useProviders';
 import { useCharts } from '@/composables/useCharts';
 import type { ThemedChart } from '@/composables/useCharts';
 import { useLoading } from '@/composables/useLoading';
+import { useCardRefresh } from '@/composables/useCardRefresh';
 import Skeleton from '@/components/Skeleton.vue';
 import StatCard from '@/components/StatCard.vue';
 import StatusCode from '@/components/StatusCode.vue';
@@ -14,6 +15,7 @@ import Breadcrumb from '@/components/Breadcrumb.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Money from '@/components/Money.vue';
+import RefreshButton from '@/components/RefreshButton.vue';
 import type { DashboardConfigResponse, RequestByDate, TrackableDetail, TrackableDetailsResponse, TrackableRequest } from '@/types/api';
 
 const route = useRoute();
@@ -27,6 +29,7 @@ const { period, startDate, endDate, periodLabel, applyQueryState, syncQueryToRou
 const { providers, loadProviders, providerDisplayName } = useProviders();
 const { createBarChart, createLineChart, createDoughnutChart } = useCharts();
 const loading = useLoading();
+const { isRefreshing, refresh } = useCardRefresh();
 
 const trackable = ref<TrackableDetail | null>(null);
 const requests = ref<TrackableRequest[]>([]);
@@ -142,6 +145,31 @@ const onRangeChange = async () => {
     await loadTrackable();
 };
 
+// A card's refresh button reloads the trackable in place, without the skeletons;
+// every card on the page reads that one response. The requests trend has its
+// own endpoint, so it reloads too when that tab is open.
+const refreshCard = (card: string) => refresh(card, async () => {
+    try {
+        const id = route.params.id;
+        const [data, byDate] = await Promise.all([
+            apiRequest<TrackableDetailsResponse>('get', `/trackables/view/${id}?${buildQueryParams().toString()}`),
+            requestsByDate.value
+                ? apiRequest<RequestByDate[]>('get', `/trackables/view/${id}/requests-by-date?${buildQueryParams().toString()}`)
+                : Promise.resolve(null),
+        ]);
+        trackable.value = data.trackable;
+        requests.value = data.requests || [];
+        if (byDate) requestsByDate.value = byDate;
+        await nextTick();
+        // Only the open trend tab: a hidden canvas has no size. Switching tabs redraws.
+        renderProviderChart();
+        if (trendTab.value === 'requests') renderRequestsChart();
+        else renderCostChart();
+    } catch (error) {
+        console.error('Failed to refresh trackable:', error);
+    }
+});
+
 const renderCharts = () => {
     renderCostChart();
     renderProviderChart();
@@ -217,6 +245,8 @@ const switchTrendTab = async (tab: string) => {
             const id = route.params.id;
             const data = await apiRequest<RequestByDate[]>('get', `/trackables/view/${id}/requests-by-date?${buildQueryParams().toString()}`);
             requestsByDate.value = data;
+            // Shown before drawing, so the chart gets a real size.
+            loadingRequestsByDate.value = false;
             await nextTick();
             renderRequestsChart();
         } catch (error) {
@@ -409,35 +439,38 @@ onUnmounted(() => {
 
         <!-- Charts -->
         <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <div class="lg:col-span-2 card">
+            <div class="lg:col-span-2 card" :class="{ 'is-refreshing': isRefreshing('trend') }">
                 <div class="card-header flex-wrap gap-3">
                     <div>
                         <h3 class="text-sm font-semibold">{{ trendTab === 'cost' ? 'Cost Over Time' : 'Requests Over Time' }}</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ trendTab === 'cost' ? 'Daily cost trend' : 'Daily request volume' }}</p>
                     </div>
-                    <div class="inline-flex items-center p-1 rounded-lg bg-gray-100 dark:bg-gray-800/80">
-                        <button
-                            @click="switchTrendTab('cost')"
-                            :class="[
-                                'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
-                                trendTab === 'cost'
-                                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
-                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
-                            ]"
-                        >
-                            Cost
-                        </button>
-                        <button
-                            @click="switchTrendTab('requests')"
-                            :class="[
-                                'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
-                                trendTab === 'requests'
-                                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
-                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
-                            ]"
-                        >
-                            Requests
-                        </button>
+                    <div class="card-actions">
+                        <div class="inline-flex items-center p-1 rounded-lg bg-gray-100 dark:bg-gray-800/80">
+                            <button
+                                @click="switchTrendTab('cost')"
+                                :class="[
+                                    'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                                    trendTab === 'cost'
+                                        ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
+                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+                                ]"
+                            >
+                                Cost
+                            </button>
+                            <button
+                                @click="switchTrendTab('requests')"
+                                :class="[
+                                    'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                                    trendTab === 'requests'
+                                        ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs'
+                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+                                ]"
+                            >
+                                Requests
+                            </button>
+                        </div>
+                        <RefreshButton v-if="!loading" :refreshing="isRefreshing('trend')" @refresh="refreshCard('trend')" />
                     </div>
                 </div>
                 <div class="card-body">
@@ -448,20 +481,22 @@ onUnmounted(() => {
                     <div v-show="!loading && !loadingRequestsByDate && trendTab === 'cost' && !trackable?.costs_by_date?.length" class="empty-state py-12">
                         <p class="empty-state-description">No cost data available</p>
                     </div>
-                    <canvas v-show="!loading && !loadingRequestsByDate && trendTab === 'cost' && trackable?.costs_by_date?.length" ref="costChartRef" height="100"></canvas>
+                    <!-- v-show on a wrapper: Chart.js sets the canvas's own display. -->
+                    <div v-show="!loading && !loadingRequestsByDate && trendTab === 'cost' && trackable?.costs_by_date?.length"><canvas ref="costChartRef" height="100"></canvas></div>
                     <!-- Requests chart -->
                     <div v-show="!loading && !loadingRequestsByDate && trendTab === 'requests' && !requestsByDate?.length" class="empty-state py-12">
                         <p class="empty-state-description">No request data available</p>
                     </div>
-                    <canvas v-show="!loading && !loadingRequestsByDate && trendTab === 'requests' && requestsByDate?.length" ref="requestsChartRef" height="100"></canvas>
+                    <div v-show="!loading && !loadingRequestsByDate && trendTab === 'requests' && requestsByDate?.length"><canvas ref="requestsChartRef" height="100"></canvas></div>
                 </div>
             </div>
-            <div class="card flex flex-col">
+            <div class="card flex flex-col" :class="{ 'is-refreshing': isRefreshing('breakdown') }">
                 <div class="card-header">
                     <div>
                         <h3>Breakdown</h3>
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Requests by provider</p>
                     </div>
+                    <RefreshButton v-if="!loading" :refreshing="isRefreshing('breakdown')" @refresh="refreshCard('breakdown')" />
                 </div>
                 <div class="card-body flex flex-1 flex-col gap-5">
                     <div v-if="loading" class="flex h-40 items-center justify-center">
@@ -493,19 +528,22 @@ onUnmounted(() => {
         <!-- Tables -->
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <!-- Top Models -->
-            <div class="card">
+            <div class="card" :class="{ 'is-refreshing': isRefreshing('models') }">
                 <div class="card-header">
                     <div>
                         <h3 class="text-sm font-semibold">Top Models</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Highest request volume</p>
                     </div>
-                    <button
-                        v-if="allModels.length > 10"
-                        @click="openAllModels"
-                        class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
-                    >
-                        View All ({{ allModels.length }})
-                    </button>
+                    <div class="card-actions">
+                        <button
+                            v-if="allModels.length > 10"
+                            @click="openAllModels"
+                            class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
+                        >
+                            View All ({{ allModels.length }})
+                        </button>
+                        <RefreshButton v-if="!loading" :refreshing="isRefreshing('models')" @refresh="refreshCard('models')" />
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="table">
@@ -555,19 +593,22 @@ onUnmounted(() => {
             </div>
 
             <!-- Recent Requests -->
-            <div class="card">
+            <div class="card" :class="{ 'is-refreshing': isRefreshing('recent') }">
                 <div class="card-header">
                     <div>
                         <h3 class="text-sm font-semibold">Recent Requests</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Latest activity feed</p>
                     </div>
-                    <button
-                        v-if="requests.length > 0"
-                        @click="viewAllRequests"
-                        class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
-                    >
-                        View All
-                    </button>
+                    <div class="card-actions">
+                        <button
+                            v-if="requests.length > 0"
+                            @click="viewAllRequests"
+                            class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
+                        >
+                            View All
+                        </button>
+                        <RefreshButton v-if="!loading" :refreshing="isRefreshing('recent')" @refresh="refreshCard('recent')" />
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="table table-fixed">

@@ -26,7 +26,10 @@ const formatTime = (iso: string | null) => {
                 <h3>Alerts</h3>
                 <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Firing as of the last <code class="font-mono">spectra:check-alerts</code></p>
             </div>
-            <span v-if="alerts.some((alert) => alert.firing)" class="badge badge-danger">{{ alerts.filter((alert) => alert.firing).length }} firing</span>
+            <div class="card-actions">
+                <span v-if="alerts.some((alert) => alert.firing)" class="badge badge-danger">{{ alerts.filter((alert) => alert.firing).length }} firing</span>
+                <slot name="action" />
+            </div>
         </div>
         <p v-if="error" class="px-5 py-4 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
         <ul v-else class="grid grid-cols-1 gap-px bg-gray-100 sm:grid-cols-2 lg:grid-cols-3 dark:bg-gray-800/80">

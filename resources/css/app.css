@@ -211,6 +211,53 @@
         @apply p-5;
     }
 
+    /* A card reloading in place: its content fades while the header stays sharp. */
+    .card > :not(.card-header) {
+        @apply transition-opacity duration-200 ease-out;
+    }
+
+    .card.is-refreshing > :not(.card-header) {
+        @apply pointer-events-none opacity-50;
+    }
+
+    .card-actions {
+        @apply flex shrink-0 items-center gap-2;
+    }
+
+    .refresh-button {
+        @apply inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400;
+        @apply transition-colors duration-150 ease-out hover:bg-gray-100 hover:text-gray-700;
+        @apply focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-500;
+        @apply disabled:cursor-default dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200;
+    }
+
+    .refresh-button.is-refreshing {
+        @apply text-primary-600 dark:text-primary-400;
+    }
+
+    .refresh-button.is-refreshing .refresh-button-arrows {
+        animation: refresh-spin 0.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    }
+
+    .refresh-button:not(:disabled):hover .refresh-button-arrows {
+        @apply transition-transform duration-300 ease-out;
+        transform: rotate(45deg);
+    }
+
+    .refresh-button.is-done {
+        @apply text-emerald-600 dark:text-emerald-400;
+    }
+
+    .refresh-icon-enter-active,
+    .refresh-icon-leave-active {
+        @apply transition duration-150 ease-out;
+    }
+
+    .refresh-icon-enter-from,
+    .refresh-icon-leave-to {
+        @apply scale-50 opacity-0;
+    }
+
     /*
     | Buttons
     */
@@ -466,3 +513,7 @@
     }
 }
 
+@keyframes refresh-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

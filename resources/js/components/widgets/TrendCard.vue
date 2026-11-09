@@ -61,6 +61,7 @@ onUnmounted(() => chart?.destroy());
                 <h3>{{ title }}</h3>
                 <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ description }}</p>
             </div>
+            <slot name="action" />
         </div>
         <div class="card-body">
             <Skeleton v-if="loading" variant="chart" height="240px" />
