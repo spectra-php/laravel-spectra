@@ -54,6 +54,50 @@ final class PageText
     }
 
     /**
+     * Determine if the page prints this model id as a name of its own: not
+     * inside a longer id or a URL path ("models/ocr-4-1" doesn't count).
+     */
+    public function mentions(string $id): bool
+    {
+        $id = strtolower(trim($id));
+
+        if (strlen($id) < 2) {
+            return false;
+        }
+
+        $pattern = $this->namePattern($id);
+
+        return collect($this->lines)->contains(fn (string $line) => Str::isMatch($pattern, $line));
+    }
+
+    /**
+     * Get the pattern that finds a lowercased name standing on its own.
+     */
+    protected function namePattern(string $name): string
+    {
+        $quotedName = preg_quote($name, '/');
+
+        return "/(?<![\w.\/-]){$quotedName}(?![\w-]|\.\d)/";
+    }
+
+    /**
+     * Get the unit a line prices this amount per when it isn't tokens or
+     * characters ("$0.0004 /Min" → "min"), or null when it doesn't say.
+     */
+    public static function unitAfter(string $line, float $amount): ?string
+    {
+        preg_match_all('/(\d[\d,]*(?:\.\d+)?)\s*(?:\/|per\b)\s*(min|minutes?|sec|seconds?|hours?|images?|img|pages?|requests?)\b/i', $line, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as [, $number, $unit]) {
+            if (abs((float) str_replace(',', '', $number) - $amount) < 0.0000001) {
+                return strtolower($unit);
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Get the quantity a line says its prices are for, from markers like "/ MTok",
      * "per 1K characters" or "$13 /M Chars": 1000000, 1000, or null when the
      * line doesn't say (or says both).
@@ -81,8 +125,7 @@ final class PageText
         $patterns = [];
         foreach (collect($names)->map(fn (string $name) => strtolower(trim($name)))->filter()->uniqueStrict() as $name) {
             if (strlen($name) >= 2) {
-                $quotedName = preg_quote($name, '/');
-                $patterns[] = "/(?<![\w.\/-]){$quotedName}(?![\w-]|\.\d)/";
+                $patterns[] = $this->namePattern($name);
             }
         }
 

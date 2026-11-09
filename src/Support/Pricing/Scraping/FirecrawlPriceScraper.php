@@ -142,6 +142,11 @@ class FirecrawlPriceScraper
                                 'type' => ['string', 'null'],
                                 'enum' => [...Arr::pluck(PricingUnit::cases(), 'value'), null],
                             ],
+                            'kind' => [
+                                'type' => ['string', 'null'],
+                                'enum' => [...ScrapedPriceMapper::KINDS, null],
+                                'description' => 'What the model generates: text (chat, embeddings, rerank, transcription, OCR), image, audio (speech, music, sound effects), video, 3d, or other.',
+                            ],
                         ],
                         'required' => ['model_id', 'tier'],
                     ],
@@ -192,6 +197,7 @@ class FirecrawlPriceScraper
             'Models billed per image, megapixel, minute, second, video, search, page, request or character: put the printed price in price_per_unit and set unit. Token models: unit is "tokens".',
             'Only use prices printed on this page for that exact model. Leave a field null when the page does not show it. Never guess, compute or copy prices from another model.',
             'model_id must be the id used in API requests.',
+            'Set kind to what the model generates: text, image, audio, video, 3d or other.',
         ];
 
         if ($knownModels !== []) {

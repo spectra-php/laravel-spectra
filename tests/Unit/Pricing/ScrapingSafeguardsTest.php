@@ -179,6 +179,79 @@ it('matches a version without its v prefix', function () {
     expect(array_keys($result->models))->toBe(['embed-v5.0']);
 });
 
+it('adds a new model only when the page prints its id', function () {
+    // ElevenLabs lists "Realtime v1 Mini" by name; the extraction made up `realtime_v1_mini`.
+    $page = <<<'MD'
+    ### Realtime v1 Mini
+    $0.08 /min
+    | `gpt-z` | $1.00 | $4.00 |
+    MD;
+
+    $result = ($this->map)([
+        ['model_id' => 'realtime_v1_mini', 'display_name' => 'Realtime v1 Mini', 'tier' => 'standard', 'unit' => 'minute', 'price_per_unit' => 0.08],
+        ['model_id' => 'gpt-z', 'tier' => 'standard', 'input' => 1, 'output' => 4],
+    ], $page);
+
+    expect($result->newModels)->toBe(['gpt-z'])
+        ->and($result->skipped)->toContain("realtime_v1_mini: new model whose id the page doesn't print, not added.");
+});
+
+it('does not count an id inside a URL or a longer id', function () {
+    $page = new PageText("| [OCR 4.1](https://docs.example.test/models/ocr-4-1) | \$4 |\n| fal-ai/trellis-2 | \$0.05 |");
+
+    expect($page->mentions('ocr-4-1'))->toBeFalse()
+        ->and($page->mentions('fal-ai/trellis'))->toBeFalse()
+        ->and($page->mentions('fal-ai/trellis-2'))->toBeTrue();
+});
+
+it('adds a new model only when the provider has a handler for its kind', function () {
+    // fal.ai lists speech and 3D models, but Spectra's fal handlers bill images and video only.
+    $catalog = ProviderPricing::fromSection('falai', ['currency' => 'USD', 'models' => [
+        'fal-ai/flux/dev' => ['type' => 'image', 'pricing_unit' => 'megapixel', 'tiers' => [['tier' => 'standard', 'price_per_unit' => 2.5]]],
+        'fal-ai/flux-pro/kontext' => ['type' => 'image', 'pricing_unit' => 'image', 'tiers' => [['tier' => 'standard', 'price_per_unit' => 4]]],
+    ]]);
+
+    $result = ($this->map)([
+        ['model_id' => 'fal-ai/z-image/turbo', 'tier' => 'standard', 'kind' => 'image', 'unit' => 'megapixel', 'price_per_unit' => 0.005],
+        ['model_id' => 'fal-ai/ace-step/prompt-to-audio', 'tier' => 'standard', 'kind' => 'audio', 'unit' => 'second', 'price_per_unit' => 0.0002],
+        ['model_id' => 'fal-ai/trellis', 'tier' => 'standard', 'kind' => '3d', 'unit' => 'image', 'price_per_unit' => 0.02],
+    ], catalog: $catalog);
+
+    expect($result->newModels)->toBe(['fal-ai/z-image/turbo'])
+        ->and($result->skipped)->toBe([
+            'fal-ai/ace-step/prompt-to-audio: new audio model, but no image/video handler bills it, not added.',
+            'fal-ai/trellis: new 3d model, but no image/video handler bills it, not added.',
+        ]);
+});
+
+it('adds a new per-unit model only when its price is on the scale of the catalog prices for that unit', function () {
+    // Mistral prices OCR "$2 per 1,000 pages"; the extraction read it as $2 a page.
+    $catalog = ProviderPricing::fromSection('acme', ['currency' => 'USD', 'models' => [
+        'ocr-latest' => ['pricing_unit' => 'page', 'tiers' => [['tier' => 'standard', 'price_per_unit' => 0.4]]],
+        'ocr-2512' => ['pricing_unit' => 'page', 'tiers' => [['tier' => 'standard', 'price_per_unit' => 0.2]]],
+    ]]);
+
+    $result = ($this->map)([
+        ['model_id' => 'ocr-3-25-12', 'tier' => 'standard', 'unit' => 'page', 'price_per_unit' => 2],
+        ['model_id' => 'ocr-mini', 'tier' => 'standard', 'unit' => 'page', 'price_per_unit' => 0.001],
+    ], catalog: $catalog);
+
+    expect($result->newModels)->toBe(['ocr-mini'])
+        ->and($result->skipped)->toBe(["ocr-3-25-12: per-page price 200 cents is far from the catalog's (0.2–0.4 cents), not added."]);
+});
+
+it('rejects a token price the page prints per minute', function () {
+    // Voxtral's audio input is "$0.0004 /Min"; the extraction took it as the cached token price.
+    $page = '| [Voxtral Small](https://example.test/long-x) | long-x | $0.004 /Min | $0.0004 /Min | $12 /M Tokens |';
+
+    $result = ($this->map)([
+        ['model_id' => 'long-x', 'tier' => 'standard', 'input' => 2, 'output' => 12, 'cached_input' => 0.0004],
+    ], $page);
+
+    expect($result->models)->toBe([])
+        ->and($result->skipped)->toContain('long-x: cached input 0.0004 is priced per min on the page, not per token, ignored.');
+});
+
 describe('PageText', function () {
     it('confirms a price on the table row naming the model', function () {
         $page = new PageText(implode("\n", [

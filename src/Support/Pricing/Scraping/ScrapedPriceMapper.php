@@ -6,11 +6,14 @@ namespace Spectra\Support\Pricing\Scraping;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Spectra\Contracts\Handler;
+use Spectra\Enums\ModelType;
 use Spectra\Enums\PricingTier;
 use Spectra\Enums\PricingUnit;
 use Spectra\Pricing\ProviderPricing;
 use Spectra\Support\Pricing\ModelDefinition;
 use Spectra\Support\Pricing\PricingLookup;
+use Spectra\Support\ProviderRegistry;
 
 /**
  * Compares scraped price rows with a provider's catalog.
@@ -24,12 +27,14 @@ use Spectra\Support\Pricing\PricingLookup;
  * the page text doesn't show next to the model, tiers and price fields the
  * catalog doesn't use, ids that aren't API ids, prices off by OUTLIER_RATIO
  * or more, a per-unit price for a token model (or the reverse), and new rows
- * missing a price they need.
+ * missing a price they need. A new model must also have its id printed on
+ * the page, be a kind the provider's handlers bill, and (when billed per
+ * unit) cost within OUTLIER_RATIO of the catalog's prices for that unit.
  *
  * @phpstan-import-type TierEntry from ModelDefinition
  *
  * @phpstan-type ScrapedRow array{tier: string, above: int|null, prices: array<string, float>, scales: array<string, float>, lines: array<string, string>}
- * @phpstan-type ScrapedModel array{display_name: string|null, unit: string|null, names: list<string>, rows: array<string, ScrapedRow>}
+ * @phpstan-type ScrapedModel array{display_name: string|null, unit: string|null, kind: string|null, names: list<string>, rows: array<string, ScrapedRow>}
  */
 class ScrapedPriceMapper
 {
@@ -41,6 +46,9 @@ class ScrapedPriceMapper
     /** Characters of a confirming page line kept for the review. */
     public const MAX_PAGE_LINE_LENGTH = 300;
 
+    /** What a scraped model generates, as the extraction labels it. */
+    public const KINDS = ['text', 'image', 'audio', 'video', '3d', 'other'];
+
     /** @var array<string, list<PriceChange>> */
     protected array $changes = [];
 
@@ -48,6 +56,12 @@ class ScrapedPriceMapper
     protected array $skipped = [];
 
     protected ?PageText $page = null;
+
+    /** @var array<string, ModelDefinition> */
+    protected array $definitions = [];
+
+    /** @var list<string>|null The kinds the provider's handlers bill; null when any may be billed. */
+    protected ?array $billableKinds = null;
 
     /**
      * Map scraped rows onto the catalog, keeping only changed and new models.
@@ -65,6 +79,9 @@ class ScrapedPriceMapper
         foreach ($pricing->models() as $definition) {
             $definitions[$definition->getInternalName()] = $definition;
         }
+
+        $this->definitions = $definitions;
+        $this->billableKinds = $this->findBillableKinds($pricing->provider());
 
         $models = [];
         $newModels = [];
@@ -94,6 +111,8 @@ class ScrapedPriceMapper
         $this->changes = [];
         $this->skipped = [];
         $this->page = null;
+        $this->definitions = [];
+        $this->billableKinds = null;
 
         return $result;
     }
@@ -174,8 +193,11 @@ class ScrapedPriceMapper
                 continue;
             }
 
-            $grouped[$id] ??= ['display_name' => $displayName, 'unit' => $unit, 'names' => [], 'rows' => []];
+            $kind = is_string($row['kind'] ?? null) && in_array(strtolower($row['kind']), self::KINDS, true) ? strtolower($row['kind']) : null;
+
+            $grouped[$id] ??= ['display_name' => $displayName, 'unit' => $unit, 'kind' => $kind, 'names' => [], 'rows' => []];
             $grouped[$id]['unit'] ??= $unit;
+            $grouped[$id]['kind'] ??= $kind;
             $grouped[$id]['names'] = array_values(collect([...$grouped[$id]['names'], ...$names])->uniqueStrict()->all());
 
             $key = "{$catalogTier}|{$above}";
@@ -270,6 +292,14 @@ class ScrapedPriceMapper
 
             if ($page !== null && $line === null) {
                 $unconfirmed[] = "{$this->label($field)} {$value}";
+
+                continue;
+            }
+
+            $pageUnit = $line !== null && $field !== 'price_per_unit' ? PageText::unitAfter($line, (float) $value) : null;
+
+            if ($pageUnit !== null) {
+                $this->skipped[] = "{$id}: {$this->label($field)} {$value} is priced per {$pageUnit} on the page, not per token, ignored.";
 
                 continue;
             }
@@ -478,6 +508,21 @@ class ScrapedPriceMapper
     protected function buildNewModel(string $id, array $scraped): ?array
     {
         $unit = $scraped['unit'] ?? PricingUnit::Tokens->value;
+
+        // Extraction invents ids from display names ("realtime_v1_mini") and
+        // renames known models ("ministral-3-14b-latest"); a real id is printed.
+        if ($this->page !== null && ! $this->page->mentions($id)) {
+            $this->skipped[] = "{$id}: new model whose id the page doesn't print, not added.";
+
+            return null;
+        }
+
+        if ($scraped['kind'] !== null && $this->billableKinds !== null && ! in_array($scraped['kind'], $this->billableKinds, true)) {
+            $this->skipped[] = "{$id}: new {$scraped['kind']} model, but no {$this->describeKinds()} handler bills it, not added.";
+
+            return null;
+        }
+
         $rows = [];
 
         foreach ($scraped['rows'] as $key => $row) {
@@ -507,6 +552,14 @@ class ScrapedPriceMapper
             return null;
         }
 
+        $problem = $this->findUnitPriceOutlier($unit, $tiers);
+
+        if ($problem !== null) {
+            $this->skipped[] = "{$id}: {$problem}, not added.";
+
+            return null;
+        }
+
         foreach ($tiers as $key => $tierRow) {
             $scrapedRow = $scraped['rows'][$key];
             $this->recordNewRow($id, $scrapedRow, $this->filterPricesForUnit($scrapedRow['prices'], $unit), $unit);
@@ -530,6 +583,75 @@ class ScrapedPriceMapper
             'capabilities' => $capabilities,
             'tiers' => $tiers,
         ], fn (mixed $value) => $value !== null && $value !== []);
+    }
+
+    /**
+     * Get the kinds of model the provider's handlers bill, or null for a
+     * provider Spectra doesn't know (a catalog of your own), where any may be.
+     *
+     * @return list<string>|null
+     */
+    protected function findBillableKinds(string $provider): ?array
+    {
+        $instance = app(ProviderRegistry::class)->provider($provider);
+
+        if ($instance === null) {
+            return null;
+        }
+
+        return array_values(collect($instance->handlers())
+            ->map(fn (Handler $handler) => match ($handler->modelType()) {
+                ModelType::Text, ModelType::Embedding => 'text',
+                ModelType::Image => 'image',
+                ModelType::Tts, ModelType::Stt => 'audio',
+                ModelType::Video => 'video',
+            })
+            ->unique()
+            ->all());
+    }
+
+    /**
+     * Describe the kinds the provider's handlers bill, for a report.
+     */
+    protected function describeKinds(): string
+    {
+        return implode('/', $this->billableKinds ?? []);
+    }
+
+    /**
+     * Get why a new per-unit model's standard price is off the scale of the
+     * catalog's prices for the same unit (Mistral's OCR priced "$4 per 1,000
+     * pages" read as $4 a page), or null when it is in range or has nothing
+     * to compare with.
+     *
+     * @param  array<array-key, array<string, mixed>>  $tiers
+     */
+    protected function findUnitPriceOutlier(string $unit, array $tiers): ?string
+    {
+        if ($unit === PricingUnit::Tokens->value) {
+            return null;
+        }
+
+        $standard = collect($tiers)->firstWhere('tier', PricingTier::Standard->value);
+        $price = is_numeric($standard['price_per_unit'] ?? null) ? (float) $standard['price_per_unit'] : 0.0;
+
+        $catalogPrices = collect($this->definitions)
+            ->filter(fn (ModelDefinition $definition) => $definition->toModelArray()['pricing_unit'] === $unit)
+            ->map(fn (ModelDefinition $definition) => collect($definition->toTiersArray())->firstWhere('tier', PricingTier::Standard->value)['price_per_unit'] ?? null)
+            ->filter(fn (?float $value) => $value !== null && $value > 0);
+
+        if ($price <= 0 || $catalogPrices->isEmpty()) {
+            return null;
+        }
+
+        $lowest = (float) $catalogPrices->min();
+        $highest = (float) $catalogPrices->max();
+
+        if ($price < $highest * self::OUTLIER_RATIO && $price > $lowest / self::OUTLIER_RATIO) {
+            return null;
+        }
+
+        return "per-{$unit} price {$price} cents is far from the catalog's ({$lowest}–{$highest} cents)";
     }
 
     /**
