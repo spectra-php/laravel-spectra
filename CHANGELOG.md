@@ -2,6 +2,18 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## v4.1.0 - 2026-11-09
+
+Spectra 4.1 adds refresh buttons to the dashboard's cards. Run `composer update spectra-php/laravel-spectra` to get it.
+
+#### Added
+
+- Dashboard: the stats cards have a refresh button in their header that reloads the card in place, without the loading skeletons: the arrows spin and the card fades while it loads, then a check shows for a moment. On the Overview (alerts, requests over time, breakdown, top models, recent requests, performance and scores), Costs, a trackable's page and Errors. Cards that read the same data update together. The refresh button in the top bar still reloads the whole screen
+
+#### Fixed
+
+- Dashboard: on a trackable's page, the Cost and Requests tabs of the trend card each show their own chart after switching tabs. Chart.js set the chart's visibility itself when a chart was redrawn, which could show the hidden chart or neither
+
 ## v4.0.1 - 2026-11-09
 
 Spectra 4.0.1 adds prices for new OpenAI, Google and fal.ai models, and the bundled prices are now checked against the providers' pricing pages every 24 hours. Run `composer update spectra-php/laravel-spectra` to get them, then restart your queue workers, Horizon or Octane.
