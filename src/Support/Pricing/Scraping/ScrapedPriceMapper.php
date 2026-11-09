@@ -296,6 +296,15 @@ class ScrapedPriceMapper
                 continue;
             }
 
+            $modality = $line !== null ? PageText::modalityAfter($line, (float) $value) : null;
+            $fieldModality = Str::startsWith($field, ['audio_', 'image_']) ? Str::before($field, '_') : 'text';
+
+            if ($modality !== null && $field !== 'price_per_unit' && $modality !== $fieldModality) {
+                $this->skipped[] = "{$id}: {$this->label($field)} {$value} is the page's {$modality} price, ignored.";
+
+                continue;
+            }
+
             $pageUnit = $line !== null && $field !== 'price_per_unit' ? PageText::unitAfter($line, (float) $value) : null;
 
             if ($pageUnit !== null) {
@@ -476,6 +485,14 @@ class ScrapedPriceMapper
                 continue;
             }
 
+            // fal.ai's pricing page shows one flat video price; the catalog
+            // keeps the model pages' price per resolution and audio.
+            if ($definition->getVariants() !== []) {
+                $this->skipped[] = "{$id}: priced per option from its model page (variants), kept ours. Edit it by hand.";
+
+                continue;
+            }
+
             $problem = $this->findImplausibility($updated, $tiers, $today);
 
             if ($problem !== null) {
@@ -552,6 +569,12 @@ class ScrapedPriceMapper
             return null;
         }
 
+        if ($this->unitNeedsVariants($unit)) {
+            $this->skipped[] = "{$id}: the catalog prices its per-{$unit} models per option from their model pages (variants), not added. Add it by hand.";
+
+            return null;
+        }
+
         $problem = $this->findUnitPriceOutlier($unit, $tiers);
 
         if ($problem !== null) {
@@ -616,6 +639,20 @@ class ScrapedPriceMapper
     protected function describeKinds(): string
     {
         return implode('/', $this->billableKinds ?? []);
+    }
+
+    /**
+     * Determine if every catalog model billed in this unit has variants, so a
+     * new one needs prices the pricing page doesn't show (fal.ai video).
+     */
+    protected function unitNeedsVariants(string $unit): bool
+    {
+        $sameUnit = collect($this->definitions)
+            ->filter(fn (ModelDefinition $definition) => $definition->toModelArray()['pricing_unit'] === $unit);
+
+        return $unit !== PricingUnit::Tokens->value
+            && $sameUnit->isNotEmpty()
+            && $sameUnit->every(fn (ModelDefinition $definition) => $definition->getVariants() !== []);
     }
 
     /**

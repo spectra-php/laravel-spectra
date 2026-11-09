@@ -252,6 +252,42 @@ it('rejects a token price the page prints per minute', function () {
         ->and($result->skipped)->toContain('long-x: cached input 0.0004 is priced per min on the page, not per token, ignored.');
 });
 
+it('leaves models priced per option from their model pages to hand edits', function () {
+    // fal.ai's pricing page shows Kling v3 at a flat $0.14 a second; the model
+    // page bills $0.168 with audio and $0.112 without, as the variants say.
+    $catalog = ProviderPricing::fromSection('falai', ['currency' => 'USD', 'models' => [
+        'fal-ai/kling-video/v3/pro/text-to-video' => [
+            'type' => 'video',
+            'pricing_unit' => 'second',
+            'variants' => ['*' => ['audio' => 16.8, 'silent' => 11.2]],
+            'tiers' => [['tier' => 'standard', 'price_per_unit' => 16.8]],
+        ],
+    ]]);
+
+    $result = ($this->map)([
+        ['model_id' => 'fal-ai/kling-video/v3/pro/text-to-video', 'tier' => 'standard', 'kind' => 'video', 'unit' => 'second', 'price_per_unit' => 0.14],
+        ['model_id' => 'fal-ai/kling-video/v2.5-turbo/pro/image-to-video', 'tier' => 'standard', 'kind' => 'video', 'unit' => 'second', 'price_per_unit' => 0.07],
+    ], catalog: $catalog);
+
+    expect($result->models)->toBe([])
+        ->and($result->skipped)->toBe([
+            'fal-ai/kling-video/v3/pro/text-to-video: priced per option from its model page (variants), kept ours. Edit it by hand.',
+            'fal-ai/kling-video/v2.5-turbo/pro/image-to-video: the catalog prices its per-second models per option from their model pages (variants), not added. Add it by hand.',
+        ]);
+});
+
+it('rejects a text price the page labels as another modality', function () {
+    // Gemini prints "$2.00 (text) <br>$12.00 (audio)"; the extraction took $12 as the output price.
+    $page = '| Output price (including thinking tokens) | Free of charge | $2.00 (text) <br>$12.00 (audio) | long-x |';
+
+    $result = ($this->map)([
+        ['model_id' => 'long-x', 'tier' => 'standard', 'input' => 2, 'output' => 12, 'audio_output' => 2],
+    ], $page);
+
+    expect($result->skipped)->toContain("long-x: output 12 is the page's audio price, ignored.")
+        ->and($result->skipped)->toContain("long-x: audio output 2 is the page's text price, ignored.");
+});
+
 describe('PageText', function () {
     it('confirms a price on the table row naming the model', function () {
         $page = new PageText(implode("\n", [

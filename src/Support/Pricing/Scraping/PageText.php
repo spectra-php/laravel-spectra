@@ -81,6 +81,23 @@ final class PageText
     }
 
     /**
+     * Get the modality a line labels this amount with ("$12.00 (audio)" →
+     * "audio"), or null when it doesn't label it.
+     */
+    public static function modalityAfter(string $line, float $amount): ?string
+    {
+        preg_match_all('/(\d[\d,]*(?:\.\d+)?)\s*\(\s*(text|audio|image|video)\b/i', $line, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as [, $number, $modality]) {
+            if (abs((float) str_replace(',', '', $number) - $amount) < 0.0000001) {
+                return strtolower($modality);
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Get the unit a line prices this amount per when it isn't tokens or
      * characters ("$0.0004 /Min" → "min"), or null when it doesn't say.
      */
