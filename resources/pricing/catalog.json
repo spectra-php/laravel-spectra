@@ -1,5 +1,5 @@
 {
-    "generated_at": "2026-11-05T19:08:31+00:00",
+    "generated_at": "2026-11-09T08:47:47+00:00",
     "providers": {
         "anthropic": {
             "currency": "USD",
@@ -1546,6 +1546,21 @@
                             "price_per_unit": 8
                         }
                     ]
+                },
+                "fal-ai/z-image/turbo": {
+                    "type": "image",
+                    "pricing_unit": "megapixel",
+                    "capabilities": [
+                        "images"
+                    ],
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 0,
+                            "output_price": 0,
+                            "price_per_unit": 0.5
+                        }
+                    ]
                 }
             }
         },
@@ -2944,6 +2959,48 @@
                             "input_price": 0,
                             "output_price": 0,
                             "price_per_unit": 15
+                        }
+                    ]
+                },
+                "gemini-3.5-transcribe": {
+                    "type": "text",
+                    "pricing_unit": "tokens",
+                    "capabilities": [
+                        "text"
+                    ],
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 200,
+                            "output_price": 1200
+                        }
+                    ]
+                },
+                "gemini-3.5-transcribe-live": {
+                    "type": "text",
+                    "pricing_unit": "tokens",
+                    "capabilities": [
+                        "text"
+                    ],
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 350,
+                            "output_price": 2100
+                        }
+                    ]
+                },
+                "gemini-omni-1.2-flash": {
+                    "type": "text",
+                    "pricing_unit": "tokens",
+                    "capabilities": [
+                        "text"
+                    ],
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 150,
+                            "output_price": 900
                         }
                     ]
                 }
@@ -6972,6 +7029,23 @@
                             "input_price": 0,
                             "output_price": 0,
                             "price_per_unit": 50
+                        }
+                    ]
+                },
+                "gpt-6-cyber": {
+                    "type": "text",
+                    "pricing_unit": "tokens",
+                    "capabilities": [
+                        "text"
+                    ],
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 2000,
+                            "output_price": 10000,
+                            "cached_input_price": 200,
+                            "cache_write_5m_price": 2500,
+                            "cache_write_1h_price": 5000
                         }
                     ]
                 }
