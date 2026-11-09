@@ -40,3 +40,6 @@ jobs:
           branch: main
           commit_message: Update CHANGELOG
           file_pattern: CHANGELOG.md
+          commit_user_name: Ahmad Mayahi
+          commit_user_email: ahmad.mayahi@gmail.com
+          commit_author: Ahmad Mayahi <ahmad.mayahi@gmail.com>
