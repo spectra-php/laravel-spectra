@@ -208,7 +208,11 @@ it('records a server-sent-events stream with thinking and the flex tier', functi
         ->and($row->reasoning_tokens)->toBe(500)
         ->and($row->pricing_tier)->toBe('flex')
         ->and($row->response['content'])->toBe('Take the A10 and leave before 8 am.')
-        ->and($row->total_cost_in_cents)->toEqualWithDelta(0.16125, 0.000001);
+        ->and($row->total_cost_in_cents)->toEqualWithDelta(0.16125, 0.000001)
+        // The first token is timed on the same (frozen) clock as the start, not
+        // the wall clock: otherwise this is the days since 2026-10-15, which
+        // overflows PostgreSQL's integer column after 24.8 days.
+        ->and($row->time_to_first_token_ms)->toBe(0);
 });
 
 it('records a streamed JSON array (streamGenerateContent without alt=sse)', function () {

@@ -123,7 +123,7 @@ class StreamingTracker
         protected ?string $requestedModel = null,
         protected array $options = []
     ) {
-        $this->startTime = microtime(true);
+        $this->startTime = $this->now();
     }
 
     /**
@@ -366,7 +366,7 @@ class StreamingTracker
 
         // A whitespace-only delta is the first token too.
         if ($text !== null && $text !== '' && $this->firstTokenTime === null) {
-            $this->firstTokenTime = microtime(true);
+            $this->firstTokenTime = $this->now();
             $ttft = (int) (($this->firstTokenTime - $this->startTime) * 1000);
             $this->context?->setTimeToFirstToken($ttft);
         }
@@ -886,6 +886,18 @@ class StreamingTracker
     }
 
     /**
+     * Get the current time as a float timestamp, on the same clock as the context's started_at.
+     *
+     * The start time comes from that Carbon clock, so measuring the first token
+     * with microtime() would mix two clocks: with a frozen or travelled test
+     * clock the difference is days, not milliseconds.
+     */
+    protected function now(): float
+    {
+        return (float) now()->format('U.u');
+    }
+
+    /**
      * Set the usage manually, when it comes from a separate source.
      *
      * Accepts the TokenMetrics usage keys (prompt_tokens, completion_tokens,
@@ -907,7 +919,7 @@ class StreamingTracker
     {
         // Whitespace-only text is still the first token, so only '' is ignored.
         if ($this->firstTokenTime === null && $text !== '') {
-            $this->firstTokenTime = microtime(true);
+            $this->firstTokenTime = $this->now();
 
             if ($this->contextInitialized && $this->context !== null) {
                 $ttft = (int) (($this->firstTokenTime - $this->startTime) * 1000);
