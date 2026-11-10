@@ -1,5 +1,5 @@
 {
-    "generated_at": "2026-11-09T08:47:47+00:00",
+    "generated_at": "2026-11-10T13:20:02+00:00",
     "providers": {
         "anthropic": {
             "currency": "USD",
@@ -649,7 +649,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:14:46+00:00"
         },
         "cohere": {
             "currency": "USD",
@@ -936,7 +937,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:14:51+00:00"
         },
         "elevenlabs": {
             "currency": "USD",
@@ -1189,7 +1191,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:15:04+00:00"
         },
         "falai": {
             "currency": "USD",
@@ -1562,7 +1565,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:15:32+00:00"
         },
         "google": {
             "currency": "USD",
@@ -3021,8 +3025,45 @@
                             "output_price": 900
                         }
                     ]
+                },
+                "lyria-3-clip-preview": {
+                    "type": "text",
+                    "pricing_unit": "request",
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 0,
+                            "output_price": 0,
+                            "price_per_unit": 4
+                        }
+                    ]
+                },
+                "lyria-3-pro-preview": {
+                    "type": "text",
+                    "pricing_unit": "request",
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 0,
+                            "output_price": 0,
+                            "price_per_unit": 8
+                        }
+                    ]
+                },
+                "lyria-3.5": {
+                    "type": "text",
+                    "pricing_unit": "request",
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 0,
+                            "output_price": 0,
+                            "price_per_unit": 8
+                        }
+                    ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:17:51+00:00"
         },
         "groq": {
             "currency": "USD",
@@ -3409,7 +3450,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:18:05+00:00"
         },
         "mistral": {
             "currency": "USD",
@@ -4435,7 +4477,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:18:28+00:00"
         },
         "openai": {
             "currency": "USD",
@@ -7067,7 +7110,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:18:48+00:00"
         },
         "openrouter": {
             "currency": "USD",
@@ -7944,7 +7988,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:18:59+00:00"
         },
         "scaleway": {
             "currency": "EUR",
@@ -8434,7 +8479,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:19:21+00:00"
         },
         "xai": {
             "currency": "USD",
@@ -9267,7 +9313,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "scraped_at": "2026-11-10T13:20:02+00:00"
         }
     }
 }
