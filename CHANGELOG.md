@@ -2,6 +2,16 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## v4.1.2 - 2026-11-17
+
+Updates the bundled pricing catalog from the providers' pricing pages (#17).
+
+### What's Changed
+
+* Update the pricing catalog by @github-actions[bot] in https://github.com/spectra-php/laravel-spectra/pull/17
+
+**Full Changelog**: https://github.com/spectra-php/laravel-spectra/compare/v4.1.1...v4.1.2
+
 ## v4.1.1 - 2026-11-11
 
 Updates the bundled pricing catalog from the providers' pricing pages (#15).
