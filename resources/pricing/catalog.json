@@ -1,5 +1,5 @@
 {
-    "generated_at": "2026-11-10T13:20:02+00:00",
+    "generated_at": "2026-11-16T13:25:04+00:00",
     "providers": {
         "anthropic": {
             "currency": "USD",
@@ -563,6 +563,14 @@
                             "cache_write_5m_price": 31.25,
                             "cache_write_1h_price": 50,
                             "above_input_tokens": 100000
+                        },
+                        {
+                            "tier": "standard",
+                            "input_price": 50,
+                            "output_price": 250,
+                            "cache_write_5m_price": 100,
+                            "cache_write_1h_price": 5,
+                            "above_input_tokens": 200000
                         }
                     ]
                 },
@@ -650,7 +658,7 @@
                     ]
                 }
             },
-            "scraped_at": "2026-11-10T13:14:46+00:00"
+            "scraped_at": "2026-11-16T13:20:56+00:00"
         },
         "cohere": {
             "currency": "USD",
@@ -938,7 +946,7 @@
                     ]
                 }
             },
-            "scraped_at": "2026-11-10T13:14:51+00:00"
+            "scraped_at": "2026-11-16T13:21:02+00:00"
         },
         "elevenlabs": {
             "currency": "USD",
@@ -1192,7 +1200,7 @@
                     ]
                 }
             },
-            "scraped_at": "2026-11-10T13:15:04+00:00"
+            "scraped_at": "2026-11-16T13:21:50+00:00"
         },
         "falai": {
             "currency": "USD",
@@ -1566,7 +1574,7 @@
                     ]
                 }
             },
-            "scraped_at": "2026-11-10T13:15:32+00:00"
+            "scraped_at": "2026-11-16T13:22:05+00:00"
         },
         "google": {
             "currency": "USD",
@@ -1638,6 +1646,12 @@
                             "output_price": 3600,
                             "cached_input_price": 36,
                             "since": "2026-12-01"
+                        },
+                        {
+                            "tier": "standard",
+                            "input_price": 400,
+                            "output_price": 2000,
+                            "above_input_tokens": 200000
                         }
                     ]
                 },
@@ -3061,9 +3075,24 @@
                             "price_per_unit": 8
                         }
                     ]
+                },
+                "gemini-4-hydrogen": {
+                    "display_name": "Gemini 4 Hydrogen",
+                    "type": "text",
+                    "pricing_unit": "tokens",
+                    "capabilities": [
+                        "text"
+                    ],
+                    "tiers": [
+                        {
+                            "tier": "standard",
+                            "input_price": 150,
+                            "output_price": 750
+                        }
+                    ]
                 }
             },
-            "scraped_at": "2026-11-10T13:17:51+00:00"
+            "scraped_at": "2026-11-16T13:22:53+00:00"
         },
         "groq": {
             "currency": "USD",
@@ -3451,7 +3480,7 @@
                     ]
                 }
             },
-            "scraped_at": "2026-11-10T13:18:05+00:00"
+            "scraped_at": "2026-11-16T13:23:07+00:00"
         },
         "mistral": {
             "currency": "USD",
@@ -4478,7 +4507,7 @@
                     ]
                 }
             },
-            "scraped_at": "2026-11-10T13:18:28+00:00"
+            "scraped_at": "2026-11-16T13:23:20+00:00"
         },
         "openai": {
             "currency": "USD",
@@ -7111,7 +7140,7 @@
                     ]
                 }
             },
-            "scraped_at": "2026-11-10T13:18:48+00:00"
+            "scraped_at": "2026-11-16T13:24:21+00:00"
         },
         "openrouter": {
             "currency": "USD",
@@ -7989,7 +8018,7 @@
                     ]
                 }
             },
-            "scraped_at": "2026-11-10T13:18:59+00:00"
+            "scraped_at": "2026-11-16T13:24:31+00:00"
         },
         "scaleway": {
             "currency": "EUR",
@@ -8480,7 +8509,7 @@
                     ]
                 }
             },
-            "scraped_at": "2026-11-10T13:19:21+00:00"
+            "scraped_at": "2026-11-16T13:24:47+00:00"
         },
         "xai": {
             "currency": "USD",
@@ -9314,7 +9343,7 @@
                     ]
                 }
             },
-            "scraped_at": "2026-11-10T13:20:02+00:00"
+            "scraped_at": "2026-11-16T13:25:04+00:00"
         }
     }
 }
