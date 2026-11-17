@@ -16,6 +16,7 @@ use Spectra\Http\Controllers\Api\Dashboards\DeleteDashboardController;
 use Spectra\Http\Controllers\Api\Dashboards\PreviewDashboardController;
 use Spectra\Http\Controllers\Api\Dashboards\StoreDashboardController;
 use Spectra\Http\Controllers\Api\Dashboards\UpdateDashboardController;
+use Spectra\Http\Controllers\Api\DeleteTrackableBudgetController;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
 use Spectra\Http\Controllers\Api\ErrorsController;
 use Spectra\Http\Controllers\Api\Evaluations\AddDatasetExampleController;
@@ -43,12 +44,14 @@ use Spectra\Http\Controllers\Api\Playground\ShowPlaygroundCallController;
 use Spectra\Http\Controllers\Api\PromptsController;
 use Spectra\Http\Controllers\Api\ProvidersController;
 use Spectra\Http\Controllers\Api\RequestsController;
+use Spectra\Http\Controllers\Api\SaveTrackableBudgetController;
 use Spectra\Http\Controllers\Api\ScoresController;
 use Spectra\Http\Controllers\Api\ServeAudioController;
 use Spectra\Http\Controllers\Api\ServeImageController;
 use Spectra\Http\Controllers\Api\ShowConversationController;
 use Spectra\Http\Controllers\Api\ShowRequestController;
 use Spectra\Http\Controllers\Api\ShowTraceController;
+use Spectra\Http\Controllers\Api\ShowTrackableBudgetController;
 use Spectra\Http\Controllers\Api\ShowTrackableController;
 use Spectra\Http\Controllers\Api\StatsController;
 use Spectra\Http\Controllers\Api\TagsController;
@@ -97,6 +100,9 @@ Route::prefix('api')->group(function () {
     Route::get('/trackables', TrackablesController::class);
     Route::get('/trackables/view/{id}', ShowTrackableController::class);
     Route::get('/trackables/view/{id}/requests-by-date', TrackableRequestsByDateController::class);
+    Route::get('/trackables/view/{id}/budget', ShowTrackableBudgetController::class);
+    Route::put('/trackables/view/{id}/budget', SaveTrackableBudgetController::class);
+    Route::delete('/trackables/view/{id}/budget', DeleteTrackableBudgetController::class);
     Route::get('/providers', ProvidersController::class);
 
     // Maintenance: anyone who may view the dashboard sees the status; the

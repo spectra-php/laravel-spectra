@@ -428,8 +428,9 @@ onUnmounted(() => {
                                             {{ getInitials(trackable) }}
                                         </div>
                                         <div>
-                                            <div class="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                                                {{ getDisplayName(trackable) }}
+                                            <div class="flex items-center gap-2">
+                                                <span class="whitespace-nowrap font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{{ getDisplayName(trackable) }}</span>
+                                                <span v-if="trackable.has_budget" class="badge badge-secondary" v-tooltip="'A budget limits this trackable'">Budget</span>
                                             </div>
                                             <div v-if="trackable.trackable_email" class="text-xs text-gray-500 dark:text-gray-400">
                                                 {{ trackable.trackable_email }}

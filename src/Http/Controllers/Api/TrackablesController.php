@@ -15,6 +15,7 @@ use Spectra\Actions\Trackables\ResolveTopModels;
 use Spectra\Actions\Trackables\ResolveTrackableMetadata;
 use Spectra\Data\Responses\TrackablesResponse;
 use Spectra\Models\SpectraRequest;
+use Spectra\Support\Budget\TrackableBudgets;
 use Spectra\Support\DateRange;
 
 /**
@@ -37,6 +38,7 @@ class TrackablesController extends BaseApiController
         ResolveTrackableMetadata $resolveTrackableMetadata,
         FormatTrackablesList $formatTrackablesList,
         GetUserTrackableTypes $getUserTrackableTypes,
+        TrackableBudgets $budgets,
     ): TrackablesResponse {
         $dateRange = DateRange::fromRequest($request);
 
@@ -57,8 +59,11 @@ class TrackablesController extends BaseApiController
         $metadata = $resolveTrackableMetadata($pageItems);
         $filters = $getAvailableFilters();
 
+        // The budget mark is an extra: a failed lookup must not take the list down with it.
+        $budgeted = rescue(fn () => $budgets->activeKeys($pageItems), []);
+
         return new TrackablesResponse(
-            data: $formatTrackablesList($pageItems, $topModels, $metadata),
+            data: $formatTrackablesList($pageItems, $topModels, $metadata, $budgeted),
             current_page: $paginated->currentPage(),
             last_page: $paginated->lastPage(),
             total: $paginated->total(),

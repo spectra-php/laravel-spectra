@@ -670,6 +670,23 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Dashboard Budgets
+        |--------------------------------------------------------------------------
+        |
+        | Whether a trackable's budget may be set, changed and removed from its
+        | page on the dashboard. Doing so also needs the `manageSpectra` gate,
+        | which allows only the local environment unless you define it. Set
+        | this to false to keep budgets in your code only; the page then shows
+        | the budget read-only.
+        |
+        | Docs: https://spectraphp.com/budgets#dashboard
+        |
+        */
+
+        'budgets' => env('SPECTRA_DASHBOARD_BUDGETS', true),
+
+        /*
+        |--------------------------------------------------------------------------
         | Dashboard Playground
         |--------------------------------------------------------------------------
         |

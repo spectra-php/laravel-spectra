@@ -458,6 +458,8 @@ class SpectraServiceProvider extends ServiceProvider
         'dashboard.playground',
         'costs.pricing_path',
         'costs.cache',
+        // 4.2
+        'dashboard.budgets',
     ];
 
     /**

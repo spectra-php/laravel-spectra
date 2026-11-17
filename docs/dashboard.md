@@ -228,7 +228,9 @@ The **Users** screen is the same list with only the users: the trackables whose 
 
 <img class="screenshot" src="/images/dashboard/trackable-detail.png" alt="One user's usage" />
 
-Open a trackable to see its spend and requests over time, the providers and models it uses, and its latest requests. This is the page to check when one user's spend looks off, or before you set them a [budget](/budgets).
+Open a trackable to see its spend and requests over time, the providers and models it uses, and its latest requests. This is the page to check when one user's spend looks off.
+
+The **Budget** card shows the trackable's [budget](/budgets): each limit on spend, tokens or requests, with what is used against it. Users the `manageSpectra` gate allows can set, change, switch off and remove the budget there. See [Setting Budgets from the Dashboard](/budgets#dashboard).
 
 <a name="maintenance"></a>
 ## Maintenance

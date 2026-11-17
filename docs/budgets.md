@@ -164,6 +164,36 @@ $user->enableAiBudget();
 $user->removeAiBudget();
 ```
 
+<a name="dashboard"></a>
+## Setting Budgets from the Dashboard {#dashboard}
+
+You don't have to deploy code to change a budget. Every [trackable's page](/dashboard#trackable-details) on the dashboard has a **Budget** card. It shows each limit as a bar of what is used against it: this month's spend, today's requests, and so on. The periods are the budget's own, so the date range you picked for the page doesn't change them.
+
+To set or change the budget, click **Set budget** or **Edit**. Each limit is one row:
+
+<img class="screenshot" src="/images/dashboard/trackable-budget.png" alt="The budget form on a trackable's page: one row per limit with its type, period and amount" />
+
+- **Type**: `Spend` in your [currency](/costs#currency-conversion), `Tokens`, or `Requests`. A request is one AI call, so a chat message that makes three calls counts as three.
+- **Period**: per day, per week, per month, or all time. Requests can't have an all-time limit.
+- **Amount**: spend is typed in currency units (`20` for $20) and saved in whole cents.
+
+Add as many rows as you need, one per type and period. Two more options sit under the rows: **Block requests when a limit is reached** (a hard limit; untick it to only be notified) and **Budget is on** (untick it to keep the limits but stop checking them). **Remove budget** deletes it.
+
+The card and your code work on the same budget. One set with `configureAiBudget()` shows on the card and can be changed there, and one set on the card is what `getBudgetStatus()`, the middleware and the events use. Saving from the card keeps the budget's name, thresholds, and allowed providers and models, which can only be set in code. If your code saves the budget again later, for example when a customer changes plan, the limits it sets replace the ones set on the card.
+
+The trackables and users lists mark everyone whose budget is switched on with a **Budget** badge.
+
+> [!NOTE]
+> A hard limit blocks requests only on routes that use the [`spectra.budget` middleware](#middleware-enforcement). Without it, reaching a limit fires the [events](#events) but nothing is blocked.
+
+Anyone who can open the dashboard sees the card. Changing a budget also needs the `manageSpectra` gate, which allows only the `local` environment unless you define it (see [Dashboard Authorization](/installation#dashboard-authorization)):
+
+```php
+Gate::define('manageSpectra', fn ($user) => $user->isAdmin());
+```
+
+To keep budgets in your code only, set `dashboard.budgets` to `false` (`SPECTRA_DASHBOARD_BUDGETS=false`). The card then shows the budget read-only for everyone.
+
 <a name="middleware-enforcement"></a>
 ## Middleware Enforcement
 

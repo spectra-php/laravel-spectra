@@ -825,6 +825,18 @@ export interface TrackableListItem {
     top_model: string | null;
     trackable_name: string | null;
     trackable_email: string | null;
+    has_budget: boolean;
+}
+
+// The budget card on a trackable's page (TrackableBudgetResponse).
+export interface TrackableBudgetResponse {
+    exists: boolean;
+    is_active: boolean;
+    hard_limit: boolean;
+    limits: BudgetLimit[];
+    allowed_providers: string[];
+    allowed_models: string[];
+    can_manage: boolean;
 }
 
 export interface TrackablesSummaryResponse {
@@ -1195,12 +1207,15 @@ export interface DashboardCosts {
     by_model_type: { model_type: string; label: string; cost: number }[];
 }
 
-export interface DashboardBudgetLimit {
+// One limit of a budget with what is used against it; a cost is whole cents.
+export interface BudgetLimit {
     metric: 'cost' | 'tokens' | 'requests';
     period: 'daily' | 'weekly' | 'monthly' | 'total';
     used: number;
     limit: number;
 }
+
+export type DashboardBudgetLimit = BudgetLimit;
 
 export type DashboardWidgetSize = 'full' | 'half';
 

@@ -2,6 +2,20 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## v4.2.0 - Unreleased
+
+Spectra 4.2 lets you set a trackable's budget from the dashboard.
+
+#### Added
+
+- Budgets: a trackable's page on the dashboard has a Budget card. It shows each limit of the budget with what is used against it, whether the budget was set in code or on the dashboard. Users the `manageSpectra` gate allows can set, change, switch off and remove the budget there: one row per limit, with a type (spend in your currency, tokens or requests), a period (per day, week, month, or all time) and an amount. It is the same budget `configureAiBudget()` sets, so the app enforces what the card saves. See [Setting Budgets from the Dashboard](https://spectraphp.com/budgets#dashboard)
+- Dashboard: the trackables and users lists mark everyone whose budget is switched on with a Budget badge
+- Config: `dashboard.budgets` (`SPECTRA_DASHBOARD_BUDGETS`, on by default). Set it to `false` to keep budgets in your code only; the card then shows the budget read-only
+
+#### Upgrading
+
+Nothing to do: there is no migration. Changing a budget from the dashboard needs the `manageSpectra` gate, which allows only the `local` environment unless you define it.
+
 ## v4.1.2 - 2026-11-17
 
 Updates the bundled pricing catalog from the providers' pricing pages (#17).

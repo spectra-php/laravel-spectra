@@ -16,6 +16,7 @@ import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Money from '@/components/Money.vue';
 import RefreshButton from '@/components/RefreshButton.vue';
+import BudgetCard from './BudgetCard.vue';
 import type { DashboardConfigResponse, RequestByDate, TrackableDetail, TrackableDetailsResponse, TrackableRequest } from '@/types/api';
 
 const route = useRoute();
@@ -32,6 +33,7 @@ const loading = useLoading();
 const { isRefreshing, refresh } = useCardRefresh();
 
 const trackable = ref<TrackableDetail | null>(null);
+const budgetType = computed(() => (typeof route.query.type === 'string' ? route.query.type : ''));
 const requests = ref<TrackableRequest[]>([]);
 loading.value = true;
 
@@ -436,6 +438,9 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
+
+        <!-- Budget: keyed by the trackable, so opening another one reloads it -->
+        <BudgetCard v-if="budgetType" :key="`${budgetType}:${route.params.id}`" :type="budgetType" :id="String(route.params.id)" />
 
         <!-- Charts -->
         <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">

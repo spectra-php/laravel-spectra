@@ -107,18 +107,28 @@ class BudgetEnforcer
      */
     public function getUsage(Model $budgetable): BudgetUsage
     {
+        return $this->usageFor($budgetable->getMorphClass(), (string) $budgetable->getKey());
+    }
+
+    /**
+     * Get the usage recorded under a morph type and id for each budget
+     * period, for callers that have no model to hand (the dashboard, a
+     * trackable whose row is gone).
+     */
+    public function usageFor(string $morphType, string $id): BudgetUsage
+    {
         return new BudgetUsage(
-            dailyCost: $this->getCostForPeriod($budgetable, 'day'),
-            weeklyCost: $this->getCostForPeriod($budgetable, 'week'),
-            monthlyCost: $this->getCostForPeriod($budgetable, 'month'),
-            totalCostInCents: $this->getTotalCost($budgetable),
-            dailyTokens: $this->getTokensForPeriod($budgetable, 'day'),
-            weeklyTokens: $this->getTokensForPeriod($budgetable, 'week'),
-            monthlyTokens: $this->getTokensForPeriod($budgetable, 'month'),
-            totalTokens: $this->getTotalTokens($budgetable),
-            dailyRequests: $this->getRequestsForPeriod($budgetable, 'day'),
-            weeklyRequests: $this->getRequestsForPeriod($budgetable, 'week'),
-            monthlyRequests: $this->getRequestsForPeriod($budgetable, 'month'),
+            dailyCost: $this->getCostForPeriod($morphType, $id, 'day'),
+            weeklyCost: $this->getCostForPeriod($morphType, $id, 'week'),
+            monthlyCost: $this->getCostForPeriod($morphType, $id, 'month'),
+            totalCostInCents: $this->getTotalCost($morphType, $id),
+            dailyTokens: $this->getTokensForPeriod($morphType, $id, 'day'),
+            weeklyTokens: $this->getTokensForPeriod($morphType, $id, 'week'),
+            monthlyTokens: $this->getTokensForPeriod($morphType, $id, 'month'),
+            totalTokens: $this->getTotalTokens($morphType, $id),
+            dailyRequests: $this->getRequestsForPeriod($morphType, $id, 'day'),
+            weeklyRequests: $this->getRequestsForPeriod($morphType, $id, 'week'),
+            monthlyRequests: $this->getRequestsForPeriod($morphType, $id, 'month'),
         );
     }
 
@@ -201,11 +211,14 @@ class BudgetEnforcer
      */
     protected function reportSpend(Model $budgetable, SpectraBudget $budget): void
     {
+        $morphType = $budgetable->getMorphClass();
+        $id = (string) $budgetable->getKey();
+
         $usage = new BudgetUsage(
-            dailyCost: $budget->daily_limit > 0 ? $this->getCostForPeriod($budgetable, 'day') : 0,
-            weeklyCost: $budget->weekly_limit > 0 ? $this->getCostForPeriod($budgetable, 'week') : 0,
-            monthlyCost: $budget->monthly_limit > 0 ? $this->getCostForPeriod($budgetable, 'month') : 0,
-            totalCostInCents: $budget->total_limit > 0 ? $this->getTotalCost($budgetable) : 0,
+            dailyCost: $budget->daily_limit > 0 ? $this->getCostForPeriod($morphType, $id, 'day') : 0,
+            weeklyCost: $budget->weekly_limit > 0 ? $this->getCostForPeriod($morphType, $id, 'week') : 0,
+            monthlyCost: $budget->monthly_limit > 0 ? $this->getCostForPeriod($morphType, $id, 'month') : 0,
+            totalCostInCents: $budget->total_limit > 0 ? $this->getTotalCost($morphType, $id) : 0,
         );
 
         $this->checkThresholds($budgetable, $budget, $usage);
@@ -257,9 +270,12 @@ class BudgetEnforcer
      */
     protected function checkCostLimits(Model $budgetable, SpectraBudget $budget): void
     {
+        $morphType = $budgetable->getMorphClass();
+        $id = (string) $budgetable->getKey();
+
         if ($budget->daily_limit !== null && $budget->daily_limit > 0) {
             $dailyLimit = $budget->daily_limit;
-            $dailyCost = $this->getCostForPeriod($budgetable, 'day');
+            $dailyCost = $this->getCostForPeriod($morphType, $id, 'day');
             $this->checkAndDispatchThreshold($budgetable, $budget, 'daily', $dailyCost, $dailyLimit);
 
             if ($dailyCost >= $dailyLimit && $budget->hard_limit) {
@@ -269,7 +285,7 @@ class BudgetEnforcer
 
         if ($budget->weekly_limit !== null && $budget->weekly_limit > 0) {
             $weeklyLimit = $budget->weekly_limit;
-            $weeklyCost = $this->getCostForPeriod($budgetable, 'week');
+            $weeklyCost = $this->getCostForPeriod($morphType, $id, 'week');
             $this->checkAndDispatchThreshold($budgetable, $budget, 'weekly', $weeklyCost, $weeklyLimit);
 
             if ($weeklyCost >= $weeklyLimit && $budget->hard_limit) {
@@ -279,7 +295,7 @@ class BudgetEnforcer
 
         if ($budget->monthly_limit !== null && $budget->monthly_limit > 0) {
             $monthlyLimit = $budget->monthly_limit;
-            $monthlyCost = $this->getCostForPeriod($budgetable, 'month');
+            $monthlyCost = $this->getCostForPeriod($morphType, $id, 'month');
             $this->checkAndDispatchThreshold($budgetable, $budget, 'monthly', $monthlyCost, $monthlyLimit);
 
             if ($monthlyCost >= $monthlyLimit && $budget->hard_limit) {
@@ -289,7 +305,7 @@ class BudgetEnforcer
 
         if ($budget->total_limit !== null && $budget->total_limit > 0) {
             $totalLimit = $budget->total_limit;
-            $totalCost = $this->getTotalCost($budgetable);
+            $totalCost = $this->getTotalCost($morphType, $id);
             $this->checkAndDispatchThreshold($budgetable, $budget, 'total', $totalCost, $totalLimit);
 
             if ($totalCost >= $totalLimit && $budget->hard_limit) {
@@ -303,6 +319,9 @@ class BudgetEnforcer
      */
     protected function checkTokenLimits(Model $budgetable, SpectraBudget $budget): void
     {
+        $morphType = $budgetable->getMorphClass();
+        $id = (string) $budgetable->getKey();
+
         $periods = [
             'daily' => ['limit' => $budget->daily_token_limit, 'period' => 'day'],
             'weekly' => ['limit' => $budget->weekly_token_limit, 'period' => 'week'],
@@ -316,8 +335,8 @@ class BudgetEnforcer
             }
 
             $tokens = $config['period']
-                ? $this->getTokensForPeriod($budgetable, $config['period'])
-                : $this->getTotalTokens($budgetable);
+                ? $this->getTokensForPeriod($morphType, $id, $config['period'])
+                : $this->getTotalTokens($morphType, $id);
 
             if ($tokens >= $config['limit'] && $budget->hard_limit) {
                 $this->block(BudgetExceededException::tokenLimitExceeded($budgetable, $budget, $name, $config['limit'], $tokens));
@@ -330,6 +349,9 @@ class BudgetEnforcer
      */
     protected function checkRequestLimits(Model $budgetable, SpectraBudget $budget): void
     {
+        $morphType = $budgetable->getMorphClass();
+        $id = (string) $budgetable->getKey();
+
         $periods = [
             'daily' => ['limit' => $budget->daily_request_limit, 'period' => 'day'],
             'weekly' => ['limit' => $budget->weekly_request_limit, 'period' => 'week'],
@@ -341,7 +363,7 @@ class BudgetEnforcer
                 continue;
             }
 
-            $requests = $this->getRequestsForPeriod($budgetable, $config['period']);
+            $requests = $this->getRequestsForPeriod($morphType, $id, $config['period']);
 
             if ($requests >= $config['limit'] && $budget->hard_limit) {
                 $this->block(BudgetExceededException::requestLimitExceeded($budgetable, $budget, $name, $config['limit'], $requests));
@@ -465,43 +487,43 @@ class BudgetEnforcer
     }
 
     /**
-     * Get the model's spend since the start of the day, week or month, in whole cents.
+     * Get the spend recorded since the start of the day, week or month, in whole cents.
      */
-    protected function getCostForPeriod(Model $budgetable, string $period): int
+    protected function getCostForPeriod(string $morphType, string $id, string $period): int
     {
-        return $this->toWholeCents((float) $this->usageRows($budgetable, $this->periodStart($period))->sum('total_cost_in_cents'));
+        return $this->toWholeCents((float) $this->usageRows($morphType, $id, $this->periodStart($period))->sum('total_cost_in_cents'));
     }
 
     /**
-     * Get the model's spend across all requests, in whole cents.
+     * Get the spend recorded across all requests, in whole cents.
      */
-    protected function getTotalCost(Model $budgetable): int
+    protected function getTotalCost(string $morphType, string $id): int
     {
-        return $this->toWholeCents((float) $this->usageRows($budgetable)->sum('total_cost_in_cents'));
+        return $this->toWholeCents((float) $this->usageRows($morphType, $id)->sum('total_cost_in_cents'));
     }
 
     /**
-     * Get the prompt and completion tokens the model used since the start of the period.
+     * Get the prompt and completion tokens used since the start of the period.
      */
-    protected function getTokensForPeriod(Model $budgetable, string $period): int
+    protected function getTokensForPeriod(string $morphType, string $id, string $period): int
     {
-        return $this->sumTokens($this->usageRows($budgetable, $this->periodStart($period)));
+        return $this->sumTokens($this->usageRows($morphType, $id, $this->periodStart($period)));
     }
 
     /**
-     * Get the prompt and completion tokens the model used across all requests.
+     * Get the prompt and completion tokens used across all requests.
      */
-    protected function getTotalTokens(Model $budgetable): int
+    protected function getTotalTokens(string $morphType, string $id): int
     {
-        return $this->sumTokens($this->usageRows($budgetable));
+        return $this->sumTokens($this->usageRows($morphType, $id));
     }
 
     /**
-     * Get the number of requests the model made since the start of the period.
+     * Get the number of requests made since the start of the period.
      */
-    protected function getRequestsForPeriod(Model $budgetable, string $period): int
+    protected function getRequestsForPeriod(string $morphType, string $id, string $period): int
     {
-        $rows = $this->usageRows($budgetable, $this->periodStart($period));
+        $rows = $this->usageRows($morphType, $id, $this->periodStart($period));
 
         return $this->usesDailyStats() ? (int) $rows->sum('request_count') : $rows->count();
     }
@@ -519,24 +541,24 @@ class BudgetEnforcer
     }
 
     /**
-     * Get the rows that hold the model's usage, since a moment when given: its
-     * daily stats, which every budget period starts on a day of, or else its
-     * requests. Every saved call passes through here, so a heavy user's budget
+     * Get the rows that hold the usage recorded under a morph type and id,
+     * since a moment when given: the daily stats, which every budget period
+     * starts on a day of, or else the requests. Every saved call passes through here, so a heavy user's budget
      * must not cost more than a light one's.
      *
-     * The key is bound as a string: trackable_id is a string column, and MySQL
+     * The id arrives as a string: trackable_id is a string column, and MySQL
      * compares it with a number as doubles, which can't use the index.
      *
      * @return Builder<SpectraRequest>
      */
-    protected function usageRows(Model $budgetable, ?CarbonInterface $since = null): Builder
+    protected function usageRows(string $morphType, string $id, ?CarbonInterface $since = null): Builder
     {
         $onDailyStats = $this->usesDailyStats();
 
         return SpectraRequest::query()
             ->when($onDailyStats, fn (Builder $query) => $query->from('spectra_daily_stats'))
-            ->where('trackable_type', $budgetable->getMorphClass())
-            ->where('trackable_id', (string) $budgetable->getKey())
+            ->where('trackable_type', $morphType)
+            ->where('trackable_id', $id)
             ->when($since, fn (Builder $query, CarbonInterface $start) => $query->where($onDailyStats ? 'date' : 'created_at', '>=', $start));
     }
 

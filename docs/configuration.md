@@ -232,6 +232,7 @@ Configure the built-in SPA dashboard.
     'path'        => env('SPECTRA_PATH', 'spectra'),
     'middleware'   => ['web'],
     'maintenance' => env('SPECTRA_DASHBOARD_MAINTENANCE', true),
+    'budgets'     => env('SPECTRA_DASHBOARD_BUDGETS', true),
     'playground'  => [
         'enabled' => env('SPECTRA_PLAYGROUND_ENABLED', false),
         'timeout' => env('SPECTRA_PLAYGROUND_TIMEOUT', 120),
@@ -248,6 +249,7 @@ Configure the built-in SPA dashboard.
 | `path` | `string` | `spectra` | URI path where the dashboard is served. |
 | `middleware` | `array` | `['web']` | Middleware applied to dashboard routes. Add `'auth'` to require authentication. |
 | `maintenance` | `bool` | `true` | Allow the [Maintenance screen](/dashboard#maintenance) to prune, rebuild stats and pause recording. Running them also needs the `manageSpectra` gate. When `false`, the screen is read-only. |
+| `budgets` | `bool` | `true` | Allow a trackable's [budget to be set from its page](/budgets#dashboard). Changing one also needs the `manageSpectra` gate. When `false`, the page shows the budget read-only. |
 | `playground.enabled` | `bool` | `false` | Let the [Playground](/playground) send new requests, and stored calls again with edits, to a provider. Each run uses your API key and costs money. Using it also needs the `manageSpectra` gate. |
 | `playground.timeout` | `int` | `120` | How long a Playground run may wait for the provider, in seconds. |
 | `layout` | `string` | `full` | Which model types the dashboard displays. Options: `full`, `text`, `embedding`, `image`, `video`, `audio`. |

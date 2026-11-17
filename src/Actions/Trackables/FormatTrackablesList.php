@@ -9,21 +9,23 @@ use Spectra\Models\SpectraRequest;
 
 /**
  * Shapes one page of aggregated trackable rows into the JSON rows the
- * trackables list shows, joined with each row's top model and name.
+ * trackables list shows, joined with each row's top model and name, and
+ * whether it has a budget.
  */
 class FormatTrackablesList
 {
     /**
-     * Get the page of trackable totals as rows, with each one's top model and name.
+     * Get the page of trackable totals as rows, with each one's top model, name and budget mark.
      *
      * @param  Collection<int, SpectraRequest>  $pageItems
      * @param  array<string, string>  $topModels
      * @param  array<string, array<string, mixed>>  $metadata
+     * @param  array<string, true>  $budgeted  The `type:id` keys of the trackables with a budget switched on.
      * @return array<int, array<string, mixed>>
      */
-    public function __invoke(Collection $pageItems, array $topModels, array $metadata): array
+    public function __invoke(Collection $pageItems, array $topModels, array $metadata, array $budgeted = []): array
     {
-        return $pageItems->map(function (SpectraRequest $item) use ($topModels, $metadata) {
+        return $pageItems->map(function (SpectraRequest $item) use ($topModels, $metadata, $budgeted) {
             $key = "{$item->trackable_type}:{$item->trackable_id}";
 
             return [
@@ -41,6 +43,7 @@ class FormatTrackablesList
                 'top_model' => $topModels[$key] ?? null,
                 'trackable_name' => $metadata[$key]['name'] ?? null,
                 'trackable_email' => $metadata[$key]['email'] ?? null,
+                'has_budget' => isset($budgeted[$key]),
             ];
         })->toArray();
     }
