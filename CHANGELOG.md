@@ -2,9 +2,9 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
-## v4.2.0 - Unreleased
+## v4.2.0 - 2026-11-17
 
-Spectra 4.2 lets you set a trackable's budget from the dashboard.
+Spectra 4.2 lets you set a trackable's budget from the dashboard. Run `composer update spectra-php/laravel-spectra` to get it.
 
 #### Added
 
