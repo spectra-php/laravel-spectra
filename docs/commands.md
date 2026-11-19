@@ -1,11 +1,11 @@
 # Artisan Commands
 
-Spectra provides Artisan commands for installation, data retention, statistics maintenance, pausing recording and pricing updates. The dashboard's [Maintenance screen](/dashboard#maintenance) runs the same prune and rebuild; prices are checked and written only with `spectra:pricing-scrape`.
+Spectra provides Artisan commands for installation, data retention, statistics maintenance, pricing updates, pausing recording, alerts, error grouping and evaluations. The dashboard's [Maintenance screen](/dashboard#maintenance) runs the same prune and rebuild; prices are checked and written only with `spectra:pricing-scrape`.
 
 <a name="spectra-install"></a>
 ## `spectra:install`
 
-An interactive installer that publishes the config file and database migrations, and can run the migrations for you. Use it to set up Spectra after installing the Composer package, and to add new migrations after upgrading.
+An interactive installer that publishes the configuration file and database migrations, and can run the migrations for you. Use it to set up Spectra after installing the Composer package, and to add new migrations after upgrading.
 
 ```shell
 php artisan spectra:install
@@ -112,8 +112,8 @@ php artisan spectra:rebuild-stats [--from=] [--to=] [--yesterday]
 
 | Option | Description |
 | --- | --- |
-| `--from=` | Start date in `Y-m-d` format (e.g., `2026-01-01`) |
-| `--to=` | End date in `Y-m-d` format (e.g., `2026-01-31`) |
+| `--from=` | Start date in `Y-m-d` format (for example, `2026-01-01`) |
+| `--to=` | End date in `Y-m-d` format (for example, `2026-01-31`) |
 | `--yesterday` | Rebuild only yesterday's statistics |
 
 <a name="spectra-rebuild-stats-examples"></a>

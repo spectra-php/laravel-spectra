@@ -4,11 +4,11 @@ Metadata is structured key-value context you attach to tracked AI requests. Tags
 
 Use metadata for request context such as:
 
-- Tenant or organization IDs
+- Tenant or organization ids
 - Feature flags and experiment variants
 - Workflow or job identifiers
-- Batch processing IDs
-- Correlation IDs from external systems
+- Batch processing ids
+- Correlation ids from external systems
 
 <a name="tags-vs-metadata"></a>
 ## Tags vs Metadata
@@ -132,7 +132,7 @@ Streamed requests are marked with `is_streaming = true`.
 <a name="where-metadata-is-stored"></a>
 ## Where Metadata Is Stored
 
-Metadata is stored as JSON in the `spectra_requests.metadata` column, and it is included in the request detail API response (`GET /api/requests/{id}`).
+Metadata is stored as JSON in the `spectra_requests.metadata` column, and it is included in the request detail API response (`GET /spectra/api/requests/{id}`).
 
 If you build your own dashboards or exports, you can read the metadata there as structured JSON.
 

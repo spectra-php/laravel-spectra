@@ -134,7 +134,7 @@ class SupportAnswerEval extends Evaluation
 
 Then [run it](/evaluations#running-an-evaluation):
 
-```bash
+```shell
 php artisan spectra:eval SupportAnswerEval
 ```
 

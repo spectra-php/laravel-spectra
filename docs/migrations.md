@@ -1,6 +1,8 @@
 # Migrations
 
-Spectra uses standard Laravel migrations to create its tables for requests, budgets, daily statistics, and tags. Pricing lives in [PHP classes](/pricing) and needs no database tables.
+Spectra uses standard Laravel migrations to create its tables: requests, spans, scores, budgets, daily statistics, tags and the rest. Prices live in a [JSON file](/pricing) and need no database tables.
+
+The installer publishes them and offers to run them (see [Installation](/installation#install-the-package)). This page lists what each migration does, and what Spectra does until you have run it.
 
 <a name="schema-migrations"></a>
 ## Schema Migrations
@@ -48,6 +50,25 @@ php artisan vendor:publish --tag=spectra-migrations
 ```
 
 This copies the migration files to `database/migrations/`. By default, Laravel gives the copies the current date in their file names, so they run after your own migrations.
+
+<a name="custom-database-connection"></a>
+### Custom Database Connection
+
+All Spectra migrations use the `spectra.storage.connection` config value. To store Spectra data in a separate database, set the connection in `config/spectra.php`:
+
+```php
+'storage' => [
+    'connection' => 'spectra',
+],
+```
+
+Then run migrations on that connection:
+
+```shell
+php artisan migrate --database=spectra
+```
+
+`php artisan migrate:fresh` drops only the tables of your default connection, so the Spectra database keeps its tables while its migrations show as pending again. Spectra's migrations check for each table and column first and skip what is already there, so running them again is safe.
 
 <a name="v2-migration"></a>
 ## The 2.0 Migration {#v2-migration}
@@ -183,25 +204,6 @@ php artisan spectra:install
 ```
 
 Until it runs, a call made under a trace id that isn't a UUID (`Spectra::withTraceId('order-12345')`) isn't saved on PostgreSQL, and the scores of a conversation's or a prompt's traces are missing from those screens there (the query compares the two column types and fails). MySQL and SQLite accept the ids either way.
-
-<a name="custom-database-connection"></a>
-### Custom Database Connection
-
-All Spectra migrations use the `spectra.storage.connection` config value. To store Spectra data in a separate database, set the connection in `config/spectra.php`:
-
-```php
-'storage' => [
-    'connection' => 'spectra',
-],
-```
-
-Then run migrations on that connection:
-
-```shell
-php artisan migrate --database=spectra
-```
-
-`php artisan migrate:fresh` drops only the tables of your default connection, so the Spectra database keeps its tables while its migrations show as pending again. Spectra's migrations check for each table and column first and skip what is already there, so running them again is safe.
 
 <a name="stat-key-migration"></a>
 ## The Stat Key Migration {#stat-key-migration}

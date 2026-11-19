@@ -16,7 +16,7 @@ When a tracked request completes, Spectra works out its cost in these steps:
 1. **Reported cost.** If the provider sent the real cost in the response (OpenRouter, xAI), Spectra uses it. See [Reported Cost](#reported-cost).
 2. **Model identification.** Spectra prices the model the provider actually served (from the response, stored as `snapshot`) when the catalog knows it. Otherwise it prices the model you asked for. See [How Spectra Finds a Model](/pricing#model-lookup).
 3. **Pricing lookup.** Spectra looks up the provider, model, and [tier](#pricing-tiers) in the in-memory pricing catalog. The prompt size picks [long-context prices](/pricing#long-context-prices), and the request date picks [dated prices](/pricing#dated-prices).
-4. **Pricing unit resolution.** The `pricing_unit` on the model definition decides which formula to use.
+4. **Pricing unit resolution.** The model's `pricing_unit` in the catalog decides which formula to use.
 5. **Cost calculation.** The formula is applied to the extracted metrics and the prices, converted to your [reporting currency](#currency-conversion). Then the [cost multiplier](#cost-multiplier) and [tool call fees](#tool-call-fees) are applied.
 6. **Persistence.** The cost is stored in `prompt_cost`, `completion_cost`, and `total_cost_in_cents` on the request record.
 
@@ -27,7 +27,7 @@ Each model in the pricing catalog has a `pricing_unit` that decides how its cost
 
 | Unit | Used By | Calculation Basis |
 | --- | --- | --- |
-| `tokens` | LLMs, embeddings, GPT Image models, token-billed audio models | Per 1M tokens (separate input, cache, audio, image, and output prices) |
+| `tokens` | Text models, embeddings, GPT Image models, token-billed audio models | Per 1M tokens (separate input, cache, audio, image, and output prices) |
 | `image` | DALL-E, Stable Diffusion | Per image generated |
 | `megapixel` | fal.ai FLUX models | Per megapixel of output |
 | `video` | Video models billed per video | Per video generated |
@@ -124,7 +124,7 @@ Unit-based costs are stored in `total_cost_in_cents`. They have no prompt and co
 <a name="tool-call-fees"></a>
 ## Tool Call Fees
 
-Some providers charge for built-in tools, such as web search or code interpreter. Spectra counts these calls in the response and adds a fee for each one, using the provider's [`toolCallPricing()`](/pricing#tool-call-pricing). Tool call fees are added to `total_cost_in_cents` only, so the total can be larger than `prompt_cost + completion_cost`. The counts are stored in `tool_call_counts`.
+Some providers charge for built-in tools, such as web search or code interpreter. Spectra counts these calls in the response and adds a fee for each one, using the provider's [`tool_calls` prices](/pricing#tool-call-pricing). Tool call fees are added to `total_cost_in_cents` only, so the total can be larger than `prompt_cost + completion_cost`. The counts are stored in `tool_call_counts`.
 
 <a name="cost-multiplier"></a>
 ## Cost Multiplier

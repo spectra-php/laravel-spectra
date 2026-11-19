@@ -7,7 +7,7 @@ Spectra saves a row for every AI call, in your database. At a few calls a minute
 
 For a busy production app:
 
-```shell
+```ini
 # Save calls off the request, on a queue outside the database
 SPECTRA_QUEUE_ENABLED=true
 SPECTRA_QUEUE_CONNECTION=redis

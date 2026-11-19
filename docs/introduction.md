@@ -31,6 +31,7 @@ The rest of these docs use a handful of words from AI observability. Each has it
 | **Trace** | All the AI calls made for one piece of work: one HTTP request to your app, one queued job or one Artisan command. A support question that searches your documents, drafts a reply and checks it is one trace with several calls. See [Traces](/usage#traces). |
 | **Span** | One timed step inside a trace: a block of your code, a tool the model asked for, or the request or job itself. Spans nest, so a trace reads as a tree. See [Spans](/usage#spans). |
 | **Conversation** | A chat with many back-and-forth messages. Each **turn** is one user message and the calls made to answer it. See [Conversations](/usage#conversation-tracking). |
+| **Trackable** | The model a call is attributed to: the signed-in user by default, or a team, a project or any other Eloquent model you choose. Usage, costs and budgets are counted per trackable. See [User Attribution](/usage#user-attribution). |
 | **Tags** and **metadata** | Labels and key-value context you attach to calls, to filter and group them by feature, tenant or experiment. See [Tags](/tags) and [Metadata](/metadata). |
 | **Cost** | What a call cost, worked out from the usage the provider reported and a built-in price list. See [Costs](/costs) and [Pricing](/pricing). |
 | **Budget** | A spending or usage limit for one user, team or any other model, checked before a call runs. See [Budgets](/budgets). |

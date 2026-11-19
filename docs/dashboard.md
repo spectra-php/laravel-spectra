@@ -52,7 +52,7 @@ The `dashboard.layout` option narrows the dashboard to one model type, for examp
 
 <img class="screenshot" src="/images/dashboard/requests.png" alt="The requests list" />
 
-The requests list shows every tracked AI call: its model and type, its tags, its usage (tokens, images, characters or seconds), its cost, latency and status. Search by model, or paste a request ID, response ID or trace ID. Filter by model type, provider, tag, finish reason, trackable type (only the calls attributed to a `User`, a `Team`, ...) and more, and sort by time, cost, usage or latency.
+The requests list shows every tracked AI call: its model and type, its tags, its usage (tokens, images, characters or seconds), its cost, latency and status. Search by model, or paste a request id, response id or trace id. Filter by model type, provider, tag, finish reason, trackable type (only the calls attributed to a `User`, a `Team`, ...) and more, and sort by time, cost, usage or latency.
 
 <img class="screenshot" src="/images/dashboard/requests-filters.png" alt="The requests filters: model, status, tag, finish reason, tool calls, reasoning and trackable type" />
 
@@ -66,7 +66,7 @@ Open a request to see everything Spectra recorded about it:
 - **Cost**, split into input and output, **latency** with the time to first token for streamed responses, **tokens** in and out, and the **throughput** of the stream.
 - **Trace**: when the call is part of a [trace](/usage#traces) with more than one call, the other calls of the trace and a link to open it.
 - **Token usage**: input split into uncached tokens, cache reads and cache writes, and output split into the answer and reasoning, each with its cost.
-- **Details**: the request and response IDs, endpoint, finish reason, pricing tier, trace, conversation and source.
+- **Details**: the request and response ids, endpoint, finish reason, pricing tier, trace, conversation and source.
 - **Payload**: the stored response and request. Generated images, audio and video show in place when [media persistence](/configuration#media-persistence) is on.
 
 The payload shows only what your [storage settings](/configuration#storage) keep.
@@ -261,11 +261,11 @@ The dashboard follows your system theme. The moon and sun icon in the top bar sw
 <img class="screenshot" src="/images/dashboard/trace-detail-dark.png" alt="A trace timeline in dark mode" />
 
 <a name="demo-data"></a>
-## Trying It With Demo Data {#demo-data}
+## Trying It with Demo Data {#demo-data}
 
 To try the dashboard without sending any AI requests, clone the repository and build the workbench. It seeds a month of traffic across 9 providers and 8 users, recorded through the real tracking pipeline:
 
-```bash
+```shell
 composer install
 vendor/bin/testbench workbench:build
 vendor/bin/testbench serve

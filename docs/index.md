@@ -20,7 +20,7 @@ hero:
 
 features:
   - title: Automatic Tracking
-    details: Tracks AI requests from Laravel's HTTP client, the OpenAI PHP SDK, and raw Guzzle clients, with no code changes.
+    details: Tracks AI requests from Laravel's HTTP client and the OpenAI PHP SDK with no code changes, and from your own Guzzle clients with one middleware.
   - title: Multimodal Support
     details: Track text completions, embeddings, image generation, video generation, text-to-speech, and speech-to-text across all major AI providers in one place.
   - title: Multi-Unit Pricing

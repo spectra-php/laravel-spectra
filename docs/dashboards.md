@@ -163,7 +163,7 @@ Spectra has no login of its own. Viewers log in through your app:
 
 1. They open the link. If they aren't logged in, your app's `auth` middleware sends them to your login page.
 2. After logging in, your app sends them back. Your login must redirect with `redirect()->intended()`, as Laravel's starter kits do.
-3. Spectra checks that the logged-in user is the shared dashboard's trackable. Anyone else gets a 403, so forwarding the link gives nobody access.
+3. Spectra checks that the signed-in user is the shared dashboard's trackable. Anyone else gets a 403, so forwarding the link gives nobody access.
 
 Pausing a shared dashboard makes its link answer 404 until you turn it back on.
 

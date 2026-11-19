@@ -123,17 +123,18 @@ Some AI endpoints return media with expiring URLs. For example, DALL-E images ex
 | `media.disk` | `string\|null` | `null` | Laravel filesystem disk to store media on. `null` uses the default filesystem disk. In production, use `s3` or another cloud disk so every server can reach the files. |
 | `media.path` | `string` | `spectra` | Directory path within the disk. |
 
-> [!NOTE]
-> **Binary data is always stripped from stored requests and responses.** Whether or not media persistence is enabled, Spectra replaces inline base64-encoded data with `[stripped]` placeholders before saving requests and responses to the database. This keeps multi-megabyte base64 strings out of the `request` and `response` columns. Spectra strips these formats automatically:
-> - Any `data:` URI in a request body (the base64 image or audio file of a vision or audio prompt), wherever the provider puts it
-> - OpenAI DALL-E: `data[].b64_json`
-> - OpenAI Responses API: `output[].result` (image generation calls)
-> - Google Gemini: `candidates[].content.parts[].inlineData.data` (images and audio)
-> - Google Imagen: `generatedImages[].image.imageBytes`
->
-> To keep the actual media files, enable media persistence above. Spectra then decodes the files and stores them on disk, and the dashboard serves them from the `media_storage_path` column.
+::: info
+**Binary data is always stripped from stored requests and responses.** Whether or not media persistence is enabled, Spectra replaces inline base64-encoded data with `[stripped]` placeholders before saving requests and responses to the database. This keeps multi-megabyte base64 strings out of the `request` and `response` columns. Spectra strips these formats automatically:
+- Any `data:` URI in a request body (the base64 image or audio file of a vision or audio prompt), wherever the provider puts it
+- OpenAI DALL-E: `data[].b64_json`
+- OpenAI Responses API: `output[].result` (image generation calls)
+- Google Gemini: `candidates[].content.parts[].inlineData.data` (images and audio)
+- Google Imagen: `generatedImages[].image.imageBytes`
 
-Media files are stored as flat file paths in the `media_storage_path` JSON column (e.g. `["spectra/abc123/0.png", "spectra/abc123/1.png"]`). The dashboard serves images and audio directly from these paths via internal API routes. When [`spectra:prune`](/commands#spectra-prune) deletes a request, it deletes the request's stored media files too.
+To keep the actual media files, enable media persistence above. Spectra then decodes the files and stores them on disk, and the dashboard serves them from the `media_storage_path` column.
+:::
+
+Media files are stored as flat file paths in the `media_storage_path` JSON column (for example, `["spectra/abc123/0.png", "spectra/abc123/1.png"]`). The dashboard serves images and audio directly from these paths via internal API routes. When [`spectra:prune`](/commands#spectra-prune) deletes a request, it deletes the request's stored media files too.
 
 <a name="api-keys"></a>
 ## API Keys
@@ -182,8 +183,9 @@ Choose whether Spectra saves requests synchronously, after the HTTP response is 
 | **After Response** | `after_response: true` | Write after HTTP response is sent. The visitor doesn't wait, but the PHP worker stays busy until the write is done | Production web applications without queues |
 | **Queue** | `enabled: true` | Dispatch `PersistSpectraRequestJob` | High-volume production applications. Use Redis or another queue outside the database (see [Running at High Volume](/production#choose-how-calls-are-saved)) |
 
-> [!WARNING]
-> After-response mode only works during web requests. Console commands, queue workers, and scheduled tasks always persist synchronously unless queue mode is enabled.
+::: warning
+After-response mode only works during web requests. Console commands, queue workers, and scheduled tasks always persist synchronously unless queue mode is enabled.
+:::
 
 <a name="tracking-context"></a>
 ## Tracking Context
@@ -210,7 +212,7 @@ Choose what context Spectra captures automatically with each tracked request.
 | `auto_track_user` | `bool` | `true` | Automatically associate requests with the authenticated user via the polymorphic `trackable` relationship. A trackable you set yourself always wins over the signed-in user. |
 | `capture_ip` | `bool` | `true` | Store the client's IP address in the `ip_address` column. Disable for GDPR or CCPA compliance. |
 | `capture_user_agent` | `bool` | `true` | Store the client's user agent string in the `user_agent` column. |
-| `capture_request_id` | `bool` | `true` | Store a request ID for correlation with your logs in the `laravel_request_id` column. Uses the `X-Request-ID` header if present (cut to 255 characters), otherwise generates one. |
+| `capture_request_id` | `bool` | `true` | Store a request id for correlation with your logs in the `laravel_request_id` column. Uses the `X-Request-ID` header if present (cut to 255 characters), otherwise generates one. |
 | `capture_origin` | `bool` | `true` | Store where each call came from in the `origin` column: the queued job class, the Artisan command (`artisan reports:send`), or the route pattern of the HTTP request (`POST /chats/{chat}`). Only the pattern is stored, never the URL with its ids and query string. Env: `SPECTRA_CAPTURE_ORIGIN`. |
 | `root_spans` | `bool` | `true` | Give each HTTP request, queued job and Artisan command that makes AI calls a span of its own, with its calls and spans inside. Only units of work that made an AI call are stored. Needs `trace_per_request`: with it off, each call is a trace of its own and no root span is stored. Env: `SPECTRA_ROOT_SPANS`. See [Spans](/usage#spans). |
 | `tool_spans` | `bool` | `false` | Draw the tools a model asked for in the trace: when a call sends tool results back, a `tool` span per result, with its arguments and result. Tools run through `Spectra::tool()` are recorded either way. Env: `SPECTRA_TOOL_SPANS`. See [Tools](/tools#tools-the-model-asked-for). |
@@ -223,7 +225,7 @@ These values come from the current HTTP request. In Artisan commands and queue w
 <a name="dashboard"></a>
 ## Dashboard
 
-Configure the built-in SPA dashboard.
+Configure the built-in dashboard.
 
 ```php
 'dashboard' => [
@@ -244,7 +246,7 @@ Configure the built-in SPA dashboard.
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `domain` | `string\|null` | `null` | Optional subdomain for the dashboard (e.g., `spectra` serves it at `spectra.yourdomain.com`). |
+| `domain` | `string\|null` | `null` | Optional subdomain for the dashboard (for example, `spectra` serves it at `spectra.yourdomain.com`). |
 | `enabled` | `bool` | `true` | Enable or disable the web dashboard. Set to `false` for headless (API tracking only) mode. |
 | `path` | `string` | `spectra` | URI path where the dashboard is served. |
 | `middleware` | `array` | `['web']` | Middleware applied to dashboard routes. Add `'auth'` to require authentication. |
@@ -422,7 +424,7 @@ For the full list of built-in providers, see [Models](/models#supported-provider
 
 Add custom providers by extending `Provider` and adding an entry here. See [Custom Providers](/custom-providers) for a complete guide.
 
-Your published `providers` list and `costs.pricing` list are merged over the built-in ones: your entries win, and built-in entries you don't list stay active, so providers added in a later Spectra release work without republishing the config. Set an entry to `false` to turn a built-in off.
+Your published `providers` list is merged over the built-in one: your entries win, and built-in entries you don't list stay active, so providers added in a later Spectra release work without republishing the config. Set an entry to `false` to turn a built-in off.
 
 <a name="endpoint-urls"></a>
 ## Endpoint URLs
@@ -467,8 +469,9 @@ If your Azure endpoint uses a custom domain (for example, an API Management gate
 
 With `laravel-ai`, the host of `ai.providers.azure.url` (`AZURE_OPENAI_URL`) is detected the same way, so no Spectra config is needed.
 
-> [!NOTE]
-> The Azure AI model inference API (`/models/chat/completions`) serves models from many vendors and is not tracked.
+::: info
+The Azure AI model inference API (`/models/chat/completions`) serves models from many vendors and is not tracked.
+:::
 
 <a name="integrations"></a>
 ## Integrations
@@ -507,7 +510,7 @@ Configure external integrations. Spectra currently supports exporting traces to 
 
 Every environment variable Spectra supports, in one place:
 
-```bash
+```ini
 # Master switch
 SPECTRA_ENABLED=true
 

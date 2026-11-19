@@ -10,7 +10,7 @@ Spectra treats a prompt as a named template, and every edit of it as a new versi
 Spectra doesn't store or manage your prompts. You keep them where they are, in code, files or a database, and tell Spectra which one a call used.
 
 <a name="tagging-calls-with-a-prompt"></a>
-## Tagging Calls With a Prompt
+## Tagging Calls with a Prompt
 
 Wrap the code that sends the prompt in `Spectra::withPrompt()`. Every AI call inside the callback is tagged with the prompt's name and version, whichever way it is tracked: the HTTP client, the OpenAI SDK, Laravel AI or `Spectra::track()`:
 

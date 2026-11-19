@@ -3,7 +3,7 @@
 Spectra can export AI request data to external observability platforms over the OpenTelemetry Protocol (OTLP), so you see your AI calls next to the rest of your monitoring. Each tracked AI request becomes a span in your distributed tracing system, with its provider, model, token usage, cost, latency, and status.
 
 <a name="what-is-opentelemetry"></a>
-## What is OpenTelemetry?
+## What Is OpenTelemetry?
 
 [OpenTelemetry](https://opentelemetry.io/) (often abbreviated as OTel) is an open-source, vendor-neutral observability framework maintained by the Cloud Native Computing Foundation (CNCF). It defines a standard format for telemetry data (traces, metrics, and logs), and virtually every major observability platform supports it.
 
@@ -43,7 +43,7 @@ Enable the integration in `config/spectra.php` and provide the OTLP endpoint for
 
 Then set the environment variables:
 
-```bash
+```ini
 SPECTRA_OTEL_ENABLED=true
 SPECTRA_OTEL_ENDPOINT=http://localhost:4318/v1/traces
 ```
@@ -77,17 +77,18 @@ Spectra exports traces in standard OTLP HTTP format, which all major observabili
 | Honeycomb | Cloud | `https://api.honeycomb.io/v1/traces` |
 | Lightstep | Cloud | `https://ingest.lightstep.com:443/traces/otlp/v0.9` |
 
-> [!TIP]
-> The easiest way to test the OpenTelemetry integration locally is with Jaeger. Start a Jaeger instance with Docker:
->
-> ```shell
-> docker run -d --name jaeger \
->   -p 16686:16686 \
->   -p 4318:4318 \
->   jaegertracing/all-in-one:latest
-> ```
->
-> Set `SPECTRA_OTEL_ENDPOINT=http://localhost:4318/v1/traces` and open `http://localhost:16686` to view traces in the Jaeger UI.
+::: tip
+The easiest way to test the OpenTelemetry integration locally is with Jaeger. Start a Jaeger instance with Docker:
+
+```shell
+docker run -d --name jaeger \
+  -p 16686:16686 \
+  -p 4318:4318 \
+  jaegertracing/all-in-one:latest
+```
+
+Set `SPECTRA_OTEL_ENDPOINT=http://localhost:4318/v1/traces` and open `http://localhost:16686` to view traces in the Jaeger UI.
+:::
 
 <a name="authentication"></a>
 ## Authentication
@@ -136,32 +137,33 @@ OpenTelemetry export follows the same persistence mode as request storage, contr
 | `queue.after_response: true` | Exported after the HTTP response is sent to the client (no added latency for the user) |
 | Both `false` (default) | Exported synchronously after the AI response completes |
 
-> [!NOTE]
-> In non-HTTP contexts such as console commands and queue workers, `after_response` has no effect. Traces are always exported synchronously in those contexts unless queue mode is enabled.
+::: info
+In non-HTTP contexts such as console commands and queue workers, `after_response` has no effect. Traces are always exported synchronously in those contexts unless queue mode is enabled.
+:::
 
 <a name="trace-correlation"></a>
 ## Trace Correlation
 
-Spectra assigns a `trace_id` to each tracked request. The same ID appears in the Spectra dashboard and in the exported OpenTelemetry spans, so you can follow a single user action across multiple AI calls and external services.
+Spectra assigns a `trace_id` to each tracked request. The same id appears in the Spectra dashboard and in the exported OpenTelemetry spans, so you can follow a single user action across multiple AI calls and external services.
 
 <a name="automatic-trace-ids"></a>
-### Automatic Trace IDs
+### Automatic Trace Ids
 
-All AI calls of the same HTTP request, queued job, or Artisan command share one trace ID. A queued job dispatched during a request keeps the request's trace ID. Each exported span is a separate span inside that trace, so your backend shows the calls of one request together. See [Traces](/usage#traces).
+All AI calls of the same HTTP request, queued job, or Artisan command share one trace id. A queued job dispatched during a request keeps the request's trace id. Each exported span is a separate span inside that trace, so your backend shows the calls of one request together. See [Traces](/usage#traces).
 
 <a name="joining-an-incoming-trace"></a>
 ### Joining an Incoming Trace
 
-When the incoming HTTP request has a W3C [`traceparent`](https://www.w3.org/TR/trace-context/#traceparent-header) header, Spectra uses its trace ID and sets the caller's span as the parent of each AI span. Your gateway, proxy, or calling service then shows the AI calls nested under its own span.
+When the incoming HTTP request has a W3C [`traceparent`](https://www.w3.org/TR/trace-context/#traceparent-header) header, Spectra uses its trace id and sets the caller's span as the parent of each AI span. Your gateway, proxy, or calling service then shows the AI calls nested under its own span.
 
-The header's 32-character trace ID is stored as a UUID in the `trace_id` column (the same 128 bits), and the parent span ID in the `parent_span_id` column. The exported span uses the original hex value, so it matches the caller's trace.
+The header's 32-character trace id is stored as a UUID in the `trace_id` column (the same 128 bits), and the parent span id in the `parent_span_id` column. The exported span uses the original hex value, so it matches the caller's trace.
 
 Turn this off with `SPECTRA_USE_TRACEPARENT=false`.
 
 <a name="spans-and-parents"></a>
 ### Spans and Parents
 
-Each AI call is exported with its own stored span ID, and with the span it ran in as its parent: a `Spectra::span()` block, or the request, job or command it ran in (see [Spans](/usage#spans)). Those spans are exported too, as `INTERNAL` spans (`SERVER` for a request, `CONSUMER` for a job), with their attributes, so your backend shows the same tree as the dashboard. A [tool](/tools) is exported as `execute_tool {name}` with `gen_ai.operation.name` set to `execute_tool`, as the GenAI conventions name tool runs. The outermost span's parent is the incoming `traceparent` span.
+Each AI call is exported with its own stored span id, and with the span it ran in as its parent: a `Spectra::span()` block, or the request, job or command it ran in (see [Spans](/usage#spans)). Those spans are exported too, as `INTERNAL` spans (`SERVER` for a request, `CONSUMER` for a job), with their attributes, so your backend shows the same tree as the dashboard. A [tool](/tools) is exported as `execute_tool {name}` with `gen_ai.operation.name` set to `execute_tool`, as the GenAI conventions name tool runs. The outermost span's parent is the incoming `traceparent` span.
 
 A custom exporter receives AI calls through `RequestExporter::export()`. To receive the other spans as well, also implement `Spectra\Contracts\ExportsSpans`:
 
@@ -182,9 +184,9 @@ class MyExporter implements ExportsSpans, RequestExporter
 ```
 
 <a name="custom-trace-ids"></a>
-### Custom Trace IDs
+### Custom Trace Ids
 
-You can provide your own trace ID to integrate with an existing tracing system. Use a UUID, or a 32-character hex OpenTelemetry trace ID written as a UUID. Set it for the rest of the request or job with `Spectra::withTraceId($traceId)`, or for one call:
+You can provide your own trace id to integrate with an existing tracing system. Use a UUID, or a 32-character hex OpenTelemetry trace id written as a UUID. Set it for the rest of the request or job with `Spectra::withTraceId($traceId)`, or for one call:
 
 ```php
 $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($myTraceId) {
@@ -196,14 +198,14 @@ $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($myTraceId) {
 ```
 
 <a name="where-trace-ids-appear"></a>
-### Where Trace IDs Appear
+### Where Trace Ids Appear
 
 | System | Location |
 | --- | --- |
 | Spectra Dashboard | The **Trace** card on the request page, and the requests list filter |
 | OpenTelemetry | The span's `trace_id` attribute, visible in your backend's trace view |
 
-This gives you end-to-end tracing. A user clicks "Generate Summary", which triggers an API route that calls an AI model, writes to the database, and dispatches a queue job. All of these steps share one trace ID, which you can see in both Spectra and your observability platform.
+This gives you end-to-end tracing. A user clicks "Generate Summary", which triggers an API route that calls an AI model, writes to the database, and dispatches a queue job. All of these steps share one trace id, which you can see in both Spectra and your observability platform.
 
 <a name="span-attributes"></a>
 ## Span Name and Attributes {#span-attributes}
@@ -336,13 +338,13 @@ The `$data` array passed to `SpanBuilder::build()` holds the stored request colu
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `id` | `string` | Unique request ID |
-| `trace_id` | `?string` | Trace ID for correlation |
-| `response_id` | `?string` | Provider's response ID |
-| `conversation_id` | `?string` | Conversation ID, if set |
+| `id` | `string` | Unique request id |
+| `trace_id` | `?string` | Trace id for correlation |
+| `response_id` | `?string` | Provider's response id |
+| `conversation_id` | `?string` | Conversation id, if set |
 | `conversation_turn` | `?int` | Turn number in the conversation |
-| `provider` | `string` | Provider name (e.g. `openai`) |
-| `model` | `string` | The catalog display name of the requested model (e.g. `GPT-4o`), or its id when the catalog doesn't know it |
+| `provider` | `string` | Provider name (for example, `openai`) |
+| `model` | `string` | The catalog display name of the requested model (for example, `GPT-4o`), or its id when the catalog doesn't know it |
 | `snapshot` | `?string` | The provider's model id: the one the response returned, or the requested id when the response didn't name one |
 | `model_type` | `?string` | Classification: `text`, `embedding`, `image`, `tts`, `stt`, `video` |
 | `endpoint` | `?string` | API endpoint path |
@@ -356,7 +358,7 @@ The `$data` array passed to `SpanBuilder::build()` holds the stored request colu
 | `prompt_cost` | `float` | Prompt cost in cents |
 | `completion_cost` | `float` | Completion cost in cents |
 | `total_cost_in_cents` | `float` | Total cost in cents |
-| `currency` | `?string` | The currency of the costs (e.g. `USD`) |
+| `currency` | `?string` | The currency of the costs (for example, `USD`) |
 | `latency_ms` | `?int` | Request latency in milliseconds |
 | `time_to_first_token_ms` | `?int` | Time to the first token (streaming) |
 | `status_code` | `?int` | HTTP status code |

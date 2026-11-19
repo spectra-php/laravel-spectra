@@ -7,7 +7,7 @@ Every tracked request gets a **model type**. The model type decides which metric
 
 - OpenAI (including [Azure OpenAI](/configuration#azure-openai))
 - Anthropic
-- Google AI
+- Google (Gemini)
 - Groq
 - xAI
 - OpenRouter
@@ -94,7 +94,7 @@ Video models are priced **per second** of video or **per video**, depending on t
 <a name="text-to-speech"></a>
 ### Text-to-Speech
 
-TTS endpoints return binary audio (MP3, Opus, etc.) instead of JSON. The audio itself is not stored in the database. Spectra records only the request parameters and the extracted metrics.
+Text-to-speech (TTS) endpoints return binary audio (MP3, Opus, etc.) instead of JSON. The audio itself is not stored in the database. Spectra records only the request parameters and the extracted metrics.
 
 | Metric | Column | Description |
 | --- | --- | --- |
@@ -105,7 +105,7 @@ TTS models are priced **per million characters**, **per minute** of audio, or **
 <a name="speech-to-text"></a>
 ### Speech-to-Text
 
-STT requests send the audio file as multipart form data instead of JSON. Spectra handles this for you.
+Speech-to-text (STT) requests send the audio file as multipart form data instead of JSON. Spectra handles this for you.
 
 | Metric | Column | Description |
 | --- | --- | --- |

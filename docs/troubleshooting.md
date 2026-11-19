@@ -10,12 +10,12 @@ Common problems with Spectra, and how to fix them.
 **Checklist:**
 
 1. **Spectra is enabled.** Check that the master switch is on:
-   ```bash
+   ```ini
    SPECTRA_ENABLED=true
    ```
 
 2. **The watcher is enabled.** Automatic tracking needs the watcher:
-   ```bash
+   ```ini
    SPECTRA_WATCHER_ENABLED=true
    ```
 
@@ -35,7 +35,7 @@ Common problems with Spectra, and how to fix them.
 8. **Saving failed.** Spectra never throws saving errors into your app. They go to your exception handler, so check your error log. A common cause is a missing column after an upgrade (see [Migrations](/migrations#v2-migration)).
 
 <a name="requests-tracked-but-cost-is-zero"></a>
-## Requests Tracked But Cost Is Zero
+## Requests Tracked but Cost Is Zero
 
 **Symptoms:** Requests appear in the dashboard but `total_cost_in_cents` shows `0.000000`.
 
@@ -47,7 +47,7 @@ Common problems with Spectra, and how to fix them.
 
 3. **The pricing tier exists.** If you use a non-standard tier (such as `batch` or `flex`), the model needs a row for that tier; without one it bills at `standard`.
 
-4. **The pricing unit matches the metrics.** The `pricingUnit` on the model definition must match the metrics in the response. For example, a model with `pricingUnit('tokens')` requires non-null `prompt_tokens` and `completion_tokens` values.
+4. **The pricing unit matches the metrics.** The model's [`pricing_unit`](/pricing#pricing-units) in the catalog must match what the response reports. For example, a model priced per `tokens` costs zero when the response has no token counts.
 
 5. **Cost tracking is enabled.** Check the configuration:
    ```php
@@ -66,12 +66,12 @@ Common problems with Spectra, and how to fix them.
 **Checklist:**
 
 1. **The dashboard is enabled.** Check that the dashboard is not turned off:
-   ```bash
+   ```ini
    SPECTRA_DASHBOARD_ENABLED=true
    ```
 
 2. **Request persistence is on.** If `store_requests` is `false`, requests are tracked in memory but not saved to the database:
-   ```bash
+   ```ini
    SPECTRA_STORE_REQUESTS=true
    ```
 
@@ -152,12 +152,12 @@ This is expected in two cases:
 <a name="opentelemetry-export-not-appearing"></a>
 ## OpenTelemetry Export Not Appearing
 
-**Symptoms:** OTEL is enabled but no traces appear in your observability backend.
+**Symptoms:** OpenTelemetry export is enabled but no traces appear in your observability backend.
 
 **Checklist:**
 
-1. **OTEL is enabled** in the configuration:
-   ```bash
+1. **The export is enabled** in the configuration:
+   ```ini
    SPECTRA_OTEL_ENABLED=true
    ```
 
@@ -171,7 +171,7 @@ This is expected in two cases:
 4. **Export timing.** In after-response mode, traces are exported after the HTTP response. In console or queue contexts, they are exported synchronously. If traces show up from CLI commands but not from web requests, check that your server supports terminable middleware.
 
 5. **The timeout is long enough.** If the OTLP endpoint is remote or slow, increase the timeout:
-   ```bash
+   ```ini
    SPECTRA_OTEL_TIMEOUT=30
    ```
 
@@ -201,7 +201,7 @@ The stats are rebuilt only from requests that still exist. If you pruned old req
 **Checklist:**
 
 1. **Media persistence is enabled:**
-   ```bash
+   ```ini
    SPECTRA_MEDIA_ENABLED=true
    ```
 
@@ -238,12 +238,12 @@ The macros are registered whether Spectra is enabled or not: with `SPECTRA_ENABL
 **Solutions:**
 
 - **Enable queue persistence** to move database writes to background workers:
-  ```bash
+  ```ini
   SPECTRA_QUEUE_ENABLED=true
   ```
 
 - **Disable payload storage** if you don't need request and response bodies:
-  ```bash
+  ```ini
   SPECTRA_STORE_REQUEST_DATA=false
   SPECTRA_STORE_RESPONSES=false
   ```
@@ -324,4 +324,4 @@ This is expected. Warning, critical, and exceeded alerts fire once per budget, l
 - **A request has no Open in Playground button.** The Playground is off, or you don't have the `manageSpectra` gate.
 - **A call opens but Run is turned off.** The screen says why: it isn't a text call to a chat endpoint, its request body wasn't stored, or it went to a custom provider. See [What Can Be Opened](/playground#what-can-be-opened).
 - **It says no API key was found.** Set `spectra.api_keys.{provider}` in `config/spectra.php`. See [API Keys and Base URLs](/playground#api-keys-and-base-urls).
-- **The provider rejects a run that worked in your app.** The stored body may have lost something, or the call may need a header Spectra doesn't store. See [When a Run Differs From the Original](/playground#when-a-run-differs-from-the-original).
+- **The provider rejects a run that worked in your app.** The stored body may have lost something, or the call may need a header Spectra doesn't store. See [When a Run Differs from the Original](/playground#when-a-run-differs-from-the-original).

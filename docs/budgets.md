@@ -183,8 +183,9 @@ The card and your code work on the same budget. One set with `configureAiBudget(
 
 The trackables and users lists mark everyone whose budget is switched on with a **Budget** badge.
 
-> [!NOTE]
-> A hard limit blocks requests only on routes that use the [`spectra.budget` middleware](#middleware-enforcement). Without it, reaching a limit fires the [events](#events) but nothing is blocked.
+::: info
+A hard limit blocks requests only on routes that use the [`spectra.budget` middleware](#middleware-enforcement). Without it, reaching a limit fires the [events](#events) but nothing is blocked.
+:::
 
 Anyone who can open the dashboard sees the card. Changing a budget also needs the `manageSpectra` gate, which allows only the `local` environment unless you define it (see [Dashboard Authorization](/installation#dashboard-authorization)):
 

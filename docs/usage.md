@@ -1,9 +1,18 @@
 # Usage
 
+Spectra tracks most AI calls with no code from you. This page covers every way a call gets tracked, and the context you can attach to it: a user, a conversation, a trace, tags and metadata.
+
+| Your code calls the provider with | What to do |
+| --- | --- |
+| Laravel's HTTP client, the OpenAI PHP SDK, Laravel AI or Prism | Nothing. See [Automatic Tracking](#automatic-tracking). |
+| A Guzzle client of your own | Add [Spectra's middleware](#guzzle-middleware) to it. |
+| A proxy, or an endpoint Spectra doesn't know | Send the request with [`Http::withAITracking()`](#tracking-any-endpoint). |
+| Anything else | Wrap the call in [`Spectra::track()`](#manual-tracking), or a stream in [`Spectra::stream()`](#spectra-stream). |
+
 <a name="automatic-tracking"></a>
 ## Automatic Tracking
 
-Spectra tracks outgoing AI requests automatically. If you call a supported AI provider with the [OpenAI PHP SDK](https://github.com/openai-php/client), [Laravel AI](https://github.com/laravel/ai), [Prism PHP](https://github.com/prism-php/prism), [Guzzle](https://github.com/guzzle/guzzle), or [Laravel's HTTP client](https://laravel.com/docs/http-client), Spectra detects and tracks the request without any code changes. There is nothing to configure, wrap, or annotate. Tracking starts as soon as you install the package, and it covers [streamed responses](#streaming) too.
+Spectra tracks outgoing AI requests automatically. If you call a supported AI provider with [Laravel's HTTP client](https://laravel.com/docs/http-client), the [OpenAI PHP SDK](https://github.com/openai-php/client), [Laravel AI](https://github.com/laravel/ai) or [Prism PHP](https://github.com/prism-php/prism), Spectra detects and tracks the request without any code changes. There is nothing to configure, wrap, or annotate. Tracking starts as soon as you install the package, and it covers [streamed responses](#streaming) too.
 
 For Laravel's HTTP client, Spectra adds itself as global middleware. Any request sent through the `Http` facade to a known AI provider host (such as `api.openai.com`, `api.anthropic.com`, `api.groq.com`, or any other registered provider) is tracked. The middleware finds the provider from the request hostname, checks that the endpoint is trackable (for example, `/v1/chat/completions` or `/v1/embeddings`), and then reads the usage metrics from the response. It never reads a response body before your code does, unless the body can be rewound.
 
@@ -49,10 +58,16 @@ $response = Prism::text()
 echo $response->text;
 ```
 
-Spectra records provider errors too. Any response outside 200–299 (a 4xx, a 5xx, or an unfollowed 3xx), or one with no status code, is stored as a failed request, with the provider's error message in the `error_message` column. So is an error the provider reports inside an HTTP 200: an async job that ends `failed` (a Replicate prediction, an OpenAI background response, an OpenRouter video) or a stream that breaks off keeps its 200 status code, but is stored with the error and counts as failed in every number. A connection failure is recorded and still thrown to your code. Saving a tracked request never throws into your application: if saving fails, the error goes to your exception handler.
+Spectra records failures too. A call is stored as a failed request, with the provider's error message in the `error_message` column, when:
 
-> [!TIP]
-> Automatic tracking is on whenever `spectra.watcher.enabled` is `true` (the default). It works for requests made through Laravel's `Http` facade, the OpenAI PHP SDK, and any library built on either of them. Direct `curl` calls and other HTTP libraries are not tracked. Use the [Guzzle middleware](#guzzle-middleware) or [manual tracking](#manual-tracking) for those.
+- **The response has a status outside 200–299** (a 4xx, a 5xx, or an unfollowed 3xx), or no status code.
+- **The provider reports an error inside an HTTP 200**: an async job that ends `failed` (a Replicate prediction, an OpenAI background response, an OpenRouter video), or a stream that breaks off. The call keeps its 200 status code, but counts as failed in every number.
+
+A connection failure is recorded and still thrown to your code. Saving a tracked request never throws into your application: if saving fails, the error goes to your exception handler.
+
+::: tip
+Automatic tracking is on whenever `spectra.watcher.enabled` is `true` (the default). It works for requests made through Laravel's `Http` facade, the OpenAI PHP SDK, and any library built on either of them. Direct `curl` calls and other HTTP libraries are not tracked. Use the [Guzzle middleware](#guzzle-middleware) or [manual tracking](#manual-tracking) for those.
+:::
 
 <a name="guzzle-middleware"></a>
 ## Guzzle Middleware
@@ -116,7 +131,7 @@ A request sent with `withAITracking()` is tracked once. The global middleware le
 <a name="manual-tracking"></a>
 ## Manual Tracking
 
-For full control over what gets tracked, use `Spectra::track()`. It wraps any callable in a tracking context, so you can attach tags, a user, a conversation ID, and custom metadata. The callback receives a `RequestContext` that you use to add to the tracked record.
+For full control over what gets tracked, use `Spectra::track()`. It wraps any callable in a tracking context, so you can attach tags, a user, a conversation id, and custom metadata. The callback receives a `RequestContext` that you use to add to the tracked record.
 
 ```php
 use Spectra\Facades\Spectra;
@@ -147,7 +162,7 @@ When `tracking.auto_track_user` is enabled (the default), Spectra links each tra
 
 <img class="screenshot" src="/images/dashboard/trackable-detail.png" alt="One user's usage and spend in the dashboard" />
 
-You can also assign a different trackable model, for example to attribute requests to a team, project, or organization instead of the logged-in user. A trackable you set yourself (with `forTrackable()`, `Spectra::forUser()`, or the `trackable_type` / `trackable_id` options) always wins over the signed-in user:
+You can also assign a different trackable model, for example to attribute requests to a team, project, or organization instead of the signed-in user. A trackable you set yourself (with `forTrackable()`, `Spectra::forUser()`, or the `trackable_type` / `trackable_id` options) always wins over the signed-in user:
 
 ```php
 $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($team) {
@@ -165,7 +180,7 @@ The trackable type is stored as the model's morph alias (`$model->getMorphClass(
 <a name="conversation-tracking"></a>
 ### Conversation Tracking
 
-A conversation is a chat with many back-and-forth messages. Each **turn** is one user message and everything your app did to answer it: the chat call, the tools it ran and the embeddings it looked up. Attach a conversation ID and a turn number to the calls, and the dashboard groups them into a transcript you can read. They are stored in the `conversation_id` and `conversation_turn` columns:
+A conversation is a chat with many back-and-forth messages. Each **turn** is one user message and everything your app did to answer it: the chat call, the tools it ran and the embeddings it looked up. Attach a conversation id and a turn number to the calls, and the dashboard groups them into a transcript you can read. They are stored in the `conversation_id` and `conversation_turn` columns:
 
 ```php
 $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($conversationId, $turn) {
@@ -205,7 +220,7 @@ The transcript reads the stored request and response, so it needs `store_prompts
 <a name="request-metadata"></a>
 ### Request Metadata
 
-Use metadata for structured request context (tenant IDs, workflow IDs, experiment variants, batch IDs, and more):
+Use metadata for structured request context (tenant ids, workflow ids, experiment variants, batch ids, and more):
 
 ```php
 $result = Spectra::track('openai', 'gpt-4o', function ($ctx) use ($tenantId) {
@@ -292,8 +307,9 @@ foreach ($stream as $response) {
 }
 ```
 
-> [!IMPORTANT]
-> When you stream from the OpenAI Chat Completions API (`/v1/chat/completions`), you must include `'stream_options' => ['include_usage' => true]` in your request. Without it, OpenAI does not send token usage in the stream, and Spectra records zero tokens and zero cost. The Responses API (`/v1/responses`) doesn't need this, because it always includes usage in the `response.completed` event.
+::: warning
+When you stream from the OpenAI Chat Completions API (`/v1/chat/completions`), you must include `'stream_options' => ['include_usage' => true]` in your request. Without it, OpenAI does not send token usage in the stream, and Spectra records zero tokens and zero cost. The Responses API (`/v1/responses`) doesn't need this, because it always includes usage in the `response.completed` event.
+:::
 
 <a name="streamed-image-generation"></a>
 ### Streamed Image Generation (OpenAI Responses API) {#streamed-image-generation}
@@ -360,8 +376,9 @@ $tracker->setUsage([
 $tracker->finish();
 ```
 
-> [!NOTE]
-> **How Spectra stores streaming responses.** For a normal response, Spectra stores the full API response body. For a streamed response, it stores only the accumulated text, not the individual stream chunks. This is on purpose: a stream can produce hundreds or thousands of chunks, and storing each raw chunk as JSON would make huge database rows. The `response_id` of a streamed request comes from the first chunk that has an ID (for example, `chatcmpl-...` for OpenAI or `msg_...` for Anthropic).
+::: info
+**How Spectra stores streaming responses.** For a normal response, Spectra stores the full API response body. For a streamed response, it stores only the accumulated text, not the individual stream chunks. This is on purpose: a stream can produce hundreds or thousands of chunks, and storing each raw chunk as JSON would make huge database rows. The `response_id` of a streamed request comes from the first chunk that has an ID (for example, `chatcmpl-...` for OpenAI or `msg_...` for Anthropic).
+:::
 
 <a name="traces"></a>
 ## Traces
@@ -469,7 +486,11 @@ $answer = Spectra::span('answer-question', function () use ($question) {
 
 **Tools.** Run a tool the model asked for through `Spectra::tool()` to draw it as a `tool` span with its arguments and result, or turn on `tool_spans` to draw the tools of an agent loop from the results it sends back. See [Tools](/tools).
 
-**Root spans.** Each HTTP request, queued job and Artisan command that makes an AI call gets a span of its own, named by its origin, with its calls and spans inside. A job's span sits under the span that dispatched it, so a trace reads request, job, call. A request, job or command that makes no AI call stores nothing, unless a job it queued does: then the job also saves the spans it came from, so the tree has no gap (a request that queues a job that stores a message and queues its analysis reads request, job, job, call). Such a span is marked `spectra.inferred` in its attributes and ends when it queued the job, since nothing recorded its real end. Turn root spans off with `root_spans` (see [Configuration](/configuration#tracking-context)). They need `trace_per_request`, the default: with it off, each call is a trace of its own and no root span is stored.
+**Root spans.** Each HTTP request, queued job and Artisan command that makes an AI call gets a span of its own, named by its origin, with its calls and spans inside. A job's span sits under the span that dispatched it, so a trace reads request, job, call.
+
+A request, job or command that makes no AI call stores nothing, with one exception: when a job it queued makes one. That job then also saves the spans it came from, so the tree has no gap. For example, a request queues a job that stores a message and queues its analysis, and the analysis calls a model: the trace reads request, job, job, call. A span saved this way is marked `spectra.inferred` in its attributes and ends when it queued the job, since nothing recorded its real end.
+
+Turn root spans off with `root_spans` (see [Configuration](/configuration#tracking-context)). They need `trace_per_request`, the default: with it off, each call is a trace of its own and no root span is stored.
 
 Spans are stored in the `spectra_spans` table. They are never billed or counted as requests, and `spectra:prune` deletes them with the requests. The trace page draws the tree: each span with its children indented under it. In the trace screenshot above, the embedding call sits inside the `retrieve-context` span, and the trace is named after the `App\Jobs\GenerateWeeklyDigest` job it ran in. The Trace card above shows the root span too: the `POST /api/chats/{chat}/messages` request, with the calls and tools inside it.
 
@@ -573,5 +594,6 @@ $response = Http::withoutAITracking()
 
 The `withAITracking()` and `withoutAITracking()` macros do not send any extra header to the provider. If you set the `X-Spectra-Manual-Tracking` header yourself, the global middleware still skips that request.
 
-> [!TIP]
-> Spectra only tracks known endpoints such as `/v1/chat/completions` and `/v1/embeddings`. Endpoints like `/v1/models` or health checks are never tracked, so you only need `withoutAITracking()` to skip an endpoint that would otherwise be tracked.
+::: tip
+Spectra only tracks known endpoints such as `/v1/chat/completions` and `/v1/embeddings`. Endpoints like `/v1/models` or health checks are never tracked, so you only need `withoutAITracking()` to skip an endpoint that would otherwise be tracked.
+:::

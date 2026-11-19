@@ -127,7 +127,7 @@ A missing price works like a missing parameter above: it falls back, or counts a
 <a name="examples"></a>
 ## Examples
 
-**Token-based LLM with multiple tiers:**
+**Token-based text model with several tiers:**
 
 ```json
 "gpt-4o": {
@@ -339,7 +339,7 @@ When a rate is missing, Spectra counts the prices 1:1 and logs a warning once pe
 
 To change a price, add a model the catalog doesn't have yet (a fine-tune, a new release), or price a provider of your own, write a pricing file and point Spectra at it in your `.env` file:
 
-```bash
+```ini
 SPECTRA_PRICING_PATH=resources/spectra/pricing.json
 ```
 
@@ -405,8 +405,8 @@ The keys match the tool call types Spectra counts in the response (for example, 
 
 Add your Firecrawl API key to your `.env` file:
 
-```bash
-FIRECRAWL_API_KEY=fc-...
+```ini
+SPECTRA_FIRECRAWL_API_KEY=fc-...
 SPECTRA_PRICING_PATH=resources/spectra/pricing.json
 ```
 
@@ -478,17 +478,19 @@ Each provider's section lists its pages in `sources`; they are the pages in the 
 
 | Config key | Env | Default | Description |
 | --- | --- | --- | --- |
-| `costs.firecrawl.api_key` | `FIRECRAWL_API_KEY` | none | Your Firecrawl API key |
-| `costs.firecrawl.url` | `FIRECRAWL_API_URL` | `https://api.firecrawl.dev/v2` | The API base URL, for a self-hosted Firecrawl |
-| `costs.firecrawl.timeout` | `FIRECRAWL_TIMEOUT` | `180` | Seconds to wait for each page (Firecrawl allows up to 300) |
-| `costs.firecrawl.providers` | `SPECTRA_SCRAPE_PROVIDERS` | none | Comma-separated providers to scrape when you don't name any, e.g. `openai,anthropic` |
+| `costs.firecrawl.api_key` | `SPECTRA_FIRECRAWL_API_KEY` | none | Your Firecrawl API key |
+| `costs.firecrawl.url` | `SPECTRA_FIRECRAWL_API_URL` | `https://api.firecrawl.dev/v2` | The API base URL, for a self-hosted Firecrawl |
+| `costs.firecrawl.timeout` | `SPECTRA_FIRECRAWL_TIMEOUT` | `180` | Seconds to wait for each page (Firecrawl allows up to 300) |
+| `costs.firecrawl.providers` | `SPECTRA_SCRAPE_PROVIDERS` | none | Comma-separated providers to scrape when you don't name any, for example `openai,anthropic` |
+
+The unprefixed `FIRECRAWL_API_KEY`, `FIRECRAWL_API_URL` and `FIRECRAWL_TIMEOUT` work too, when the `SPECTRA_` names are not set.
 
 <a name="caching"></a>
 ## Caching
 
 The pricing files are read and indexed once per process. With the cache on (the default), the index is kept in your cache store instead, so a PHP-FPM request doesn't parse the files again. The cached index is rebuilt when a pricing file changes, when the package is updated, and after `spectra:pricing-scrape` writes a file.
 
-```bash
+```ini
 SPECTRA_PRICING_CACHE=true          # default
 SPECTRA_PRICING_CACHE_STORE=redis   # default: your default cache store
 SPECTRA_PRICING_CACHE_TTL=86400     # seconds; 0 keeps it until a file changes
@@ -516,7 +518,7 @@ Provider prices change, and new models ship often. The bundled catalog follows t
 
 To pick up new prices in your app:
 
-```bash
+```shell
 composer update spectra-php/laravel-spectra
 ```
 
@@ -529,7 +531,7 @@ A price change can take a day to be found and a little longer to be reviewed. To
 
 Maintainers can run the same refresh locally in the package repository:
 
-```bash
+```shell
 composer pricing-scrape
 ```
 
@@ -555,7 +557,7 @@ It runs `spectra:pricing-scrape --all` against `resources/pricing/catalog.json`,
 
 To spot prices that need a review, the repository has a maintainer command (not shipped with the package) that compares the catalog with the community-maintained [models.dev](https://models.dev) catalog:
 
-```bash
+```shell
 vendor/bin/testbench spectra:pricing-drift
 ```
 

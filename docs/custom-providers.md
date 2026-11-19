@@ -12,8 +12,9 @@ When Spectra intercepts an outgoing HTTP request, it matches it against the conf
 
 Once a request matches, the provider's handler extracts normalized metrics from the response.
 
-> [!TIP]
-> Spectra only tracks usage endpoints: requests that consume tokens, generate media, or produce other billable output. Other endpoints, such as listing models (`/v1/models`), health checks, or configuration lookups, are not tracked, even on a recognized provider host.
+::: tip
+Spectra only tracks usage endpoints: requests that consume tokens, generate media, or produce other billable output. Other endpoints, such as listing models (`/v1/models`), health checks, or configuration lookups, are not tracked, even on a recognized provider host.
+:::
 
 <a name="architecture-overview"></a>
 ## Architecture Overview
@@ -147,7 +148,7 @@ The `Provider` base class requires three abstract methods:
 
 | Method | Purpose |
 | --- | --- |
-| `getProvider()` | Returns the provider's identifier (e.g., `'mistral'`). Used as the stored `provider` value in the database. |
+| `getProvider()` | Returns the provider's identifier (for example, `'mistral'`). Used as the stored `provider` value in the database. |
 | `getHosts()` | Returns hostnames to match against. Supports `{placeholder}` patterns for variable segments. |
 | `handlers()` | Returns an array of `Handler` instances. The provider routes each request to the matching handler. |
 
@@ -196,8 +197,9 @@ class MyProvider extends Provider
 }
 ```
 
-> [!NOTE]
-> When each handler targets its own endpoints, order does not matter. Spectra checks all handlers and picks the one whose endpoint matches. When several handlers share an endpoint (for example, OpenAI's `/v1/responses` serves both text and image generation), implement the `MatchesResponseShape` interface on the specialized handlers so Spectra can tell them apart by the response body. List each specialized handler after the generic handler it specializes: Spectra checks later handlers first and falls back to the first matching handler.
+::: info
+When each handler targets its own endpoints, order does not matter. Spectra checks all handlers and picks the one whose endpoint matches. When several handlers share an endpoint (for example, OpenAI's `/v1/responses` serves both text and image generation), implement the `MatchesResponseShape` interface on the specialized handlers so Spectra can tell them apart by the response body. List each specialized handler after the generic handler it specializes: Spectra checks later handlers first and falls back to the first matching handler.
+:::
 
 <a name="optional-handler-interfaces"></a>
 ## Optional Handler Interfaces
@@ -287,8 +289,9 @@ class MyChatHandler implements Handler, ExtractsModelFromResponse
 }
 ```
 
-> [!NOTE]
-> `extractModelFromResponse()` is not part of the base `Handler` interface. You opt in by implementing `ExtractsModelFromResponse`. If your handler does not implement this interface, Spectra falls back to `ExtractsModelFromRequest` (below) or the `model` field in the request body.
+::: info
+`extractModelFromResponse()` is not part of the base `Handler` interface. You opt in by implementing `ExtractsModelFromResponse`. If your handler does not implement this interface, Spectra falls back to `ExtractsModelFromRequest` (below) or the `model` field in the request body.
+:::
 
 <a name="extracts-model-from-request"></a>
 ### `ExtractsModelFromRequest` {#extracts-model-from-request}
@@ -763,8 +766,9 @@ To track costs, add your provider to [your pricing file](/pricing#your-own-price
 
 With `sources`, [`spectra:pricing-scrape`](/pricing#scraping-prices) keeps the provider's prices current from its pricing page. See [The Pricing File](/pricing#the-pricing-file) for every field.
 
-> [!TIP]
-> All prices in the pricing catalog are stored in **cents**. For token-based models, prices are in cents per million tokens (for example, `200` means $2.00 per million tokens). For unit-based models (images, audio, video), prices are in cents per unit.
+::: tip
+All prices in the pricing catalog are stored in **cents**. For token-based models, prices are in cents per million tokens (for example, `200` means $2.00 per million tokens). For unit-based models (images, audio, video), prices are in cents per unit.
+:::
 
 <a name="testing-custom-providers"></a>
 ## Testing Custom Providers

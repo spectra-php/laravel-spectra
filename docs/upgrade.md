@@ -1,5 +1,7 @@
 # Upgrade Guide
 
+What to do when you move to a new major version of Spectra. The newest version comes first. If you skip a version, start at the section for the version you are on and work up the page: an app on 2.x follows [From 2.x to 3.0](#from-2x-to-3), then [From 3.x to 4.0](#from-3x-to-4).
+
 <a name="from-3x-to-4"></a>
 ## From 3.x to 4.0 {#from-3x-to-4}
 
@@ -376,7 +378,7 @@ The default span builder follows the current [OpenTelemetry GenAI conventions](h
 
 | 1.x | 2.0 |
 | --- | --- |
-| span name `ai.{provider}.{model}` | `{operation} {model}`, e.g. `chat gpt-4o` |
+| span name `ai.{provider}.{model}` | `{operation} {model}`, for example `chat gpt-4o` |
 | `gen_ai.system` | `gen_ai.provider.name` (`gcp.gemini` for Google, `x_ai` for xAI) |
 | `gen_ai.operation.name` = endpoint path | `gen_ai.operation.name` = `chat`, `embeddings`, `generate_content`, ...; the path moved to `spectra.endpoint` |
 | `gen_ai.usage.prompt_tokens` | `gen_ai.usage.input_tokens` |

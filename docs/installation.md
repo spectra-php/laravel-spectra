@@ -113,7 +113,7 @@ The `dashboard.layout` option controls which model types the dashboard shows. Us
 | `embedding` | Embeddings only |
 | `image` | Image generation only |
 | `video` | Video generation only |
-| `audio` | TTS and STT metrics |
+| `audio` | Text-to-speech and speech-to-text only |
 
 <a name="separate-database"></a>
 ## Separate Database

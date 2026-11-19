@@ -62,7 +62,7 @@ The Playground uses the keys your app is already configured with. For each provi
 A run goes to the provider's default address, or to the base URL you set in [`spectra.endpoint_urls`](/configuration#endpoint-urls) or the usual config keys. The note under the editor shows the address, so you can see where a run will go before you press **Run**. Only the scheme and host of a configured URL are used; the path comes from the stored call.
 
 <a name="starting-from-a-new-prompt"></a>
-## Starting From a New Request
+## Starting from a New Request {#starting-from-a-new-prompt}
 
 Click **Playground** in the sidebar, then **New request**. Pick a provider and a model, write your messages, and press **Run**:
 
@@ -173,7 +173,7 @@ The stored copy follows your [storage settings](/configuration#storage) like any
 While [recording is paused](/dashboard#maintenance), a run still works and shows its numbers, but nothing is saved, so it has no **View the call** link.
 
 <a name="when-a-run-differs-from-the-original"></a>
-## When a Run Differs From the Original
+## When a Run Differs from the Original
 
 A run sends what Spectra stored, which isn't always everything your app sent. When something is different, a note at the top of the screen tells you, so you don't draw the wrong conclusion from a comparison:
 
@@ -213,7 +213,7 @@ The Playground runs text calls to these chat endpoints, when the request body wa
 It can't run the calls below. They still open, with the reason at the top of the screen and **Run** turned off:
 
 - **Other kinds of calls**, such as images, audio, video or embeddings.
-- **Calls whose body wasn't stored**, because of [payload sampling](/configuration#storage) or your storage settings.
+- **Calls whose body wasn't stored**, because of [payload sampling](/configuration#sampling) or your [storage settings](/configuration#storage).
 - **Calls to [custom providers](/custom-providers)**, because Spectra doesn't know how they expect their key to be sent.
 
 ::: warning Azure OpenAI
