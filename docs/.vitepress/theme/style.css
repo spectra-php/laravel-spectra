@@ -72,6 +72,13 @@
   }
 }
 
+/* Below the two-column layout the hero logo only repeats the one in the nav bar */
+@media (max-width: 959px) {
+  .VPHome .VPHero .image {
+    display: none;
+  }
+}
+
 .footer-logo {
   display: flex;
   justify-content: center;
