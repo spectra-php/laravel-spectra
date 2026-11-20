@@ -1,8 +1,8 @@
 name: pricing-scrape
 
-# Scrapes the providers' pricing pages with Firecrawl every day and keeps one
-# open pull request with the catalog changes. The branch is rebuilt from main
-# on each run, so the PR always shows today's scrape against main. Merging the
+# Scrapes the providers' pricing pages with Firecrawl every 72 hours and keeps
+# one open pull request with the catalog changes. The branch is rebuilt from main
+# on each run, so the PR always shows the latest scrape against main. Merging the
 # PR releases the next patch version (pricing-release.yml).
 #
 # Needs the FIRECRAWL_API_KEY repository secret, and "Allow GitHub Actions to
@@ -10,7 +10,10 @@ name: pricing-scrape
 
 on:
   schedule:
-    - cron: '0 5 * * *'
+    # Cron has no 72-hour interval, so this runs on every third day of the month
+    # (1, 4, … 28, 31). The gap is 72 hours within a month and can be shorter
+    # across a month's end, never longer.
+    - cron: '0 5 */3 * *'
   workflow_dispatch:
 
 permissions:
@@ -83,7 +86,7 @@ jobs:
           git push --force origin "$BRANCH"
 
           {
-            echo "Daily Firecrawl scrape of the providers' pricing pages ([run]($RUN_URL))."
+            echo "Scheduled Firecrawl scrape of the providers' pricing pages ([run]($RUN_URL))."
             echo
             if [ "$TESTS" = "success" ]; then
               echo "Tests pass with the new catalog."
