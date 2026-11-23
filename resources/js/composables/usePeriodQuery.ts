@@ -135,10 +135,8 @@ export function usePeriodQuery(options: PeriodQueryOptions = {}) {
         endDate,
         periodLabel,
         queryString,
-        isValidDate,
         applyQueryState,
         buildQueryParams,
-        buildRouteQuery,
         syncQueryToRouter,
     };
 }

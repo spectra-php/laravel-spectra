@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import hljs from 'highlight.js/lib/core';
 import json from 'highlight.js/lib/languages/json';
+import { copyText } from '@/composables/useClipboard';
 import type { JsonObject, JsonValue } from '@/types/api';
 
 hljs.registerLanguage('json', json);
@@ -38,23 +39,13 @@ const highlightedCode = computed(() => {
     try {
         return hljs.highlight(formattedJson.value, { language: 'json' }).value;
     } catch {
-        return formattedJson.value;
+        // Rendered with v-html, so stored content never goes in unescaped.
+        return formattedJson.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 });
 
 const copy = async (text: string) => {
-    try {
-        await navigator.clipboard.writeText(text);
-    } catch {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-    }
+    if (!await copyText(text)) return;
     copied.value = true;
     setTimeout(() => copied.value = false, 2000);
 };
@@ -65,6 +56,7 @@ const copy = async (text: string) => {
         <div class="json-viewer-header">
             <span v-if="title" class="json-viewer-title">{{ title }}</span>
             <button
+                type="button"
                 @click="copy(formattedJson)"
                 class="json-viewer-copy-btn"
                 :class="{ 'copied': copied }"
@@ -79,7 +71,7 @@ const copy = async (text: string) => {
             </button>
         </div>
         <div class="json-viewer-content" :style="{ maxHeight }">
-            <pre ref="codeRef"><code class="hljs language-json" v-html="highlightedCode"></code></pre>
+            <pre><code class="hljs language-json" v-html="highlightedCode"></code></pre>
         </div>
     </div>
 </template>

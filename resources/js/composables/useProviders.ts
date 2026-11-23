@@ -37,7 +37,6 @@ export function useProviders() {
     return {
         providers,
         loadProviders,
-        providerMetaBySlug,
         providerDisplayName,
     };
 }

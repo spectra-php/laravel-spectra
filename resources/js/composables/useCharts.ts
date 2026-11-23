@@ -1,5 +1,23 @@
-import Chart from 'chart.js/auto';
+import {
+    ArcElement,
+    BarController,
+    BarElement,
+    CategoryScale,
+    Chart,
+    DoughnutController,
+    Filler,
+    Legend,
+    LinearScale,
+    LineController,
+    LineElement,
+    PieController,
+    PointElement,
+    Tooltip,
+} from 'chart.js';
 import type { ChartOptions, ScriptableContext, TooltipCallbacks, UpdateMode } from 'chart.js';
+
+// Only what the dashboard draws: `chart.js/auto` would bundle every chart type and scale.
+Chart.register(ArcElement, BarController, BarElement, CategoryScale, DoughnutController, Filler, Legend, LinearScale, LineController, LineElement, PieController, PointElement, Tooltip);
 
 interface SeriesData {
     labels: string[];

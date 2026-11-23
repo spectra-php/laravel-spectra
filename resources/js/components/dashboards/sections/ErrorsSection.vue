@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { useViewer } from '@/composables/useViewer';
+import { useLatest } from '@/composables/useLatest';
 import DashboardHeading, { dashboardPeriods } from '../DashboardHeading.vue';
 import SectionFailed from '../SectionFailed.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
@@ -26,13 +27,18 @@ const bars = (trend: number[]) => {
     return trend.map((count) => ({ count, height: Math.max(12, (count / max) * 100) }));
 };
 
+// A period changed twice in a row keeps the answer to the second.
+const beginLoad = useLatest();
+
 const load = async () => {
+    const isLatest = beginLoad();
     failed.value = false;
 
     try {
-        errors.value = await fetchData<DashboardErrors>('/errors', { period: period.value });
+        const data = await fetchData<DashboardErrors>('/errors', { period: period.value });
+        if (isLatest()) errors.value = data;
     } catch (error) {
-        failed.value = true;
+        if (isLatest()) failed.value = true;
     }
 };
 

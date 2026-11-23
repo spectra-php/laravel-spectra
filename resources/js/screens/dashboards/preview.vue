@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import DashboardView from '@/components/dashboards/DashboardView.vue';
@@ -19,19 +20,23 @@ const preview = ref<DashboardResponse | null>(null);
 const period = ref('month');
 const refreshing = ref(false);
 
+const beginLoad = useLatest();
+
 const load = async () => {
     if (!summary.value) return;
 
+    const isLatest = beginLoad();
     refreshing.value = true;
 
     const params = new URLSearchParams({ period: period.value });
 
     try {
-        preview.value = await apiRequest<DashboardResponse>('get', `/dashboards/${summary.value.id}/preview?${params.toString()}`);
+        const data = await apiRequest<DashboardResponse>('get', `/dashboards/${summary.value.id}/preview?${params.toString()}`);
+        if (isLatest()) preview.value = data;
     } catch (error) {
         console.error('Failed to load the preview:', error);
     } finally {
-        refreshing.value = false;
+        if (isLatest()) refreshing.value = false;
     }
 };
 
@@ -46,6 +51,8 @@ onMounted(async () => {
         summary.value = screen.dashboards.find((dashboard) => dashboard.id === route.params.id) ?? null;
         period.value = summary.value?.default_period ?? 'month';
         await load();
+    } catch {
+        // apiRequest has shown the error.
     } finally {
         loading.value = false;
     }

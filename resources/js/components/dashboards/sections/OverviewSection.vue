@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
 import { useViewer } from '@/composables/useViewer';
+import { useLatest } from '@/composables/useLatest';
 import DashboardView from '../DashboardView.vue';
 import SectionFailed from '../SectionFailed.vue';
 import type { DashboardResponse } from '@/types/api';
@@ -12,16 +13,21 @@ const dashboard = ref<DashboardResponse | null>(null);
 const loading = ref(true);
 const failed = ref(false);
 
+// A period changed twice in a row keeps the answer to the second.
+const beginLoad = useLatest();
+
 const load = async () => {
+    const isLatest = beginLoad();
     loading.value = true;
     failed.value = false;
 
     try {
-        dashboard.value = await fetchData<DashboardResponse>('', { period: period.value });
+        const data = await fetchData<DashboardResponse>('', { period: period.value });
+        if (isLatest()) dashboard.value = data;
     } catch (error) {
-        failed.value = true;
+        if (isLatest()) failed.value = true;
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 

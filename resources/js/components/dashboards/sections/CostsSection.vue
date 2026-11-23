@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { useViewer } from '@/composables/useViewer';
+import { useLatest } from '@/composables/useLatest';
 import DashboardHeading, { dashboardPeriods } from '../DashboardHeading.vue';
 import SectionFailed from '../SectionFailed.vue';
 import Money from '@/components/Money.vue';
@@ -21,13 +22,18 @@ const failed = ref(false);
 
 const subtitle = computed(() => [config.trackableName, dashboardPeriods.find((option) => option.value === period.value)?.label].filter(Boolean).join(' · '));
 
+// A period changed twice in a row keeps the answer to the second.
+const beginLoad = useLatest();
+
 const load = async () => {
+    const isLatest = beginLoad();
     failed.value = false;
 
     try {
-        costs.value = await fetchData<DashboardCosts>('/costs', { period: period.value });
+        const data = await fetchData<DashboardCosts>('/costs', { period: period.value });
+        if (isLatest()) costs.value = data;
     } catch (error) {
-        failed.value = true;
+        if (isLatest()) failed.value = true;
     }
 };
 

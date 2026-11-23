@@ -4,6 +4,8 @@ import type { Component } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
+import { copyText } from '@/composables/useClipboard';
 import DocsLink from '@/components/DocsLink.vue';
 import JsonViewer from '@/components/JsonViewer.vue';
 import CodeBlock from '@/components/CodeBlock.vue';
@@ -34,13 +36,18 @@ const activeTab = ref('response');
 const metricsExpanded = ref(true);
 const payloadExpanded = ref(true);
 
+// Clicking through a trace's calls can leave two loads in flight; the page shows the call in the URL.
+const beginLoad = useLatest();
+
 const loadRequest = async () => {
+    const isLatest = beginLoad();
     try {
-        request.value = await apiRequest<RequestDetailsResponse>('get', '/requests/' + route.params.id);
+        const data = await apiRequest<RequestDetailsResponse>('get', '/requests/' + encodeURIComponent(route.params.id as string));
+        if (isLatest()) request.value = data;
     } catch (error) {
         console.error('Failed to load request:', error);
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 
@@ -58,18 +65,7 @@ const metricsComponent = computed(() => {
 
 const copiedField = ref<string | null>(null);
 const copyToClipboard = async (text: string, field: string) => {
-    try {
-        await navigator.clipboard.writeText(text);
-    } catch {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-    }
+    if (!await copyText(text)) return;
     copiedField.value = field;
     setTimeout(() => copiedField.value = null, 2000);
 };

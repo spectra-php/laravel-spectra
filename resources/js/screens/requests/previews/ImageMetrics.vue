@@ -28,8 +28,9 @@ const imageUrls = computed(() => {
     if (props.request.image_urls?.length) {
         return props.request.image_urls;
     }
+    // These come from the stored provider response, so only web addresses become links.
     const data = (props.request.response?.data || []) as GeneratedImage[];
-    return data.filter(item => item.url).map(item => item.url as string);
+    return data.map(item => item.url).filter((url): url is string => typeof url === 'string' && /^https?:\/\//i.test(url));
 });
 
 const costPerImage = computed(() => {
@@ -47,6 +48,10 @@ const imagesExpanded = ref(false);
                 class="card-header cursor-pointer select-none"
                 :class="{ 'border-b-0': !expanded }"
                 @click="emit('toggle')"
+                role="button"
+                tabindex="0"
+                :aria-expanded="expanded"
+                @keydown.enter.space.self.prevent="emit('toggle')"
             >
                 <div class="flex items-center justify-between w-full">
                     <div class="flex items-center gap-2">
@@ -129,7 +134,11 @@ const imagesExpanded = ref(false);
         <div v-if="imageUrls.length" class="card">
             <div
                 class="card-header cursor-pointer select-none"
+                role="button"
+                tabindex="0"
+                :aria-expanded="imagesExpanded"
                 @click="imagesExpanded = !imagesExpanded"
+                @keydown.enter.space.self.prevent="imagesExpanded = !imagesExpanded"
             >
                 <div class="flex items-center justify-between w-full">
                     <div class="flex items-center gap-2">
@@ -156,9 +165,10 @@ const imagesExpanded = ref(false);
                         :key="idx"
                         :href="url"
                         target="_blank"
+                        rel="noopener noreferrer"
                         class="block rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800 hover:ring-2 hover:ring-primary-500 transition-shadow"
                     >
-                        <img :src="url" :alt="'Generated image ' + (idx + 1)" class="w-full h-auto" loading="lazy" />
+                        <img :src="url" :alt="'Generated image ' + (idx + 1)" class="w-full h-auto" loading="lazy" referrerpolicy="no-referrer" />
                     </a>
                 </div>
             </div>

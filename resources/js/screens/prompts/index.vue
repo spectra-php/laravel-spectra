@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import type { PromptsResponse, PromptVersion } from '@/types/api';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import Skeleton from '@/components/Skeleton.vue';
@@ -29,16 +30,21 @@ const prompts = computed(() => {
     return [...groups.entries()].map(([name, rows]) => ({ name, rows }));
 });
 
+// A period changed twice in a row keeps the answer to the second.
+const beginLoad = useLatest();
+
 const load = async () => {
+    const isLatest = beginLoad();
     loading.value = true;
     try {
         const data = await apiRequest<PromptsResponse>('get', '/prompts?' + buildQueryParams().toString());
+        if (!isLatest()) return;
         versions.value = data.versions || [];
         migrated.value = data.migrated !== false;
     } catch (error) {
         console.error('Failed to load prompts:', error);
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 

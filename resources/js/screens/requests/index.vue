@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import type { LocationQueryValue } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import debounce from 'lodash/debounce';
 import Skeleton from '@/components/Skeleton.vue';
 import StatusCode from '@/components/StatusCode.vue';
@@ -18,7 +19,7 @@ import type { RequestFilterKey, RequestFilterValues } from '@/types/app';
 
 const router = useRouter();
 const route = useRoute();
-const { formatNumber, formatDuration, providerClass, apiRequest } = useHelpers();
+const { formatNumber, formatDuration, apiRequest } = useHelpers();
 const { providers, loadProviders } = useProviders();
 const loading = useLoading();
 
@@ -61,11 +62,16 @@ const { period, startDate, endDate, applyQueryState, buildQueryParams, syncQuery
     getFilters: () => filters.value,
 });
 
+// A filter typed quickly sends several requests; only the last one's answer is shown.
+const beginLoad = useLatest();
+
 const loadRequests = async (page = 1) => {
+    const isLatest = beginLoad();
     loading.value = true;
     try {
         const params = buildQueryParams(page);
         const data = await apiRequest<RequestsResponse>('get', '/requests?' + params.toString());
+        if (!isLatest()) return;
         requests.value = data.data;
         pagination.value = {
             current_page: data.current_page,
@@ -87,7 +93,7 @@ const loadRequests = async (page = 1) => {
     } catch (error) {
         console.error('Failed to load requests:', error);
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 
@@ -148,9 +154,7 @@ const clearFilters = () => {
     filters.value = f;
 };
 
-const hasActiveFilters = () => {
-    return filterKeys.filter(k => k !== 'sort_by' && k !== 'sort_dir').some(k => filters.value[k] !== '');
-};
+const hasActiveFilters = () => clearableFilterKeys.some((key) => filters.value[key] !== '');
 
 const toggleSort = (field: string) => {
     if (filters.value.sort_by === field) {
@@ -164,6 +168,12 @@ const toggleSort = (field: string) => {
 const sortIcon = (field: string) => {
     if (filters.value.sort_by !== field) return null;
     return filters.value.sort_dir === 'desc' ? 'down' : 'up';
+};
+
+// What a screen reader is told about a sortable heading.
+const ariaSort = (field: string) => {
+    if (filters.value.sort_by !== field) return 'none';
+    return filters.value.sort_dir === 'desc' ? 'descending' : 'ascending';
 };
 
 const formatUsage = (request: RequestListItem) => {
@@ -197,8 +207,6 @@ const formatUsage = (request: RequestListItem) => {
     }
     return { value: formatNumber(request.total_tokens), label: 'tokens' };
 };
-
-const usageLabel = computed(() => 'Usage');
 
 onMounted(async () => {
     applyQueryState();
@@ -258,34 +266,34 @@ onUnmounted(() => {
                         <tr>
                             <th>Model</th>
                             <th>Tags</th>
-                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white select-none" @click="toggleSort('total_tokens')">
-                                <span class="inline-flex items-center gap-1">
-                                    {{ usageLabel }}
+                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white select-none" :aria-sort="ariaSort('total_tokens')" @click="toggleSort('total_tokens')">
+                                <button type="button" class="inline-flex items-center gap-1">
+                                    Usage
                                     <svg v-if="sortIcon('total_tokens') === 'down'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     <svg v-else-if="sortIcon('total_tokens') === 'up'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                                </span>
+                                </button>
                             </th>
-                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white select-none" @click="toggleSort('total_cost_in_cents')">
-                                <span class="inline-flex items-center gap-1">
+                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white select-none" :aria-sort="ariaSort('total_cost_in_cents')" @click="toggleSort('total_cost_in_cents')">
+                                <button type="button" class="inline-flex items-center gap-1">
                                     Cost
                                     <svg v-if="sortIcon('total_cost_in_cents') === 'down'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     <svg v-else-if="sortIcon('total_cost_in_cents') === 'up'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                                </span>
+                                </button>
                             </th>
-                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white select-none" @click="toggleSort('latency_ms')">
-                                <span class="inline-flex items-center gap-1">
+                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white select-none" :aria-sort="ariaSort('latency_ms')" @click="toggleSort('latency_ms')">
+                                <button type="button" class="inline-flex items-center gap-1">
                                     Latency
                                     <svg v-if="sortIcon('latency_ms') === 'down'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     <svg v-else-if="sortIcon('latency_ms') === 'up'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                                </span>
+                                </button>
                             </th>
                             <th>Status</th>
-                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white select-none" @click="toggleSort('created_at')">
-                                <span class="inline-flex items-center gap-1">
+                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white select-none" :aria-sort="ariaSort('created_at')" @click="toggleSort('created_at')">
+                                <button type="button" class="inline-flex items-center gap-1">
                                     Time
                                     <svg v-if="sortIcon('created_at') === 'down'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     <svg v-else-if="sortIcon('created_at') === 'up'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                                </span>
+                                </button>
                             </th>
                         </tr>
                     </thead>
@@ -306,6 +314,8 @@ onUnmounted(() => {
                                 v-for="(request, index) in requests"
                                 :key="request.id"
                                 @click="goToRequest(request.id)"
+                                tabindex="0"
+                                @keydown.enter.self="goToRequest(request.id)"
                                 class="cursor-pointer group"
                             >
                                 <td>

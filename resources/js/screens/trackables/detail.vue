@@ -7,6 +7,7 @@ import { useProviders } from '@/composables/useProviders';
 import { useCharts } from '@/composables/useCharts';
 import type { ThemedChart } from '@/composables/useCharts';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import { useCardRefresh } from '@/composables/useCardRefresh';
 import Skeleton from '@/components/Skeleton.vue';
 import StatCard from '@/components/StatCard.vue';
@@ -17,13 +18,15 @@ import ProviderLogo from '@/components/ProviderLogo.vue';
 import Money from '@/components/Money.vue';
 import RefreshButton from '@/components/RefreshButton.vue';
 import BudgetCard from './BudgetCard.vue';
+import Modal from '@/components/Modal.vue';
+import LatencyByTypeModal from '@/components/widgets/LatencyByTypeModal.vue';
 import type { DashboardConfigResponse, RequestByDate, TrackableDetail, TrackableDetailsResponse, TrackableRequest } from '@/types/api';
 
 const route = useRoute();
 const router = useRouter();
 const { formatNumber, formatCompact, formatShortDate, formatCurrency, formatDuration, formatDurationSeconds, truncate, providerChartColor, apiRequest } = useHelpers();
 // `type` tells the API which model the id belongs to, so it stays in the URL with the period.
-const { period, startDate, endDate, periodLabel, applyQueryState, syncQueryToRouter } = usePeriodQuery({
+const { period, startDate, endDate, periodLabel, applyQueryState, buildQueryParams, syncQueryToRouter } = usePeriodQuery({
     filterKeys: ['type'],
     getFilters: () => ({ type: route.query.type }),
 });
@@ -84,10 +87,6 @@ const openAllModels = () => {
     showAllModelsModal.value = true;
 };
 
-const closeAllModels = () => {
-    showAllModelsModal.value = false;
-};
-
 const viewAllRequests = () => {
     if (!trackable.value) return;
     router.push({
@@ -104,41 +103,29 @@ const openLatencyBreakdown = () => {
     showLatencyBreakdownModal.value = true;
 };
 
-const closeLatencyBreakdown = () => {
-    showLatencyBreakdownModal.value = false;
-};
+// The trackable's API path. Ids are the app's own keys, so they are escaped.
+const trackablePath = () => `/trackables/view/${encodeURIComponent(route.params.id as string)}`;
 
-const buildQueryParams = () => {
-    const params = new URLSearchParams();
-    const hasCustomRange = Boolean(startDate.value && endDate.value);
-    params.set('period', hasCustomRange ? 'custom' : period.value);
-
-    if (hasCustomRange) {
-        params.set('start_date', startDate.value as string);
-        params.set('end_date', endDate.value as string);
-    }
-
-    const type = route.query.type;
-    if (type) params.set('type', type as string);
-
-    return params;
-};
+// A period changed twice in a row keeps the answer to the second.
+const beginLoad = useLatest();
 
 const loadTrackable = async () => {
+    const isLatest = beginLoad();
+    beginTrend();
     loading.value = true;
     requestsByDate.value = null;
     trendTab.value = 'cost';
     try {
-        const id = route.params.id;
-        const data = await apiRequest<TrackableDetailsResponse>('get', `/trackables/view/${id}?${buildQueryParams().toString()}`);
+        const data = await apiRequest<TrackableDetailsResponse>('get', `${trackablePath()}?${buildQueryParams().toString()}`);
+        if (!isLatest()) return;
         trackable.value = data.trackable;
         requests.value = data.requests || [];
         loading.value = false;
         await nextTick();
-        renderCharts();
+        if (isLatest()) renderCharts();
     } catch (error) {
         console.error('Failed to load trackable:', error);
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 
@@ -151,18 +138,20 @@ const onRangeChange = async () => {
 // every card on the page reads that one response. The requests trend has its
 // own endpoint, so it reloads too when that tab is open.
 const refreshCard = (card: string) => refresh(card, async () => {
+    const isLatest = beginLoad();
     try {
-        const id = route.params.id;
         const [data, byDate] = await Promise.all([
-            apiRequest<TrackableDetailsResponse>('get', `/trackables/view/${id}?${buildQueryParams().toString()}`),
+            apiRequest<TrackableDetailsResponse>('get', `${trackablePath()}?${buildQueryParams().toString()}`),
             requestsByDate.value
-                ? apiRequest<RequestByDate[]>('get', `/trackables/view/${id}/requests-by-date?${buildQueryParams().toString()}`)
+                ? apiRequest<RequestByDate[]>('get', `${trackablePath()}/requests-by-date?${buildQueryParams().toString()}`)
                 : Promise.resolve(null),
         ]);
+        if (!isLatest()) return;
         trackable.value = data.trackable;
         requests.value = data.requests || [];
         if (byDate) requestsByDate.value = byDate;
         await nextTick();
+        if (!isLatest()) return;
         // Only the open trend tab: a hidden canvas has no size. Switching tabs redraws.
         renderProviderChart();
         if (trendTab.value === 'requests') renderRequestsChart();
@@ -238,14 +227,19 @@ const providerRows = computed(() => {
     }));
 });
 
+// The requests trend loads when its tab opens. A reload of the trackable starts it
+// over, so an answer for the period before never lands in the new one.
+const beginTrend = useLatest();
+
 const switchTrendTab = async (tab: string) => {
     trendTab.value = tab;
 
     if (tab === 'requests' && !requestsByDate.value) {
         loadingRequestsByDate.value = true;
         try {
-            const id = route.params.id;
-            const data = await apiRequest<RequestByDate[]>('get', `/trackables/view/${id}/requests-by-date?${buildQueryParams().toString()}`);
+            const isLatest = beginTrend();
+            const data = await apiRequest<RequestByDate[]>('get', `${trackablePath()}/requests-by-date?${buildQueryParams().toString()}`);
+            if (!isLatest()) return;
             requestsByDate.value = data;
             // Shown before drawing, so the chart gets a real size.
             loadingRequestsByDate.value = false;
@@ -345,28 +339,14 @@ const breadcrumbs = computed(() => [
     { label: trackable.value ? getDisplayName() : `${route.name === 'user-detail' ? 'User' : 'Trackable'} #${route.params.id}` },
 ]);
 
-// Watch for dark mode changes
-const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class') {
-            renderCharts();
-            if (trendTab.value === 'requests' && requestsByDate.value) {
-                renderRequestsChart();
-            }
-        }
-    });
-});
-
 onMounted(async () => {
     applyQueryState();
     await syncQueryToRouter(null, true);
     await Promise.all([loadConfig(), loadProviders()]);
     await loadTrackable();
-    observer.observe(document.documentElement, { attributes: true });
 });
 
 onUnmounted(() => {
-    observer.disconnect();
     if (costChart) costChart.destroy();
     if (requestsChart) requestsChart.destroy();
     if (providerChart) providerChart.destroy();
@@ -561,7 +541,7 @@ onUnmounted(() => {
                         </thead>
                         <tbody>
                             <template v-if="loading">
-                                <Skeleton variant="table-row" :lines="5" />
+                                <Skeleton variant="table-row" :lines="5" :columns="3" />
                             </template>
                             <template v-else>
                                 <tr v-for="model in allModels.slice(0, 10)" :key="`${model.provider}|${model.model}`">
@@ -633,13 +613,15 @@ onUnmounted(() => {
                         </thead>
                         <tbody>
                             <template v-if="loading">
-                                <Skeleton variant="table-row" :lines="5" />
+                                <Skeleton variant="table-row" :lines="5" :columns="4" />
                             </template>
                             <template v-else>
                                 <tr
                                     v-for="request in requests.slice(0, 10)"
                                     :key="request.id"
                                     @click="goToRequest(request.id)"
+                                    tabindex="0"
+                                    @keydown.enter.self="goToRequest(request.id)"
                                     class="cursor-pointer group"
                                 >
                                     <td class="max-w-0">
@@ -685,150 +667,80 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <!-- Latency Breakdown Modal -->
-        <div
-            v-if="showLatencyBreakdownModal"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            @click="closeLatencyBreakdown"
-        >
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden" @click.stop>
-                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-4">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Average Latency by Model Type</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ periodLabel }}</p>
-                    </div>
-                    <button
-                        type="button"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                        @click="closeLatencyBreakdown"
-                    >
-                        <span class="sr-only">Close</span>
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
+        <LatencyByTypeModal v-if="showLatencyBreakdownModal" :rows="latencyByModelType" :period-label="periodLabel" @close="showLatencyBreakdownModal = false" />
 
-                <div class="overflow-auto max-h-[65vh]">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Model Type</th>
-                                <th class="text-right">Avg Latency</th>
-                                <th class="text-right">Requests</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="row in latencyByModelType" :key="row.model_type">
-                                <td>
-                                    <div class="font-medium text-gray-900 dark:text-white">{{ row.label }}</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ row.model_type }}</div>
-                                </td>
-                                <td class="text-right tabular-nums">{{ formatDuration(row.avg_latency) }}</td>
-                                <td class="text-right tabular-nums">{{ formatNumber(row.count) }}</td>
-                            </tr>
-                            <tr v-if="!latencyByModelType.length">
-                                <td colspan="3" class="text-center py-8 text-gray-500 dark:text-gray-400">No latency data available.</td>
-                            </tr>
-                        </tbody>
-                    </table>
+        <Modal v-if="showAllModelsModal" title="All models" :subtitle="`${formatNumber(filteredModels.length)} ${filteredModels.length === 1 ? 'model' : 'models'}`" size="lg" @close="showAllModelsModal = false">
+            <template #header>
+                <div class="relative mt-3">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                        v-model="modelsSearch"
+                        type="text"
+                        placeholder="Search models..."
+                        aria-label="Search models"
+                        class="form-input pl-9 text-sm"
+                        @input="modelsPage = 1"
+                    />
                 </div>
-            </div>
-        </div>
-        <!-- All Models Modal -->
-        <div
-            v-if="showAllModelsModal"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            @click="closeAllModels"
-        >
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden" @click.stop>
-                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">All Models</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ filteredModels.length }} models</p>
-                        </div>
-                        <button
-                            type="button"
-                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                            @click="closeAllModels"
-                        >
-                            <span class="sr-only">Close</span>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="mt-3">
-                        <div class="relative">
-                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                                v-model="modelsSearch"
-                                type="text"
-                                placeholder="Search models..."
-                                class="form-input pl-9 text-sm"
-                                @input="modelsPage = 1"
-                            />
-                        </div>
-                    </div>
-                </div>
+            </template>
 
-                <div class="overflow-auto max-h-[55vh]">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Model</th>
-                                <th class="text-right">Requests</th>
-                                <th class="text-right">Cost</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="model in pagedModels" :key="`${model.provider}|${model.model}`">
-                                <td>
-                                    <div class="flex items-center gap-2 min-w-0">
-                                        <ProviderLogo
-                                            :provider="model.provider"
-                                            v-tooltip="providerDisplayName(model.provider)"
-                                            class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
-                                            aria-hidden="true"
-                                        />
-                                        <span class="max-w-56 truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">
-                                            {{ model.model }}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td class="text-right tabular-nums font-medium">{{ formatNumber(model.requests) }}</td>
-                                <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white"><Money :cents="model.cost" /></td>
-                            </tr>
-                            <tr v-if="!filteredModels.length">
-                                <td colspan="3" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                                    No models match your search.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th class="text-right">Requests</th>
+                        <th class="text-right">Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="model in pagedModels" :key="`${model.provider}|${model.model}`">
+                        <td>
+                            <div class="flex items-center gap-2 min-w-0">
+                                <ProviderLogo
+                                    :provider="model.provider"
+                                    v-tooltip="providerDisplayName(model.provider)"
+                                    class="inline-flex items-center shrink-0 w-4 h-4 [&>svg]:w-full [&>svg]:h-full text-gray-500 dark:text-gray-400"
+                                    aria-hidden="true"
+                                />
+                                <span class="max-w-56 truncate font-medium text-gray-900 dark:text-white" v-tooltip.truncated="model.model">
+                                    {{ model.model }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="text-right tabular-nums font-medium">{{ formatNumber(model.requests) }}</td>
+                        <td class="text-right tabular-nums font-medium text-gray-900 dark:text-white"><Money :cents="model.cost" /></td>
+                    </tr>
+                    <tr v-if="!filteredModels.length">
+                        <td colspan="3" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                            No models match your search.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
 
-                <div v-if="modelsTotalPages > 1" class="px-5 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+            <template v-if="modelsTotalPages > 1" #footer>
+                <div class="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-gray-800">
                     <span class="text-sm text-gray-500 dark:text-gray-400">
                         Page {{ modelsPage }} of {{ modelsTotalPages }}
                     </span>
                     <div class="flex gap-2">
                         <button
+                            type="button"
                             @click="modelsPage = Math.max(1, modelsPage - 1)"
                             :disabled="modelsPage <= 1"
-                            class="btn btn-secondary btn-sm"
+                            class="btn btn-secondary"
                         >Previous</button>
                         <button
+                            type="button"
                             @click="modelsPage = Math.min(modelsTotalPages, modelsPage + 1)"
                             :disabled="modelsPage >= modelsTotalPages"
-                            class="btn btn-secondary btn-sm"
+                            class="btn btn-secondary"
                         >Next</button>
                     </div>
                 </div>
-            </div>
-        </div>
+            </template>
+        </Modal>
     </div>
 </template>

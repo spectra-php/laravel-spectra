@@ -20,9 +20,13 @@ provide('refreshView', () => {
 const alert = ref<AlertState>({ type: null, message: null });
 const loading = ref(false);
 
+let alertTimer: ReturnType<typeof setTimeout> | undefined;
+
 const showAlert = (type: AlertType, message: string) => {
     alert.value = { type, message };
-    setTimeout(() => {
+    // A new alert gets its full time: the one before it must not clear it early.
+    clearTimeout(alertTimer);
+    alertTimer = setTimeout(() => {
         alert.value = { type: null, message: null };
     }, type === 'success' ? 3000 : 5000);
 };

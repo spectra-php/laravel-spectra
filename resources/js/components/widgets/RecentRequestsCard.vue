@@ -94,14 +94,16 @@ const usage = (request: RecentRow) => {
                 </thead>
                 <tbody>
                     <template v-if="loading">
-                        <Skeleton variant="table-row" :lines="5" />
+                        <Skeleton variant="table-row" :lines="5" :columns="4" />
                     </template>
                     <template v-else>
                         <tr
                             v-for="(request, index) in requests"
                             :key="request.id ?? index"
                             :class="clickable ? 'group cursor-pointer' : ''"
+                            :tabindex="clickable && request.id ? 0 : undefined"
                             @click="open(request)"
+                            @keydown.enter.self="open(request)"
                         >
                             <td class="max-w-0">
                                 <div class="flex min-w-0 items-center gap-2.5">

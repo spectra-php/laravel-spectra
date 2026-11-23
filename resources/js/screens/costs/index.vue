@@ -7,6 +7,7 @@ import { useProviders } from '@/composables/useProviders';
 import { useCharts } from '@/composables/useCharts';
 import type { ThemedChart } from '@/composables/useCharts';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import { useCardRefresh } from '@/composables/useCardRefresh';
 import RefreshButton from '@/components/RefreshButton.vue';
 import Skeleton from '@/components/Skeleton.vue';
@@ -57,29 +58,37 @@ let costChart: ThemedChart | null = null;
 let providerChart: ThemedChart | null = null;
 let modelTypeChart: ThemedChart | null = null;
 
+// The period and the model filter both reload `/costs`; only the latest answer is drawn.
+const beginLoad = useLatest();
+
 const loadStats = async () => {
+    const isLatest = beginLoad();
     loading.value = true;
     try {
         const data = await apiRequest<CostsResponse>('get', '/costs?' + buildQueryParams().toString());
+        if (!isLatest()) return;
         stats.value = data;
         // Draw once the chart containers are visible, so they get a real size.
         loading.value = false;
         await nextTick();
-        renderCharts();
+        if (isLatest()) renderCharts();
     } catch (error) {
         console.error('Failed to load costs:', error);
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 
 // A card's refresh button reloads `/costs` in place, without the skeletons; every
 // card on the page reads that one response.
 const refreshCard = (card: string) => refresh(card, async () => {
+    const isLatest = beginLoad();
     try {
-        stats.value = await apiRequest<CostsResponse>('get', '/costs?' + buildQueryParams().toString());
+        const data = await apiRequest<CostsResponse>('get', '/costs?' + buildQueryParams().toString());
+        if (!isLatest()) return;
+        stats.value = data;
         await nextTick();
-        renderCharts();
+        if (isLatest()) renderCharts();
     } catch (error) {
         console.error('Failed to refresh costs:', error);
     }
@@ -411,7 +420,7 @@ onUnmounted(() => {
                         </thead>
                         <tbody>
                             <template v-if="loading">
-                                <Skeleton variant="table-row" :lines="5" />
+                                <Skeleton variant="table-row" :lines="5" :columns="4" />
                             </template>
                             <template v-else>
                                 <tr v-for="model in stats.costs_by_model" :key="model.provider + model.model + ':' + (model.model_type || 'text')">
@@ -471,7 +480,7 @@ onUnmounted(() => {
                         </thead>
                         <tbody>
                             <template v-if="loading">
-                                <Skeleton variant="table-row" :lines="5" />
+                                <Skeleton variant="table-row" :lines="5" :columns="3" />
                             </template>
                             <template v-else>
                                 <tr v-for="user in stats.costs_by_user" :key="`${user.trackable_type}-${user.user_id}`">

@@ -63,7 +63,12 @@ export function useHelpers() {
 
     const formatNumber = (num: number | string | null | undefined) => {
         if (num === null || num === undefined) return '0';
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+        // Only the whole part is grouped: a fraction keeps its digits as they are.
+        const [whole, fraction] = num.toString().split('.');
+        const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+        return fraction === undefined ? grouped : `${grouped}.${fraction}`;
     };
 
     const formatDuration = (ms: number | null | undefined) => {
@@ -73,20 +78,8 @@ export function useHelpers() {
         return (ms / 60000).toFixed(2) + 'm';
     };
 
-    const statusClass = (status: string) => {
-        const classes: Record<string, string> = {
-            success: 'badge-success',
-            completed: 'badge-success',
-            failed: 'badge-danger',
-            error: 'badge-danger',
-            pending: 'badge-warning',
-            processing: 'badge-info',
-        };
-        return classes[status] || 'badge-secondary';
-    };
-
     /**
-     * Provider colors for charts and badges — the single source of truth.
+     * Provider colors for charts — the single source of truth.
      *
      * Chart colors come from a validated, color-blind-safe categorical palette
      * (light and dark steps). Each provider owns a fixed slot, so a provider
@@ -107,17 +100,6 @@ export function useHelpers() {
         const palette = isDark() ? seriesPalette.dark : seriesPalette.light;
 
         return palette[index] ?? (isDark() ? seriesPalette.other.dark : seriesPalette.other.light);
-    };
-
-    const providerBrandColors: Record<string, { badge: string }> = Object.fromEntries(
-        [...providerSlots, 'replicate', 'falai', 'elevenlabs', 'scaleway', 'ollama', 'azure'].map((slug) => [
-            slug,
-            { badge: 'badge-provider-' + slug },
-        ]),
-    );
-
-    const providerClass = (provider: string | null | undefined) => {
-        return providerBrandColors[provider as string]?.badge || 'badge-secondary';
     };
 
     const providerChartColor = (provider: string | null | undefined) => {
@@ -169,10 +151,7 @@ export function useHelpers() {
         formatNumber,
         formatDuration,
         formatDurationSeconds,
-        statusClass,
-        providerClass,
         providerChartColor,
-        providerBrandColors,
         apiRequest,
         alertSuccess,
         alertError,

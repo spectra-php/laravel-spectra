@@ -1,19 +1,31 @@
 <script setup lang="ts">
 withDefaults(defineProps<{
-    variant?: 'text' | 'circle' | 'card' | 'chart' | 'table-row';
+    variant?: 'text' | 'chart' | 'table-row';
     lines?: number;
+    // For table rows: the table's number of columns, so the placeholder cells sit under its headings.
+    columns?: number;
     width?: string | null;
     height?: string | null;
 }>(), {
     variant: 'text',
     lines: 1,
+    columns: 5,
     width: null,
     height: null,
 });
 </script>
 
 <template>
-    <div class="animate-pulse">
+    <!-- Table rows have no wrapper: a <tbody> takes rows only, and anything else is squeezed into its first column. -->
+    <template v-if="variant === 'table-row'">
+        <tr v-for="i in lines" :key="i" class="animate-pulse border-b border-gray-200 dark:border-gray-800">
+            <td class="px-4 py-3" v-for="j in columns" :key="j">
+                <div class="skeleton-line h-4" :class="j === 1 ? 'w-20' : 'w-16'"></div>
+            </td>
+        </tr>
+    </template>
+
+    <div v-else class="animate-pulse">
         <!-- Text skeleton -->
         <template v-if="variant === 'text'">
             <div
@@ -23,19 +35,6 @@ withDefaults(defineProps<{
                 :class="{ 'w-3/4': i === lines && lines > 1 }"
                 :style="{ width: width!, height: height! }"
             ></div>
-        </template>
-
-        <!-- Circle skeleton (for avatars) -->
-        <template v-else-if="variant === 'circle'">
-            <div class="skeleton-circle" :style="{ width: width!, height: height! }"></div>
-        </template>
-
-        <!-- Card skeleton -->
-        <template v-else-if="variant === 'card'">
-            <div class="skeleton-card">
-                <div class="skeleton-line w-1/3 h-4 mb-3"></div>
-                <div class="skeleton-line w-2/3 h-8"></div>
-            </div>
         </template>
 
         <!-- Chart skeleton -->
@@ -52,15 +51,6 @@ withDefaults(defineProps<{
                 </div>
             </div>
         </template>
-
-        <!-- Table row skeleton -->
-        <template v-else-if="variant === 'table-row'">
-            <tr v-for="i in lines" :key="i" class="border-b border-gray-200 dark:border-gray-800">
-                <td class="px-4 py-3" v-for="j in 5" :key="j">
-                    <div class="skeleton-line h-4" :class="j === 1 ? 'w-20' : 'w-16'"></div>
-                </td>
-            </tr>
-        </template>
     </div>
 </template>
 
@@ -73,14 +63,6 @@ withDefaults(defineProps<{
 
 .skeleton-line:last-child {
     @apply mb-0;
-}
-
-.skeleton-circle {
-    @apply bg-gray-200 dark:bg-gray-700 rounded-full w-10 h-10;
-}
-
-.skeleton-card {
-    @apply p-6;
 }
 
 .skeleton-chart {

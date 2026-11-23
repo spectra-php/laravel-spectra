@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import { useCardRefresh } from '@/composables/useCardRefresh';
 import type { ErrorGroup, ErrorsResponse } from '@/types/api';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
@@ -22,18 +23,24 @@ const { isRefreshing, refresh } = useCardRefresh();
 loading.value = true;
 const data = ref<ErrorsResponse>({ request_count: 0, failed_count: 0, error_rate: 0, ungrouped_count: 0, migrated: true, groups: [] });
 
+// A period changed twice in a row keeps the answer to the second.
+const beginLoad = useLatest();
+
 const fetchErrors = async () => {
+    const isLatest = beginLoad();
     try {
-        data.value = await apiRequest<ErrorsResponse>('get', '/errors?' + buildQueryParams().toString());
+        const errors = await apiRequest<ErrorsResponse>('get', '/errors?' + buildQueryParams().toString());
+        if (isLatest()) data.value = errors;
     } catch (error) {
         console.error('Failed to load errors:', error);
     }
+
+    return isLatest();
 };
 
 const load = async () => {
     loading.value = true;
-    await fetchErrors();
-    loading.value = false;
+    if (await fetchErrors()) loading.value = false;
 };
 
 const onRangeChange = async () => {

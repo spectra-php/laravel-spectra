@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { copyText } from '@/composables/useClipboard';
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
     content?: string;
     maxHeight?: string;
     variant?: 'default' | 'error';
@@ -14,18 +15,7 @@ const props = withDefaults(defineProps<{
 const copied = ref(false);
 
 const copy = async (text: string) => {
-    try {
-        await navigator.clipboard.writeText(text);
-    } catch {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-    }
+    if (!await copyText(text)) return;
     copied.value = true;
     setTimeout(() => copied.value = false, 2000);
 };
@@ -35,6 +25,7 @@ const copy = async (text: string) => {
     <div class="code-block" :class="variant">
         <div class="code-block-header">
             <button
+                type="button"
                 @click="copy(content)"
                 class="code-block-copy-btn"
                 :class="{ 'copied': copied }"

@@ -5,6 +5,7 @@ import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import debounce from 'lodash/debounce';
 import RequestFilters from '@/components/RequestFilters.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
@@ -64,11 +65,16 @@ const { period, startDate, endDate, applyQueryState, buildQueryParams, syncQuery
 
 const migrated = ref(true);
 
+// A filter typed quickly sends several requests; only the last one's answer is shown.
+const beginLoad = useLatest();
+
 const loadConversations = async (page = 1) => {
+    const isLatest = beginLoad();
     loading.value = true;
     try {
         const params = buildQueryParams(page);
         const data = await apiRequest<ConversationsResponse>('get', '/conversations?' + params.toString());
+        if (!isLatest()) return;
         conversations.value = data.data;
         summary.value = data.summary;
         migrated.value = data.migrated !== false;
@@ -84,7 +90,7 @@ const loadConversations = async (page = 1) => {
     } catch (error) {
         console.error('Failed to load conversations:', error);
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 
@@ -141,6 +147,12 @@ const toggleSort = (field: string) => {
 const sortIcon = (field: string) => {
     if (filters.value.sort_by !== field) return null;
     return filters.value.sort_dir === 'desc' ? 'down' : 'up';
+};
+
+// What a screen reader is told about a sortable heading.
+const ariaSort = (field: string) => {
+    if (filters.value.sort_by !== field) return 'none';
+    return filters.value.sort_dir === 'desc' ? 'descending' : 'ascending';
 };
 
 const sortableColumns = [
@@ -247,13 +259,14 @@ onUnmounted(() => {
                                 v-for="column in sortableColumns"
                                 :key="column.field"
                                 class="text-right cursor-pointer select-none hover:text-gray-900 dark:hover:text-white"
+                                :aria-sort="ariaSort(column.field)"
                                 @click="toggleSort(column.field)"
                             >
-                                <span class="inline-flex items-center gap-1">
+                                <button type="button" class="inline-flex items-center gap-1">
                                     {{ column.label }}
                                     <svg v-if="sortIcon(column.field) === 'down'" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     <svg v-else-if="sortIcon(column.field) === 'up'" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                                </span>
+                                </button>
                             </th>
                         </tr>
                     </thead>
@@ -272,6 +285,8 @@ onUnmounted(() => {
                                 :key="conversation.conversation_id"
                                 class="group cursor-pointer"
                                 @click="goToConversation(conversation.conversation_id)"
+                                tabindex="0"
+                                @keydown.enter.self="goToConversation(conversation.conversation_id)"
                             >
                                 <td class="max-w-sm">
                                     <div class="truncate font-mono text-[13px] font-medium text-gray-900 dark:text-white" v-tooltip.truncated="conversation.conversation_id">{{ conversation.conversation_id }}</div>

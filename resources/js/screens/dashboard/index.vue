@@ -5,6 +5,7 @@ import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import { useCardRefresh } from '@/composables/useCardRefresh';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import BreakdownCard from '@/components/widgets/BreakdownCard.vue';
@@ -71,11 +72,19 @@ const loadConfig = async () => {
 // The Scores card; empty (and hidden) until the app records scores.
 const scoreSummary = ref<ScoreSummary[]>([]);
 
+// Each card keeps the answer to its latest request: a period changed twice in a
+// row must not end on the first period's numbers.
+const beginScores = useLatest();
+const beginPerformance = useLatest();
+const beginStats = useLatest();
+
 const loadScores = async () => {
+    const isLatest = beginScores();
     try {
-        scoreSummary.value = (await apiRequest<ScoresResponse>('get', '/scores?' + buildQueryParams().toString())).scores || [];
+        const scores = (await apiRequest<ScoresResponse>('get', '/scores?' + buildQueryParams().toString())).scores || [];
+        if (isLatest()) scoreSummary.value = scores;
     } catch (error) {
-        scoreSummary.value = [];
+        if (isLatest()) scoreSummary.value = [];
     }
 };
 
@@ -84,10 +93,12 @@ const performance = ref<ModelPerformance[]>([]);
 const alerts = ref<AlertsResponse>({ alerts: [], error: null });
 
 const loadPerformance = async () => {
+    const isLatest = beginPerformance();
     try {
-        performance.value = (await apiRequest<PerformanceResponse>('get', '/performance?' + buildQueryParams().toString())).models || [];
+        const models = (await apiRequest<PerformanceResponse>('get', '/performance?' + buildQueryParams().toString())).models || [];
+        if (isLatest()) performance.value = models;
     } catch (error) {
-        performance.value = [];
+        if (isLatest()) performance.value = [];
     }
 };
 
@@ -100,13 +111,17 @@ const loadAlerts = async () => {
 };
 
 const fetchStats = async () => {
+    const isLatest = beginStats();
     try {
         const data = await apiRequest<StatsResponse>('get', '/stats?' + buildQueryParams().toString());
+        if (!isLatest()) return false;
         stats.value = data;
         layout.value = data.layout || layout.value;
     } catch (error) {
         console.error('Failed to load stats:', error);
     }
+
+    return isLatest();
 };
 
 const loadStats = async () => {
@@ -114,8 +129,8 @@ const loadStats = async () => {
     loadScores();
     loadPerformance();
     loadAlerts();
-    await fetchStats();
-    loading.value = false;
+    // A newer load is still running when this one was overtaken, so it ends the loading state.
+    if (await fetchStats()) loading.value = false;
 };
 
 // A card's refresh button reloads its data in place, without the skeletons. The

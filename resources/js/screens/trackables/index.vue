@@ -6,11 +6,13 @@ import { useHelpers } from '@/composables/useHelpers';
 import { usePeriodQuery } from '@/composables/usePeriodQuery';
 import { useProviders } from '@/composables/useProviders';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import debounce from 'lodash/debounce';
 import RequestFilters from '@/components/RequestFilters.vue';
 import StatCard from '@/components/StatCard.vue';
 import PageRangeHeader from '@/components/PageRangeHeader.vue';
 import Money from '@/components/Money.vue';
+import LatencyByTypeModal from '@/components/widgets/LatencyByTypeModal.vue';
 import type { DashboardConfigResponse, ModelTypeLatency, ModelTypeOption, TrackableListItem, TrackablesResponse, TrackablesSummaryResponse } from '@/types/api';
 import type { RequestFilterKey, RequestFilterValues } from '@/types/app';
 
@@ -98,16 +100,17 @@ const openLatencyBreakdown = () => {
     showLatencyBreakdownModal.value = true;
 };
 
-const closeLatencyBreakdown = () => {
-    showLatencyBreakdownModal.value = false;
-};
+// A filter typed quickly sends several requests; only the last one's answer is shown.
+const beginLoad = useLatest();
 
 const loadTrackables = async (page = 1) => {
+    const isLatest = beginLoad();
     loading.value = true;
     try {
         const params = buildQueryParams(page);
         if (props.usersOnly) params.set('users_only', '1');
         const data = await apiRequest<TrackablesResponse>('get', '/trackables?' + params.toString());
+        if (!isLatest()) return;
         trackables.value = data.data;
         pagination.value = {
             current_page: data.current_page,
@@ -122,7 +125,7 @@ const loadTrackables = async (page = 1) => {
     } catch (error) {
         console.error('Failed to load trackables:', error);
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 
@@ -201,6 +204,12 @@ const toggleSort = (field: string) => {
 const sortIcon = (field: string) => {
     if (filters.value.sort_by !== field) return null;
     return filters.value.sort_dir === 'desc' ? 'down' : 'up';
+};
+
+// What a screen reader is told about a sortable heading.
+const ariaSort = (field: string) => {
+    if (filters.value.sort_by !== field) return 'none';
+    return filters.value.sort_dir === 'desc' ? 'descending' : 'ascending';
 };
 
 const getDisplayName = (trackable: TrackableListItem) => {
@@ -370,26 +379,26 @@ onUnmounted(() => {
                         <tr>
                             <th>{{ singular }}</th>
                             <th v-if="showTypes">Type</th>
-                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white" @click="toggleSort('requests')">
-                                <span class="inline-flex items-center gap-1">
+                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white" :aria-sort="ariaSort('requests')" @click="toggleSort('requests')">
+                                <button type="button" class="inline-flex items-center gap-1">
                                     Requests
                                     <svg v-if="sortIcon('requests') === 'down'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     <svg v-else-if="sortIcon('requests') === 'up'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                                </span>
+                                </button>
                             </th>
-                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white" @click="toggleSort('tokens')">
-                                <span class="inline-flex items-center gap-1">
+                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white" :aria-sort="ariaSort('tokens')" @click="toggleSort('tokens')">
+                                <button type="button" class="inline-flex items-center gap-1">
                                     Usage
                                     <svg v-if="sortIcon('tokens') === 'down'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     <svg v-else-if="sortIcon('tokens') === 'up'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                                </span>
+                                </button>
                             </th>
-                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white" @click="toggleSort('cost')">
-                                <span class="inline-flex items-center gap-1">
+                            <th class="text-right cursor-pointer hover:text-gray-900 dark:hover:text-white" :aria-sort="ariaSort('cost')" @click="toggleSort('cost')">
+                                <button type="button" class="inline-flex items-center gap-1">
                                     Cost
                                     <svg v-if="sortIcon('cost') === 'down'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     <svg v-else-if="sortIcon('cost') === 'up'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                                </span>
+                                </button>
                             </th>
                             <th class="text-right">Avg Latency</th>
                             <th>Top Model</th>
@@ -420,6 +429,8 @@ onUnmounted(() => {
                                 v-for="(trackable, index) in trackables"
                                 :key="`${trackable.trackable_type}-${trackable.trackable_id}`"
                                 @click="goToTrackable(trackable)"
+                                tabindex="0"
+                                @keydown.enter.self="goToTrackable(trackable)"
                                 class="cursor-pointer group"
                             >
                                 <td>
@@ -514,55 +525,6 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <!-- Latency Breakdown Modal -->
-        <div
-            v-if="showLatencyBreakdownModal"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            @click="closeLatencyBreakdown"
-        >
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden" @click.stop>
-                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-4">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Average Latency by Model Type</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ periodLabel }}</p>
-                    </div>
-                    <button
-                        type="button"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                        @click="closeLatencyBreakdown"
-                    >
-                        <span class="sr-only">Close</span>
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="overflow-auto max-h-[65vh]">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Model Type</th>
-                                <th class="text-right">Avg Latency</th>
-                                <th class="text-right">Requests</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="row in latencyByModelType" :key="row.model_type">
-                                <td>
-                                    <div class="font-medium text-gray-900 dark:text-white">{{ row.label }}</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ row.model_type }}</div>
-                                </td>
-                                <td class="text-right tabular-nums">{{ formatDuration(row.avg_latency) }}</td>
-                                <td class="text-right tabular-nums">{{ formatNumber(row.count) }}</td>
-                            </tr>
-                            <tr v-if="!latencyByModelType.length">
-                                <td colspan="3" class="text-center py-8 text-gray-500 dark:text-gray-400">No latency data available.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <LatencyByTypeModal v-if="showLatencyBreakdownModal" :rows="latencyByModelType" :period-label="periodLabel" @close="showLatencyBreakdownModal = false" />
     </div>
 </template>

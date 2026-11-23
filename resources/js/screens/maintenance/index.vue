@@ -2,6 +2,7 @@
 import { ref, computed, inject, watch, onMounted, onUnmounted } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import type { MaintenanceQueuedResponse, MaintenanceStatusResponse, PrunePreview, RecordingResponse } from '@/types/api';
 import type { RefreshView } from '@/types/app';
 import StatCard from '@/components/StatCard.vue';
@@ -46,10 +47,17 @@ const retentionPayload = () => ({
     stats_days: pruneStats.value ? statsDays.value : null,
 });
 
+// The preview under the Prune button must be the one for the retention picked
+// last, and nothing polls on once the screen is left.
+const beginLoad = useLatest();
+
 const loadStatus = async ({ quiet = false } = {}) => {
+    const isLatest = beginLoad();
     if (!quiet) loading.value = true;
     try {
-        status.value = await apiRequest<MaintenanceStatusResponse>('get', '/maintenance?' + queryString());
+        const data = await apiRequest<MaintenanceStatusResponse>('get', '/maintenance?' + queryString());
+        if (!isLatest()) return;
+        status.value = data;
         schedulePoll();
     } catch (error) {
         console.error('Failed to load maintenance status:', error);
@@ -83,6 +91,8 @@ const prune = async () => {
         alertSuccess('Prune queued. The numbers below update when it finishes.');
         confirmingPrune.value = false;
         await loadStatus({ quiet: true });
+    } catch {
+        // apiRequest has shown the error.
     } finally {
         busy.value.prune = false;
     }
@@ -94,6 +104,8 @@ const rebuildStats = async () => {
         await apiRequest<MaintenanceQueuedResponse>('post', '/maintenance/rebuild-stats');
         alertSuccess('Stats rebuild queued.');
         await loadStatus({ quiet: true });
+    } catch {
+        // apiRequest has shown the error.
     } finally {
         busy.value.rebuild = false;
     }
@@ -104,6 +116,8 @@ const toggleRecording = async () => {
     try {
         await apiRequest<RecordingResponse>('post', '/maintenance/recording', { paused: !status.value!.recording_paused });
         refreshView();
+    } catch {
+        // apiRequest has shown the error.
     } finally {
         busy.value.recording = false;
     }

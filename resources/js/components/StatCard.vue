@@ -3,15 +3,12 @@ import Skeleton from '@/components/Skeleton.vue';
 
 withDefaults(defineProps<{
     label: string;
-    // Kept for backwards compatibility with older screens; no longer rendered.
-    gradient?: string | null;
     // Optional accent dot color (any CSS color).
     accent?: string | null;
     loading?: boolean;
     periodLabel?: string | null;
     skeletonWidth?: string;
 }>(), {
-    gradient: null,
     accent: null,
     loading: false,
     periodLabel: null,

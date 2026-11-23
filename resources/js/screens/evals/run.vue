@@ -4,6 +4,7 @@ import type { Ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import { useEvalFormat } from '@/composables/useEvalFormat';
 import type { EvalResultWithBaseline, EvalRunResponse } from '@/types/api';
 import Skeleton from '@/components/Skeleton.vue';
@@ -24,15 +25,20 @@ loading.value = true;
 const data = ref<EvalRunResponse | null>(null) as Ref<EvalRunResponse | null>;
 const changedOnly = ref(false);
 
+// Picking another run to compare with reloads; the page keeps the latest answer.
+const beginLoad = useLatest();
+
 const load = async () => {
+    const isLatest = beginLoad();
     loading.value = true;
     try {
         const query = route.query.compare ? `?compare=${encodeURIComponent(route.query.compare as string)}` : '';
-        data.value = await apiRequest<EvalRunResponse>('get', `/evals/runs/${encodeURIComponent(route.params.id as string)}${query}`);
+        const run = await apiRequest<EvalRunResponse>('get', `/evals/runs/${encodeURIComponent(route.params.id as string)}${query}`);
+        if (isLatest()) data.value = run;
     } catch (error) {
         console.error('Failed to load the run:', error);
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 

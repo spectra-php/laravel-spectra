@@ -189,10 +189,6 @@
         line-height: 1.25;
     }
 
-    .stat-change {
-        @apply mt-2 flex items-center gap-1 text-xs font-medium;
-    }
-
     /*
     | Cards
     */
@@ -322,28 +318,6 @@
     }
 
     /*
-     * Provider badges are neutral chips: the provider logo next to them
-     * carries the identity, so the badge itself stays quiet.
-     */
-    .badge-provider-openai,
-    .badge-provider-anthropic,
-    .badge-provider-google,
-    .badge-provider-xai,
-    .badge-provider-ollama,
-    .badge-provider-azure,
-    .badge-provider-openrouter,
-    .badge-provider-cohere,
-    .badge-provider-groq,
-    .badge-provider-elevenlabs,
-    .badge-provider-replicate,
-    .badge-provider-mistral,
-    .badge-provider-scaleway,
-    .badge-provider-falai {
-        @apply bg-gray-50 text-gray-700 ring-gray-500/15;
-        @apply dark:bg-gray-400/10 dark:text-gray-200 dark:ring-gray-400/15;
-    }
-
-    /*
     | Tables
     */
 
@@ -397,14 +371,6 @@
     }
 
     /*
-    | Section headings
-    */
-
-    .section-title {
-        @apply text-xs font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400;
-    }
-
-    /*
     | Empty states
     */
 
@@ -435,10 +401,6 @@
     .spinner-sm {
         @apply h-4 w-4;
     }
-
-    .spinner-lg {
-        @apply h-8 w-8;
-    }
 }
 
 /*
@@ -447,14 +409,6 @@
 | a utility that must win, such as a hover colour on a table cell.
 */
 @layer overrides {
-
-    .stat-change.positive {
-        @apply text-emerald-600 dark:text-emerald-400;
-    }
-
-    .stat-change.negative {
-        @apply text-red-600 dark:text-red-400;
-    }
 
     .card-header h2,
     .card-header h3 {
@@ -488,6 +442,11 @@
 
     .table tbody tr.cursor-pointer:hover {
         @apply bg-primary-50/40 dark:bg-primary-400/[0.05];
+    }
+
+    /* A row opened with the keyboard: the ring sits inside it, where the card's edge can't clip it. */
+    .table tbody tr:focus-visible {
+        @apply outline-solid outline-2 -outline-offset-2 outline-primary-500/70 ring-0 ring-offset-0;
     }
 
     .segmented > button,

@@ -154,7 +154,13 @@ export type RequestListItem = Pick<SpectraRequestAttributes,
     | 'created_at' | 'completed_at' | 'expires_at'
 > & { tags: string[] };
 
-export interface RequestsResponse extends PaginatedResponse<RequestListItem>, AvailableFilterOptions {}
+export interface RequestsResponse extends PaginatedResponse<RequestListItem>, AvailableFilterOptions {
+    // On a large table the total is an estimate, paging can go by cursor, and a
+    // sort other than time covers only the latest rows.
+    total_is_estimate: boolean;
+    next_cursor: string | null;
+    sorted_within_latest: number | null;
+}
 
 // A row of the overview's latest requests (GetRecentRequests).
 export type RecentRequest = Pick<SpectraRequestAttributes,
@@ -244,11 +250,14 @@ export interface TracesSummary {
     avg_cost_in_cents: number;
     avg_request_count: number;
     avg_duration_ms: number;
+    // The numbers are extrapolated from a sample of a large table.
+    estimated: boolean;
 }
 
 export interface TracesResponse extends PaginatedResponse<TraceListItem>, AvailableFilterOptions {
     summary: TracesSummary;
     migrated: boolean;
+    total_is_estimate: boolean;
 }
 
 export interface TraceCall {
@@ -333,11 +342,14 @@ export interface ConversationsSummary {
     total_cost_in_cents: number;
     avg_cost_in_cents: number;
     avg_turn_count: number;
+    // The numbers are extrapolated from a sample of a large table.
+    estimated: boolean;
 }
 
 export interface ConversationsResponse extends PaginatedResponse<ConversationListItem>, AvailableFilterOptions {
     summary: ConversationsSummary;
     migrated: boolean;
+    total_is_estimate: boolean;
 }
 
 export interface ConversationTurnCall {
@@ -460,6 +472,8 @@ export interface ModelPerformance {
     latency_p95: number | null;
     latency_p99: number | null;
     ttft_p50: number | null;
+    // The percentiles come from a sample of a large table. A shared dashboard's rows don't say.
+    sampled?: boolean;
 }
 
 export interface PerformanceResponse {
@@ -924,8 +938,10 @@ export interface LastPrune {
     daily_stats: number;
     scores: number;
     review_items: number;
+    payloads: number;
     hours: number;
     stats_days: number | null;
+    payload_hours: number | null;
 }
 
 export interface LastRebuild {
@@ -1248,7 +1264,6 @@ export interface DashboardSummary {
     trackable_name: string | null;
     widgets: { type: DashboardWidgetData['type']; size: DashboardWidgetSize }[];
     default_period: string;
-    show_costs: boolean;
     sections: DashboardSectionName[];
     show_messages: boolean;
     is_active: boolean;

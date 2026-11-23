@@ -61,9 +61,4 @@ const uid = Math.random().toString(36).slice(2, 8);
       Spectra
     </text>
   </svg>
-
 </template>
-
-<style scoped>
-
-</style>

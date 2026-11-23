@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, useId } from 'vue';
 import type { ModelTypeOption, Provider } from '@/types/api';
 import type { RequestFilterKey, RequestFilterValues } from '@/types/app';
 
@@ -83,6 +83,8 @@ const emit = defineEmits<{
 }>();
 
 const showMoreFilters = ref(false);
+// Ties each label in the Filters panel to its control.
+const fieldId = useId();
 const moreFiltersEl = ref<HTMLElement | null>(null);
 
 const extraFilterKeys: RequestFilterKey[] = ['model', 'status', 'tag', 'finish_reason', 'has_tool_calls', 'is_reasoning', 'reasoning_effort', 'trackable_type'];
@@ -147,20 +149,21 @@ onUnmounted(() => {
     <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
         <div class="md:col-span-2">
             <div class="relative">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
                     v-model="filters.search"
                     type="text"
                     :placeholder="searchPlaceholder"
+                    :aria-label="searchPlaceholder"
                     class="form-input pl-9"
                 />
             </div>
         </div>
 
         <div v-if="showModelType">
-            <select v-model="filters.model_type" class="form-select">
+            <select v-model="filters.model_type" class="form-select" aria-label="Model type">
                 <option value="">All Types</option>
                 <option v-for="modelType in modelTypes" :key="modelType.value" :value="modelType.value">
                     {{ modelType.label }}
@@ -169,7 +172,7 @@ onUnmounted(() => {
         </div>
 
         <div v-if="showProvider">
-            <select v-model="filters.provider" class="form-select">
+            <select v-model="filters.provider" class="form-select" aria-label="Provider">
                 <option value="">All Providers</option>
                 <option v-for="provider in providers" :key="provider.internal_name" :value="provider.internal_name">
                     {{ provider.display_name }}
@@ -180,7 +183,7 @@ onUnmounted(() => {
         <slot name="inline-filters"></slot>
 
         <div v-if="showSort">
-            <select v-model="filters.sort_by" class="form-select">
+            <select v-model="filters.sort_by" class="form-select" aria-label="Sort by">
                 <option v-for="option in sortOptions" :key="option.value" :value="option.value">
                     {{ option.label }}
                 </option>
@@ -190,6 +193,8 @@ onUnmounted(() => {
         <div class="flex gap-2">
             <div v-if="showAdvancedFilters" class="relative flex-1" ref="moreFiltersEl">
                 <button
+                    type="button"
+                    :aria-expanded="showMoreFilters"
                     @click="showMoreFilters = !showMoreFilters"
                     class="btn btn-secondary w-full justify-between"
                     :class="{ 'border-primary-500! text-primary-600! dark:text-primary-400!': activeExtraFilters.length > 0 }"
@@ -222,8 +227,9 @@ onUnmounted(() => {
                         class="absolute right-0 z-50 mt-2 w-72 space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-pop dark:border-gray-800 dark:bg-gray-900"
                     >
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Model</label>
+                            <label :for="`${fieldId}-model`" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Model</label>
                             <input
+                                :id="`${fieldId}-model`"
                                 v-model="filters.model"
                                 type="text"
                                 placeholder="e.g. gpt-4o"
@@ -231,16 +237,16 @@ onUnmounted(() => {
                             />
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
-                            <select v-model="filters.status" class="form-select text-sm">
+                            <label :for="`${fieldId}-status`" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                            <select :id="`${fieldId}-status`" v-model="filters.status" class="form-select text-sm">
                                 <option value="">All</option>
                                 <option value="success">Success</option>
                                 <option value="error">Error</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tag</label>
-                            <select v-model="filters.tag" class="form-select text-sm">
+                            <label :for="`${fieldId}-tag`" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tag</label>
+                            <select :id="`${fieldId}-tag`" v-model="filters.tag" class="form-select text-sm">
                                 <option value="">All</option>
                                 <option v-for="tag in availableTags" :key="tag" :value="tag">
                                     {{ tag }}
@@ -248,8 +254,8 @@ onUnmounted(() => {
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Finish Reason</label>
-                            <select v-model="filters.finish_reason" class="form-select text-sm">
+                            <label :for="`${fieldId}-finish_reason`" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Finish Reason</label>
+                            <select :id="`${fieldId}-finish_reason`" v-model="filters.finish_reason" class="form-select text-sm">
                                 <option value="">All</option>
                                 <option v-for="reason in availableFinishReasons" :key="reason" :value="reason">
                                     {{ reason }}
@@ -257,24 +263,24 @@ onUnmounted(() => {
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tool Calls</label>
-                            <select v-model="filters.has_tool_calls" class="form-select text-sm">
+                            <label :for="`${fieldId}-has_tool_calls`" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tool Calls</label>
+                            <select :id="`${fieldId}-has_tool_calls`" v-model="filters.has_tool_calls" class="form-select text-sm">
                                 <option value="">All</option>
                                 <option value="1">With Tool Calls</option>
                                 <option value="0">Without Tool Calls</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Reasoning</label>
-                            <select v-model="filters.is_reasoning" class="form-select text-sm">
+                            <label :for="`${fieldId}-is_reasoning`" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Reasoning</label>
+                            <select :id="`${fieldId}-is_reasoning`" v-model="filters.is_reasoning" class="form-select text-sm">
                                 <option value="">All</option>
                                 <option value="1">Reasoning</option>
                                 <option value="0">Not Reasoning</option>
                             </select>
                         </div>
                         <div v-if="availableReasoningEfforts.length">
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Reasoning Effort</label>
-                            <select v-model="filters.reasoning_effort" class="form-select text-sm">
+                            <label :for="`${fieldId}-reasoning_effort`" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Reasoning Effort</label>
+                            <select :id="`${fieldId}-reasoning_effort`" v-model="filters.reasoning_effort" class="form-select text-sm">
                                 <option value="">All</option>
                                 <option v-for="effort in availableReasoningEfforts" :key="effort" :value="effort">
                                     {{ effort }}
@@ -282,8 +288,8 @@ onUnmounted(() => {
                             </select>
                         </div>
                         <div v-if="availableTrackableTypes.length">
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Trackable Type</label>
-                            <select v-model="filters.trackable_type" class="form-select text-sm" @change="onTrackableTypeChange">
+                            <label :for="`${fieldId}-trackable_type`" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Trackable Type</label>
+                            <select :id="`${fieldId}-trackable_type`" v-model="filters.trackable_type" class="form-select text-sm" @change="onTrackableTypeChange">
                                 <option value="">All</option>
                                 <option v-for="type in availableTrackableTypes" :key="type" :value="type">
                                     {{ trackableTypeLabel(type) }}
@@ -296,6 +302,8 @@ onUnmounted(() => {
 
             <button
                 v-if="hasClearableFilters"
+                type="button"
+                :aria-label="clearTitle"
                 @click="emit('clear')"
                 class="btn btn-ghost px-3"
                 v-tooltip="clearTitle"
@@ -314,7 +322,7 @@ onUnmounted(() => {
             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
         >
             {{ extraFilterLabel(key) }}
-            <button @click="removeExtraFilter(key)" class="hover:text-gray-900 dark:hover:text-white">
+            <button type="button" :aria-label="`Remove the filter ${extraFilterLabel(key)}`" @click="removeExtraFilter(key)" class="hover:text-gray-900 dark:hover:text-white">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -326,7 +334,7 @@ onUnmounted(() => {
             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
         >
             Trace: <span class="font-mono">{{ filters.trace_id }}</span>
-            <button @click="filters.trace_id = ''" class="hover:text-primary-900 dark:hover:text-primary-100">
+            <button type="button" aria-label="Remove the trace filter" @click="filters.trace_id = ''" class="hover:text-primary-900 dark:hover:text-primary-100">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -338,7 +346,7 @@ onUnmounted(() => {
             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
         >
             Conversation: <span class="font-mono">{{ filters.conversation_id }}</span>
-            <button @click="filters.conversation_id = ''" class="hover:text-primary-900 dark:hover:text-primary-100">
+            <button type="button" aria-label="Remove the conversation filter" @click="filters.conversation_id = ''" class="hover:text-primary-900 dark:hover:text-primary-100">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -350,7 +358,7 @@ onUnmounted(() => {
             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
         >
             Prompt: <span class="font-mono">{{ filters.prompt_name }}</span><span v-if="filters.prompt_version" class="font-mono">{{ filters.prompt_version }}</span>
-            <button @click="filters.prompt_name = ''; filters.prompt_version = ''" class="hover:text-primary-900 dark:hover:text-primary-100">
+            <button type="button" aria-label="Remove the prompt filter" @click="filters.prompt_name = ''; filters.prompt_version = ''" class="hover:text-primary-900 dark:hover:text-primary-100">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -362,7 +370,7 @@ onUnmounted(() => {
             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
         >
             Error group: <span class="font-mono">{{ filters.error_fingerprint }}</span>
-            <button @click="filters.error_fingerprint = ''" class="hover:text-red-900 dark:hover:text-red-100">
+            <button type="button" aria-label="Remove the error group filter" @click="filters.error_fingerprint = ''" class="hover:text-red-900 dark:hover:text-red-100">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -374,7 +382,7 @@ onUnmounted(() => {
             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
         >
             Trackable: <span class="font-mono">{{ trackableTypeLabel(filters.trackable_type) }}#{{ filters.trackable_id }}</span>
-            <button @click="filters.trackable_type = ''; filters.trackable_id = ''" class="hover:text-violet-900 dark:hover:text-violet-100">
+            <button type="button" aria-label="Remove the trackable filter" @click="filters.trackable_type = ''; filters.trackable_id = ''" class="hover:text-violet-900 dark:hover:text-violet-100">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
+import { copyText } from '@/composables/useClipboard';
 import DocsLink from '@/components/DocsLink.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import type { DashboardSummary, DashboardsResponse } from '@/types/api';
@@ -37,7 +38,7 @@ const audience = (dashboard: DashboardSummary) => {
 };
 
 const copyLink = async (dashboard: DashboardSummary) => {
-    await navigator.clipboard.writeText(dashboard.url);
+    if (!await copyText(dashboard.url)) return;
     copied.value = dashboard.id;
     setTimeout(() => {
         if (copied.value === dashboard.id) copied.value = null;
@@ -45,7 +46,13 @@ const copyLink = async (dashboard: DashboardSummary) => {
 };
 
 const remove = async (dashboard: DashboardSummary) => {
-    await apiRequest('delete', `/dashboards/${dashboard.id}`);
+    try {
+        await apiRequest('delete', `/dashboards/${dashboard.id}`);
+    } catch {
+        // apiRequest has shown the error; the dashboard is still there.
+        return;
+    }
+
     confirmingDelete.value = null;
     await load();
 };

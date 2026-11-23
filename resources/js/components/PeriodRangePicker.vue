@@ -107,6 +107,7 @@ const onRangeChange = (range: Date[] | null) => {
             <select
                 v-model="periodModel"
                 class="form-select w-full"
+                :aria-label="label || 'Period'"
                 :disabled="loading"
                 @change="onPeriodChange"
             >

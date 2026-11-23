@@ -45,7 +45,7 @@ const max = computed(() => Math.max(1, ...props.models.map((model) => Number(mod
                 </thead>
                 <tbody>
                     <template v-if="loading">
-                        <Skeleton variant="table-row" :lines="5" />
+                        <Skeleton variant="table-row" :lines="5" :columns="showCosts ? 3 : 2" />
                     </template>
                     <template v-else>
                         <tr v-for="model in models" :key="`${model.provider}|${model.model}`">

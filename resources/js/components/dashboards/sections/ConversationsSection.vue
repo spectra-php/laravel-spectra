@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useViewer } from '@/composables/useViewer';
+import { useLatest } from '@/composables/useLatest';
 import DashboardHeading, { dashboardPeriods } from '../DashboardHeading.vue';
 import ListPager from '../ListPager.vue';
 import SectionFailed from '../SectionFailed.vue';
@@ -22,16 +23,21 @@ const failed = ref(false);
 
 const subtitle = computed(() => [config.trackableName, dashboardPeriods.find((option) => option.value === period.value)?.label].filter(Boolean).join(' · '));
 
+// A period or page changed twice in a row keeps the answer to the second.
+const beginLoad = useLatest();
+
 const load = async (number = 1) => {
+    const isLatest = beginLoad();
     loading.value = true;
     failed.value = false;
 
     try {
-        page.value = await fetchData<PaginatedResponse<DashboardListedConversation>>('/conversations', { period: period.value, page: number });
+        const data = await fetchData<PaginatedResponse<DashboardListedConversation>>('/conversations', { period: period.value, page: number });
+        if (isLatest()) page.value = data;
     } catch (error) {
-        failed.value = true;
+        if (isLatest()) failed.value = true;
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 
@@ -58,13 +64,15 @@ watch(period, () => load());
                         </tr>
                     </thead>
                     <tbody>
-                        <Skeleton v-if="loading" variant="table-row" :lines="6" />
+                        <Skeleton v-if="loading" variant="table-row" :lines="6" :columns="config.showCosts ? 6 : 5" />
                         <template v-else>
                             <tr
                                 v-for="row in page?.data ?? []"
                                 :key="row.conversation_id"
                                 class="cursor-pointer"
                                 @click="router.push({ name: 'conversation', params: { conversationId: row.conversation_id } })"
+                                tabindex="0"
+                                @keydown.enter.self="router.push({ name: 'conversation', params: { conversationId: row.conversation_id } })"
                             >
                                 <td class="whitespace-nowrap font-medium text-gray-900 dark:text-white">{{ formatWhen(row.started_at) }}</td>
                                 <td class="max-w-0 w-[40%]">

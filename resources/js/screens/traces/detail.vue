@@ -3,13 +3,15 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
+import { copyText } from '@/composables/useClipboard';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Skeleton from '@/components/Skeleton.vue';
 import TraceWaterfall from '@/components/TraceWaterfall.vue';
 import Money from '@/components/Money.vue';
 import ScoresCard from '@/components/ScoresCard.vue';
-import type { AnnotationQueueSummary, AnnotationQueuesResponse, TraceDetailsResponse, TraceSpan } from '@/types/api';
+import type { AnnotationQueueSummary, AnnotationQueuesResponse, QueueTraceResponse, TraceDetailsResponse, TraceSpan } from '@/types/api';
 import type { ApiError } from '@/types/app';
 
 const route = useRoute();
@@ -21,17 +23,22 @@ const notFound = ref(false);
 const copied = ref(false);
 loading.value = true;
 
+const beginLoad = useLatest();
+
 const loadTrace = async () => {
+    const isLatest = beginLoad();
     loading.value = true;
     notFound.value = false;
     try {
-        trace.value = await apiRequest<TraceDetailsResponse>('get', '/traces/' + encodeURIComponent(route.params.traceId as string));
+        const data = await apiRequest<TraceDetailsResponse>('get', '/traces/' + encodeURIComponent(route.params.traceId as string));
+        if (isLatest()) trace.value = data;
     } catch (error) {
+        if (!isLatest()) return;
         trace.value = null;
         notFound.value = (error as ApiError)?.response?.status === 404;
         if (!notFound.value) console.error('Failed to load trace:', error);
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 
@@ -55,8 +62,10 @@ const queueForReview = async (event: Event) => {
     if (!queue) return;
     queueError.value = '';
     try {
-        await apiRequest('post', `/annotations/${encodeURIComponent(queue)}/items`, { trace_id: route.params.traceId });
-        queuedIn.value = queue;
+        const { queued } = await apiRequest<QueueTraceResponse>('post', `/annotations/${encodeURIComponent(queue)}/items`, { trace_id: route.params.traceId });
+        // The API answers 200 with `queued: false` when it didn't save the item (recording is paused, say).
+        if (queued) queuedIn.value = queue;
+        else queueError.value = 'Could not add it to the queue.';
     } catch {
         queueError.value = 'Could not add it to the queue.';
     }
@@ -117,13 +126,10 @@ const trackableLabel = computed(() => {
 });
 
 const copyTraceId = async () => {
-    try {
-        await navigator.clipboard.writeText(trace.value!.trace_id);
-        copied.value = true;
-        setTimeout(() => copied.value = false, 2000);
-    } catch {
-        // Clipboard can be blocked outside secure contexts; the id stays selectable.
-    }
+    // When the browser refuses, the id stays selectable.
+    if (!await copyText(trace.value!.trace_id)) return;
+    copied.value = true;
+    setTimeout(() => copied.value = false, 2000);
 };
 </script>
 

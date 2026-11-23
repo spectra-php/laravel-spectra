@@ -38,6 +38,10 @@ const onExpired = () => {
             class="card-header cursor-pointer select-none"
             :class="{ 'border-b-0': !expanded }"
             @click="emit('toggle')"
+            role="button"
+            tabindex="0"
+            :aria-expanded="expanded"
+            @keydown.enter.space.self.prevent="emit('toggle')"
         >
             <div class="flex items-center justify-between w-full">
                 <div class="flex items-center gap-2">

@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHelpers } from '@/composables/useHelpers';
 import { useLoading } from '@/composables/useLoading';
+import { useLatest } from '@/composables/useLatest';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import ProviderLogo from '@/components/ProviderLogo.vue';
 import Skeleton from '@/components/Skeleton.vue';
@@ -19,17 +20,22 @@ const conversation = ref<ConversationDetailsResponse | null>(null);
 const notFound = ref(false);
 loading.value = true;
 
+const beginLoad = useLatest();
+
 const loadConversation = async () => {
+    const isLatest = beginLoad();
     loading.value = true;
     notFound.value = false;
     try {
-        conversation.value = await apiRequest<ConversationDetailsResponse>('get', '/conversations/' + encodeURIComponent(route.params.conversationId as string));
+        const data = await apiRequest<ConversationDetailsResponse>('get', '/conversations/' + encodeURIComponent(route.params.conversationId as string));
+        if (isLatest()) conversation.value = data;
     } catch (error) {
+        if (!isLatest()) return;
         conversation.value = null;
         notFound.value = (error as ApiError)?.response?.status === 404;
         if (!notFound.value) console.error('Failed to load conversation:', error);
     } finally {
-        loading.value = false;
+        if (isLatest()) loading.value = false;
     }
 };
 
