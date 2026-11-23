@@ -11,7 +11,10 @@
 /docs               export-ignore
 /resources/css      export-ignore
 /resources/js       export-ignore
-/resources/images   export-ignore
+/resources/pricing/NOTES.md export-ignore
+# The dashboard inlines four favicon files; the web app manifest and its icons are not used.
+/resources/images/favicons/site.webmanifest export-ignore
+/resources/images/favicons/web-app-manifest-*.png export-ignore
 /tests              export-ignore
 /workbench          export-ignore
 /.ai                export-ignore
