@@ -27,6 +27,7 @@ Spectra 4.3 updates prices from public price feeds instead of scraping pricing p
 - Pricing: the daily check of the bundled catalog reads the price feed instead of scraping the providers' pricing pages. Scaleway, which the feed doesn't cover, is updated by hand. See [Scheduled Price Updates](https://spectraphp.com/pricing#scheduled-price-updates)
 - Pricing: the bundled catalog and the pricing file `spectra:pricing-sync` writes are compact JSON, one model per line, and the catalog no longer carries the maintainers' notes on each provider. It is 155 KB instead of 430 KB, and a price change is still a one-line diff
 - OpenRouter: its prices are no longer in the catalog. OpenRouter sends the cost of every request in the response, and Spectra records that cost, for every model it offers and not only the 32 the catalog listed. An OpenRouter model is now recorded under the id you called it with (`anthropic/claude-sonnet-4.5`), not a display name (`Claude Sonnet 4.5`), and a response without a cost is recorded at $0
+- Dashboard: lists work from the keyboard. A sortable column heading is a button that says which way its column is sorted, and a row that opens a page can be reached with Tab and opened with Enter. Dialogs keep focus inside while they are open, close on Escape and put focus back on what opened them
 
 #### Fixed
 
@@ -34,6 +35,8 @@ Spectra 4.3 updates prices from public price feeds instead of scraping pricing p
 - Mistral: `mistral-large-latest` bills as Mistral Large 4 ($0.70 / $2.10) instead of Mistral Large 3 ($0.50 / $1.50), which keeps its price as `mistral-large-2512`. `voxtral-mini-tts-latest` bills as Voxtral TTS 3 ($13 per 1M characters) instead of $16, and the 26.03 model keeps its price as `voxtral-mini-tts-2603`
 - Google: `gemini-3.5-flash-lite` batch cached input is $0.015 (was $0.02)
 - Dashboard: the favicon was missing in an installed copy of the package, because the folder that holds it was left out of the package archive
+- Dashboard: after a filter, the period or the page was changed quickly, a slow answer to the earlier request could replace the newer one. Each screen now keeps only the answer to its latest request, and nothing is loaded for a screen you have left
+- Dashboard: a number with four or more decimals got thousands separators inside its fraction (`1,234.56,789`)
 
 #### Upgrading
 
