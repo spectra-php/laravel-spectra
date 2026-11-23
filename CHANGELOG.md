@@ -2,6 +2,43 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## v4.3.0 - 2026-11-23
+
+Spectra 4.3 updates prices from public price feeds instead of scraping pricing pages. `spectra:pricing-sync` needs no key, and Firecrawl is no longer used.
+
+#### Added
+
+- `spectra:pricing-sync` saves the prices that differ from the bundled catalog, and new models, to your pricing file. It reads LiteLLM's cost map, a public price feed, for every provider in the catalog except Scaleway. It needs no key. A feed price that can't be right (ten times ours, a cached price above the input price, another column of the same row) is left out and reported, and a new model is added only when models.dev lists it at the same price. See [Syncing Prices from Feeds](https://spectraphp.com/pricing#syncing-prices)
+- Together AI, Fireworks AI, DeepInfra and Cerebras: chat completions sent to `api.together.ai` (and `api.together.xyz`), `api.fireworks.ai`, `api.deepinfra.com` and `api.cerebras.ai` are tracked under the `together`, `fireworks`, `deepinfra` and `cerebras` providers, streamed or not. The catalog prices 92 of their models (16, 26, 48 and 2): the ones LiteLLM's cost map and models.dev list at the same price, not yet checked against the providers' pricing pages. DeepInfra reports each request's cost in `usage.estimated_cost`, and Spectra records that cost
+- Anthropic: `claude-fable-5-2` ($8 / $40 per 1M tokens, cache reads $0.20, cache writes $10 and $16, batch at half)
+- Google: `gemini-4-carbon` ($2 / $10, doubling on 1 December 2026, as Gemini 4 Argon does) and `gemini-4-neon` ($3 / $15), with batch, flex and priority prices. Gemini 4 Hydrogen gets its cached input price ($0.075) and batch, flex and priority prices
+- OpenAI: `gpt-6.2-astra` ($8 / $40) and `gpt-6.2-sol` ($2 / $10), with batch, priority and above-272K prices. `gpt-5.6-cyber`, `gpt-6-cyber` and `gpt-6-astra-law` get their prices above 272K input tokens
+- xAI: prices above 200K input tokens for Grok 4.3, 4.5, 4.6, 4.7, the three Grok 4.20 models, Grok Build 0.1 and Grok Code Fast 1, and batch prices for Grok 4.7
+- Mistral: cached input prices for Pixtral Large, Devstral Medium, Devstral Small and Voxtral Small
+- Dashboard: the Maintenance screen's Prices card has a **Recalculate costs** button. It prices the stored requests again from the catalog, so a request recorded at $0 before its model had a price, or at a price that was since corrected, gets the right cost, and it rebuilds the daily stats of the stored days. It writes the database only, never a pricing file. It asks you to confirm, and runs as a queued job when `spectra.queue.enabled` is on, or during the request when it is off; the card says which. Everyone sees the button; it works only for users the `manageSpectra` gate allows, and the card tells the others so. A request keeps its recorded cost when the provider reported it (OpenRouter, xAI, DeepInfra), when the catalog has no price for its model, or when the cost was made from something the request row doesn't keep. See [Recalculating Stored Costs](https://spectraphp.com/pricing#recalculating-costs)
+- Dashboard: the Prices card's description is replaced by a question mark that opens the pricing docs
+- `Spectra\Contracts\ReportsRequestCost`: a marker for a custom provider whose responses say what a request cost, so recalculating costs leaves its requests as recorded
+- Config: `costs.feeds` (`SPECTRA_PRICING_FEED_LITELLM`, `SPECTRA_PRICING_FEED_MODELS_DEV`) holds the feed URLs, so you can read a mirror or a fixed commit of LiteLLM's file
+
+#### Changed
+
+- `spectra:pricing-scrape` is now an alias of `spectra:pricing-sync`: it reads the price feeds instead of the providers' pricing pages, and no longer calls Firecrawl. It syncs every provider the feed covers unless you name some; `--all` and `--url` are accepted and do nothing
+- Config: `costs.firecrawl` and the `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL`, `SPECTRA_FIRECRAWL_TIMEOUT` and `SPECTRA_SCRAPE_PROVIDERS` variables are no longer read
+- Pricing: the daily check of the bundled catalog reads the price feed instead of scraping the providers' pricing pages. Scaleway, which the feed doesn't cover, is updated by hand. See [Scheduled Price Updates](https://spectraphp.com/pricing#scheduled-price-updates)
+- Pricing: the bundled catalog and the pricing file `spectra:pricing-sync` writes are compact JSON, one model per line, and the catalog no longer carries the maintainers' notes on each provider. It is 155 KB instead of 430 KB, and a price change is still a one-line diff
+- OpenRouter: its prices are no longer in the catalog. OpenRouter sends the cost of every request in the response, and Spectra records that cost, for every model it offers and not only the 32 the catalog listed. An OpenRouter model is now recorded under the id you called it with (`anthropic/claude-sonnet-4.5`), not a display name (`Claude Sonnet 4.5`), and a response without a cost is recorded at $0
+
+#### Fixed
+
+- OpenAI: `gpt-6-rosalind` was priced $15 / $75 instead of $10 / $50. Cached input is $1 (was $1.50), cache writes are $12.50 and $25 (were $18.75 and $37.50), and above 272K input tokens it is $20 / $75 (was $30 / $112.50)
+- Mistral: `mistral-large-latest` bills as Mistral Large 4 ($0.70 / $2.10) instead of Mistral Large 3 ($0.50 / $1.50), which keeps its price as `mistral-large-2512`. `voxtral-mini-tts-latest` bills as Voxtral TTS 3 ($13 per 1M characters) instead of $16, and the 26.03 model keeps its price as `voxtral-mini-tts-2603`
+- Google: `gemini-3.5-flash-lite` batch cached input is $0.015 (was $0.02)
+- Dashboard: the favicon was missing in an installed copy of the package, because the folder that holds it was left out of the package archive
+
+#### Upgrading
+
+Nothing you must do: there is no migration, and a pricing file `spectra:pricing-scrape` wrote keeps working. A script that calls `spectra:pricing-scrape` keeps working too, but it now reads the feeds: it no longer needs a Firecrawl key, it ignores `--url`, and it can't refresh Scaleway. You can delete the Firecrawl variables from your `.env` file and the `costs.firecrawl` block from a published config file. A published config file gets the `costs.feeds` defaults on its own. OpenRouter requests recorded before the upgrade keep the display name of their model, so for a while the dashboard lists the same OpenRouter model under two names; to keep pricing a response that carries no cost, add an `openrouter` section to your own pricing file. If your app calls Together AI, Fireworks AI, DeepInfra or Cerebras, those calls are now tracked: set `'together' => false` (or the other slugs) under `providers` in `config/spectra.php` to keep one untracked, and remove a custom provider you registered for the same host.
+
 ## v4.2.0 - 2026-11-17
 
 Spectra 4.2 lets you set a trackable's budget from the dashboard. Run `composer update spectra-php/laravel-spectra` to get it.
