@@ -4,7 +4,7 @@ All notable changes to `laravel-spectra` will be documented in this file.
 
 ## v4.3.0 - 2026-11-23
 
-Spectra 4.3 updates prices from public price feeds instead of scraping pricing pages. `spectra:pricing-sync` needs no key, and Firecrawl is no longer used.
+Spectra 4.3 updates prices from public price feeds instead of scraping pricing pages. `spectra:pricing-sync` needs no key, and Firecrawl is no longer used. Run `composer update spectra-php/laravel-spectra` to get it.
 
 #### Added
 
