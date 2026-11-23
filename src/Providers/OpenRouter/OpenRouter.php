@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Spectra\Providers\OpenRouter;
 
+use Spectra\Contracts\ReportsRequestCost;
 use Spectra\Providers\OpenRouter\Handlers\ChatHandler;
 use Spectra\Providers\OpenRouter\Handlers\EmbeddingHandler;
 use Spectra\Providers\OpenRouter\Handlers\ImageGenerationHandler;
@@ -19,7 +20,7 @@ use Spectra\Providers\Provider;
  * Spectra records as the exact cost; the pricing catalog is only a fallback
  * for responses without it.
  */
-class OpenRouter extends Provider
+class OpenRouter extends Provider implements ReportsRequestCost
 {
     /**
      * Get the provider's slug.

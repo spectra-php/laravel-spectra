@@ -6,6 +6,7 @@ namespace Spectra\Actions\Maintenance;
 
 use Spectra\Jobs\PruneEntriesJob;
 use Spectra\Jobs\RebuildStatsJob;
+use Spectra\Jobs\RecalculateCostsJob;
 use Spectra\Support\Maintenance\MaintenanceHistory;
 
 /**
@@ -17,7 +18,7 @@ class QueueMaintenanceJob
     /**
      * Queue the job and mark its task as pending.
      */
-    public function __invoke(PruneEntriesJob|RebuildStatsJob $job): void
+    public function __invoke(PruneEntriesJob|RebuildStatsJob|RecalculateCostsJob $job): void
     {
         if ($connection = config('spectra.queue.connection')) {
             $job->onConnection($connection);
@@ -29,7 +30,11 @@ class QueueMaintenanceJob
 
         // Before dispatching: on the sync driver the job runs right here,
         // records its run and clears the mark again.
-        MaintenanceHistory::markPending($job instanceof PruneEntriesJob ? MaintenanceHistory::PRUNE : MaintenanceHistory::REBUILD_STATS);
+        MaintenanceHistory::markPending(match (true) {
+            $job instanceof PruneEntriesJob => MaintenanceHistory::PRUNE,
+            $job instanceof RebuildStatsJob => MaintenanceHistory::REBUILD_STATS,
+            default => MaintenanceHistory::RECALCULATE_COSTS,
+        });
 
         dispatch($job);
     }

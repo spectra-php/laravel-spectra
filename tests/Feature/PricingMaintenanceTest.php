@@ -9,10 +9,10 @@ use Spectra\Support\Pricing\PricingFile;
 use Spectra\Tests\Fixtures\FakeCatalogs;
 
 /**
- * The maintenance screen's prices card is read-only: it shows the bundled
- * catalog, the app's own pricing file when it has one, and the cache.
- * Prices are checked and written with spectra:pricing-scrape where you
- * develop; the dashboard runs in production and never writes them.
+ * The maintenance screen's prices card: it shows the bundled catalog, the
+ * app's own pricing file when it has one, and the cache. It never checks a
+ * price feed or writes a pricing file; recalculating the stored requests'
+ * costs from it is covered in RecalculateCostsTest.
  */
 beforeEach(function () {
     Gate::define('viewSpectra', fn ($user = null) => true);
@@ -21,11 +21,7 @@ beforeEach(function () {
     $this->bundled = FakeCatalogs::useBundled();
     $this->path = storage_path('framework/testing/pricing-'.uniqid().'.json');
 
-    config([
-        'spectra.costs.pricing_path' => null,
-        'spectra.costs.firecrawl.api_key' => 'fc-test',
-        'spectra.costs.firecrawl.providers' => ['openai'],
-    ]);
+    config(['spectra.costs.pricing_path' => null]);
 });
 
 afterEach(function () {

@@ -7,7 +7,7 @@ namespace Spectra\Support\Maintenance;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Remembers the last prune and stats rebuild, and which of them is queued, so
+ * Remembers the last prune, stats rebuild and cost recalculation, and which of them is queued, so
  * the dashboard's maintenance screen can show them. Kept in the default cache
  * store: losing it loses only this history, never data.
  */
@@ -16,6 +16,8 @@ class MaintenanceHistory
     public const PRUNE = 'prune';
 
     public const REBUILD_STATS = 'rebuild-stats';
+
+    public const RECALCULATE_COSTS = 'recalculate-costs';
 
     /**
      * How long a queued task counts as pending when its job never reports back.

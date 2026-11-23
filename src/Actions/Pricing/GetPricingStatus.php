@@ -7,15 +7,16 @@ namespace Spectra\Actions\Pricing;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Spectra\Data\Responses\PricingStatusResponse;
+use Spectra\Support\Maintenance\MaintenanceAccess;
+use Spectra\Support\Maintenance\MaintenanceHistory;
 use Spectra\Support\Pricing\PricingCatalog;
 use Spectra\Support\Pricing\PricingFile;
 
 /**
  * What the dashboard's prices card shows: the catalog bundled with Spectra,
  * the app's own pricing file (whether it exists and what it holds) and the
- * cache. Read-only: prices are checked and written with
- * spectra:pricing-scrape where you develop, never from the dashboard, which
- * runs in production.
+ * cache, plus whether the current user may recalculate the stored requests'
+ * costs from the card and what the last recalculation did.
  */
 class GetPricingStatus
 {
@@ -30,6 +31,11 @@ class GetPricingStatus
             bundled: $this->summarise(PricingCatalog::bundledFile()),
             file: $file !== null ? $this->summarise($file) : null,
             cache: ['enabled' => PricingCatalog::cacheEnabled(), 'store' => PricingCatalog::cacheStoreName()],
+            can_manage: MaintenanceAccess::allowed(),
+            runs_on_queue: (bool) config('spectra.queue.enabled'),
+            queue_name: is_string($queue = config('spectra.queue.queue')) && $queue !== '' ? $queue : null,
+            pending: MaintenanceHistory::isPending(MaintenanceHistory::RECALCULATE_COSTS),
+            last_recalculation: MaintenanceHistory::last(MaintenanceHistory::RECALCULATE_COSTS),
         );
     }
 

@@ -9,8 +9,8 @@ use Spectra\Data\Responses\PricingStatusResponse;
 use Spectra\Http\Controllers\Api\BaseApiController;
 
 /**
- * GET /api/maintenance/pricing: the prices card, read-only. Anyone who can
- * view the dashboard sees it.
+ * GET /api/maintenance/pricing: the prices card. Anyone who can view the
+ * dashboard sees it; recalculating the stored costs is a separate, gated endpoint.
  */
 class PricingStatusController extends BaseApiController
 {

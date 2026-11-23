@@ -7,6 +7,7 @@ namespace Spectra\Providers\XAi;
 use Illuminate\Support\Str;
 use Spectra\Contracts\ExtractsPricingTierFromRequest;
 use Spectra\Contracts\ExtractsPricingTierFromResponse;
+use Spectra\Contracts\ReportsRequestCost;
 use Spectra\Enums\PricingTier;
 use Spectra\Providers\Provider;
 use Spectra\Providers\XAi\Handlers\ChatHandler;
@@ -21,7 +22,7 @@ use Spectra\Providers\XAi\Handlers\VideoHandler;
  * `us.api.x.ai` is the US regional endpoint. Its 1.1x surcharge is included
  * in the `cost_in_usd_ticks` every response reports.
  */
-class XAi extends Provider implements ExtractsPricingTierFromRequest, ExtractsPricingTierFromResponse
+class XAi extends Provider implements ExtractsPricingTierFromRequest, ExtractsPricingTierFromResponse, ReportsRequestCost
 {
     /**
      * Get the slug xAI requests are recorded under.

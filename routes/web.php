@@ -34,6 +34,7 @@ use Spectra\Http\Controllers\Api\Maintenance\MaintenanceStatusController;
 use Spectra\Http\Controllers\Api\Maintenance\PricingStatusController;
 use Spectra\Http\Controllers\Api\Maintenance\PruneController;
 use Spectra\Http\Controllers\Api\Maintenance\RebuildStatsController;
+use Spectra\Http\Controllers\Api\Maintenance\RecalculateCostsController;
 use Spectra\Http\Controllers\Api\Maintenance\RecordingController;
 use Spectra\Http\Controllers\Api\PerformanceController;
 use Spectra\Http\Controllers\Api\Playground\NewPlaygroundPromptController;
@@ -112,6 +113,7 @@ Route::prefix('api')->group(function () {
     Route::post('/maintenance/rebuild-stats', RebuildStatsController::class);
     Route::post('/maintenance/recording', RecordingController::class);
     Route::get('/maintenance/pricing', PricingStatusController::class);
+    Route::post('/maintenance/pricing/recalculate', RecalculateCostsController::class);
 
     // Playground: anyone who may view the dashboard sees whether it is on; the
     // calls and running them also need the option and the manageSpectra gate.

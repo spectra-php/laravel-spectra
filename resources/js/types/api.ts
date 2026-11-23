@@ -994,6 +994,11 @@ export interface PricingStatusResponse {
         enabled: boolean;
         store: string | null;
     };
+    can_manage: boolean;
+    runs_on_queue: boolean;
+    queue_name: string | null;
+    pending: boolean;
+    last_recalculation: { at: string; requests: number; updated: number; difference: number } | null;
 }
 
 /* Playground */
