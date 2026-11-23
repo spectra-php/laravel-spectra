@@ -64,12 +64,16 @@ it('uses only the chosen patterns, custom patterns and the callback', function (
         ->toBe(['note' => '[REDACTED:email] [REDACTED:account] [REDACTED:codename] from 10.0.0.1']);
 });
 
-it('masks span attributes and score comments', function () {
+it('masks span attributes', function () {
     Spectra::span('lookup', fn () => null, ['customer_email' => 'ada@example.com']);
+
+    expect(SpectraSpan::query()->sole()->attributes)->toEqual(['customer_email' => '[REDACTED:email]']);
+});
+
+it('masks score comments', function () {
     Spectra::score('helpful', false, traceId: 't', comment: 'Reach me at +44 20 7946 0958');
 
-    expect(SpectraSpan::query()->sole()->attributes)->toEqual(['customer_email' => '[REDACTED:email]'])
-        ->and(SpectraScore::query()->sole()->comment)->toBe('Reach me at [REDACTED:phone]');
+    expect(SpectraScore::query()->sole()->comment)->toBe('Reach me at [REDACTED:phone]');
 });
 
 it('masks a request before it goes on the queue', function () {

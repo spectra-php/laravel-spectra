@@ -174,6 +174,7 @@ it('rebuilds the daily stats of the days it changed', function () {
 
     app(RecalculateCosts::class)();
 
+    // GPT X (in 100, out 400): (1,000×100 + 500×400) / 1M
     expect((float) SpectraDailyStat::query()->whereNull('trackable_type')->sum('total_cost_in_cents'))->toEqualWithDelta(0.3, 1e-9);
 });
 
@@ -224,6 +225,7 @@ describe('from the dashboard', function () {
             ->assertJsonPath('pending', false)
             ->assertJsonPath('last_recalculation.requests', 1)
             ->assertJsonPath('last_recalculation.updated', 1);
+        // GPT X (in 100, out 400): (1,000×100 + 500×400) / 1M
         expect($request->refresh()->total_cost_in_cents)->toEqualWithDelta(0.3, 1e-9);
     });
 
@@ -240,6 +242,7 @@ describe('from the dashboard', function () {
         $this->getJson('/spectra/api/maintenance/pricing')
             ->assertJsonPath('pending', false)
             ->assertJsonPath('last_recalculation.updated', 1);
+        // GPT X (in 100, out 400): (1,000×100 + 500×400) / 1M
         expect($request->refresh()->total_cost_in_cents)->toEqualWithDelta(0.3, 1e-9);
     });
 });

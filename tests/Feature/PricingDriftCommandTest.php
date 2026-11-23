@@ -105,17 +105,24 @@ it('reports a baselined price again when models.dev changes it', function () {
         ->assertFailed();
 });
 
-it('writes a markdown report and downloads models.dev by default', function () {
-    Http::fake([PricingDriftCommand::SOURCE => Http::response($this->catalog)]);
+it('writes the findings to a markdown report', function () {
     $markdown = tempnam(sys_get_temp_dir(), 'drift-report');
 
-    $this->artisan('spectra:pricing-drift', ['--baseline' => $this->baseline, '--markdown' => $markdown])->assertFailed();
+    $this->artisan('spectra:pricing-drift', ['--source' => $this->source, '--baseline' => $this->baseline, '--markdown' => $markdown])->assertFailed();
 
     expect(File::get($markdown))
         ->toContain('| openai | `gpt-x` | output | 400 | 450 |')
         ->toContain('| openai | `gpt-new` | 200 | 800 |');
 
     File::delete($markdown);
+});
+
+it('downloads models.dev when no source is given', function () {
+    Http::fake([PricingDriftCommand::SOURCE => Http::response($this->catalog)]);
+
+    $this->artisan('spectra:pricing-drift', ['--baseline' => $this->baseline])
+        ->expectsOutputToContain('4 new findings (3 differing prices, 1 missing models), 0 already in the baseline.')
+        ->assertFailed();
 });
 
 it('fails when models.dev cannot be loaded', function () {

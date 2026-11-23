@@ -56,15 +56,15 @@ it('keeps a 2xx answer that carries an error out of the cost query, the trackabl
     $errorRate = $evaluator->measure(AlertRule::fromConfig(['name' => 'Errors', 'metric' => 'error_rate', 'above' => 0.5, 'min_requests' => 1]), now());
     $spend = $evaluator->measure(AlertRule::fromConfig(['name' => 'Spend', 'metric' => 'cost', 'above' => 1]), now());
 
-    expect((new CostQueryBuilder)->totalCents())->toBe(100.0)
+    expect((new CostQueryBuilder)->totalCents())->toEqualWithDelta(100.0, 1e-9)
         ->and((new CostQueryBuilder)->breakdown()->requestCount)->toBe(1)
         ->and($usage->requestCount)->toBe(2)
         ->and($usage->successfulCount)->toBe(1)
         ->and($usage->failedCount)->toBe(1)
-        ->and($usage->totalCostInCents)->toBe(100.0)
+        ->and($usage->totalCostInCents)->toEqualWithDelta(100.0, 1e-9)
         ->and($usage->avgLatencyMs)->toBe(100.0)
         ->and($errorRate)->toBe(0.5)
-        ->and($spend)->toBe(100.0);
+        ->and($spend)->toEqualWithDelta(100.0, 1e-9);
 });
 
 it('exports a 3xx request as failed to integrations', function () {
@@ -98,13 +98,13 @@ it('sums usage cost and averages latency over successful requests only while cou
     $byModel = (new UsageQueryBuilder)->byModel()->first();
 
     expect($stats->requestCount)->toBe(2)
-        ->and($stats->totalCostInCents)->toBe(100.0)
+        ->and($stats->totalCostInCents)->toEqualWithDelta(100.0, 1e-9)
         ->and($stats->avgLatencyMs)->toBe(100.0)
         ->and($stats->maxLatencyMs)->toBe(100)
-        ->and((new UsageQueryBuilder)->totalCostCents())->toBe(100.0)
+        ->and((new UsageQueryBuilder)->totalCostCents())->toEqualWithDelta(100.0, 1e-9)
         ->and((new UsageQueryBuilder)->averageLatency())->toBe(100.0)
         ->and($byModel['request_count'])->toBe(2)
-        ->and($byModel['total_cost_in_cents'])->toBe(100.0)
+        ->and($byModel['total_cost_in_cents'])->toEqualWithDelta(100.0, 1e-9)
         ->and($byModel['avg_latency_ms'])->toBe(100.0);
 });
 
@@ -116,9 +116,9 @@ it('sums a trackable model usage cost over successful requests only while counti
     $usage = $user->getAiUsageForPeriod(now()->subDay(), now()->addDay());
 
     expect($usage->requestCount)->toBe(2)
-        ->and($usage->totalCostInCents)->toBe(100.0)
+        ->and($usage->totalCostInCents)->toEqualWithDelta(100.0, 1e-9)
         ->and($usage->avgLatencyMs)->toBe(100.0)
-        ->and($user->getAiUsageByProvider(now()->subDay(), now()->addDay())['openai']['total_cost_in_cents'])->toBe(100.0);
+        ->and($user->getAiUsageByProvider(now()->subDay(), now()->addDay())['openai']['total_cost_in_cents'])->toEqualWithDelta(100.0, 1e-9);
 });
 
 it('includes the whole end day when a usage period ends on a date-only string', function () {
@@ -128,7 +128,7 @@ it('includes the whole end day when a usage period ends on a date-only string', 
 
     expect($user->getAiUsageForPeriod('2026-03-01', '2026-03-05')->requestCount)->toBe(1)
         ->and((new UsageQueryBuilder)->between('2026-03-01', '2026-03-05')->count())->toBe(1)
-        ->and((new CostQueryBuilder)->between('2026-03-01', '2026-03-05')->totalCents())->toBe(50.0);
+        ->and((new CostQueryBuilder)->between('2026-03-01', '2026-03-05')->totalCents())->toEqualWithDelta(50.0, 1e-9);
 });
 
 it('includes the end day when daily stats are read with a date-only end', function () {

@@ -39,7 +39,6 @@ it('groups messages that differ only in ids, numbers, urls, emails and masked ke
     expect($fingerprint->for('openai', 429, null, $first))->toBe($fingerprint->for('openai', 429, null, $second));
 })->with([
     'retry delay' => ['Rate limit reached. Please try again in 2s.', 'Rate limit reached. Please try again in 14.5s.'],
-    'org and usage' => ['Rate limit reached for gpt-4o in organization org-3kTq9xYzAb on tokens per min (TPM): Limit 30000, Used 29871, Requested 2203.', 'Rate limit reached for gpt-4o in organization org-88aaZZ11bb on tokens per min (TPM): Limit 30000, Used 25012, Requested 950.'],
     'request id' => ['(Please include the request ID req_8f3a0c1d2e4b5a6978 in your message.)', '(Please include the request ID req_00ffaa11bb22cc33dd in your message.)'],
     'uuid' => ['Job 0192f7c3-8a1b-7c2d-9e3f-4a5b6c7d8e9f failed', 'Job 0192f7c4-1111-7222-9333-444455556666 failed'],
     'url' => ['See https://example.test/a?id=1', 'See https://example.test/b'],

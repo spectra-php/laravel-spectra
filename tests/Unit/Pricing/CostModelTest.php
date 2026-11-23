@@ -242,11 +242,18 @@ it('bills a pricing unit the enum does not know as tokens', function () {
     expect($cost['total_cost_in_cents'])->toEqualWithDelta(10.0, 1e-9);
 });
 
-it('reads provider usage keys and round-trips its own usage array', function () {
-    $tokens = TokenMetrics::fromArray(['input_tokens' => 10, 'output_tokens' => 5, 'cache_write_tokens' => 3, 'cached_tokens' => 2]);
+it('reads input_tokens and output_tokens as prompt and completion tokens', function () {
+    $tokens = TokenMetrics::fromArray(['input_tokens' => 10, 'output_tokens' => 5]);
 
     expect($tokens->promptTokens)->toBe(10)
-        ->and($tokens->completionTokens)->toBe(5)
-        ->and($tokens->cacheWriteTokens)->toBe(3)
-        ->and(TokenMetrics::fromArray($tokens->toUsageArray()))->toEqual($tokens);
+        ->and($tokens->completionTokens)->toBe(5);
+});
+
+it('round-trips its own usage array', function () {
+    $tokens = TokenMetrics::fromArray(['input_tokens' => 10, 'output_tokens' => 5, 'cache_write_tokens' => 3, 'cached_tokens' => 2]);
+
+    $restored = TokenMetrics::fromArray($tokens->toUsageArray());
+
+    expect($tokens->cacheWriteTokens)->toBe(3)
+        ->and($restored)->toEqual($tokens);
 });

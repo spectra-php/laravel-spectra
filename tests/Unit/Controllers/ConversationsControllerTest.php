@@ -111,12 +111,22 @@ it('keeps only the conversations with a call attributed to the trackable type as
         ->and($json['available_trackable_types'])->toBe(['App\\Models\\Team', 'App\\Models\\User']);
 });
 
-it('finds a conversation by part of its id and sorts by last activity', function () {
+it('finds a conversation by part of its id', function () {
     supportCall(0, 1);
     SpectraRequest::factory()->create(['conversation_id' => 'sales-7', 'created_at' => Date::parse('2026-11-04 09:00:00')]);
 
-    expect(collect(callConversations(['search' => 'sales'])['data'])->pluck('conversation_id')->all())->toBe(['sales-7'])
-        ->and(collect(callConversations()['data'])->pluck('conversation_id')->all())->toBe(['sales-7', 'support-42']);
+    $json = callConversations(['search' => 'sales']);
+
+    expect(collect($json['data'])->pluck('conversation_id')->all())->toBe(['sales-7']);
+});
+
+it('lists conversations by last activity, newest first', function () {
+    supportCall(0, 1);
+    SpectraRequest::factory()->create(['conversation_id' => 'sales-7', 'created_at' => Date::parse('2026-11-04 09:00:00')]);
+
+    $json = callConversations();
+
+    expect(collect($json['data'])->pluck('conversation_id')->all())->toBe(['sales-7', 'support-42']);
 });
 
 it('sums the summary over every matching conversation', function () {

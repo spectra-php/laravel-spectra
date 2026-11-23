@@ -328,6 +328,8 @@ describe('what a response may contain', function () {
     });
 
     it('sends the requests per day for the requests card', function () {
+        // Mid-year, so both days fall inside "this year" on every day the suite runs.
+        $this->travelTo('2026-06-15 12:00:00');
         $user = dashboardViewer();
         dashboardCall($user, ['created_at' => now()->subDays(2)]);
         dashboardCall($user, ['created_at' => now()->subDays(2)]);
@@ -393,17 +395,28 @@ describe('what a response may contain', function () {
             ->and(collect($breakdown['model_types'])->pluck('count', 'model_type')->all())->toEqual(['image' => 1, 'text' => 2]);
     });
 
-    it('lists the latest ten calls and the five most used models, as the Overview does', function () {
+    it('lists only the latest ten calls, as the Overview does', function () {
+        $user = dashboardViewer();
+        foreach (range(1, 12) as $index) {
+            dashboardCall($user);
+        }
+
+        $this->actingAs($user);
+        $response = dashboardData(dashboardFor($user, ['widgets' => [['type' => 'recent_requests', 'size' => 'half']]]));
+
+        expect(dashboardWidgetData($response, 'recent_requests'))->toHaveCount(10);
+    });
+
+    it('lists only the five most used models, as the Overview does', function () {
         $user = dashboardViewer();
         foreach (range(1, 12) as $index) {
             dashboardCall($user, ['model' => 'model-'.($index % 7)]);
         }
 
         $this->actingAs($user);
-        $response = dashboardData(dashboardFor($user, ['widgets' => [['type' => 'recent_requests', 'size' => 'half'], ['type' => 'usage_by_model', 'size' => 'half']]]));
+        $response = dashboardData(dashboardFor($user, ['widgets' => [['type' => 'usage_by_model', 'size' => 'half']]]));
 
-        expect(dashboardWidgetData($response, 'recent_requests'))->toHaveCount(10)
-            ->and(dashboardWidgetData($response, 'usage_by_model'))->toHaveCount(5);
+        expect(dashboardWidgetData($response, 'usage_by_model'))->toHaveCount(5);
     });
 
     it('queries only the widgets on the dashboard, in the saved order', function () {
@@ -452,18 +465,26 @@ describe('what a response may contain', function () {
 });
 
 describe('the period', function () {
-    it('starts on the dashboard\'s default and switches to a preset', function () {
+    it('starts on the dashboard\'s default period', function () {
         $user = dashboardViewer();
         dashboardCall($user, ['created_at' => now()->subDays(40)]);
         $dashboard = dashboardFor($user, ['default_period' => 'today']);
 
         $this->actingAs($user);
         $default = dashboardData($dashboard);
-        $year = dashboardData($dashboard, '?period=year');
 
         expect($default->json('period'))->toBe('today')
-            ->and(dashboardWidgetData($default, 'stats')['total_requests'])->toBe(0)
-            ->and($year->json('period'))->toBe('year');
+            ->and(dashboardWidgetData($default, 'stats')['total_requests'])->toBe(0);
+    });
+
+    it('switches to the preset in the query string', function () {
+        $user = dashboardViewer();
+        $dashboard = dashboardFor($user, ['default_period' => 'today']);
+
+        $this->actingAs($user);
+        $year = dashboardData($dashboard, '?period=year');
+
+        expect($year->json('period'))->toBe('year');
     });
 
     it('rejects all time', function () {
@@ -504,17 +525,34 @@ describe('designing them', function () {
         Gate::define('manageSpectra', fn ($user = null) => true);
     });
 
-    it('saves, lists, changes and deletes a dashboard', function () {
+    it('saves a dashboard under the id it answers with', function () {
         $id = $this->postJson('/spectra/api/dashboards', dashboardInput())->assertCreated()->json('id');
 
+        expect(SpectraDashboard::query()->sole()->id)->toBe($id);
+    });
+
+    it('lists a dashboard with its URL', function () {
+        $dashboard = dashboardFor(dashboardViewer());
+
         $listed = $this->getJson('/spectra/api/dashboards')->assertOk();
-        expect($listed->json('dashboards.0.id'))->toBe($id)
-            ->and($listed->json('dashboards.0.url'))->toEndWith("/spectra/dashboards/{$id}");
 
-        $this->putJson("/spectra/api/dashboards/{$id}", dashboardInput(['name' => 'Renamed']))->assertOk();
-        expect(SpectraDashboard::query()->findOrFail($id)->name)->toBe('Renamed');
+        expect($listed->json('dashboards.0.id'))->toBe($dashboard->id)
+            ->and($listed->json('dashboards.0.url'))->toEndWith("/spectra/dashboards/{$dashboard->id}");
+    });
 
-        $this->deleteJson("/spectra/api/dashboards/{$id}")->assertOk();
+    it('renames a dashboard', function () {
+        $dashboard = dashboardFor(dashboardViewer());
+
+        $this->putJson("/spectra/api/dashboards/{$dashboard->id}", dashboardInput(['name' => 'Renamed']))->assertOk();
+
+        expect($dashboard->refresh()->name)->toBe('Renamed');
+    });
+
+    it('deletes a dashboard', function () {
+        $dashboard = dashboardFor(dashboardViewer());
+
+        $this->deleteJson("/spectra/api/dashboards/{$dashboard->id}")->assertOk();
+
         expect(SpectraDashboard::query()->count())->toBe(0);
     });
 
@@ -611,7 +649,7 @@ describe('from code', function () {
 
         expect($dashboard->trackable_type)->toBe($user->getMorphClass())
             ->and($dashboard->trackable_id)->toBe((string) $user->id)
-            ->and($dashboard->widgets)->toBe([['type' => 'stats', 'size' => 'full'], ['type' => 'recent_requests', 'size' => 'half']])
+            ->and($dashboard->widgets)->toEqual([['type' => 'stats', 'size' => 'full'], ['type' => 'recent_requests', 'size' => 'half']])
             ->and($dashboard->showsCosts())->toBeTrue()
             ->and($dashboard->url())->toEndWith("/spectra/dashboards/{$dashboard->id}");
     });
@@ -953,18 +991,30 @@ describe('the pages in the header', function () {
         test()->getJson('/spectra/dashboards/'.dashboardWithSections($user)->id."/data/{$path}?period=all")->assertUnprocessable();
     })->with(['requests', 'traces', 'conversations', 'errors', 'costs']);
 
-    it('saves the pages and message setting from the form and from code', function () {
+    it('saves the pages and message setting from the form', function () {
         Gate::define('viewSpectra', fn ($user = null) => true);
         Gate::define('manageSpectra', fn ($user = null) => true);
 
         $id = $this->postJson('/spectra/api/dashboards', dashboardInput(['sections' => ['traces', 'errors'], 'show_messages' => true]))->assertCreated()->json('id');
-        $fromCode = Spectra::dashboard()->create('Code', dashboardViewer(), sections: [DashboardSection::Requests, 'costs'], showMessages: true);
 
         expect(SpectraDashboard::query()->findOrFail($id)->enabledSections())->toBe(['traces', 'errors'])
-            ->and(SpectraDashboard::query()->findOrFail($id)->show_messages)->toBeTrue()
-            ->and($fromCode->enabledSections())->toBe(['requests', 'costs'])
+            ->and(SpectraDashboard::query()->findOrFail($id)->show_messages)->toBeTrue();
+    });
+
+    it('saves the pages and message setting from code', function () {
+        $fromCode = Spectra::dashboard()->create('Code', dashboardViewer(), sections: [DashboardSection::Requests, 'costs'], showMessages: true);
+
+        expect($fromCode->enabledSections())->toBe(['requests', 'costs'])
             ->and($fromCode->show_messages)->toBeTrue();
-        $this->postJson('/spectra/api/dashboards', dashboardInput(['sections' => ['raw_prompts']]))->assertUnprocessable();
+    });
+
+    it('rejects an unknown section', function () {
+        Gate::define('viewSpectra', fn ($user = null) => true);
+        Gate::define('manageSpectra', fn ($user = null) => true);
+
+        $fromForm = $this->postJson('/spectra/api/dashboards', dashboardInput(['sections' => ['raw_prompts']]));
+
+        $fromForm->assertUnprocessable();
         expect(fn () => Spectra::dashboard()->create('Code', dashboardViewer(), sections: ['raw_prompts']))->toThrow(InvalidArgumentException::class, 'Unknown dashboard section');
     });
 

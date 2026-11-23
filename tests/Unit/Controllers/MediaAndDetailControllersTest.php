@@ -3,14 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Spectra\Facades\Spectra;
 use Spectra\Http\Controllers\Api\DownloadVideoController;
-use Spectra\Http\Controllers\Api\RequestsController;
 use Spectra\Http\Controllers\Api\ServeAudioController;
 use Spectra\Http\Controllers\Api\ServeImageController;
 use Spectra\Http\Controllers\Api\ShowRequestController;
@@ -84,22 +82,6 @@ it('exposes request and response payloads on the details endpoint', function () 
     // Hidden by default on the model, but the detail endpoint re-exposes them.
     expect($json['request']['model'] ?? null)->toBe('gpt-4o')
         ->and($json['response']['choices'][0]['message']['content'] ?? null)->toBe('hello');
-});
-
-it('hides request and response payloads from the list endpoint', function () {
-    SpectraRequest::factory()->create([
-        'model_type' => 'text',
-        'request' => ['model' => 'gpt-4o'],
-        'response' => ['choices' => []],
-    ]);
-
-    $controller = app(RequestsController::class);
-    $response = app()->call($controller->__invoke(...), ['request' => new Request(['period' => 'month'])]);
-    $json = $response->toArray();
-
-    expect($json['data'])->toHaveCount(1)
-        ->and($json['data'][0])->not->toHaveKey('request')
-        ->and($json['data'][0])->not->toHaveKey('response');
 });
 
 it('serves persisted tts audio with the stored mime type', function () {

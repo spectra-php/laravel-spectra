@@ -27,18 +27,27 @@ it('puts calls tracked by the HTTP client and by track() in the conversation and
         ]);
 });
 
-it('takes a model\'s key, and lets a call name its own conversation', function () {
+it('uses a model\'s key as the conversation id', function () {
     $user = User::query()->create(['name' => 'Ava', 'email' => 'ava@example.test', 'password' => 'secret']);
+
     Spectra::forConversation($user, turn: 1);
+
+    expect(Spectra::startRequest('openai', 'gpt-4o')->conversationId)->toBe((string) $user->id);
+});
+
+it('lets a call name its own conversation', function () {
+    Spectra::forConversation('chat_42', turn: 1);
 
     $own = Spectra::startRequest('openai', 'gpt-4o', ['conversation_id' => 'other']);
     $context = Spectra::startRequest('openai', 'gpt-4o', []);
     $context->inConversation('third', 9);
 
-    expect(Spectra::startRequest('openai', 'gpt-4o')->conversationId)->toBe((string) $user->id)
-        ->and([$own->conversationId, $own->conversationTurn])->toBe(['other', null])
-        ->and([$context->conversationId, $context->conversationTurn])->toBe(['third', 9])
-        ->and(fn () => Spectra::forConversation(' '))->toThrow(InvalidArgumentException::class);
+    expect([$own->conversationId, $own->conversationTurn])->toBe(['other', null])
+        ->and([$context->conversationId, $context->conversationTurn])->toBe(['third', 9]);
+});
+
+it('throws for a blank conversation id', function () {
+    expect(fn () => Spectra::forConversation(' '))->toThrow(InvalidArgumentException::class);
 });
 
 it('forgets the conversation with the other globals', function () {

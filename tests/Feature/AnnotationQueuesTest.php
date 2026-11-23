@@ -108,24 +108,38 @@ it('saves no scores when another reviewer finished the item first', function () 
         ->and($item->fresh()->status)->toBe(AnnotationStatus::Skipped);
 });
 
-it('queues the current trace by hand, and rejects an unknown queue', function () {
+it('queues the current trace by hand once', function () {
     trackReviewCall();
 
-    expect(Spectra::queueForReview('manual'))->toBeTrue()
-        ->and(Spectra::queueForReview('manual'))->toBeTrue()
-        ->and(SpectraAnnotationItem::query()->where('queue', 'manual')->count())->toBe(1)
-        ->and(fn () => Spectra::queueForReview('nope'))->toThrow(InvalidArgumentException::class, 'no Spectra annotation queue [nope]');
+    $first = Spectra::queueForReview('manual');
+    $again = Spectra::queueForReview('manual');
+
+    expect($first)->toBeTrue()
+        ->and($again)->toBeTrue()
+        ->and(SpectraAnnotationItem::query()->where('queue', 'manual')->count())->toBe(1);
 });
 
-it('lists the queues with their counts, and serves the next trace with its calls', function () {
+it('throws for a queue that is not configured', function () {
+    trackReviewCall();
+
+    expect(fn () => Spectra::queueForReview('nope'))->toThrow(InvalidArgumentException::class, 'no Spectra annotation queue [nope]');
+});
+
+it('lists the queues with their counts', function () {
     trackReviewCall('support-answer', 'Where is order 42?');
 
     $queues = $this->getJson('/spectra/api/annotations')->assertOk()->json();
-    $next = $this->getJson('/spectra/api/annotations/support-review/next')->assertOk()->json();
 
     expect($queues['can_annotate'])->toBeTrue()
-        ->and(collect($queues['queues'])->firstWhere('name', 'support-review'))->toMatchArray(['pending_count' => 1, 'completed_count' => 0])
-        ->and($next['item']['calls'][0])->toMatchArray(['prompt' => 'Where is order 42?', 'reply' => 'It shipped today.', 'is_queued_call' => true])
+        ->and(collect($queues['queues'])->firstWhere('name', 'support-review'))->toMatchArray(['pending_count' => 1, 'completed_count' => 0]);
+});
+
+it('serves the next trace of a queue with its calls', function () {
+    trackReviewCall('support-answer', 'Where is order 42?');
+
+    $next = $this->getJson('/spectra/api/annotations/support-review/next')->assertOk()->json();
+
+    expect($next['item']['calls'][0])->toMatchArray(['prompt' => 'Where is order 42?', 'reply' => 'It shipped today.', 'is_queued_call' => true])
         ->and($next['queue']['scores'])->toHaveCount(3);
 });
 
@@ -154,18 +168,28 @@ it('saves a review as Annotation scores on the trace, by the signed-in reviewer'
     $this->getJson('/spectra/api/annotations/support-review/next')->assertOk()->assertJsonPath('item', null);
 });
 
-it('rejects values outside a score\'s range or options, and a second review', function () {
+it('rejects a review with scores out of range, outside the options or missing', function () {
     trackReviewCall('support-answer');
     $item = SpectraAnnotationItem::query()->sole();
 
-    $this->postJson("/spectra/api/annotations/items/{$item->id}", ['action' => 'review', 'scores' => ['accuracy' => 9]])->assertUnprocessable()->assertJsonValidationErrors('scores');
-    $this->postJson("/spectra/api/annotations/items/{$item->id}", ['action' => 'review', 'scores' => ['issue' => 'spelling']])->assertUnprocessable();
-    $this->postJson("/spectra/api/annotations/items/{$item->id}", ['action' => 'review', 'scores' => []])->assertUnprocessable();
+    $outOfRange = $this->postJson("/spectra/api/annotations/items/{$item->id}", ['action' => 'review', 'scores' => ['accuracy' => 9]]);
+    $notAnOption = $this->postJson("/spectra/api/annotations/items/{$item->id}", ['action' => 'review', 'scores' => ['issue' => 'spelling']]);
+    $noScores = $this->postJson("/spectra/api/annotations/items/{$item->id}", ['action' => 'review', 'scores' => []]);
 
-    $this->postJson("/spectra/api/annotations/items/{$item->id}", ['action' => 'skip'])->assertOk()->assertJson(['status' => 'skipped']);
-    $this->postJson("/spectra/api/annotations/items/{$item->id}", ['action' => 'skip'])->assertUnprocessable();
-
+    $outOfRange->assertUnprocessable()->assertJsonValidationErrors('scores');
+    $notAnOption->assertUnprocessable();
+    $noScores->assertUnprocessable();
     expect(SpectraScore::query()->count())->toBe(0);
+});
+
+it('rejects a second action on a finished item', function () {
+    trackReviewCall('support-answer');
+    $item = SpectraAnnotationItem::query()->sole();
+    $this->postJson("/spectra/api/annotations/items/{$item->id}", ['action' => 'skip'])->assertOk()->assertJson(['status' => 'skipped']);
+
+    $second = $this->postJson("/spectra/api/annotations/items/{$item->id}", ['action' => 'skip']);
+
+    $second->assertUnprocessable();
 });
 
 it('queues a trace from the dashboard', function () {

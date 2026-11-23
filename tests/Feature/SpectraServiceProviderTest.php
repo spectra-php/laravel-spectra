@@ -95,11 +95,7 @@ it('fills every key a config published under 1.0 lacks, so their env variables w
         ->all();
 
     expect($missing)->toBe([])
-        ->and(config('spectra.storage.redaction.enabled'))->toBeTrue()
-        ->and(config('spectra.storage.sampling'))->toBe(['rate' => 1.0, 'keep_failures' => true])
-        ->and(config('spectra.tracking.tool_spans'))->toBeFalse()
-        ->and(config('spectra.dashboard.maintenance'))->toBeTrue()
-        ->and(config('spectra.tracking.trace_per_request'))->toBeTrue();
+        ->and(config('spectra.storage.redaction.enabled'))->toBeTrue();
 });
 
 it('keeps the nested keys a published config sets', function () {

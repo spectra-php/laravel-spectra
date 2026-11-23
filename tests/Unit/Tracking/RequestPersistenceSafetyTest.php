@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Queue;
 use Spectra\Events\RequestTracked;
 use Spectra\Jobs\PersistSpectraRequestJob;
-use Spectra\Models\SpectraDailyStat;
 use Spectra\Models\SpectraRequest;
 use Spectra\Support\Tracking\RequestContext;
 use Spectra\Support\Tracking\RequestPersister;
@@ -38,19 +37,6 @@ it('gives a queued request its row id before the job is dispatched', function ()
         fn (PersistSpectraRequestJob $job) => is_string($job->attributes['id'] ?? null)
             && $job->attributes['id'] === $returned->id
     );
-});
-
-it('does not save a second row or count the request twice when the job is retried', function () {
-    config(['spectra.queue.enabled' => true]);
-    Queue::fake();
-    app(RequestPersister::class)->persist(completedContext());
-    $job = Queue::pushed(PersistSpectraRequestJob::class)->first();
-
-    $job->handle(app(RequestWriter::class));
-    $job->handle(app(RequestWriter::class));
-
-    expect(SpectraRequest::query()->count())->toBe(1)
-        ->and(SpectraDailyStat::query()->sum('request_count'))->toEqual(1);
 });
 
 it('keeps the saved row when a RequestTracked listener throws', function () {

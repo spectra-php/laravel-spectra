@@ -57,10 +57,14 @@ it('maps the azure responses preview api to the v1 responses endpoint', function
 
     $row = SpectraRequest::query()->sole();
 
+    // gpt-4.1 standard (in 200, out 800): (36×200 + 87×800) / 1M = 0.0768
     expect($row->provider)->toBe('openai')
         ->and($row->endpoint)->toBe('/v1/responses')
+        ->and($row->model)->toBe('GPT-4.1')
+        ->and($row->model_type)->toBe('text')
         ->and($row->prompt_tokens)->toBe(36)
-        ->and($row->completion_tokens)->toBe(87);
+        ->and($row->completion_tokens)->toBe(87)
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0768, 1e-9);
 });
 
 it('names an image or speech call after its deployment when the response names no model', function () {

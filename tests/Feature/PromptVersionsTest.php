@@ -30,30 +30,37 @@ function trackPromptCall(array $options = [], int $status = 200): void
     }, $options);
 }
 
-it('tags every call inside withPrompt(), and takes the version from the options or the context', function () {
-    Spectra::withPrompt('support-answer', 'v3', function () {
-        trackPromptCall();
-        trackPromptCall(['prompt_version' => 'v4-beta']);
-    });
-
-    Spectra::track('openai', 'gpt-4o', function ($context) {
-        $context->usingPrompt('summarize', '2026-11');
-
-        return ['choices' => [['message' => ['content' => 'Hi']]]];
-    });
+it('tags only the calls made inside withPrompt()', function () {
+    Spectra::withPrompt('support-answer', 'v3', fn () => trackPromptCall());
 
     trackPromptCall();
 
     expect(SpectraRequest::query()->oldest()->get(['prompt_name', 'prompt_version'])->map->only(['prompt_name', 'prompt_version'])->all())
         ->toEqualCanonicalizing([
             ['prompt_name' => 'support-answer', 'prompt_version' => 'v3'],
-            ['prompt_name' => 'support-answer', 'prompt_version' => 'v4-beta'],
-            ['prompt_name' => 'summarize', 'prompt_version' => '2026-11'],
             ['prompt_name' => null, 'prompt_version' => null],
         ]);
 });
 
-it('compares versions on calls, errors, cost, tokens and scores', function () {
+it('takes the version from the track() options over withPrompt()', function () {
+    Spectra::withPrompt('support-answer', 'v3', fn () => trackPromptCall(['prompt_version' => 'v4-beta']));
+
+    expect(SpectraRequest::query()->sole(['prompt_name', 'prompt_version'])->only(['prompt_name', 'prompt_version']))
+        ->toBe(['prompt_name' => 'support-answer', 'prompt_version' => 'v4-beta']);
+});
+
+it('tags a call from usingPrompt() on its context', function () {
+    Spectra::track('openai', 'gpt-4o', function ($context) {
+        $context->usingPrompt('summarize', '2026-11');
+
+        return ['choices' => [['message' => ['content' => 'Hi']]]];
+    });
+
+    expect(SpectraRequest::query()->sole(['prompt_name', 'prompt_version'])->only(['prompt_name', 'prompt_version']))
+        ->toBe(['prompt_name' => 'summarize', 'prompt_version' => '2026-11']);
+});
+
+it('compares versions on calls, errors, tokens and scores', function () {
     Spectra::withPrompt('support-answer', 'v3', function () {
         trackPromptCall();
         trackPromptCall();

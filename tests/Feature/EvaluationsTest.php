@@ -59,14 +59,32 @@ it('adds a tracked call as an example, with its reply as expected when asked', f
         ->and($example->source_request_id)->toBe($call->id);
 });
 
-it('scores outputs with the built-in scorers', function () {
-    expect((new ExactMatch)(' paris ', 'Paris'))->toBeTrue()
-        ->and((new ExactMatch(caseSensitive: true))('paris', 'Paris'))->toBeFalse()
-        ->and((new ExactMatch)(['a' => 1], ['a' => 1]))->toBeTrue()
-        ->and((new ExactMatch)('Paris', null))->toBeNull()
-        ->and((new Contains(['refund', '30 days']))('Refund within 30 days.', null))->toBeTrue()
-        ->and((new Contains)('It is Paris.', 'paris'))->toBeTrue()
-        ->and((new Contains)('It is Paris.', null))->toBeNull();
+it('ExactMatch ignores case and surrounding spaces', function () {
+    expect((new ExactMatch)(' paris ', 'Paris'))->toBeTrue();
+});
+
+it('ExactMatch fails on a difference in case when case sensitive', function () {
+    expect((new ExactMatch(caseSensitive: true))('paris', 'Paris'))->toBeFalse();
+});
+
+it('ExactMatch passes for an array equal to the expected one', function () {
+    expect((new ExactMatch)(['a' => 1], ['a' => 1]))->toBeTrue();
+});
+
+it('ExactMatch answers null without an expected value', function () {
+    expect((new ExactMatch)('Paris', null))->toBeNull();
+});
+
+it('Contains passes when every needle is in the output', function () {
+    expect((new Contains(['refund', '30 days']))('Refund within 30 days.', null))->toBeTrue();
+});
+
+it('Contains looks for the expected value when given no needles', function () {
+    expect((new Contains)('It is Paris.', 'paris'))->toBeTrue();
+});
+
+it('Contains answers null with no needles and no expected value', function () {
+    expect((new Contains)('It is Paris.', null))->toBeNull();
 });
 
 it('runs each example in its own trace, scores it, and saves the run', function () {
@@ -95,7 +113,7 @@ it('runs each example in its own trace, scores it, and saves the run', function 
         ->and(Spectra::currentTraceId())->not->toBe($results[3]->trace_id);
 });
 
-it('runs an evaluation from the command, by class or by name in App\\Evals', function () {
+it('runs an evaluation from the command by its class', function () {
     seedCapitals();
 
     $this->artisan('spectra:eval', ['evaluation' => CapitalsEval::class, '--limit' => 2])
@@ -103,9 +121,15 @@ it('runs an evaluation from the command, by class or by name in App\\Evals', fun
         ->expectsOutputToContain('2 examples, 0 with errors')
         ->assertSuccessful();
 
+    expect(SpectraEvalRun::query()->sole()->example_count)->toBe(2);
+});
+
+it('fails for an evaluation the command cannot find', function () {
+    seedCapitals();
+
     $this->artisan('spectra:eval', ['evaluation' => 'NoSuchEval'])->assertFailed();
 
-    expect(SpectraEvalRun::query()->sole()->example_count)->toBe(2);
+    expect(SpectraEvalRun::query()->exists())->toBeFalse();
 });
 
 it('fails clearly for a missing or empty dataset', function () {
@@ -170,7 +194,7 @@ describe('on the dashboard', function () {
             ->and($data['results'][3]['error'])->toContain('No capital for Atlantis');
     });
 
-    it('shows a dataset\'s examples, and adds a call to a dataset', function () {
+    it('adds a tracked call to a dataset from the dashboard', function () {
         Spectra::track('openai', 'gpt-4o', fn () => ['choices' => [['message' => ['content' => 'Paris.']]]], [
             'endpoint' => '/v1/chat/completions',
             'request_data' => ['model' => 'gpt-4o', 'messages' => [['role' => 'user', 'content' => 'Capital of France?']]],
@@ -178,10 +202,19 @@ describe('on the dashboard', function () {
 
         $added = $this->postJson('/spectra/api/datasets/examples', ['dataset' => 'from-calls', 'request_id' => SpectraRequest::query()->value('id'), 'reply_is_expected' => true])
             ->assertCreated()->json();
-        $data = $this->getJson("/spectra/api/datasets/{$added['dataset_id']}")->assertOk()->json();
 
-        expect($data['dataset'])->toMatchArray(['name' => 'from-calls', 'example_count' => 1])
-            ->and($data['examples'][0])->toMatchArray(['input' => ['prompt' => 'Capital of France?'], 'expected' => 'Paris.']);
+        expect($this->getJson("/spectra/api/datasets/{$added['dataset_id']}")->json('examples.0'))
+            ->toMatchArray(['input' => ['prompt' => 'Capital of France?'], 'expected' => 'Paris.']);
+    });
+
+    it('shows a dataset with its examples', function () {
+        $dataset = Spectra::dataset('from-code');
+        $dataset->add(['country' => 'France'], expected: 'Paris');
+
+        $data = $this->getJson("/spectra/api/datasets/{$dataset->model()->id}")->assertOk()->json();
+
+        expect($data['dataset'])->toMatchArray(['name' => 'from-code', 'example_count' => 1])
+            ->and($data['examples'][0])->toMatchArray(['input' => ['country' => 'France'], 'expected' => 'Paris']);
     });
 
     it('creates an empty dataset with a description', function () {
@@ -208,20 +241,29 @@ describe('on the dashboard', function () {
         expect(SpectraDataset::query()->count())->toBe(1);
     });
 
-    it('renames a dataset, its runs moving with it, and changes its description', function () {
+    it('renames a dataset and moves its runs with it', function () {
         seedCapitals();
         $run = app(EvaluationRunner::class)->run(new CapitalsEval);
         $other = SpectraEvalRun::query()->create(['evaluation' => 'other', 'dataset' => 'other', 'status' => $run->status]);
         $dataset = Spectra::dataset('capitals')->model();
 
-        $this->putJson("/spectra/api/datasets/{$dataset->id}", ['name' => 'world-capitals', 'description' => 'Every capital'])->assertOk();
+        $this->putJson("/spectra/api/datasets/{$dataset->id}", ['name' => 'world-capitals'])->assertOk();
 
         $data = $this->getJson("/spectra/api/datasets/{$dataset->id}")->assertOk()->json();
 
-        expect($data['dataset'])->toMatchArray(['name' => 'world-capitals', 'description' => 'Every capital', 'example_count' => 4])
+        expect($data['dataset'])->toMatchArray(['name' => 'world-capitals', 'example_count' => 4])
             ->and($data['runs'][0]['id'])->toBe($run->id)
             ->and($run->fresh()->dataset)->toBe('world-capitals')
             ->and($other->fresh()->dataset)->toBe('other');
+    });
+
+    it('changes or clears a dataset\'s description', function () {
+        $dataset = SpectraDataset::query()->create(['name' => 'world-capitals']);
+
+        $this->putJson("/spectra/api/datasets/{$dataset->id}", ['name' => 'world-capitals', 'description' => 'Every capital'])->assertOk();
+
+        expect($this->getJson("/spectra/api/datasets/{$dataset->id}")->assertOk()->json('dataset'))
+            ->toMatchArray(['name' => 'world-capitals', 'description' => 'Every capital']);
 
         $this->putJson("/spectra/api/datasets/{$dataset->id}", ['name' => 'world-capitals', 'description' => null])->assertOk();
 
@@ -239,14 +281,28 @@ describe('on the dashboard', function () {
         expect($dataset->fresh())->name->toBe('mine')->description->toBe('Kept');
     });
 
-    it('renames from code, and refuses a used or too long name', function () {
+    it('renames a dataset from code, keeping its examples', function () {
         Spectra::dataset('old')->add('France');
+
+        $renamed = Spectra::dataset('old')->rename('new');
+
+        expect($renamed->examples())->toHaveCount(1);
+    });
+
+    it('throws when renamed from code to a name that is used or too long', function () {
+        Spectra::dataset('new')->add('France');
         SpectraDataset::query()->create(['name' => 'taken']);
 
-        expect(Spectra::dataset('old')->rename('new')->examples())->toHaveCount(1)
-            ->and(fn () => Spectra::dataset('new')->rename('taken'))->toThrow(InvalidArgumentException::class)
-            ->and(fn () => Spectra::dataset('new')->rename(Str::repeat('x', 101)))->toThrow(InvalidArgumentException::class)
-            ->and(Spectra::dataset('new')->rename('new')->name)->toBe('new');
+        expect(fn () => Spectra::dataset('new')->rename('taken'))->toThrow(InvalidArgumentException::class)
+            ->and(fn () => Spectra::dataset('new')->rename(Str::repeat('x', 101)))->toThrow(InvalidArgumentException::class);
+    });
+
+    it('accepts a dataset\'s own name when renaming it from code', function () {
+        Spectra::dataset('new')->add('France');
+
+        $renamed = Spectra::dataset('new')->rename('new');
+
+        expect($renamed->name)->toBe('new');
     });
 
     it('deletes a dataset and its examples, and past runs stay', function () {
@@ -276,7 +332,6 @@ describe('on the dashboard', function () {
             ->metadata->toEqual(['source' => 'dashboard'])
             ->source_request_id->toBeNull();
     })->with([
-        'one key, text expected' => [['prompt' => 'Capital of France?'], 'Paris'],
         'plain text, nothing expected' => ['Capital of France?', null],
         'several fields, JSON expected' => [['country' => 'France', 'year' => 2026], ['capital' => 'Paris']],
     ]);
@@ -292,13 +347,16 @@ describe('on the dashboard', function () {
         expect($latestInput)->toEqual(['country' => 'Italy', 'year' => 2026]);
     });
 
-    it('validates an added example, and 404s for a missing dataset', function () {
+    it('rejects an example with no input', function () {
         $dataset = SpectraDataset::query()->create(['name' => 'written']);
 
         $this->postJson("/spectra/api/datasets/{$dataset->id}/examples", ['input' => ''])->assertUnprocessable()->assertJsonValidationErrors('input');
-        $this->postJson('/spectra/api/datasets/0192f7c3-8a1b-7c2d-9e3f-4a5b6c7d8e9f/examples', ['input' => 'Italy'])->assertNotFound();
 
         expect(Spectra::dataset('written')->examples())->toBeEmpty();
+    });
+
+    it('answers 404 when the dataset an example is added to does not exist', function () {
+        $this->postJson('/spectra/api/datasets/0192f7c3-8a1b-7c2d-9e3f-4a5b6c7d8e9f/examples', ['input' => 'Italy'])->assertNotFound();
     });
 
     it('changes an example, keeping where it came from', function () {

@@ -62,7 +62,20 @@ it('prices Gemini 3.8 Flash at the doubled rates from 2027', function () {
     expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(1.08, 0.000001);
 });
 
-it('adds tool-use prompt tokens to the input and counts search grounding without pricing it', function () {
+it('adds tool-use prompt tokens to the input', function () {
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->loadMockResponse('google/generate-content-grounding.json'))]);
+
+    postGemini('gemini-2.5-flash', ['tools' => [['google_search' => (object) []]]]);
+
+    $row = SpectraRequest::query()->sole();
+
+    // Input = 5000 prompt (2000 of them cached) + 1500 tool-use prompt.
+    expect($row->prompt_tokens)->toBe(6500)
+        ->and($row->cached_tokens)->toBe(2000)
+        ->and($row->completion_tokens)->toBe(1000);
+});
+
+it('counts search grounding without pricing it', function () {
     Http::fake(['generativelanguage.googleapis.com/*' => Http::response($this->loadMockResponse('google/generate-content-grounding.json'))]);
 
     postGemini('gemini-2.5-flash', ['tools' => [['google_search' => (object) []]]]);
@@ -70,12 +83,10 @@ it('adds tool-use prompt tokens to the input and counts search grounding without
     $row = SpectraRequest::query()->sole();
 
     // Gemini 2.5 Flash: $0.30 in, $2.50 out, $0.03 cached.
-    // Input = 5000 prompt (2000 of them cached) + 1500 tool-use prompt:
+    // Input = 5000 prompt (2000 of them cached) + 1500 tool-use prompt.
+    // The two searches add nothing to the token cost:
     // (4500×30 + 2000×3 + (400 + 600)×250) / 1M = 0.391¢
-    expect($row->prompt_tokens)->toBe(6500)
-        ->and($row->cached_tokens)->toBe(2000)
-        ->and($row->completion_tokens)->toBe(1000)
-        ->and($row->tool_call_counts)->toEqual(['google_search' => 2])
+    expect($row->tool_call_counts)->toEqual(['google_search' => 2])
         ->and($row->total_cost_in_cents)->toEqualWithDelta(0.391, 0.000001);
 });
 

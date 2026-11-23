@@ -6,6 +6,10 @@ namespace Spectra\Tests\Concerns;
 
 use Spectra\Watchers\HttpWatcher;
 
+/**
+ * Builds the HTTP watcher and calls its protected methods, for unit tests of
+ * the decisions it makes before a request reaches the tracking pipeline.
+ */
 trait InteractsWithHttpWatcher
 {
     protected function makeHttpWatcher(): HttpWatcher

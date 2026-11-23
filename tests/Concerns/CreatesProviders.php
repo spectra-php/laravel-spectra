@@ -15,6 +15,10 @@ use Spectra\Providers\Replicate\Replicate;
 use Spectra\Providers\Scaleway\Scaleway;
 use Spectra\Providers\XAi\XAi;
 
+/**
+ * Builds provider and handler instances for unit tests that call a provider
+ * class directly, so each test doesn't repeat how one is constructed.
+ */
 trait CreatesProviders
 {
     protected function openAiProvider(): OpenAI

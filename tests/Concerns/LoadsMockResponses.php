@@ -7,6 +7,10 @@ namespace Spectra\Tests\Concerns;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
+/**
+ * Loads a recorded provider response from tests/responses, so tests track
+ * real payloads instead of hand-typed ones.
+ */
 trait LoadsMockResponses
 {
     /**

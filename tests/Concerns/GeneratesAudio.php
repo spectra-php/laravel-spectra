@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Spectra\Tests\Concerns;
 
+/**
+ * Generates a silent WAV of a given length, for tests that read an audio
+ * response's duration without shipping a binary fixture.
+ */
 trait GeneratesAudio
 {
     protected function generateSilentWav(int $seconds = 1, int $sampleRate = 8000): string

@@ -56,8 +56,8 @@ it('ignores a cursor it cannot read', function () {
     expect(listRequests(['cursor' => 'not-a-cursor'])['data'])->toHaveCount(3);
 });
 
-it('reads a page without selecting the bodies or counting its rows twice', function () {
-    SpectraRequest::factory()->count(3)->create(['request' => ['secret' => 'body']]);
+it('reads a page without selecting the request and response bodies', function () {
+    SpectraRequest::factory()->count(3)->create(['request' => ['secret' => 'body'], 'response' => ['choices' => []]]);
     $statements = [];
     DB::listen(function ($query) use (&$statements) {
         $statements[] = $query->sql;
@@ -66,6 +66,7 @@ it('reads a page without selecting the bodies or counting its rows twice', funct
     $page = listRequests([]);
 
     expect($page['data'][0])->not->toHaveKey('request')
+        ->and($page['data'][0])->not->toHaveKey('response')
         ->and(collect($statements)->filter(fn (string $sql) => str_contains($sql, '"request"') || str_contains($sql, '`request`')))->toBeEmpty();
 });
 
@@ -149,7 +150,7 @@ it('keeps the exact traces below the limit', function () {
         ->and($traces['total'])->toBe(1);
 });
 
-it('marks percentiles that cover only the latest calls', function () {
+it('does not mark percentiles as sampled when every call fits the sample', function () {
     SpectraRequest::factory()->count(3)->create(['provider' => 'openai', 'model' => 'gpt-4o', 'status_code' => 200, 'error_type' => null, 'latency_ms' => 100]);
 
     $performance = app(GetModelPerformance::class)(new DateRange(null, null), 'full');
@@ -158,7 +159,7 @@ it('marks percentiles that cover only the latest calls', function () {
         ->and($performance->first()->latency_p95)->toBe(100);
 });
 
-it('finds every trackable type with one lookup per type', function () {
+it('lists every stored trackable type once, sorted by name', function () {
     SpectraRequest::factory()->create(['trackable_type' => 'App\\User', 'trackable_id' => '1']);
     SpectraRequest::factory()->create(['trackable_type' => 'App\\User', 'trackable_id' => '2']);
     SpectraRequest::factory()->create(['trackable_type' => 'App\\Team', 'trackable_id' => '1']);

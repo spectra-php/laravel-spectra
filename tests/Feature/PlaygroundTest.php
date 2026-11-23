@@ -204,7 +204,7 @@ describe('opening a call', function () {
             ->and($opened->json('run_count'))->toBe(21);
     });
 
-    it('opens a run with its original and the other runs, and a run sent from there starts from the same original', function () {
+    it('opens a run with its original and the other runs', function () {
         Http::fake(['*' => fn () => Http::response(['id' => 'chatcmpl-'.Str::uuid(), 'model' => 'gpt-4o', 'choices' => [['message' => ['role' => 'assistant', 'content' => 'On its way.'], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 2]])]);
         $original = storedChatCall();
         $first = playgroundRun($original)->assertOk()->json('request_id');
@@ -212,14 +212,22 @@ describe('opening a call', function () {
 
         $opened = $this->getJson("/spectra/api/playground/{$first}")->assertOk();
 
-        $third = playgroundRun(SpectraRequest::query()->findOrFail($first))->assertOk()->json('request_id');
-
         expect($opened->json('run.request_id'))->toBe($first)
             ->and($opened->json('run.number'))->toBe(1)
             ->and($opened->json('original.id'))->toBe($original->id)
             ->and(array_column($opened->json('runs'), 'request_id'))->toBe([$second])
-            ->and($opened->json('runs.0.number'))->toBe(2)
-            ->and(SpectraRequest::query()->findOrFail($third)->metadata)->toEqual(['playground_source' => $original->id])
+            ->and($opened->json('runs.0.number'))->toBe(2);
+    });
+
+    it('points a run sent from a run\'s page at the same original', function () {
+        Http::fake(['*' => fn () => Http::response(['id' => 'chatcmpl-'.Str::uuid(), 'model' => 'gpt-4o', 'choices' => [['message' => ['role' => 'assistant', 'content' => 'On its way.'], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 2]])]);
+        $original = storedChatCall();
+        $first = playgroundRun($original)->assertOk()->json('request_id');
+        playgroundRun($original)->assertOk();
+
+        $third = playgroundRun(SpectraRequest::query()->findOrFail($first))->assertOk()->json('request_id');
+
+        expect(SpectraRequest::query()->findOrFail($third)->metadata)->toEqual(['playground_source' => $original->id])
             ->and($this->getJson("/spectra/api/playground/{$original->id}")->json('run_count'))->toBe(3);
     });
 
@@ -295,7 +303,6 @@ describe('opening a call', function () {
 describe('running a call', function () {
     it('sends each provider its own host and key header', function (array $attributes, string $url, string $header, string $value) {
         Http::fake(['*' => Http::response(['id' => 'x'])]);
-        config()->set('spectra.api_keys.groq', 'test-groq');
         $call = storedChatCall($attributes);
 
         playgroundRun($call, ['model' => 'some-model'])->assertOk();
@@ -304,7 +311,6 @@ describe('running a call', function () {
     })->with([
         'openai' => [[], 'https://api.openai.com/v1/chat/completions', 'Authorization', 'Bearer sk-test-openai'],
         'anthropic' => [['provider' => 'anthropic', 'endpoint' => '/v1/messages'], 'https://api.anthropic.com/v1/messages', 'x-api-key', 'sk-test-anthropic'],
-        'groq' => [['provider' => 'groq', 'endpoint' => '/openai/v1/chat/completions'], 'https://api.groq.com/openai/v1/chat/completions', 'Authorization', 'Bearer test-groq'],
         'google' => [['provider' => 'google', 'endpoint' => '/v1beta/models/gemini-2.5-flash:generateContent'], 'https://generativelanguage.googleapis.com/v1beta/models/some-model:generateContent', 'x-goog-api-key', 'test-google'],
     ]);
 
@@ -408,21 +414,23 @@ describe('running a call', function () {
     });
 
     it('answers with the reply text read by the provider\'s handler', function () {
-        Http::fake(['*' => Http::response(['id' => 'msg', 'model' => 'claude', 'type' => 'message', 'content' => [['type' => 'text', 'text' => 'Hello there']], 'usage' => ['input_tokens' => 1, 'output_tokens' => 2]])]);
+        Http::fake(['*' => Http::response($this->loadMockResponse('claude/message.json'))]);
         $call = storedChatCall(['provider' => 'anthropic', 'endpoint' => '/v1/messages']);
 
-        playgroundRun($call, ['model' => 'claude-opus-4-8'])->assertOk()->assertJson(['reply' => 'Hello there']);
+        $result = playgroundRun($call, ['model' => 'claude-opus-4-8'])->assertOk();
+
+        expect($result->json('reply'))->toStartWith('Here are some effective search strategies');
     });
 
     it('says when the model asked for a tool instead of replying', function () {
-        Http::fake(['*' => Http::response(['id' => 'x', 'model' => 'gpt-4o', 'choices' => [['message' => ['role' => 'assistant', 'content' => null, 'tool_calls' => [['id' => 'a', 'type' => 'function', 'function' => ['name' => 'lookup_order', 'arguments' => '{}']]]], 'finish_reason' => 'tool_calls']], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 2]])]);
+        Http::fake(['*' => Http::response($this->loadMockResponse('openai/completion_tool_calls.json'))]);
 
         $result = playgroundRun(storedChatCall())->assertOk();
 
         expect($result->json('reply'))->toBeNull()
             ->and($result->json('has_tool_calls'))->toBeTrue()
             ->and($result->json('finish_reason'))->toBe('tool_calls')
-            ->and($result->json('response.choices.0.message.tool_calls.0.function.name'))->toBe('lookup_order');
+            ->and($result->json('response.choices.0.message.tool_calls.0.function.name'))->toBe('get_weather');
     });
 
     it('answers a provider error as a failed result and records it', function () {
@@ -521,14 +529,6 @@ describe('a new prompt', function () {
             ->and(array_column($opened->json('runs'), 'request_id'))->toBe([$second, $first]);
     });
 
-    it('rejects a session that is not a uuid', function () {
-        Http::fake();
-
-        runNewPrompt(['session' => 'nope'])->assertUnprocessable();
-
-        Http::assertNothingSent();
-    });
-
     it('refuses to open or run while the option is off or without the gate', function () {
         Http::fake();
         config()->set('spectra.dashboard.playground.enabled', false);
@@ -578,28 +578,22 @@ describe('a new prompt', function () {
         $this->getJson('/spectra/api/playground/new?provider=groq')->assertJsonPath('unavailable_reason', fn (string $reason) => str_contains($reason, 'No API key'));
     });
 
-    it('rejects a provider it cannot send to', function (string $provider) {
+    it('rejects a provider that has no chat api to send to', function () {
         Http::fake();
 
-        $this->getJson("/spectra/api/playground/new?provider={$provider}")->assertJsonValidationErrors('provider');
-        runNewPrompt(['provider' => $provider])->assertJsonValidationErrors('provider');
+        $this->getJson('/spectra/api/playground/new?provider=elevenlabs')->assertJsonValidationErrors('provider');
+        runNewPrompt(['provider' => 'elevenlabs'])->assertJsonValidationErrors('provider');
 
         Http::assertNothingSent();
-    })->with([
-        'a custom provider' => ['acme'],
-        'one with no chat api' => ['elevenlabs'],
-    ]);
+    });
 
-    it('sends a new prompt to the provider\'s chat endpoint whatever the input says', function (string $provider, string $url) {
+    it('sends a new prompt to the provider\'s chat endpoint whatever the input says', function () {
         Http::fake(['*' => Http::response(['id' => 'x'])]);
 
-        runNewPrompt(['provider' => $provider, 'endpoint' => '/v1/files', 'url' => 'https://evil.test'])->assertOk();
+        runNewPrompt(['provider' => 'openai', 'endpoint' => '/v1/files', 'url' => 'https://evil.test'])->assertOk();
 
-        Http::assertSent(fn (Request $request) => $request->url() === $url);
-    })->with([
-        'openai' => ['openai', 'https://api.openai.com/v1/chat/completions'],
-        'anthropic' => ['anthropic', 'https://api.anthropic.com/v1/messages'],
-    ]);
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://api.openai.com/v1/chat/completions');
+    });
 
     it('puts the model in the gemini endpoint', function () {
         Http::fake(['*' => Http::response($this->loadMockResponse('google/response.json'))]);

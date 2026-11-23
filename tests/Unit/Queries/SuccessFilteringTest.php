@@ -68,7 +68,7 @@ it('excludes failed requests from cost and latency in the overview stats but cou
     $stats = app(GetOverviewStats::class)(DateRange::fromRequest(new Request), 'full');
 
     expect($stats->total_requests)->toBe(4)
-        ->and($stats->total_cost_in_cents)->toBe(300.0)
+        ->and($stats->total_cost_in_cents)->toEqualWithDelta(300.0, 1e-9)
         ->and($stats->avg_latency)->toBe(200.0);
 });
 
@@ -79,7 +79,7 @@ it('excludes failed requests from cost and latency in the model type breakdown',
     $text = $rows->firstWhere('model_type', 'text');
 
     expect($text->count)->toBe(4)
-        ->and((float) $text->cost)->toBe(300.0)
+        ->and((float) $text->cost)->toEqualWithDelta(300.0, 1e-9)
         ->and((float) $text->avg_latency)->toBe(200.0);
 });
 
@@ -89,7 +89,7 @@ it('excludes failed requests from trackable stats cost and latency', function ()
     $stats = app(GetTrackableStats::class)('App\\Models\\User', '1', DateRange::fromRequest(new Request));
 
     expect($stats->total_requests)->toBe(4)
-        ->and($stats->total_cost)->toBe(300.0)
+        ->and($stats->total_cost)->toEqualWithDelta(300.0, 1e-9)
         ->and($stats->avg_latency)->toBe(200.0);
 });
 
@@ -99,7 +99,7 @@ it('excludes failed requests from trackable latency-by-model-type cost', functio
     $rows = app(GetTrackableLatencyByModelType::class)('App\\Models\\User', '1', DateRange::fromRequest(new Request));
     $text = $rows->firstWhere('model_type', 'text');
 
-    expect((float) $text->cost)->toBe(300.0)
+    expect((float) $text->cost)->toEqualWithDelta(300.0, 1e-9)
         ->and((float) $text->avg_latency)->toBe(200.0);
 });
 
@@ -108,7 +108,7 @@ it('excludes failed requests from trackable usage-by-provider cost', function ()
 
     $rows = app(GetTrackableUsageByProvider::class)('App\\Models\\User', '1', DateRange::fromRequest(new Request));
 
-    expect($rows->first()->cost)->toBe(300.0)
+    expect($rows->first()->cost)->toEqualWithDelta(300.0, 1e-9)
         ->and($rows->first()->requests)->toBe(4);
 });
 
@@ -118,7 +118,7 @@ it('excludes failed requests from the trackables summary cost', function () {
     $summary = app(GetTrackablesSummary::class)(new Request, DateRange::fromRequest(new Request));
 
     expect($summary->total_requests)->toBe(4)
-        ->and($summary->total_cost)->toBe(300.0)
+        ->and($summary->total_cost)->toEqualWithDelta(300.0, 1e-9)
         ->and($summary->avg_latency)->toBe(200.0);
 });
 
@@ -162,7 +162,7 @@ it('groups costs into one row per calendar month on SQLite', function () {
     $rows = Spectra::costs()->monthly();
 
     expect($rows)->toHaveCount(2)
-        ->and($rows->last()['total_cost_in_cents'])->toBe(250.0)
+        ->and($rows->last()['total_cost_in_cents'])->toEqualWithDelta(250.0, 1e-9)
         ->and($rows->last()['year'])->toBe(now()->year)
         ->and($rows->last()['month'])->toBe(now()->month)
         ->and($rows->last()['period'])->toBe(now()->format('Y-m'));

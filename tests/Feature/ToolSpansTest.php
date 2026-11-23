@@ -105,7 +105,7 @@ it('stores a tool\'s arguments and result only with store_prompts on and the tra
     config()->set('spectra.storage.sampling.rate', 0.0);
     Spectra::tool('search', fn () => 'three results', ['query' => 'refunds']);
 
-    expect(toolSpans()->pluck('attributes')->all())->toBe([
+    expect(toolSpans()->pluck('attributes')->all())->toEqual([
         ['gen_ai.tool.name' => 'search'],
         ['gen_ai.tool.name' => 'search'],
     ]);
@@ -197,7 +197,7 @@ describe('with tool_spans on', function () {
         $tools = toolSpans();
 
         expect($tools->pluck('name')->all())->toBe(['find_order', 'refund'])
-            ->and($tools[0]->attributes['gen_ai.tool.call.arguments'])->toBe(['id' => 42])
+            ->and($tools[0]->attributes['gen_ai.tool.call.arguments'])->toEqual(['id' => 42])
             ->and($tools[0]->attributes['gen_ai.tool.call.result'])->toBe('Order 42: paid')
             ->and($tools[0]->status)->toBe(SpanStatus::Ok)
             ->and($tools[1]->status)->toBe(SpanStatus::Error)

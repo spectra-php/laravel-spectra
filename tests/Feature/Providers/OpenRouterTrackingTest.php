@@ -26,7 +26,7 @@ it('records a tracked openrouter chat response at no cost when it reports none',
         ->and($record->model_type)->toBe('text')
         ->and($record->prompt_tokens)->toBe(25)
         ->and($record->completion_tokens)->toBe(15)
-        ->and((float) $record->total_cost_in_cents)->toBe(0.0);
+        ->and((float) $record->total_cost_in_cents)->toEqualWithDelta(0.0, 1e-9);
 });
 
 it('resolves image responses to the image handler, not the chat handler', function () {

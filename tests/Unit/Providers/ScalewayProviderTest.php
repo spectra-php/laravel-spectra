@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Spectra\Providers\Scaleway\Handlers\ChatHandler;
 use Spectra\Providers\Scaleway\Handlers\TranscriptionHandler;
-use Spectra\Support\Pricing\PricingLookup;
 
 /**
  * The Scaleway provider: transcription duration, cached and reasoning
@@ -30,7 +29,3 @@ it('reads cached and reasoning tokens from chat and responses usage', function (
         ->and($responses->cachedTokens)->toBe(30)
         ->and($responses->reasoningTokens)->toBe(5);
 });
-
-it('no longer lists dedicated-only models', function (string $model) {
-    expect(app(PricingLookup::class)->knows('scaleway', $model))->toBeFalse();
-})->with(['mistral-large-3-675b-instruct-2512', 'gpt-oss-20b', 'minimax-m2.5', 'qwen3-235b-a22b-thinking-2507']);

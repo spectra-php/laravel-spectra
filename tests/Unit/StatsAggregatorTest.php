@@ -40,7 +40,7 @@ it('records counts, tokens and cost on the global daily stat for a request', fun
         ->and($stat->failed_count)->toBe(0)
         ->and($stat->prompt_tokens)->toBe(100)
         ->and($stat->completion_tokens)->toBe(50)
-        ->and($stat->total_cost_in_cents)->toBe(500.0);
+        ->and($stat->total_cost_in_cents)->toEqualWithDelta(500.0, 1e-9);
 });
 
 it('adds repeated requests for one model into a single daily row', function () {
@@ -65,7 +65,7 @@ it('adds repeated requests for one model into a single daily row', function () {
     expect($stat)->not->toBeNull()
         ->and($stat->request_count)->toBe(3)
         ->and($stat->total_tokens)->toBe(450)
-        ->and($stat->total_cost_in_cents)->toBe(600.0);
+        ->and($stat->total_cost_in_cents)->toEqualWithDelta(600.0, 1e-9);
 });
 
 it('counts a 500 response as failed and halves the success rate', function () {
@@ -110,12 +110,12 @@ it('counts a failed request without adding its cost or latency to the day', func
     expect($stat->request_count)->toBe(3)
         ->and($stat->successful_count)->toBe(1)
         ->and($stat->failed_count)->toBe(2)
-        ->and($stat->total_cost_in_cents)->toBe(100.0)
+        ->and($stat->total_cost_in_cents)->toEqualWithDelta(100.0, 1e-9)
         ->and($stat->total_latency_ms)->toBe(100)
         ->and($stat->min_latency_ms)->toBe(100)
         ->and($stat->max_latency_ms)->toBe(100)
         ->and($stat->avgLatencyMs)->toBe(100.0)
-        ->and($aggregated['total_cost_in_cents'])->toBe(100.0)
+        ->and($aggregated['total_cost_in_cents'])->toEqualWithDelta(100.0, 1e-9)
         ->and($aggregated['avg_latency_ms'])->toBe(100.0)
         ->and($aggregated['failed_requests'])->toBe(2);
 });
@@ -134,7 +134,7 @@ it('moves a request\'s cost and latency out of the day when a later poll reports
     expect($stat->request_count)->toBe(1)
         ->and($stat->successful_count)->toBe(0)
         ->and($stat->failed_count)->toBe(1)
-        ->and($stat->total_cost_in_cents)->toBe(0.0)
+        ->and($stat->total_cost_in_cents)->toEqualWithDelta(0.0, 1e-9)
         ->and($stat->total_latency_ms)->toBe(0)
         ->and($stat->avgLatencyMs)->toBeNull();
 });
@@ -146,7 +146,7 @@ it('leaves a failed request\'s cost and latency out of record() too', function (
 
     expect($stat->failed_count)->toBe(1)
         ->and($stat->total_tokens)->toBe(15)
-        ->and($stat->total_cost_in_cents)->toBe(0.0)
+        ->and($stat->total_cost_in_cents)->toEqualWithDelta(0.0, 1e-9)
         ->and($stat->total_latency_ms)->toBe(0)
         ->and($stat->max_latency_ms)->toBeNull();
 });
@@ -212,7 +212,7 @@ it('aggregates requests, tokens, cost and success rate over a period', function 
 
     expect($stats['total_requests'])->toBe(5)
         ->and($stats['total_tokens'])->toBe(750)
-        ->and($stats['total_cost_in_cents'])->toBe(1000.0)
+        ->and($stats['total_cost_in_cents'])->toEqualWithDelta(1000.0, 1e-9)
         ->and($stats['success_rate'])->toBe(100.0);
 });
 

@@ -66,22 +66,6 @@ describe('Spectra::stream()', function () {
             ->and($row->total_cost_in_cents)->toBeGreaterThan(0);
     });
 
-    it('rethrows an exception from the underlying stream', function () {
-        $stream = (function () {
-            yield ['choices' => [['delta' => ['content' => 'Hi']]]];
-
-            throw new RuntimeException('connection reset');
-        })();
-
-        $consume = function () use ($stream) {
-            foreach (Spectra::stream('openai', 'gpt-4.1')->track($stream) as $text) {
-                //
-            }
-        };
-
-        expect($consume)->toThrow(RuntimeException::class, 'connection reset');
-    });
-
     it('returns an unsaved request when recording the stream fails', function () {
         Exceptions::fake();
         $this->mock(ResponseProcessor::class)

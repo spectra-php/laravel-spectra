@@ -303,7 +303,7 @@ it('keeps recording calls when the spans table does not exist yet', function () 
     Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message) => Str::contains($message, 'spectra_spans'));
 });
 
-it('exports a call with its stored span id and a span with its kind and parent', function () {
+it('exports a call under its stored span id', function () {
     config()->set('spectra.integrations.opentelemetry.enabled', true);
     Http::fake([
         'api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json')),
@@ -313,14 +313,26 @@ it('exports a call with its stored span id and a span with its kind and parent',
     Spectra::span('answer-question', fn () => callOpenAi(), ['tenant' => 'acme']);
 
     $call = SpectraRequest::query()->sole();
+
+    expect((new DefaultSpanBuilder)->build(app(RequestTransformer::class)->transform($call))['spanId'])->toBe($call->span_id);
+});
+
+it('exports a Spectra::span() block with its kind and attributes', function () {
+    config()->set('spectra.integrations.opentelemetry.enabled', true);
+    Http::fake([
+        'api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json')),
+        'localhost:4318/*' => Http::response([], 200),
+    ]);
+
+    Spectra::span('answer-question', fn () => callOpenAi(), ['tenant' => 'acme']);
+
     $span = SpectraSpan::query()->sole();
     $exported = collect(Http::recorded())
         ->filter(fn ($pair) => Str::contains($pair[0]->url(), '4318'))
         ->map(fn ($pair) => $pair[0]->data()['resourceSpans'][0]['scopeSpans'][0]['spans'][0])
         ->keyBy('name');
 
-    expect((new DefaultSpanBuilder)->build(app(RequestTransformer::class)->transform($call))['spanId'])->toBe($call->span_id)
-        ->and($exported['answer-question'])->toMatchArray(['spanId' => $span->span_id, 'kind' => 1])
+    expect($exported['answer-question'])->toMatchArray(['spanId' => $span->span_id, 'kind' => 1])
         ->and($exported['answer-question']['attributes'])->toContain(['key' => 'tenant', 'value' => ['stringValue' => 'acme']]);
 });
 

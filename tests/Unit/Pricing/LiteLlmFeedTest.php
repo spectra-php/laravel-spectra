@@ -40,9 +40,19 @@ it('reads the tier and the long-prompt threshold from the field names', function
     ]);
 });
 
-it('strips the provider prefix and skips other hosts, unpriced models and repeated modality prices', function () {
+it('strips the provider prefix from a model id', function () {
     $feed = new LiteLlmFeed([
-        'openai/gpt-y' => ['litellm_provider' => 'openai', 'mode' => 'chat', 'input_cost_per_token' => 3e-7, 'output_cost_per_token' => 1.2e-6, 'input_cost_per_audio_token' => 3e-7, 'output_cost_per_audio_token' => 2e-6],
+        'openai/gpt-y' => ['litellm_provider' => 'openai', 'mode' => 'chat', 'input_cost_per_token' => 3e-7, 'output_cost_per_token' => 1.2e-6],
+    ]);
+
+    $rows = $feed->rows(FakeCatalogs::openai());
+
+    expect($rows[0]['model_id'])->toBe('gpt-y');
+});
+
+it('skips rows of other hosts, unpriced models and new models not billed per token', function () {
+    $feed = new LiteLlmFeed([
+        'openai/gpt-y' => ['litellm_provider' => 'openai', 'mode' => 'chat', 'input_cost_per_token' => 3e-7, 'output_cost_per_token' => 1.2e-6],
         'azure/gpt-y' => ['litellm_provider' => 'azure', 'mode' => 'chat', 'input_cost_per_token' => 9e-7, 'output_cost_per_token' => 9e-6],
         'gpt-free' => ['litellm_provider' => 'openai', 'mode' => 'chat', 'input_cost_per_token' => 0, 'output_cost_per_token' => 0],
         // A new model that isn't billed per token can't be added from the feed.
@@ -52,9 +62,17 @@ it('strips the provider prefix and skips other hosts, unpriced models and repeat
 
     $rows = $feed->rows(FakeCatalogs::openai());
 
-    expect($rows)->toHaveCount(1)
-        ->and($rows[0]['model_id'])->toBe('gpt-y')
-        ->and($rows[0])->not->toHaveKey('audio_input')
+    expect($rows)->toHaveCount(1);
+});
+
+it('drops an audio price that repeats the text price', function () {
+    $feed = new LiteLlmFeed([
+        'gpt-y' => ['litellm_provider' => 'openai', 'mode' => 'chat', 'input_cost_per_token' => 3e-7, 'output_cost_per_token' => 1.2e-6, 'input_cost_per_audio_token' => 3e-7, 'output_cost_per_audio_token' => 2e-6],
+    ]);
+
+    $rows = $feed->rows(FakeCatalogs::openai());
+
+    expect($rows[0])->not->toHaveKey('audio_input')
         ->and($rows[0]['audio_output'])->toBe(2.0);
 });
 

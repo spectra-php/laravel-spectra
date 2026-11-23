@@ -29,20 +29,6 @@ it('remembers the model of a queued fal job when the result URL drops its sub-pa
         ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(7.5, 1e-9);
 });
 
-it('stores the provider error for a failed prediction', function () {
-    Http::fake(['api.replicate.com/*' => Http::response($this->loadMockResponse('replicate/prediction-failed.json'))]);
-
-    Http::get('https://api.replicate.com/v1/predictions/x1hfa7zq3hrmc0cs9qwbtyd0rg');
-
-    $row = SpectraRequest::query()->sole();
-
-    expect($row->status_code)->toBe(200)
-        ->and($row->error_message)->toBe('NSFW content detected. Try running it again, or try a different prompt.')
-        // completed_at − started_at: 10:05:00.900 − 10:05:00.480.
-        ->and($row->latency_ms)->toBe(420)
-        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0, 1e-9);
-});
-
 it('does not treat a JSON reply to a stream request as a stream', function () {
     Http::fake(['api.openai.com/*' => Http::response($this->loadMockResponse('openai/completion.json'))]);
 

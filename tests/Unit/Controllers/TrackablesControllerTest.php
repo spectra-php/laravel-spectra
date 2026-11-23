@@ -91,15 +91,19 @@ it('sorts trackables by token usage', function () {
     expect(collect($json['data'])->pluck('trackable_id')->all())->toBe(['many-tokens', 'few-tokens']);
 });
 
-it('falls back to a descending sort and a capped page size for bad input', function () {
+it('falls back to a descending cost sort for an unknown sort column or direction', function () {
     SpectraRequest::factory()->create(['total_cost_in_cents' => 1, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 'cheap']);
     SpectraRequest::factory()->create(['total_cost_in_cents' => 9, 'trackable_type' => 'App\\Models\\User', 'trackable_id' => 'pricey']);
 
-    $json = callTrackables(['sort_by' => 'created_at; drop table', 'sort_dir' => 'sideways', 'per_page' => 100000]);
+    $json = callTrackables(['sort_by' => 'created_at; drop table', 'sort_dir' => 'sideways']);
+
+    expect(collect($json['data'])->pluck('trackable_id')->all())->toBe(['pricey', 'cheap']);
+});
+
+it('caps the page size at 100', function () {
     $paginated = app(GetFilteredTrackables::class)(new Request(['per_page' => 100000]), new DateRange(null, null));
 
-    expect(collect($json['data'])->pluck('trackable_id')->all())->toBe(['pricey', 'cheap'])
-        ->and($paginated->perPage())->toBe(100);
+    expect($paginated->perPage())->toBe(100);
 });
 
 it('counts failed requests but leaves their cost and latency out of each trackable row', function () {

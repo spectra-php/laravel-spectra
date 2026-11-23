@@ -46,19 +46,28 @@ function recentCalls(int $succeeded, int $failed, array $attributes = []): void
     SpectraRequest::factory()->count($failed)->create(['status_code' => 500, 'created_at' => now()->subMinutes(2), ...$attributes]);
 }
 
-it('fires once, notifies every channel, and stays quiet within the cooldown', function () {
+it('notifies mail, Slack and the webhook when a rule fires', function () {
     recentCalls(succeeded: 6, failed: 4);
 
     $this->artisan('spectra:check-alerts')->expectsOutputToContain('FIRING')->assertSuccessful();
-    $this->travel(10)->minutes();
-    $this->artisan('spectra:check-alerts')->assertSuccessful();
 
-    Event::assertDispatchedTimes(AlertTriggered::class, 1);
     Event::assertDispatched(AlertTriggered::class, fn (AlertTriggered $event) => $event->value === 0.4);
     Mail::assertSent(AlertMail::class, fn (AlertMail $mail) => $mail->hasTo('ops@example.com') && $mail->hasTo('cto@example.com') && ! $mail->resolved);
     Http::assertSentCount(2);
     Http::assertSent(fn ($request) => $request->url() === 'https://hooks.slack.test/T1' && Str::contains($request['text'], 'High error rate: 40%'));
     Http::assertSent(fn ($request) => $request->url() === 'https://alerts.example.test/spectra' && $request['status'] === 'firing' && $request['value'] === 0.4);
+});
+
+it('stays quiet when a firing rule is checked again within the cooldown', function () {
+    recentCalls(succeeded: 6, failed: 4);
+    $this->artisan('spectra:check-alerts');
+    $this->travel(10)->minutes();
+
+    $this->artisan('spectra:check-alerts')->assertSuccessful();
+
+    // Still the first check's one event and two HTTP notifications.
+    Event::assertDispatchedTimes(AlertTriggered::class, 1);
+    Http::assertSentCount(2);
 });
 
 it('notifies again after the cooldown while the rule keeps firing', function () {
@@ -84,8 +93,19 @@ it('resolves once the rule recovers', function () {
     Http::assertSent(fn ($request) => $request->url() === 'https://alerts.example.test/spectra' && $request['status'] === 'resolved');
 });
 
-it('waits for enough calls before judging a rate, and watches only its provider', function () {
+it('does not judge a rate below min_requests calls', function () {
     recentCalls(succeeded: 1, failed: 2);
+    config()->set('spectra.alerts.rules', [
+        ['name' => 'Errors', 'metric' => 'error_rate', 'above' => 0.2, 'min_requests' => 5],
+    ]);
+
+    $this->artisan('spectra:check-alerts')->assertSuccessful();
+
+    Event::assertNotDispatched(AlertTriggered::class);
+});
+
+it('counts only the calls of the rule\'s provider', function () {
+    recentCalls(succeeded: 5, failed: 0, attributes: ['provider' => 'openai']);
     recentCalls(succeeded: 0, failed: 9, attributes: ['provider' => 'anthropic']);
     config()->set('spectra.alerts.rules', [
         ['name' => 'OpenAI errors', 'metric' => 'error_rate', 'above' => 0.2, 'provider' => 'openai', 'min_requests' => 5],
@@ -96,20 +116,30 @@ it('waits for enough calls before judging a rate, and watches only its provider'
     Event::assertNotDispatched(AlertTriggered::class);
 });
 
-it('measures latency percentiles and spend', function () {
+it('fires on the nearest-rank p95 latency', function () {
     foreach ([100, 200, 300, 400, 5000] as $latency) {
-        SpectraRequest::factory()->create(['status_code' => 200, 'latency_ms' => $latency, 'total_cost_in_cents' => 30, 'created_at' => now()->subMinute()]);
+        SpectraRequest::factory()->create(['status_code' => 200, 'latency_ms' => $latency, 'created_at' => now()->subMinute()]);
     }
     config()->set('spectra.alerts.rules', [
         ['name' => 'Slow', 'metric' => 'latency_p95', 'above' => 1000, 'min_requests' => 5],
+    ]);
+
+    $this->artisan('spectra:check-alerts')->assertSuccessful();
+
+    // p95 of five calls is the fifth (nearest rank).
+    Event::assertDispatched(AlertTriggered::class, fn (AlertTriggered $event) => $event->rule->name === 'Slow' && $event->value === 5000.0);
+});
+
+it('keeps a below-spend rule quiet while spend is above it', function () {
+    SpectraRequest::factory()->count(5)->create(['status_code' => 200, 'total_cost_in_cents' => 30, 'created_at' => now()->subMinute()]);
+    config()->set('spectra.alerts.rules', [
         ['name' => 'Spend', 'metric' => 'cost', 'below' => 100],
     ]);
 
     $this->artisan('spectra:check-alerts')->assertSuccessful();
 
-    // p95 of five calls is the fifth (nearest rank); spend is 150 cents, not below 100.
-    Event::assertDispatched(AlertTriggered::class, fn (AlertTriggered $event) => $event->rule->name === 'Slow' && $event->value === 5000.0);
-    Event::assertDispatchedTimes(AlertTriggered::class, 1);
+    // 5 × 30 = 150 cents, not below 100.
+    Event::assertNotDispatched(AlertTriggered::class);
 });
 
 it('rejects a rule it cannot check', function (array $rule, string $message) {

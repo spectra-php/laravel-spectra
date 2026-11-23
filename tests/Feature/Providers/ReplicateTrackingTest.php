@@ -94,6 +94,8 @@ it('records a failed prediction as a failed request that keeps its 200 status an
         ->and($record->isFailed())->toBeTrue()
         ->and(SpectraRequest::query()->failed()->count())->toBe(1)
         ->and($record->image_count)->toBe(0)
+        // completed_at − started_at: 10:05:00.900 − 10:05:00.480.
+        ->and($record->latency_ms)->toBe(420)
         ->and($record->total_cost_in_cents)->toEqualWithDelta(0.0, 0.000001)
         ->and($stat->failed_count)->toBe(1)
         ->and($stat->successful_count)->toBe(0);
