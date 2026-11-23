@@ -139,38 +139,43 @@ To keep the stats fresh, schedule a nightly rebuild:
 Schedule::command('spectra:rebuild-stats --yesterday')->dailyAt('01:00');
 ```
 
-<a name="spectra-pricing-scrape"></a>
-## `spectra:pricing-scrape`
+<a name="spectra-pricing-sync"></a>
+## `spectra:pricing-sync`
 
-Reads the providers' pricing pages with [Firecrawl](https://firecrawl.dev) and saves the prices that differ from the bundled catalog, and the models it doesn't have, to [your pricing file](/pricing#your-own-prices). Needs `SPECTRA_FIRECRAWL_API_KEY` (or `FIRECRAWL_API_KEY`) in your `.env` file, and `SPECTRA_PRICING_PATH` to bill with the saved prices.
+Reads LiteLLM's cost map, a public price feed, and saves the prices that differ from the bundled catalog, and the models it doesn't have, to [your pricing file](/pricing#your-own-prices). It needs no key. Set `SPECTRA_PRICING_PATH` to bill with the saved prices.
 
 ```shell
-php artisan spectra:pricing-scrape [provider*] [--all] [--url=*] [--path=] [--dry-run]
+php artisan spectra:pricing-sync [provider*] [--path=] [--dry-run]
 ```
 
-<a name="spectra-pricing-scrape-options"></a>
-### Options {#spectra-pricing-scrape-options}
+<a name="spectra-pricing-sync-options"></a>
+### Options {#spectra-pricing-sync-options}
 
 | Option | Description |
 | --- | --- |
-| `provider*` | The providers to scrape. Default: the providers in `SPECTRA_SCRAPE_PROVIDERS`, else the providers your app has tracked requests for. See [Which Providers Are Scraped](/pricing#scraped-providers). |
-| `--all` | Scrape every provider with pricing pages. |
-| `--url=*` | Scrape these pages instead of the provider's own. Needs exactly one provider. |
-| `--path=` | Write this file instead of `spectra.costs.pricing_path` (default: `resources/spectra/pricing.json`). Pointed at the package's `resources/pricing/catalog.json`, it updates the bundled catalog itself, every model of each provider. |
+| `provider*` | The providers to sync. Default: every provider the feed covers, which is every provider in the catalog except Scaleway. |
+| `--path=` | Write this file instead of `spectra.costs.pricing_path` (default: `resources/spectra/pricing.json`). |
 | `--dry-run` | Print the changes without writing the file. |
 
-<a name="spectra-pricing-scrape-examples"></a>
-### Examples {#spectra-pricing-scrape-examples}
+<a name="spectra-pricing-sync-examples"></a>
+### Examples {#spectra-pricing-sync-examples}
 
 ```shell
-# Scrape the providers your app uses and save the changes
-php artisan spectra:pricing-scrape
+# Sync every provider the feed covers and save the changes
+php artisan spectra:pricing-sync
 
 # Check OpenAI only, without writing anything
-php artisan spectra:pricing-scrape openai --dry-run
+php artisan spectra:pricing-sync openai --dry-run
 ```
 
-See [Scraping Prices with Firecrawl](/pricing#scraping-prices) for how rows are matched and checked.
+See [Syncing Prices from Feeds](/pricing#syncing-prices) for where the prices come from and how they are checked.
+
+<a name="spectra-pricing-scrape"></a>
+<a name="spectra-pricing-scrape-options"></a>
+<a name="spectra-pricing-scrape-examples"></a>
+### `spectra:pricing-scrape` {#spectra-pricing-scrape}
+
+An alias of `spectra:pricing-sync`, so scripts that call it keep working. It takes the same arguments and options. `--all` and `--url` are accepted and do nothing.
 
 <a name="spectra-pause"></a>
 ## `spectra:pause` and `spectra:resume` {#spectra-pause}
@@ -221,7 +226,7 @@ The run, with every example's output and scores, shows on the dashboard's Evals 
 | `spectra:install` | Interactive setup; publishes missing migrations | After `composer require` and after upgrading |
 | `spectra:prune --hours=168` | Delete old request data, review queue items and media | Scheduled daily for retention management |
 | `spectra:rebuild-stats --yesterday` | Rebuild aggregated statistics | Scheduled daily, after data corrections, or once after upgrading |
-| `spectra:pricing-scrape` | Save new provider prices to your pricing file | Before a release picks them up; review and commit the file |
+| `spectra:pricing-sync` | Save new provider prices to your pricing file, from a public price feed | Before a release picks them up; review and commit the file |
 | `spectra:pause` / `spectra:resume` | Stop and restart storing requests | During load tests or incidents |
 | `spectra:check-alerts` | Check the alert rules and notify | Scheduled every few minutes |
 | `spectra:eval SupportAnswerEval` | Run an evaluation over its dataset | After changing a prompt or model, or in CI |

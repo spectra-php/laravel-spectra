@@ -138,7 +138,7 @@ Custom providers can do the same with the [`ExtractsCostMultiplier`](/custom-pro
 <a name="reported-cost"></a>
 ## Reported Cost
 
-When the provider sends the real cost of the request (OpenRouter `usage.cost`, xAI `cost_in_usd_ticks`), Spectra uses it as the total cost, instead of the catalog price, tool fees, and multiplier. The reported cost is in US dollars, so it is converted to your reporting currency. `prompt_cost` and `completion_cost` keep the same share of the total as the catalog estimate gave them.
+When the provider sends the real cost of the request (OpenRouter `usage.cost`, xAI `cost_in_usd_ticks`, DeepInfra `usage.estimated_cost`), Spectra uses it as the total cost, instead of the catalog price, tool fees, and multiplier. OpenRouter is priced this way only: it sends the cost with every response, so the catalog has no OpenRouter prices. The reported cost is in US dollars, so it is converted to your reporting currency. `prompt_cost` and `completion_cost` keep the same share of the total as the catalog estimate gave them.
 
 <a name="currency-conversion"></a>
 ## Currency Conversion
@@ -322,4 +322,4 @@ A request costs zero when:
 
 A model that is missing from its provider's catalog is not silent: Spectra logs a warning once per process for each such model (`no price for the openai model 'ft:gpt-4o-mini:acme'`), and the dashboard's Overview says under the spend total how many successful calls in the period were recorded at $0 for want of a price, and for which models. Providers without a catalog (Ollama, a custom provider) are tracked at $0 on purpose and are left out of both.
 
-To add pricing for a missing model, add it to [your pricing file](/pricing#your-own-prices), by hand or with [`spectra:pricing-scrape`](/pricing#scraping-prices).
+To add pricing for a missing model, add it to [your pricing file](/pricing#your-own-prices), by hand or with [`spectra:pricing-sync`](/pricing#syncing-prices).

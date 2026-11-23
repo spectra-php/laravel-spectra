@@ -7,7 +7,7 @@ paths:
 # Dependencies
 
 ## Require as little as possible
-Every runtime dependency lands in every user's app. `require` holds only PHP, the `illuminate/*` components and polyfills. Call outside APIs (OTLP, Firecrawl) with Laravel's `Http` client instead of pulling in an SDK.
+Every runtime dependency lands in every user's app. `require` holds only PHP, the `illuminate/*` components and polyfills. Call outside APIs (OTLP, the price feeds) with Laravel's `Http` client instead of pulling in an SDK.
 
 ## Optional integrations stay optional
 Libraries Spectra can work with but doesn't need (the OpenAI SDK, getID3) go in `require-dev` for the tests and in `suggest` with the reason. Code that uses one checks `class_exists()` first and degrades quietly when it is missing.

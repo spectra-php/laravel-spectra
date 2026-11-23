@@ -309,11 +309,9 @@ Configure cost calculation and pricing tiers.
         'ttl'     => (int) env('SPECTRA_PRICING_CACHE_TTL', 86400),
     ],
 
-    'firecrawl' => [
-        'api_key'   => env('SPECTRA_FIRECRAWL_API_KEY', env('FIRECRAWL_API_KEY')),
-        'url'       => env('SPECTRA_FIRECRAWL_API_URL', env('FIRECRAWL_API_URL', 'https://api.firecrawl.dev/v2')),
-        'timeout'   => (int) env('SPECTRA_FIRECRAWL_TIMEOUT', env('FIRECRAWL_TIMEOUT', 180)),
-        'providers' => array_values(array_filter(array_map('trim', explode(',', (string) env('SPECTRA_SCRAPE_PROVIDERS', ''))))),
+    'feeds' => [
+        'litellm'    => env('SPECTRA_PRICING_FEED_LITELLM', 'https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json'),
+        'models_dev' => env('SPECTRA_PRICING_FEED_MODELS_DEV', 'https://models.dev/api.json'),
     ],
 ],
 ```
@@ -325,11 +323,11 @@ Configure cost calculation and pricing tiers.
 | `exchange_rates` | `array` | `[]` | How many units of `currency` one unit of another currency is worth. For example, `['EUR' => 1.17]` when you report in USD, or `['USD' => 0.86]` when you report in EUR. A missing rate counts as 1:1, and Spectra logs a warning once per process. Spectra does not fetch rates, so update them from time to time. |
 | `currency_symbol` | `string` | `$` | Symbol shown before cost values in the dashboard. Display only. |
 | `provider_settings.*.default_tier` | `string` | `standard` | The tier used when you did not set one (with `Spectra::withPricingTier()` or the `pricing_tier` option), and neither the request nor the response says which tier was used. Tiers: `standard`, `batch`, `flex`, `priority`, `fast`, `ultrafast`, `hd`. Any provider slug may be listed. See [Which Tier Is Used](/costs#tier-order). |
-| `pricing_path` | `string\|null` | `null` | Your own pricing file (JSON), in the format of the [bundled catalog](/pricing#the-pricing-file). Each model in it replaces the bundled model with the same id; every other model keeps its bundled price. A relative path is relative to the app's root. `spectra:pricing-scrape` writes it. See [Your Own Prices](/pricing#your-own-prices). |
+| `pricing_path` | `string\|null` | `null` | Your own pricing file (JSON), in the format of the [bundled catalog](/pricing#the-pricing-file). Each model in it replaces the bundled model with the same id; every other model keeps its bundled price. A relative path is relative to the app's root. `spectra:pricing-sync` writes it. See [Your Own Prices](/pricing#your-own-prices). |
 | `cache.enabled` | `bool` | `true` | Keep the pricing index in the cache instead of parsing the pricing files once per process. It is rebuilt when a file changes. See [Caching](/pricing#caching). |
 | `cache.store` | `string\|null` | `null` | The cache store to keep it in, from `config/cache.php`. `null` is your default store. |
 | `cache.ttl` | `int` | `86400` | Seconds to keep the index. `0` keeps it until a file changes. |
-| `firecrawl.*` | `array` | See above | API key, base URL, per-page timeout (seconds) and the default providers for [`spectra:pricing-scrape`](/pricing#scraping-prices), which saves the prices that differ from the bundled catalog to `pricing_path`. Without `providers`, it scrapes the providers your app has tracked requests for. Tracking never calls Firecrawl. The unprefixed `FIRECRAWL_API_KEY`, `FIRECRAWL_API_URL` and `FIRECRAWL_TIMEOUT` still work when the `SPECTRA_` names are not set. |
+| `feeds.*` | `array` | See above | The URLs [`spectra:pricing-sync`](/pricing#syncing-prices) reads: LiteLLM's cost map, and models.dev, which confirms a new model's price before it is added. No key is needed. Change one to read a mirror, or a fixed commit of LiteLLM's file. Tracking never calls them. |
 
 <a name="budget"></a>
 ## Budget
@@ -568,10 +566,8 @@ SPECTRA_PRICING_PATH=
 SPECTRA_PRICING_CACHE=true
 SPECTRA_PRICING_CACHE_STORE=
 SPECTRA_PRICING_CACHE_TTL=86400
-SPECTRA_FIRECRAWL_API_KEY=
-SPECTRA_FIRECRAWL_API_URL=https://api.firecrawl.dev/v2
-SPECTRA_FIRECRAWL_TIMEOUT=180
-SPECTRA_SCRAPE_PROVIDERS=
+SPECTRA_PRICING_FEED_LITELLM=https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json
+SPECTRA_PRICING_FEED_MODELS_DEV=https://models.dev/api.json
 
 # Budget
 SPECTRA_BUDGET_ENABLED=true

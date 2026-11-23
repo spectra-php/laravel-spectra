@@ -590,6 +590,19 @@ class MyProvider extends Provider implements ExtractsCostMultiplierForModel
 
 For a polled async job, `$requestData` is the body of the request that submitted it.
 
+### `ReportsRequestCost` {#reports-request-cost}
+
+A marker with no methods, for a provider whose handlers return `reportedCostInCents` (see [Metrics DTOs](#metrics-dtos)). The cost stored for its requests is the provider's own figure, so [recalculating stored costs](/pricing#recalculating-costs) from the catalog leaves them as recorded:
+
+```php
+use Spectra\Contracts\ReportsRequestCost;
+
+class MyProvider extends Provider implements ReportsRequestCost
+{
+    // ...
+}
+```
+
 <a name="metrics-dtos"></a>
 ## Metrics DTOs
 
@@ -764,7 +777,7 @@ To track costs, add your provider to [your pricing file](/pricing#your-own-price
 }
 ```
 
-With `sources`, [`spectra:pricing-scrape`](/pricing#scraping-prices) keeps the provider's prices current from its pricing page. See [The Pricing File](/pricing#the-pricing-file) for every field.
+`sources` records where the prices come from, so you can check them again when the provider changes its pricing. See [The Pricing File](/pricing#the-pricing-file) for every field.
 
 ::: tip
 All prices in the pricing catalog are stored in **cents**. For token-based models, prices are in cents per million tokens (for example, `200` means $2.00 per million tokens). For unit-based models (images, audio, video), prices are in cents per unit.

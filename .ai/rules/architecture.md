@@ -40,7 +40,7 @@ Create a folder when its first class arrives; no empty or `Misc/` folders. Split
 Name a support class for what it does (`AudioDurationExtractor`, `ApiKeyResolver`, `StreamDetector`) with no `Service` suffix; if you cannot name it precisely, split it. No `Helper`, `Util` or `Manager` grab-bags.
 
 ## Wrap every outside system in one class
-Each outside API is called from one class (`OtlpExporter`, the Firecrawl scraper in `Support/Pricing/Scraping`). Everything else uses that class. Credentials and URLs come from `config('spectra.…')`, never `env()` or a literal. A watcher that rebuilds a third-party client reads that package's own config too (the OpenAI watcher reads `openai.*`), so the client behaves as the user set it up.
+Each outside API is called from one class (`OtlpExporter`, each price feed in `Support/Pricing/Feeds`). Everything else uses that class. Credentials and URLs come from `config('spectra.…')`, never `env()` or a literal. A watcher that rebuilds a third-party client reads that package's own config too (the OpenAI watcher reads `openai.*`), so the client behaves as the user set it up.
 
 ## Add an interface only for a real seam
 Write an interface in `Contracts/` only for a second implementation, a test fake, or an extension point users implement (`Handler`, `SpanBuilder`, `RequestExporter`, the optional `Extracts…` / `Has…` capabilities handlers opt into). Name it as a noun or capability with no `Interface` suffix, and bind the default in `SpectraServiceProvider::register()`.

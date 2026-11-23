@@ -232,7 +232,7 @@ Older rows keep their old values. Nothing is rewritten.
 - `SpectraRequest::$trackable_id` is always a string, also on a row just created from an integer key.
 - A whitespace-only API key in config counts as unset.
 - Pricing: dated ids that only add a date to a model id (`claude-sonnet-4-20250514`) are no longer listed by `getAliases()`. They still resolve to the same price.
-- The Firecrawl settings read `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL` and `SPECTRA_FIRECRAWL_TIMEOUT`. The unprefixed `FIRECRAWL_*` names still work.
+- The Firecrawl settings read `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL` and `SPECTRA_FIRECRAWL_TIMEOUT`. The unprefixed `FIRECRAWL_*` names still work. Since 4.3 none of them is read: `spectra:pricing-scrape` is an alias of [`spectra:pricing-sync`](/commands#spectra-pricing-sync), which reads price feeds and needs no key.
 
 <a name="from-1x-to-2"></a>
 ## From 1.x to 2.0 {#from-1x-to-2}

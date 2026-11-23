@@ -220,7 +220,9 @@ Older rows keep their old values.
   are no longer listed by `getAliases()`. They still resolve to the same
   price.
 - Firecrawl reads `SPECTRA_FIRECRAWL_API_KEY`, `SPECTRA_FIRECRAWL_API_URL`
-  and `SPECTRA_FIRECRAWL_TIMEOUT`; the unprefixed names still work.
+  and `SPECTRA_FIRECRAWL_TIMEOUT`; the unprefixed names still work. Since
+  4.3 none of them is read: `spectra:pricing-scrape` is an alias of
+  `spectra:pricing-sync`, which reads price feeds and needs no key.
 
 ## From 1.x to 2.0
 

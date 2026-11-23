@@ -18,6 +18,10 @@ Every tracked request gets a **model type**. The model type decides which metric
 - fal.ai
 - Scaleway
 - ElevenLabs
+- Together AI
+- Fireworks AI
+- DeepInfra
+- Cerebras
 
 To support a provider not listed here, see [Custom Providers](/custom-providers).
 

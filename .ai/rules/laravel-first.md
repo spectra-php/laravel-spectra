@@ -15,7 +15,7 @@ When Laravel has a helper for the job, use it instead of the plain PHP function.
 Use `Str::` for one call and `Str::of($text)` / `str($text)` for a chain: `Str::contains()`, `Str::startsWith()`, `Str::endsWith()`, `Str::lower()`, `Str::limit()`, `Str::before()` / `after()`, `Str::replace()`, `Str::substr()`, `Str::length()`. For patterns use `Str::match()`, `Str::matchAll()`, `Str::isMatch()` and `Str::replaceMatches()`, not `preg_*`. Not `str_contains`, `strtolower`, `substr`, `mb_substr`, `str_replace`, `explode` + `implode` round trips.
 Keep the plain function where the helper differs:
 - Byte-level code that must see raw bytes: stream parsing, binary audio, multipart request bodies, file headers built with `pack()`, and test stand-ins for binary data.
-- Text whose exact bytes decide an outcome, such as the scraping safeguards' page-text matching: `Str::lower()` and `Str::length()` are multibyte and `Str::trim()` also strips Unicode whitespace, so they can change the result.
+- Text whose exact bytes decide an outcome: `Str::lower()` and `Str::length()` are multibyte and `Str::trim()` also strips Unicode whitespace, so they can change the result.
 - A match that needs several capture groups at once: `Str::match()` returns only the first group, so use `preg_match()` there.
 
 A lone `explode()` is fine; only an `explode()` + `implode()` round trip has a better helper. Plain `trim()` and `strlen()` are fine too: `Str::trim()` also strips Unicode whitespace and `Str::length()` counts characters, not bytes, so neither gives the same result.

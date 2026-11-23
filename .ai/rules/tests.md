@@ -7,7 +7,7 @@ paths:
 # Tests
 
 ## What earns a test
-Test what users get: the stored row, its cost, the budget decision, the dashboard numbers. Every provider endpoint has a test that tracks a real fixture and checks the provider, model, model type, metrics and a non-zero cost. Add a unit test for logic with real branches (handler resolution, usage parsing, stream decoding, price lookup, tier and long-context selection, scraping safeguards), one case per branch.
+Test what users get: the stored row, its cost, the budget decision, the dashboard numbers. Every provider endpoint has a test that tracks a real fixture and checks the provider, model, model type, metrics and a non-zero cost. Add a unit test for logic with real branches (handler resolution, usage parsing, stream decoding, price lookup, tier and long-context selection, price feed safeguards), one case per branch.
 
 Don't test labels and copy, the exact shape of a DTO, config defaults, enum lists, service-provider bindings, or framework behaviour. A dataset holds distinct branches only.
 
@@ -24,7 +24,7 @@ A test name says what happens and what should result, never "works". Split a tes
 Load provider responses with `$this->loadMockResponse('{provider}/{file}.json')` from `tests/responses/`. Add a new fixture from a real response rather than typing one. A unit test of one branch (a usage shape, a stream event, `matchesResponse()`) may build the small payload inline, and a variant of a real response is derived from its loaded fixture. Show the price maths in a comment next to the cost assertion (`// 0.185 cents/minute × (120.5s / 60)`). Compare costs with `toEqualWithDelta()`, except where the test exists to prove a cost comes back as a `float` (aggregate casts, sub-cent precision): `toBe(12.5)` checks the type, which a delta does not. Compare a stored JSON object (`metadata`, `attributes`, `tool_call_counts`) with `toEqual()`, not `toBe()`: MySQL's JSON type gives the keys back in its own order, so `toBe()` passes on SQLite and fails on MySQL. A JSON list (`allowed_providers`) keeps its order and may use `toBe()`.
 
 ## Never call a real outside service
-Fake every HTTP call with `Http::fake([...])` or a Guzzle `MockHandler`. Firecrawl, OTLP endpoints and provider APIs are never reached from tests.
+Fake every HTTP call with `Http::fake([...])` or a Guzzle `MockHandler`. Price feeds, OTLP endpoints and provider APIs are never reached from tests.
 
 ## Arrange, act, assert
 Keep the three parts as blocks separated by blank lines, with no `// Arrange` comments. One part may itself span more than one block. Assert only what this behaviour changes, not a whole `toArray()`.
