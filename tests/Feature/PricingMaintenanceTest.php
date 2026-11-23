@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Http;
 use Spectra\Support\Pricing\PricingFile;
 use Spectra\Tests\Fixtures\FakeCatalogs;
 
 /**
  * The maintenance screen's prices card: it shows the bundled catalog, the
- * app's own pricing file when it has one, and the cache. It never checks a
- * price feed or writes a pricing file; recalculating the stored requests'
- * costs from it is covered in RecalculateCostsTest.
+ * app's own pricing file when it has one, and the cache. Recalculating the
+ * stored requests' costs from the card is covered in RecalculateCostsTest.
  */
 beforeEach(function () {
     Gate::define('viewSpectra', fn ($user = null) => true);
@@ -71,15 +69,4 @@ it('says why the file cannot be read', function () {
     File::put($this->path, '{not json');
 
     expect($this->getJson('/spectra/api/maintenance/pricing')->assertOk()->json('file.error'))->not->toBeNull();
-});
-
-it('cannot check, apply or dismiss prices from the dashboard, even for managers', function () {
-    Http::fake();
-
-    foreach ([['post', 'check'], ['post', 'apply'], ['delete', 'review']] as [$method, $path]) {
-        expect($this->json($method, "/spectra/api/maintenance/pricing/{$path}", ['models' => ['openai' => ['gpt-x']]])->status())->toBeIn([404, 405]);
-    }
-
-    Http::assertNothingSent();
-    expect(File::exists($this->path))->toBeFalse();
 });
