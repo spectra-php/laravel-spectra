@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 use Illuminate\Support\Arr;
 use Spectra\Pricing\ProviderPricing;
-use Spectra\Support\Pricing\Scraping\PriceChange;
-use Spectra\Support\Pricing\Scraping\ScrapedPriceMapper;
+use Spectra\Support\Pricing\Feeds\FeedPriceMapper;
+use Spectra\Support\Pricing\Feeds\PriceChange;
 use Spectra\Tests\Fixtures\FakeCatalogs;
 
 /**
- * ScrapedPriceMapper turns Firecrawl's rows (currency units) into pricing
+ * FeedPriceMapper turns a price feed's rows (currency units) into pricing
  * file entries (cents), only for models whose prices differ or are new.
  */
 beforeEach(function () {
-    $this->map = fn (array $rows) => (new ScrapedPriceMapper)->map(FakeCatalogs::openai(), $rows, '2026-10-31');
+    $this->map = fn (array $rows) => (new FeedPriceMapper)->map(FakeCatalogs::openai(), $rows, '2026-10-31');
 });
 
 it('leaves out models whose prices match the catalog', function () {
@@ -72,22 +72,14 @@ it('does not add a token tier without both input and output prices', function ()
         ->and($result->skipped)->toContain('gpt-y: batch is missing input_price or output_price, not added.');
 });
 
-it('matches aliases, display names and case to catalog ids', function (string $id) {
+it('matches aliases and case to catalog ids', function (string $id) {
     $result = ($this->map)([
         ['model_id' => $id, 'tier' => 'standard', 'input' => 0.9],
     ]);
 
     expect(array_keys($result->models))->toBe(['gpt-x'])
         ->and($result->newModels)->toBe([]);
-})->with(['alias' => 'gpt-x-latest', 'display name' => 'GPT X', 'upper-case id' => 'GPT-X']);
-
-it('matches by display name when the id is made up', function () {
-    $result = ($this->map)([
-        ['model_id' => 'gpt-x-turbo-preview', 'display_name' => 'GPT X', 'tier' => 'standard', 'input' => 0.9],
-    ]);
-
-    expect(array_keys($result->models))->toBe(['gpt-x']);
-});
+})->with(['alias' => 'gpt-x-latest', 'upper-case id' => 'GPT-X']);
 
 it('adds models the catalog does not have', function () {
     $result = ($this->map)([
@@ -134,7 +126,7 @@ it('skips ids that are not API ids', function () {
         ->and($result->skipped)->toBe(["'Some Brand New Model (beta)' is not a model id."]);
 });
 
-it('keeps our price when the scraped one is off by an order of magnitude', function () {
+it('keeps our price when the feed price is off by an order of magnitude', function () {
     $result = ($this->map)([
         // A per-1K price read as per-1M.
         ['model_id' => 'gpt-x', 'tier' => 'standard', 'input' => 0.001, 'output' => 3.5],
@@ -162,7 +154,7 @@ it('skips a per-unit model priced in another unit', function () {
     ]);
 
     expect($result->models)->toBe([])
-        ->and($result->skipped)->toBe(['image-x: the page prices it per megapixel, the catalog per image.']);
+        ->and($result->skipped)->toBe(['image-x: the feed prices it per megapixel, the catalog per image.']);
 });
 
 it('ignores a unit price for a token model', function () {
@@ -171,10 +163,10 @@ it('ignores a unit price for a token model', function () {
     ]);
 
     expect($result->models)->toBe([])
-        ->and($result->skipped)->toBe(['gpt-y: the page has no token prices for standard.']);
+        ->and($result->skipped)->toBe(['gpt-y: the feed has no token prices for standard.']);
 });
 
-it('keeps the first price when pages repeat a row', function () {
+it('keeps the first price when a feed repeats a row', function () {
     $result = ($this->map)([
         ['model_id' => 'gpt-y', 'tier' => 'standard', 'input' => 0.25],
         ['model_id' => 'gpt-y', 'tier' => 'standard', 'input' => 0.35, 'output' => 1.5],
@@ -203,7 +195,7 @@ it('updates the dated row in effect, not a future one', function () {
         ]],
     ]);
 
-    $result = (new ScrapedPriceMapper)->map($pricing, [
+    $result = (new FeedPriceMapper)->map($pricing, [
         ['model_id' => 'gpt-d', 'tier' => 'standard', 'input' => 0.7],
     ], '2026-10-31');
 
@@ -211,7 +203,7 @@ it('updates the dated row in effect, not a future one', function () {
 });
 
 it('starts each map with no leftover changes', function () {
-    $mapper = new ScrapedPriceMapper;
+    $mapper = new FeedPriceMapper;
     $mapper->map(FakeCatalogs::openai(), [['model_id' => 'gpt-y', 'tier' => 'standard', 'input' => 0.4]]);
 
     $result = $mapper->map(FakeCatalogs::openai(), []);

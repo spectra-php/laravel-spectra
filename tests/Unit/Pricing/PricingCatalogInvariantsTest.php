@@ -35,21 +35,15 @@ function spectraCatalogRows(): array
     return $rows;
 }
 
-it('bundles a catalog for every built-in provider', function () {
+it('bundles a catalog for every built-in provider it prices itself', function () {
     expect(array_keys(PricingCatalog::bundled()))->toBe([
-        'anthropic', 'cohere', 'elevenlabs', 'falai', 'google', 'groq', 'mistral', 'openai', 'openrouter', 'replicate', 'scaleway', 'xai',
+        'anthropic', 'cerebras', 'cohere', 'deepinfra', 'elevenlabs', 'falai', 'fireworks', 'google', 'groq', 'mistral', 'openai', 'replicate', 'scaleway', 'together', 'xai',
     ]);
 });
 
-it('lists pricing pages for every provider but OpenRouter, which reports its costs', function () {
+it('lists a pricing page for every provider, to check its prices on', function () {
     foreach (PricingCatalog::bundled() as $provider => $pricing) {
-        if ($provider === 'openrouter') {
-            expect($pricing->sources())->toBe([]);
-
-            continue;
-        }
-
-        expect($pricing->sources())->not->toBeEmpty("{$provider} has no pricing pages to scrape");
+        expect($pricing->sources())->not->toBeEmpty("{$provider} lists no pricing page to check its prices on");
     }
 });
 

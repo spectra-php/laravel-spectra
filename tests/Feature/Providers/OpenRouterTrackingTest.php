@@ -10,23 +10,23 @@ use Spectra\Models\SpectraRequest;
 
 /**
  * OpenRouter requests through the HTTP client: the cost OpenRouter reports
- * wins over the catalog, with fallbacks to catalog prices, and chat, image,
- * video and embedding calls are each recorded once.
+ * is the cost recorded (it has no catalog prices), and chat, image, video and
+ * embedding calls are each recorded once.
  */
-it('records a tracked openrouter chat response with its model, tokens and cost', function () {
+it('records a tracked openrouter chat response at no cost when it reports none', function () {
     $response = $this->loadMockResponse('openrouter/chat.json');
 
     Spectra::track('openrouter', 'openai/gpt-5-mini', fn () => $response);
 
     $record = SpectraRequest::query()->sole();
 
-    // GPT-5 Mini catalog (in 25, out 200): (25×25 + 15×200) / 1M = 0.003625¢
+    // OpenRouter has no catalog: the cost is the one the response reports, and this one reports none.
     expect($record->provider)->toBe('openrouter')
-        ->and($record->model)->toBe('GPT-5 Mini')
+        ->and($record->model)->toBe('openai/gpt-5-mini')
         ->and($record->model_type)->toBe('text')
         ->and($record->prompt_tokens)->toBe(25)
         ->and($record->completion_tokens)->toBe(15)
-        ->and((float) $record->total_cost_in_cents)->toEqualWithDelta(0.003625, 1e-9);
+        ->and((float) $record->total_cost_in_cents)->toBe(0.0);
 });
 
 it('resolves image responses to the image handler, not the chat handler', function () {
@@ -39,10 +39,8 @@ it('resolves image responses to the image handler, not the chat handler', functi
 
     $record = SpectraRequest::query()->sole();
 
-    // Gemini 2.5 Flash Image Preview: 3 cents per image × 2 images = 6 cents
     expect($record->model_type)->toBe('image')
-        ->and($record->image_count)->toBe(2)
-        ->and((float) $record->total_cost_in_cents)->toEqualWithDelta(6.0, 1e-9);
+        ->and($record->image_count)->toBe(2);
 });
 
 it('records the cost openrouter reports, with cache reads, cache writes and reasoning', function () {
@@ -59,7 +57,7 @@ it('records the cost openrouter reports, with cache reads, cache writes and reas
     // + 8,000 cache reads × 30 + 2,000 cache writes × 375 + 600 output × 1500,
     // all per 1M tokens = 2.49 cents.
     expect($record->provider)->toBe('openrouter')
-        ->and($record->model)->toBe('Claude Sonnet 4.5')
+        ->and($record->model)->toBe('anthropic/claude-sonnet-4.5')
         ->and($record->model_type)->toBe('text')
         ->and($record->response_id)->toBe('gen-1760000000-9fKq2LmZpX4rTt8YvWcB')
         ->and($record->prompt_tokens)->toBe(12000)
@@ -69,18 +67,6 @@ it('records the cost openrouter reports, with cache reads, cache writes and reas
         ->and($record->reasoning_tokens)->toBe(200)
         ->and($record->pricing_tier)->toBe('standard')
         ->and($record->total_cost_in_cents)->toEqualWithDelta(2.49, 0.000001);
-});
-
-it('falls back to the catalog price when the response has no cost', function () {
-    $body = $this->loadMockResponse('openrouter/chat-cache.json');
-    unset($body['usage']['cost'], $body['usage']['cost_details'], $body['usage']['is_byok']);
-
-    Http::fake(['openrouter.ai/*' => Http::response($body)]);
-
-    Http::post('https://openrouter.ai/api/v1/chat/completions', ['model' => 'anthropic/claude-sonnet-4.5', 'messages' => []]);
-
-    // (2,000 × 300 + 8,000 × 30 + 2,000 × 375 + 600 × 1500) / 1M = 2.49 cents
-    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(2.49, 0.000001);
 });
 
 it('adds the upstream provider cost for bring-your-own-key requests', function () {
@@ -111,18 +97,6 @@ it('keeps openrouter/auto as the model and the served model as the snapshot', fu
         ->and($record->cached_tokens)->toBe(1000)
         ->and($record->has_tool_calls)->toBeTrue()
         ->and($record->tool_call_counts)->toEqual(['web_search' => 1]);
-});
-
-it('prices the served model when openrouter/auto reports no cost', function () {
-    $body = $this->loadMockResponse('openrouter/chat-auto.json');
-    unset($body['usage']['cost']);
-
-    Http::fake(['openrouter.ai/*' => Http::response($body)]);
-
-    Http::post('https://openrouter.ai/api/v1/chat/completions', ['model' => 'openrouter/auto', 'messages' => []]);
-
-    // Gemini 2.5 Flash: (4,000 × 30 + 1,000 cached × 3 + 400 × 250) / 1M = 0.223 cents
-    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(0.223, 0.000001);
 });
 
 it('records a streamed chat completion with the cost from the last chunk', function () {
@@ -160,25 +134,13 @@ it('records the image api with its image count and reported cost', function () {
 
     $record = SpectraRequest::query()->sole();
 
-    // usage.cost = $0.0387036 → 3.87036 cents; catalog: (12 × 30 + 1,290 image tokens × 3000) / 1M
-    expect($record->model)->toBe('Gemini 2.5 Flash Image')
+    // usage.cost = $0.0387036 → 3.87036 cents
+    expect($record->model)->toBe('google/gemini-2.5-flash-image')
         ->and($record->model_type)->toBe('image')
         ->and($record->image_count)->toBe(1)
         ->and($record->completion_tokens)->toBe(1290)
         ->and($record->total_cost_in_cents)->toEqualWithDelta(3.87036, 0.000001)
         ->and($record->response['data'][0]['b64_json'])->toBe('[stripped]');
-});
-
-it('prices image output tokens at the image rate when the image api reports no cost', function () {
-    $body = $this->loadMockResponse('openrouter/images.json');
-    unset($body['usage']['cost'], $body['usage']['cost_details']);
-
-    Http::fake(['openrouter.ai/*' => Http::response($body)]);
-
-    Http::post('https://openrouter.ai/api/v1/images', ['model' => 'google/gemini-2.5-flash-image', 'prompt' => 'x']);
-
-    // (12 × 30 + 1,290 × 3000) / 1M = 3.87036 cents
-    expect(SpectraRequest::query()->sole()->total_cost_in_cents)->toEqualWithDelta(3.87036, 0.000001);
 });
 
 it('records a video job once, when it finishes, however often it is polled', function () {
@@ -221,9 +183,9 @@ it('records a streamed image api call from its completed event', function () {
 
     $record = SpectraRequest::query()->sole();
 
-    // usage.cost = $0.16651 → 16.651 cents; catalog: (20 × 500 + 4,160 image tokens × 4000) / 1M = 16.65
+    // usage.cost = $0.16651 → 16.651 cents
     expect($record->is_streaming)->toBeTrue()
-        ->and($record->model)->toBe('GPT Image 1')
+        ->and($record->model)->toBe('openai/gpt-image-1')
         ->and($record->model_type)->toBe('image')
         ->and($record->completion_tokens)->toBe(4160)
         ->and($record->total_cost_in_cents)->toEqualWithDelta(16.651, 0.000001);

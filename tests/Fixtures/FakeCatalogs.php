@@ -10,7 +10,7 @@ use Spectra\Support\Pricing\PricingFile;
 use Spectra\Support\Pricing\PricingLookup;
 
 /**
- * Small, stable catalogs for the pricing file, cache and scraping tests, as
+ * Small, stable catalogs for the pricing file, cache and price feed tests, as
  * provider sections of a pricing file.
  */
 final class FakeCatalogs
@@ -55,7 +55,7 @@ final class FakeCatalogs
     }
 
     /**
-     * A second provider with pricing pages, for choosing which providers to scrape.
+     * A second provider, for tests that need more than one.
      *
      * @return array<string, mixed>
      */
@@ -75,7 +75,7 @@ final class FakeCatalogs
     }
 
     /**
-     * A provider whose models cover the scraping safeguards: modality prices,
+     * A provider whose models cover the feed safeguards: modality prices,
      * a priority tier, a long-context row, an embedding and per-unit models.
      *
      * @return array<string, mixed>

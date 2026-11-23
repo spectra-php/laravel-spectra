@@ -51,9 +51,9 @@ it('records the tier Mistral says it served and bills it at standard without a p
 
     $row = SpectraRequest::query()->sole();
 
-    // No priority price is published, so Mistral Large 3 bills at standard: (25×50 + 15×150) / 1M = 0.0035¢
+    // No priority price is published, so Mistral Large 4 bills at standard: (25×70 + 15×210) / 1M = 0.0049¢
     expect($row->pricing_tier)->toBe('priority')
-        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0035, 1e-12);
+        ->and((float) $row->total_cost_in_cents)->toEqualWithDelta(0.0049, 1e-12);
 });
 
 it('records a streamed reasoning response with its answer text and cost', function () {

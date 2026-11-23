@@ -22,7 +22,8 @@ class ModelsDevDrift
 {
     /**
      * Spectra provider slug => models.dev provider id, for catalogs priced in
-     * tokens. Replicate, Fal.ai and ElevenLabs are not on models.dev.
+     * tokens. Replicate, Fal.ai and ElevenLabs are not on models.dev, and
+     * OpenRouter has no catalog: it reports each request's cost itself.
      */
     public const PROVIDERS = [
         'openai' => 'openai',
@@ -30,17 +31,10 @@ class ModelsDevDrift
         'google' => 'google',
         'xai' => 'xai',
         'mistral' => 'mistral',
-        'openrouter' => 'openrouter',
         'cohere' => 'cohere',
         'groq' => 'groq',
         'scaleway' => 'scaleway',
     ];
-
-    /**
-     * Catalogs that deliberately cover only popular models, so models missing
-     * from them are not reported. OpenRouter reports each request's cost itself.
-     */
-    public const PARTIAL_CATALOGS = ['openrouter'];
 
     /** Prices this close (relative) count as equal. */
     protected const TOLERANCE = 0.001;
@@ -88,8 +82,7 @@ class ModelsDevDrift
 
             // A $0 entry is how models.dev lists a model it has no price for.
             $reportable = ($input > 0 || $output > 0)
-                && ($model['status'] ?? null) !== 'deprecated'
-                && ! in_array($provider, self::PARTIAL_CATALOGS, true);
+                && ($model['status'] ?? null) !== 'deprecated';
 
             return $reportable ? [DriftFinding::missing($provider, $id, $input, $output)] : [];
         }

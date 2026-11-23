@@ -29,7 +29,7 @@ use Spectra\Console\Commands\PauseCommand;
 use Spectra\Console\Commands\PruneCommand;
 use Spectra\Console\Commands\RebuildStatsCommand;
 use Spectra\Console\Commands\ResumeCommand;
-use Spectra\Console\Commands\ScrapePricingCommand;
+use Spectra\Console\Commands\SyncPricingCommand;
 use Spectra\Contracts\DashboardTrackableResolver;
 use Spectra\Contracts\RequestExporter;
 use Spectra\Contracts\SpanBuilder;
@@ -444,7 +444,6 @@ class SpectraServiceProvider extends ServiceProvider
         'costs.exchange_rates',
         // 2.x
         'tracking.propagate_tags',
-        'costs.firecrawl',
         // 3.0
         'tracking.capture_origin',
         'tracking.root_spans',
@@ -460,6 +459,8 @@ class SpectraServiceProvider extends ServiceProvider
         'costs.cache',
         // 4.2
         'dashboard.budgets',
+        // 4.3
+        'costs.feeds',
     ];
 
     /**
@@ -552,7 +553,7 @@ class SpectraServiceProvider extends ServiceProvider
                 PruneCommand::class,
                 RebuildStatsCommand::class,
                 ResumeCommand::class,
-                ScrapePricingCommand::class,
+                SyncPricingCommand::class,
             ]);
 
             AboutCommand::add('Spectra', fn () => [

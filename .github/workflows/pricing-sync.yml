@@ -1,19 +1,20 @@
-name: pricing-scrape
+name: pricing-sync
 
-# Scrapes the providers' pricing pages with Firecrawl every 72 hours and keeps
-# one open pull request with the catalog changes. The branch is rebuilt from main
-# on each run, so the PR always shows the latest scrape against main. Merging the
-# PR releases the next patch version (pricing-release.yml).
+# Checks the bundled pricing catalog against LiteLLM's cost map every 24 hours
+# and keeps one open pull request with the changes (spectra:pricing-sync). No
+# key and no page scraping. Scaleway, which the feed doesn't cover, is edited
+# by hand, and OpenRouter has no catalog: it reports each request's cost.
 #
-# Needs the FIRECRAWL_API_KEY repository secret, and "Allow GitHub Actions to
-# create and approve pull requests" (Settings → Actions → General).
+# The branch is rebuilt from main on each run, so the PR always shows the
+# latest check against main. Merging the PR releases the next patch version
+# (pricing-release.yml).
+#
+# Needs "Allow GitHub Actions to create and approve pull requests"
+# (Settings → Actions → General).
 
 on:
   schedule:
-    # Cron has no 72-hour interval, so this runs on every third day of the month
-    # (1, 4, … 28, 31). The gap is 72 hours within a month and can be shorter
-    # across a month's end, never longer.
-    - cron: '0 5 */3 * *'
+    - cron: '0 5 * * *'
   workflow_dispatch:
 
 permissions:
@@ -25,14 +26,14 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  BRANCH: pricing/scrape
+  BRANCH: pricing/sync
   CATALOG: resources/pricing/catalog.json
 
 jobs:
-  scrape:
-    name: Pricing scrape
+  sync:
+    name: Pricing sync
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -45,19 +46,17 @@ jobs:
       - name: Install composer dependencies
         uses: ramsey/composer-install@v4
 
-      - name: Scrape the pricing pages
-        env:
-          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+      - name: Sync the price feed
         run: |
           set -o pipefail
-          vendor/bin/testbench spectra:pricing-scrape --all --path="$CATALOG" --no-ansi | tee scrape.log
+          vendor/bin/testbench spectra:pricing-sync --path="$CATALOG" --no-ansi | tee sync.log
 
       - name: Check for price changes
         id: changes
         run: |
-          # The scrape always rewrites generated_at; only real catalog changes count.
-          git show "HEAD:$CATALOG" | jq -S 'del(.generated_at)' > before.json
-          jq -S 'del(.generated_at)' "$CATALOG" > after.json
+          # generated_at and a provider's scraped_at are timestamps; only real catalog changes count.
+          git show "HEAD:$CATALOG" | jq -S 'del(.generated_at) | del(.providers[].scraped_at)' > before.json
+          jq -S 'del(.generated_at) | del(.providers[].scraped_at)' "$CATALOG" > after.json
           if cmp -s before.json after.json; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
@@ -82,11 +81,11 @@ jobs:
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           git switch -C "$BRANCH"
           git add "$CATALOG"
-          git commit -m "Update the pricing catalog from the providers' pages"
+          git commit -m "Update the pricing catalog"
           git push --force origin "$BRANCH"
 
           {
-            echo "Scheduled Firecrawl scrape of the providers' pricing pages ([run]($RUN_URL))."
+            echo "Daily check of the pricing catalog against LiteLLM's cost map ([run]($RUN_URL))."
             echo
             if [ "$TESTS" = "success" ]; then
               echo "Tests pass with the new catalog."
@@ -95,11 +94,12 @@ jobs:
               echo "> Tests fail with the new catalog. See the run log."
             fi
             echo
-            echo "Firecrawl's extraction is not deterministic: check each change against the provider's page before merging."
+            echo "A feed is not the provider's word: check each change against the provider's page before merging."
+            echo "To decline a change for good, restore our price on this branch, run \`composer pricing-sync -- --decline\` and commit \`resources/pricing/declined.json\`."
             echo "Merging releases the next patch version."
             echo
             echo '```text'
-            head -c 55000 scrape.log
+            head -c 55000 sync.log
             echo
             echo '```'
           } > body.md

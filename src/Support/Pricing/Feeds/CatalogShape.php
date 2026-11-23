@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Spectra\Support\Pricing\Scraping;
+namespace Spectra\Support\Pricing\Feeds;
 
 use Illuminate\Support\Arr;
 use Spectra\Enums\PricingTier;
@@ -11,14 +11,14 @@ use Spectra\Pricing\ProviderPricing;
 /**
  * The tiers and price fields a provider's catalog uses.
  *
- * Scraping is limited to them: a price the catalog never reads (OpenAI's
- * 12-hour cache write) would only make a model look changed. Pages and
- * catalogs name the same tier differently (OpenAI's "Fast" is the catalog's
+ * A price feed is read only for them: a price the catalog never bills with
+ * (OpenAI's 12-hour cache write) would only make a model look changed. Feeds
+ * and catalogs name the same tier differently (one's "fast" is the other's
  * `priority`), so a tier the catalog lacks falls back to its synonym.
  */
 final class CatalogShape
 {
-    /** Extraction schema field => tier field. */
+    /** Feed row field => tier field. */
     public const FIELDS = [
         'input' => 'input_price',
         'output' => 'output_price',
@@ -82,7 +82,7 @@ final class CatalogShape
     }
 
     /**
-     * Get the catalog tier a page's tier label stands for, or null when the
+     * Get the catalog tier a feed's tier label stands for, or null when the
      * catalog has neither the tier nor a synonym of it.
      */
     public function resolveTier(string $tier): ?string
@@ -97,20 +97,7 @@ final class CatalogShape
     }
 
     /**
-     * Get the tier labels the extraction may use: the catalog's tiers and their synonyms.
-     *
-     * @return list<string>
-     */
-    public function tierLabels(): array
-    {
-        return array_values(collect(PricingTier::cases())
-            ->pluck('value')
-            ->filter(fn (string $tier) => $this->resolveTier($tier) !== null)
-            ->all());
-    }
-
-    /**
-     * Determine if the catalog uses this tier price field, so a scraped value for it counts.
+     * Determine if the catalog uses this tier price field, so a feed's value for it counts.
      */
     public function allowsField(string $field): bool
     {

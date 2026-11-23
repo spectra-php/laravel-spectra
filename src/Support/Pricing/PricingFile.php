@@ -36,8 +36,8 @@ use Spectra\Pricing\ProviderPricing;
  *     }
  *
  * Prices are cents per 1M tokens (or per unit) of the provider's currency.
- * A provider may also carry `notes` (why a price is what it is) and
- * `scraped_at`, which spectra:pricing-scrape keeps and sets.
+ * A provider in an app's own file may also carry `notes` of its own and
+ * `scraped_at` (set by the pre-4.3 scrape), which are kept and not read.
  */
 class PricingFile
 {
@@ -99,14 +99,85 @@ class PricingFile
     }
 
     /**
-     * Write the prices as pretty-printed JSON, creating the folder if needed.
+     * Write the prices as compact JSON, creating the folder if needed.
      *
      * @param  array<string, mixed>  $data
      */
     public function write(array $data): void
     {
         File::ensureDirectoryExists(dirname($this->path));
-        File::put($this->path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n");
+        File::put($this->path, $this->encode($data));
+    }
+
+    /**
+     * Encode the prices with one model per line and no other whitespace
+     * inside a model.
+     *
+     * Pretty-printed, the bundled catalog is over twice the size. Fully
+     * minified it would be one line, so every diff would show the whole file
+     * as changed; one line per model keeps a price change a one-line diff.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function encode(array $data): string
+    {
+        $lines = [];
+
+        foreach ($data as $key => $value) {
+            $lines[] = $key === 'providers' && is_array($value) && $value !== []
+                ? '    "providers": '.$this->encodeProviders($value)
+                : "    {$this->compact($key)}: {$this->compact($value)}";
+        }
+
+        return "{\n".implode(",\n", $lines)."\n}\n";
+    }
+
+    /**
+     * Encode the provider sections, each key on its own line and each model on one line.
+     *
+     * @param  array<array-key, mixed>  $providers
+     */
+    protected function encodeProviders(array $providers): string
+    {
+        $sections = [];
+
+        foreach ($providers as $provider => $section) {
+            if (! is_array($section)) {
+                $sections[] = "        {$this->compact((string) $provider)}: {$this->compact($section)}";
+
+                continue;
+            }
+
+            $lines = [];
+
+            foreach ($section as $key => $value) {
+                if ($key !== 'models' || ! is_array($value) || $value === []) {
+                    $encoded = $key === 'models' && $value === [] ? '{}' : $this->compact($value);
+                    $lines[] = "            {$this->compact((string) $key)}: {$encoded}";
+
+                    continue;
+                }
+
+                $models = [];
+                foreach ($value as $id => $model) {
+                    $models[] = "                {$this->compact((string) $id)}: {$this->compact($model)}";
+                }
+
+                $lines[] = "            \"models\": {\n".implode(",\n", $models)."\n            }";
+            }
+
+            $sections[] = "        {$this->compact((string) $provider)}: {\n".implode(",\n", $lines)."\n        }";
+        }
+
+        return "{\n".implode(",\n", $sections)."\n    }";
+    }
+
+    /**
+     * Encode a value as JSON on one line.
+     */
+    protected function compact(mixed $value): string
+    {
+        return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 
     /**
@@ -123,7 +194,7 @@ class PricingFile
     public function catalogs(array $base = []): array
     {
         if (! $this->exists()) {
-            Log::warning("Spectra: the pricing file {$this->path} doesn't exist; the models it would price keep the bundled prices. Run `php artisan spectra:pricing-scrape` to create it.");
+            Log::warning("Spectra: the pricing file {$this->path} doesn't exist; the models it would price keep the bundled prices. Run `php artisan spectra:pricing-sync` to create it.");
 
             return [];
         }

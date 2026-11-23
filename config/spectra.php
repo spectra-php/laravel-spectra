@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Str;
 use Spectra\Providers\Anthropic\Anthropic;
 use Spectra\Providers\Cohere\Cohere;
 use Spectra\Providers\ElevenLabs\ElevenLabs;
@@ -920,7 +919,7 @@ return [
         | providers' pricing pages. To bill with prices of your own, point
         | `pricing_path` at a file in the same format: a model in it replaces
         | the bundled model with the same id, and every other model keeps its
-        | bundled price. `php artisan spectra:pricing-scrape` writes that file
+        | bundled price. `php artisan spectra:pricing-sync` writes that file
         | for you. Commit it, so every environment bills the same prices. A
         | relative path is relative to the app's root.
         |
@@ -953,30 +952,23 @@ return [
 
         /*
         |--------------------------------------------------------------------------
-        | Firecrawl
+        | Price Feeds
         |--------------------------------------------------------------------------
         |
-        | `spectra:pricing-scrape` reads the providers' pricing pages with
-        | Firecrawl's JSON extraction and saves the prices that differ from
-        | the bundled catalog to your pricing file. Only the command needs a
-        | key; tracking never calls Firecrawl. Timeout is in seconds, per page. The
-        | unprefixed FIRECRAWL_API_KEY, FIRECRAWL_API_URL and FIRECRAWL_TIMEOUT
-        | variables are still read when the SPECTRA_ ones are not set.
+        | `spectra:pricing-sync` reads LiteLLM's cost map, a public JSON file,
+        | and saves the prices that differ from the bundled catalog to your
+        | pricing file. It needs no key, and only the command calls it;
+        | tracking never does. A model the catalog doesn't have is added only
+        | when models.dev lists it at the same price. Change a URL to read a
+        | mirror, or a fixed commit of LiteLLM's file.
         |
-        | `providers` are the ones the command scrapes when you don't name
-        | any, e.g. SPECTRA_SCRAPE_PROVIDERS=openai,anthropic. Left empty, it
-        | scrapes the providers your app has tracked requests for, so you
-        | don't spend Firecrawl credits on providers you don't use.
-        |
-        | Docs: https://spectraphp.com/pricing#scraping-prices
+        | Docs: https://spectraphp.com/pricing#syncing-prices
         |
         */
 
-        'firecrawl' => [
-            'api_key' => env('SPECTRA_FIRECRAWL_API_KEY', env('FIRECRAWL_API_KEY')),
-            'url' => env('SPECTRA_FIRECRAWL_API_URL', env('FIRECRAWL_API_URL', 'https://api.firecrawl.dev/v2')),
-            'timeout' => (int) env('SPECTRA_FIRECRAWL_TIMEOUT', env('FIRECRAWL_TIMEOUT', 180)),
-            'providers' => Str::of((string) env('SPECTRA_SCRAPE_PROVIDERS', ''))->explode(',')->map(fn (string $provider): string => trim($provider))->filter()->values()->all(),
+        'feeds' => [
+            'litellm' => env('SPECTRA_PRICING_FEED_LITELLM', 'https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json'),
+            'models_dev' => env('SPECTRA_PRICING_FEED_MODELS_DEV', 'https://models.dev/api.json'),
         ],
 
     ],

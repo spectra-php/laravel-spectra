@@ -1,6 +1,6 @@
 name: pricing-release
 
-# When the pricing PR from pricing-scrape.yml is merged, releases the next
+# When the pricing PR from pricing-sync.yml is merged, releases the next
 # patch version (v4.0.0 → v4.0.1) from the merge commit and adds it to
 # CHANGELOG.md. The tag ships main as it is, other unreleased commits included.
 
@@ -21,7 +21,7 @@ jobs:
     name: Patch release
     if: >-
       github.event.pull_request.merged == true
-      && github.event.pull_request.head.ref == 'pricing/scrape'
+      && github.event.pull_request.head.ref == 'pricing/sync'
       && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -50,7 +50,7 @@ jobs:
           next="v${major}.${minor}.$((patch + 1))"
 
           gh release create "$next" --target "$SHA" --title "$next" \
-            --notes "Updates the bundled pricing catalog from the providers' pricing pages (#${PR})." \
+            --notes "Updates the bundled pricing catalog from the price feeds (#${PR})." \
             --generate-notes --notes-start-tag "$latest"
 
           echo "version=$next" >> "$GITHUB_OUTPUT"

@@ -69,6 +69,16 @@ class PricingCatalog
     }
 
     /**
+     * Determine if the file is the catalog bundled with the package.
+     */
+    public static function isBundledFile(PricingFile $file): bool
+    {
+        $bundled = realpath(static::bundledFile()->path());
+
+        return $bundled !== false && realpath($file->path()) === $bundled;
+    }
+
+    /**
      * Get the app's own pricing file, or null when `spectra.costs.pricing_path` is not set.
      *
      * A relative path is relative to the app's root. A config published

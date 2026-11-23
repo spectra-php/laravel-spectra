@@ -32,6 +32,6 @@ it('stays quiet for a provider without a catalog and for a cost the provider rep
 
     Log::shouldNotHaveReceived('warning');
     expect(app(PricingLookup::class)->isUnpriced('ollama', 'llama3.3:70b'))->toBeFalse()
-        ->and(app(PricingLookup::class)->isUnpriced('openrouter', 'acme/brand-new-model'))->toBeTrue()
+        ->and(app(PricingLookup::class)->isUnpriced('openrouter', 'acme/brand-new-model'))->toBeFalse()
         ->and(app(PricingLookup::class)->isUnpriced('openai', 'gpt-4o-2024-08-06'))->toBeFalse();
 });

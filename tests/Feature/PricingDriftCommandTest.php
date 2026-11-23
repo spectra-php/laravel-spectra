@@ -41,8 +41,9 @@ beforeEach(function () {
             'gpt-unpriced' => ['cost' => ['input' => 0, 'output' => 0]],
             'gpt-no-cost' => [],
         ]],
+        // OpenRouter reports its own costs and has no catalog to compare.
         'openrouter' => ['models' => [
-            'vendor/not-in-catalog' => ['cost' => ['input' => 1, 'output' => 1]],
+            'vendor/not-compared' => ['cost' => ['input' => 1, 'output' => 1]],
         ]],
     ];
 

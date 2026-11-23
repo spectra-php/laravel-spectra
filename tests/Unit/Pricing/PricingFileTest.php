@@ -236,16 +236,16 @@ it('fills the pricing keys into a config published before they existed', functio
 
     expect(config('spectra.costs.pricing_path'))->toBe('prices/mine.json')
         ->and(config('spectra.costs.cache'))->toBe(['enabled' => true, 'store' => null, 'ttl' => 86400])
-        ->and(config('spectra.costs.firecrawl.url'))->toBe('https://api.firecrawl.dev/v2');
+        ->and(config('spectra.costs.feeds.models_dev'))->toBe('https://models.dev/api.json');
 });
 
 it('keeps pricing keys the app config already has', function () {
-    config(['spectra.costs.cache' => ['enabled' => false], 'spectra.costs.firecrawl' => ['api_key' => 'mine']]);
+    config(['spectra.costs.cache' => ['enabled' => false], 'spectra.costs.feeds' => ['litellm' => 'https://mirror.test/prices.json']]);
 
     (new SpectraServiceProvider($this->app))->register();
 
     expect(config('spectra.costs.cache'))->toBe(['enabled' => false])
-        ->and(config('spectra.costs.firecrawl'))->toBe(['api_key' => 'mine']);
+        ->and(config('spectra.costs.feeds'))->toBe(['litellm' => 'https://mirror.test/prices.json']);
 });
 
 it('warns once when a published config still maps pricing classes, and prices as usual', function () {

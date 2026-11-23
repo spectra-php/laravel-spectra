@@ -62,7 +62,7 @@ class ProviderPricing implements Arrayable
      * Create a new catalog for one provider's entries in a pricing file.
      *
      * @param  array<array-key, mixed>  $data  Model id => model array (a numeric id decodes as an int key).
-     * @param  list<string>  $pageSources  The pricing pages spectra:pricing-scrape reads for the provider.
+     * @param  list<string>  $pageSources  The provider's pricing pages, where its prices can be checked.
      * @param  array<string, float>  $toolCalls  Tool call type => cents per call.
      * @param  ProviderPricing|null  $base  The bundled catalog whose models these entries replace.
      * @param  string  $origin  Where the entries come from, for warnings.
@@ -81,7 +81,7 @@ class ProviderPricing implements Arrayable
      * Build a catalog from a provider's section of a pricing file.
      *
      * The section's `currency` defaults to the base catalog's. Unknown keys
-     * (`notes`, `scraped_at`) are ignored here and kept by the scrape command.
+     * (`notes`, `scraped_at`) are ignored here and kept by spectra:pricing-sync.
      *
      * @param  array<string, mixed>  $section
      */
@@ -124,9 +124,9 @@ class ProviderPricing implements Arrayable
     }
 
     /**
-     * Get the pricing pages `spectra:pricing-scrape` reads for this provider.
+     * Get the provider's pricing pages, where its prices can be checked.
      *
-     * Empty for a provider that is left out of scraping.
+     * Empty for a provider of your own that lists none.
      *
      * @return list<string>
      */

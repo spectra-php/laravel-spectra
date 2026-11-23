@@ -2,12 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Spectra\Support\Pricing\Scraping;
+namespace Spectra\Support\Pricing\Feeds;
 
 /**
- * One price that differs between a scraped page and the catalog, in cents,
- * with the page line that shows it next to the model, so a reviewer can
- * check the change without opening the page.
+ * One price that differs between a price feed and the catalog, in cents.
  */
 final class PriceChange
 {
@@ -22,6 +20,5 @@ final class PriceChange
         public readonly ?float $old,
         public readonly float $new,
         public readonly string $unit,
-        public readonly ?string $pageLine = null,
     ) {}
 }

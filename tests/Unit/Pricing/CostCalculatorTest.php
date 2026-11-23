@@ -58,12 +58,12 @@ it('returns zero per-unit cost for unknown models', function () {
 it('prices the models added in the 2026-11-01 review', function () {
     $calculator = new CostCalculator;
 
-    // gpt-6-rosalind: $15 / $75, and $30 / $112.50 above 272K input tokens.
+    // gpt-6-rosalind: $10 / $50, and $20 / $75 above 272K input tokens.
     $rosalind = $calculator->calculate('openai', 'gpt-6-rosalind', 100_000, 100_000);
-    expect($rosalind['total_cost_in_cents'])->toEqualWithDelta(900, 1e-9);
+    expect($rosalind['total_cost_in_cents'])->toEqualWithDelta(600, 1e-9);
 
     $rosalindLong = $calculator->calculate('openai', 'gpt-6-rosalind', 300_000, 100_000);
-    expect($rosalindLong['total_cost_in_cents'])->toEqualWithDelta(300_000 * 3000 / 1e6 + 100_000 * 11250 / 1e6, 1e-9);
+    expect($rosalindLong['total_cost_in_cents'])->toEqualWithDelta(300_000 * 2000 / 1e6 + 100_000 * 7500 / 1e6, 1e-9);
 
     // gpt-6-astra-law: $10 / $50 (promotional).
     $law = $calculator->calculate('openai', 'gpt-6-astra-law', 100_000, 100_000);

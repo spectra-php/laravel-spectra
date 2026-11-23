@@ -46,11 +46,11 @@ it('bills voxtral speech per input character without storing the audio', functio
 
     $record = SpectraRequest::query()->sole();
 
-    // voxtral-mini-tts-latest: 1600 cents per 1M chars × 1000 chars = 1.6 cents
+    // voxtral-mini-tts-latest is Voxtral TTS 3: 1300 cents per 1M chars × 1000 chars = 1.3 cents
     expect($record->provider)->toBe('mistral')
-        ->and($record->model)->toBe('Voxtral Mini TTS')
+        ->and($record->model)->toBe('Voxtral TTS 3')
         ->and($record->model_type)->toBe('tts')
         ->and($record->input_characters)->toBe(1000)
-        ->and((float) $record->total_cost_in_cents)->toEqualWithDelta(1.6, 0.001)
+        ->and((float) $record->total_cost_in_cents)->toEqualWithDelta(1.3, 0.001)
         ->and($record->response['audio_data'] ?? null)->toBe('[stripped]');
 });
