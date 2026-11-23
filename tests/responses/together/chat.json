@@ -1,0 +1,25 @@
+{
+    "id": "oZc4KxT-4Yz4kd-9a1b2c3d4e5f6a7b",
+    "object": "chat.completion",
+    "created": 1794572388,
+    "model": "Qwen/Qwen3.5-9B",
+    "prompt": [],
+    "choices": [
+        {
+            "finish_reason": "stop",
+            "seed": 1234567890123456789,
+            "index": 0,
+            "logprobs": null,
+            "message": {
+                "role": "assistant",
+                "content": "Walk the High Line, take the ferry to Governors Island, and end the day with a slice in Brooklyn.",
+                "tool_calls": []
+            }
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 24,
+        "completion_tokens": 26,
+        "total_tokens": 50
+    }
+}

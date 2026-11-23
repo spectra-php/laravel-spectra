@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 use Spectra\Providers\Anthropic\Anthropic;
+use Spectra\Providers\Cerebras\Cerebras;
 use Spectra\Providers\Cohere\Cohere;
+use Spectra\Providers\DeepInfra\DeepInfra;
 use Spectra\Providers\ElevenLabs\ElevenLabs;
 use Spectra\Providers\FalAi\FalAi;
+use Spectra\Providers\Fireworks\Fireworks;
 use Spectra\Providers\Google\Google;
 use Spectra\Providers\Groq\Groq;
 use Spectra\Providers\Mistral\Mistral;
@@ -14,6 +17,7 @@ use Spectra\Providers\OpenAI\OpenAI;
 use Spectra\Providers\OpenRouter\OpenRouter;
 use Spectra\Providers\Replicate\Replicate;
 use Spectra\Providers\Scaleway\Scaleway;
+use Spectra\Providers\Together\Together;
 use Spectra\Providers\XAi\XAi;
 use Spectra\Support\RequestTransformer;
 use Spectra\Watchers\GuzzleWatcher;
@@ -1209,6 +1213,10 @@ return [
         'mistral' => ['class' => Mistral::class, 'name' => 'Mistral'],
         'falai' => ['class' => FalAi::class, 'name' => 'fal.ai'],
         'scaleway' => ['class' => Scaleway::class, 'name' => 'Scaleway'],
+        'together' => ['class' => Together::class, 'name' => 'Together AI'],
+        'fireworks' => ['class' => Fireworks::class, 'name' => 'Fireworks AI'],
+        'deepinfra' => ['class' => DeepInfra::class, 'name' => 'DeepInfra'],
+        'cerebras' => ['class' => Cerebras::class, 'name' => 'Cerebras'],
     ],
 
     /*

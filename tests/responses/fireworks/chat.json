@@ -1,0 +1,24 @@
+{
+    "id": "8f2d3a1c-5b7e-4c9a-a1d2-3e4f5a6b7c8d",
+    "object": "chat.completion",
+    "created": 1794572410,
+    "model": "accounts/fireworks/models/deepseek-v4p1-flash",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "Refunds reach your card within 5 to 10 business days of approval."
+            },
+            "finish_reason": "stop"
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 4200,
+        "total_tokens": 4520,
+        "completion_tokens": 320,
+        "prompt_tokens_details": {
+            "cached_tokens": 3000
+        }
+    }
+}

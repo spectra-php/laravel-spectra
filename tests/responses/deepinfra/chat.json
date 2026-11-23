@@ -1,0 +1,22 @@
+{
+    "id": "chatcmpl-guMTxWgpFf",
+    "object": "chat.completion",
+    "created": 1694623155,
+    "model": "deepseek-ai/DeepSeek-V4-Flash-0731",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "Hello! It's nice to meet you. Is there something I can help you with?"
+            },
+            "finish_reason": "stop"
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 15,
+        "completion_tokens": 16,
+        "total_tokens": 31,
+        "estimated_cost": 0.0000268
+    }
+}
