@@ -96,12 +96,6 @@
   }
 }
 
-/* The chatvia chat widget shows on the doc pages only (see theme/index.ts) */
-html.chatvia-hidden .chatvia-widget,
-html.chatvia-hidden .chatvia-widget-confirm-dialog {
-  display: none !important;
-}
-
 /* Dashboard screenshots */
 .vp-doc img.screenshot {
   display: block;
