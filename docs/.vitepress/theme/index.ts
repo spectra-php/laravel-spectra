@@ -3,7 +3,7 @@ import { inBrowser, useData } from 'vitepress'
 import { h, watchEffect } from 'vue'
 import './style.css'
 
-// The chatvia command bar shows on the doc pages, not on the home page. The
+// The chatvia chat widget shows on the doc pages, not on the home page. The
 // embed can't be removed and loaded again, so it loads once, on the first doc
 // page opened, and is hidden by CSS (html.chatvia-hidden) while the home page shows.
 function loadChatvia(): void {
@@ -16,7 +16,8 @@ function loadChatvia(): void {
   script.src = 'https://chat.chatvia.ai/shakomako/embed.js'
   script.defer = true
   script.dataset.agentId = 'b815114397aaef'
-  script.dataset.mode = 'bar'
+  script.dataset.language = 'auto'
+  script.dataset.theme = 'auto'
   document.body.appendChild(script)
 }
 
