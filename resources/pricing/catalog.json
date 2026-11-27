@@ -128,7 +128,7 @@
                 "mistralai/Mistral-Small-3.2-24B-Instruct-2506": {"display_name":"Mistral Small 3.2 24B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":7.5,"output_price":20}]},
                 "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B": {"display_name":"Nemotron 3 Super 120B A12B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":7.5,"output_price":40}]},
                 "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B": {"display_name":"Nemotron 3 Ultra 550B A55B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":50,"output_price":220,"cached_input_price":10}]},
-                "nvidia/NVIDIA-Nemotron-3.5-Lightning": {"display_name":"Nemotron 3.5 Lightning 30B A3B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":6,"output_price":16,"cached_input_price":4}]},
+                "nvidia/NVIDIA-Nemotron-3.5-Lightning": {"display_name":"Nemotron 3.5 Lightning 30B A3B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":6,"output_price":16,"cached_input_price":3}]},
                 "openai/gpt-oss-120b-Ultra": {"display_name":"GPT OSS 120B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":20,"output_price":95}]}
             }
         },
@@ -560,7 +560,7 @@
                 "elorian-labs/glimpse-1.0": {"display_name":"Glimpse 1.0","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":60,"output_price":300,"cached_input_price":6}]},
                 "meta-models/Muse-Glimmer-30B": {"display_name":"Muse Glimmer 30B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":35,"output_price":150,"cached_input_price":4}]},
                 "ricursive-ai/Ripple-65B-Preview": {"display_name":"Ripple 65B Preview","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":20,"output_price":60,"cached_input_price":2}]},
-                "tencent/Hy4": {"display_name":"Hy4","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":83.4,"output_price":250.1,"cached_input_price":4.2}]},
+                "tencent/Hy4": {"display_name":"Hy4","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":83,"output_price":250,"cached_input_price":4.2}]},
                 "thinkingmachines/Inkling-2-Small": {"display_name":"Inkling 2 Small","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":30,"output_price":100,"cached_input_price":3}]}
             }
         },
