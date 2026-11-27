@@ -2,6 +2,16 @@
 
 All notable changes to `laravel-spectra` will be documented in this file.
 
+## v4.3.1 - 2026-11-27
+
+Updates the bundled pricing catalog from the price feeds (#20).
+
+### What's Changed
+
+* Update the pricing catalog by @github-actions[bot] in https://github.com/spectra-php/laravel-spectra/pull/20
+
+**Full Changelog**: https://github.com/spectra-php/laravel-spectra/compare/v4.3.0...v4.3.1
+
 ## v4.3.0 - 2026-11-23
 
 Spectra 4.3 updates prices from public price feeds instead of scraping pricing pages. `spectra:pricing-sync` needs no key, and Firecrawl is no longer used. Run `composer update spectra-php/laravel-spectra` to get it.
