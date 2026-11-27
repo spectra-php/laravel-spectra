@@ -1,4 +1,5 @@
 {
+    "deepinfra|nvidia/NVIDIA-Nemotron-3.5-Lightning|standard|cached_input_price": 4.0,
     "falai|fal-ai/imagen4/preview|standard|price_per_unit": 3.98,
     "falai|fal-ai/recraft/v3/text-to-image|standard|price_per_unit": 3.98,
     "google|deep-research-max-preview-04-2026|model": null,
@@ -21,5 +22,6 @@
     "openai|gpt-4o-transcribe|standard|audio_input_price": 600.0,
     "openai|gpt-5.6|model": null,
     "openai|gpt-daybreak-blue-latest|model": null,
-    "openai|gpt-daybreak-red-latest|model": null
+    "openai|gpt-daybreak-red-latest|model": null,
+    "together|tencent/Hy4|standard|input_price": 83.4
 }
