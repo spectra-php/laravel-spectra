@@ -1,5 +1,5 @@
 {
-    "generated_at": "2026-11-26T14:45:20+00:00",
+    "generated_at": "2026-11-28T13:55:57+00:00",
     "providers": {
         "anthropic": {
             "currency": "USD",
@@ -129,7 +129,10 @@
                 "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B": {"display_name":"Nemotron 3 Super 120B A12B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":7.5,"output_price":40}]},
                 "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B": {"display_name":"Nemotron 3 Ultra 550B A55B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":50,"output_price":220,"cached_input_price":10}]},
                 "nvidia/NVIDIA-Nemotron-3.5-Lightning": {"display_name":"Nemotron 3.5 Lightning 30B A3B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":6,"output_price":16,"cached_input_price":3}]},
-                "openai/gpt-oss-120b-Ultra": {"display_name":"GPT OSS 120B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":20,"output_price":95}]}
+                "openai/gpt-oss-120b-Ultra": {"display_name":"GPT OSS 120B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":20,"output_price":95}]},
+                "Sao10K/L3-8B-Lunaris-v1-Turbo": {"display_name":"Llama 3 8B Lunaris","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":4,"output_price":5}]},
+                "Sao10K/L3.1-70B-Euryale-v2.2": {"display_name":"Llama 3.1 Euryale 70B v2.2","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":85,"output_price":85}]},
+                "nvidia/NVIDIA-Nemotron-3.5-Super-VL": {"display_name":"Nemotron 3.5 Super VL 120B A12B","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":15,"output_price":50,"cached_input_price":2}]}
             }
         },
         "elevenlabs": {
@@ -219,7 +222,9 @@
                 "accounts/fireworks/routers/glm-5p3-flex": {"display_name":"GLM 5.3 Flex","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":70,"output_price":220,"cached_input_price":13}]},
                 "accounts/fireworks/routers/glm-5p3-us": {"display_name":"GLM 5.3 (US)","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":210,"output_price":660,"cached_input_price":39},{"tier":"priority","input_price":262.5,"output_price":825,"cached_input_price":48.75}]},
                 "accounts/fireworks/routers/kimi-k3-us": {"display_name":"Kimi K3 (US)","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":450,"output_price":2250,"cached_input_price":45},{"tier":"priority","input_price":562.5,"output_price":2812.5,"cached_input_price":56.25}]},
-                "accounts/fireworks/routers/kimi-k3p1-pro-us": {"display_name":"Kimi K3.1 Pro (US)","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":250,"output_price":1250,"cached_input_price":25},{"tier":"priority","input_price":375,"output_price":1875,"cached_input_price":37.5}]}
+                "accounts/fireworks/routers/kimi-k3p1-pro-us": {"display_name":"Kimi K3.1 Pro (US)","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":250,"output_price":1250,"cached_input_price":25},{"tier":"priority","input_price":375,"output_price":1875,"cached_input_price":37.5}]},
+                "accounts/fireworks/models/inkling-2-small": {"display_name":"Inkling 2 Small","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":30,"output_price":100,"cached_input_price":3},{"tier":"priority","input_price":37.5,"output_price":125,"cached_input_price":3.75}]},
+                "accounts/fireworks/routers/kimi-k3p1-pro-ultrafast": {"display_name":"Kimi K3.1 Pro Ultra-fast","type":"text","pricing_unit":"tokens","capabilities":["text"],"tiers":[{"tier":"standard","input_price":500,"output_price":2500,"cached_input_price":50}]}
             }
         },
         "google": {
